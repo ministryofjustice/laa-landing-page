@@ -6,27 +6,29 @@ plugins {
 
 group = 'uk.gov.justice.laa'
 version = '0.0.1-SNAPSHOT'
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
-}
+sourceCompatibility = '21'
 
 repositories {
 	mavenCentral()
+	// If you have private repos or GitHub Packages, add them here
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-security' // if you need security
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client' // if you need Azure AD
+	// Add any GDS or MoJ custom libraries if relevant
+	// e.g. implementation 'uk.gov.justice.laa:laa-ccms-spring-boot-starter-govuk-dialect:VERSION'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named('test') {
+//checkstyle {
+//    toolVersion = '10.21.2'
+//    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+//}
+
+tasks.withType(Test).configureEach {
 	useJUnitPlatform()
 }
