@@ -24,10 +24,10 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-//checkstyle {
-//    toolVersion = '10.21.2'
-//    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
-//}
+checkstyle {
+    toolVersion = '10.21.2'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+}
 
 tasks.withType(Test).configureEach {
 	useJUnitPlatform()
