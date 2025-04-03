@@ -1,0 +1,57 @@
+.logout {
+    float: right;
+    text-decoration: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.logout button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1em;
+    font-weight: bold;
+    cursor:pointer;
+}
+.application {
+    background: #f3f2f1;
+    padding: 1em;
+    margin-bottom: 1em;
+    width: 80%;
+}
+.application a.govuk-link {
+    margin-bottom: 1em;
+    display: inline-block;
+    color: #1d70b8;
+    text-decoration: underline;
+    width: auto;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+.error-message {
+    color: #d4351c;
+    margin-bottom: 5px;
+}
+
+.error-input {
+    border: 1px solid #d4351c;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 0 auto;
+}
+.grid-item {
+    background-color: #f0f0f0;
+    padding: 20px;
+    border: 1px solid #ccc;
+}
+.green {
+    background-color: #00703c;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 0.4em;
+}
