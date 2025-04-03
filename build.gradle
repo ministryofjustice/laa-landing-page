@@ -4,6 +4,10 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
+//tasks.register('wrapper', Wrapper) {
+//	gradleVersion = '8.13'
+//}
+
 group = 'uk.gov.justice.laa'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '21'
@@ -19,15 +23,15 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security' // if you need security
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client' // if you need Azure AD
 	// Add any GDS or MoJ custom libraries if relevant
-	// e.g. implementation 'uk.gov.justice.laa:laa-ccms-spring-boot-starter-govuk-dialect:VERSION'
+	// implementation 'uk.gov.justice.laa:laa-ccms-spring-boot-starter'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-checkstyle {
-    toolVersion = '10.21.2'
-    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
-}
+//checkstyle {
+//    toolVersion = '10.21.2'
+//    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+//}
 
 tasks.withType(Test).configureEach {
 	useJUnitPlatform()
