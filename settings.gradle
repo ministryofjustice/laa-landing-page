@@ -13,4 +13,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'laa-portal-landing-page'
+rootProject.name = 'laa-landing-page'
