@@ -33,6 +33,12 @@ This is a prototype application developed and maintained by the LAA portal stabi
    2. write:packages
    3. read:packages
 2. The token must be authorised with (MoJ) SSO.
+3. Add the following parameters to ~/.gradle/gradle.properties:
+
+```
+project.ext.gitPackageUser = <your GitHub username>
+project.ext.gitPackageKey = <your GitHub access token>
+```
 
 For more detailed instructions, refer to the laa-ccms-spring-boot-common repository [here](https://github.com/ministryofjustice/laa-ccms-spring-boot-common?tab=readme-ov-file).
 
@@ -66,9 +72,12 @@ Once the environment variables are set, you can run the application using Gradle
 - **VSCode:**
 
   1. Open the project in VSCode
-  2. Install the Gradle plugin from the Extensions page on the left pane
-  3. Navigate to Gradle on the left pane
-  4. Navigate to `laa-landing-page -> Tasks -> appplication` and select `bootRun`.
+  2. Open a VSCode Terminal
+  3. Ensure the `.env` environment variables are exported inside the terminal
+  4. Run the following command:
+     ```sh
+     .gradlew bootRun
+     ```
 
 - **Command Line:**
 
