@@ -4,6 +4,10 @@ import lombok.Data;
 
 import java.util.List;
 
+
+/**
+ * Javadoc comment.
+ */
 @Data
 public class PaginatedUsers {
     private List<UserModel> users;
