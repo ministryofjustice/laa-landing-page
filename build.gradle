@@ -1,34 +1,58 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.4.4'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+    id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.25'
 }
 
-group = 'uk.gov.justice.laa'
-version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '21'
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+checkstyle {
+    toolVersion = '10.21.2'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+}
 
 repositories {
-	mavenCentral()
-	// If you have private repos or GitHub Packages, add them here
+    mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-	implementation 'org.springframework.boot:spring-boot-starter-security' // if you need security
-	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client' // if you need Azure AD
-	// Add any GDS or MoJ custom libraries if relevant
-	// e.g. implementation 'uk.gov.justice.laa:laa-ccms-spring-boot-starter-govuk-dialect:VERSION'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.projectlombok:lombok'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
+
+    annotationProcessor 'org.projectlombok:lombok'
+
+    implementation 'org.springframework.boot:spring-boot-starter-graphql'
+    implementation 'uk.gov.laa.ccms.springboot:laa-ccms-spring-boot-starter-govuk-dialect'
+
+    // Microsoft Graph SDK dependencies
+    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
+    implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
+
+    // MSAL for authentication
+    implementation 'com.microsoft.azure:msal4j:1.19.0'
+
+    // Azure Identity SDK for OAuth2 and token management
+    implementation 'com.azure:azure-identity:1.15.0'
+
+    implementation 'com.azure.spring:azure-spring-boot-starter-active-directory:3.14.0'
+
+    implementation 'com.h2database:h2'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.graphql:spring-graphql-test'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
-//checkstyle {
-//    toolVersion = '10.21.2'
-//    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
-//}
-
-tasks.withType(Test).configureEach {
-	useJUnitPlatform()
+test {
+    useJUnitPlatform()
 }
