@@ -8,3 +8,10 @@ env/
 *.code-workspace
 *.sha256
 terraform.tfstate
+
+# Java/Gradle
+.gradle/
+build/
+out/
+*.war
+*.ear
