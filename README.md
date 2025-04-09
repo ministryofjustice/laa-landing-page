@@ -76,7 +76,7 @@ Once the environment variables are set, you can run the application using Gradle
   3. Ensure the `.env` environment variables are exported inside the terminal
   4. Run the following command:
      ```sh
-     .gradlew bootRun
+     ./gradlew bootRun
      ```
 
 - **Command Line:**
