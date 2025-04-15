@@ -56,3 +56,16 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/config/**',
+                    'uk/gov/**/Application.class',
+            ])
+        })
+    }
+}
+
+//test.finalizedBy jacocoTestCoverageVerification, jacocoTestReport
