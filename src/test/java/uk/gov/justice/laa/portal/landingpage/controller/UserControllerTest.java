@@ -10,7 +10,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,14 +30,6 @@ class UserControllerTest {
 
     @Test
     void register() {
-    }
-
-    @Test
-    void invite() {
-    }
-
-    @Test
-    void inviteUserToGraph() {
     }
 
     @Test

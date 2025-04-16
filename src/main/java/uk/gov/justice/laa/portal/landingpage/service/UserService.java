@@ -51,21 +51,6 @@ public class UserService {
      *
      * @return {@code User}
      */
-    public static Invitation inviteUser(String email) {
-
-        Invitation invitation = new Invitation();
-        invitation.setInvitedUserEmailAddress(email);
-        invitation.setInviteRedirectUrl("http://localhost:8080");
-        invitation.setSendInvitationMessage(true);
-        GraphServiceClient graphClient = getGraphClient();
-        return graphClient.invitations().post(invitation);
-    }
-
-    /**
-     * create User at Entra
-     *
-     * @return {@code User}
-     */
     public User createUser(String username, String password) {
 
         User user = new User();
