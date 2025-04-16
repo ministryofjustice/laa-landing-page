@@ -7,7 +7,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
