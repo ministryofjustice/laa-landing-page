@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    image: laa-portal-stabilisation-prototype:latest
-    container_name: laa-portal-stabilisation-container
+    image: laa-landing-page-dev:latest
+    container_name: laa-landing-page-container
     ports:
       - "8089:8080"
