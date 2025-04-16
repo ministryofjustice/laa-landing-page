@@ -30,6 +30,7 @@ class UserControllerTest {
 
     @Test
     void register() {
+        assertThat(userController.register()).isEqualTo("register");
     }
 
     @Test
