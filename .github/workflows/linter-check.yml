@@ -54,11 +54,11 @@ jobs:
           paths: |
             ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 1
-          min-coverage-changed-files: 1
+          min-coverage-overall: 80
+          min-coverage-changed-files: 80
 
       - name: Fail PR if overall coverage is less than 80%
-        if: ${{ steps.jacoco.outputs.coverage-overall < 1 }}
+        if: ${{ steps.jacoco.outputs.coverage-overall < 80.0 }}
         uses: actions/github-script@v6
         with:
           script: |
