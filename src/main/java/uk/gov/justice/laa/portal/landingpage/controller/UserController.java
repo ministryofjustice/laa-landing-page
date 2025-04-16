@@ -32,7 +32,7 @@ public class UserController {
     @PostMapping("/register")
     public User addUserToGraph(@RequestParam("username") String username,
                                @RequestParam("password") String password) {
-        return UserService.createUser(username, password);
+        return userService.createUser(username, password);
     }
 
     /**

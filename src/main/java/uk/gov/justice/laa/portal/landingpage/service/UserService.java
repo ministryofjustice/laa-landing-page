@@ -66,7 +66,7 @@ public class UserService {
      *
      * @return {@code User}
      */
-    public static User createUser(String username, String password) {
+    public User createUser(String username, String password) {
 
         User user = new User();
         user.setAccountEnabled(true);
