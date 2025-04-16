@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laa-landing-page-dev
+  labels:
+    app: laa-landing-page-dev
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: laa-landing-page-dev # this should match the selector in service.yml
+  template:
+    metadata:
+      labels:
+        app: laa-landing-page-dev # this should match the selector in service.yml
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: laa-landing-page-dev
+          image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 8080
+          env:
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-id-k8s
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-secret-k8s
+                  key: AZURE_CLIENT_SECRET
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-tenant-secret-k8s
+                  key: AZURE_TENANT_ID
+            - name: BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-url-dev-k8s
+                  key: BASE_URL
