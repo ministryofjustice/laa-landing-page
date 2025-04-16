@@ -59,6 +59,9 @@ test {
 }
 
 jacocoTestReport {
+    reports {
+        xml.required = true
+    }
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
