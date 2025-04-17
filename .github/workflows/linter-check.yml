@@ -66,6 +66,6 @@ jobs:
           script: |
             core.setFailed('Overall unit test coverage is less than 85%!')    
 
-      - name: Run IntegrationTest Test
+      - name: Run IntegrationTest
         run: |
           ./gradlew integrationTest
