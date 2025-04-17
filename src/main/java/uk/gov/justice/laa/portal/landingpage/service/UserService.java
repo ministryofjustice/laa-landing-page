@@ -7,7 +7,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
@@ -51,22 +50,7 @@ public class UserService {
      *
      * @return {@code User}
      */
-    public static Invitation inviteUser(String email) {
-
-        Invitation invitation = new Invitation();
-        invitation.setInvitedUserEmailAddress(email);
-        invitation.setInviteRedirectUrl("http://localhost:8080");
-        invitation.setSendInvitationMessage(true);
-        GraphServiceClient graphClient = getGraphClient();
-        return graphClient.invitations().post(invitation);
-    }
-
-    /**
-     * create User at Entra
-     *
-     * @return {@code User}
-     */
-    public static User createUser(String username, String password) {
+    public User createUser(String username, String password) {
 
         User user = new User();
         user.setAccountEnabled(true);
@@ -86,7 +70,7 @@ public class UserService {
      *
      * @return Usable and authenticated Graph Client
      */
-    private static GraphServiceClient getGraphClient() {
+    public static GraphServiceClient getGraphClient() {
         if (graphClient == null) {
 
             // Create secret
