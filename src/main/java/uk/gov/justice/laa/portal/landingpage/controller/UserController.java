@@ -30,9 +30,10 @@ public class UserController {
      * Add new user via Microsoft Graph API.
      */
     @PostMapping("/register")
-    public User addUserToGraph(@RequestParam("username") String username,
+    public String addUserToGraph(@RequestParam("username") String username,
                                @RequestParam("password") String password) {
-        return userService.createUser(username, password);
+        User user = userService.createUser(username, password);
+        return "register";
     }
 
     /**

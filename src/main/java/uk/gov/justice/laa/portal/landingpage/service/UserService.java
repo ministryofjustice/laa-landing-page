@@ -70,7 +70,7 @@ public class UserService {
      *
      * @return Usable and authenticated Graph Client
      */
-    protected static GraphServiceClient getGraphClient() {
+    public static GraphServiceClient getGraphClient() {
         if (graphClient == null) {
 
             // Create secret

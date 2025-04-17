@@ -24,8 +24,8 @@ class UserControllerTest {
     void addUserToGraph() {
         User created = new User();
         when(userService.createUser(anyString(), anyString())).thenReturn(created);
-        User user = userController.addUserToGraph("username", "password");
-        assertThat(user).isNotNull();
+        String view = userController.addUserToGraph("username", "password");
+        assertThat(view).isEqualTo("register");
     }
 
     @Test
