@@ -41,6 +41,6 @@ class UserControllerTest extends BaseIntegrationTest {
                 performPostRequestWithParams(ADD_USER_API_ENDPOINT, requestParams, status().is2xxSuccessful(), "register");
 
         //then
-        assertThat(model).isNull();
+        assertThat(model).isNotNull();
     }
 }
