@@ -27,6 +27,13 @@ class UserControllerTest extends BaseIntegrationTest {
     private GraphServiceClient graphServiceClient;
 
     @Test
+    void shouldRedirectAnonymousUser() throws Exception {
+        this.mockMvc
+                .perform(get("/users"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
     @DisplayName("Happy Path Test: addUserToGraph")
     //@WithMockUser(username = "admin")
     void addUserToGraph() throws Exception {
