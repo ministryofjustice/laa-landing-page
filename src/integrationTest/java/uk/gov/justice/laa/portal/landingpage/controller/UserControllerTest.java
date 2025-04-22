@@ -17,7 +17,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 class UserControllerTest extends BaseIntegrationTest {
     private static final String ADD_USER_API_ENDPOINT = "/register";
@@ -26,6 +28,7 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @Test
     @DisplayName("Happy Path Test: addUserToGraph")
+    //@WithMockUser(username = "admin")
     void addUserToGraph() throws Exception {
         LinkedMultiValueMap<String, String> requestParams = new LinkedMultiValueMap();
         requestParams.add("username", "john");
@@ -42,5 +45,14 @@ class UserControllerTest extends BaseIntegrationTest {
 
         //then
         assertThat(model).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Happy Path Test: register get")
+    //@WithMockUser(username = "admin")
+    void register() throws Exception {
+        this.mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("register"));
     }
 }
