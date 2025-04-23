@@ -30,9 +30,10 @@ public class UserController {
      * Add new user via Microsoft Graph API.
      */
     @PostMapping("/register")
-    public User addUserToGraph(@RequestParam("username") String username,
+    public String addUserToGraph(@RequestParam("username") String username,
                                @RequestParam("password") String password) {
-        return UserService.createUser(username, password);
+        User user = userService.createUser(username, password);
+        return "register";
     }
 
     /**
@@ -41,24 +42,6 @@ public class UserController {
     @GetMapping("/register")
     public String register() {
         return "register";
-    }
-
-    /**
-     * invite new user via Microsoft Graph API.
-     */
-    @PostMapping("/invite")
-    public Invitation invite(@RequestParam("email") String email, Model model) {
-        Invitation result = UserService.inviteUser(email);
-        model.addAttribute("redeemUrl", result.getInviteRedeemUrl());
-        return result;
-    }
-
-    /**
-     * Retrieves a list of users from Microsoft Graph API.
-     */
-    @GetMapping("/invite")
-    public String inviteUserToGraph() {
-        return "invite";
     }
 
     /**
