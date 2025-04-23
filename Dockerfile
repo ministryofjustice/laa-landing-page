@@ -1,4 +1,4 @@
-FROM openjdk:21-slim
+FROM amazoncorretto:21-alpine
 
 # Create a group and user to run the application
 RUN addgroup --gid 1000 appgroup && \
