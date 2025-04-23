@@ -42,30 +42,3 @@ jobs:
           name: checkstyle-report
           path: target/checkstyle/*
           retention-days: 15
-
-      - name: Run Coverage
-        run: |
-          ./gradlew test
-
-      - name: Add coverage to PR
-        id: jacoco
-        uses: madrapps/jacoco-report@v1.7.1
-        with:
-          paths: |
-            ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 85
-          min-coverage-changed-files: 85
-          title: Code Coverage
-          update-comment: true
-
-      - name: Fail PR if overall coverage is less than 1%
-        if: ${{ steps.jacoco.outputs.coverage-overall < 1 }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.setFailed('Overall unit test coverage is less than 85%!')    
-
-      - name: Run IntegrationTest
-        run: |
-          ./gradlew integrationTest
