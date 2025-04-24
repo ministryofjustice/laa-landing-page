@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
@@ -20,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service class for handling login-related logic.
@@ -93,12 +95,14 @@ public class LoginService {
         LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
         String formattedLastLogin = "N/A";
 
+        Set<LaaApplication> userAccLaaApps = LaaAppDetailsStore.getUserAssignedApps(appRoleAssignments);
+
         if (lastLogin != null) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
             formattedLastLogin = lastLogin.format(formatter);
         }
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin);
+                userAppRoleAssignments, userAccLaaApps, user, formattedLastLogin);
     }
 }

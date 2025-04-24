@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * UserSessionData
@@ -20,6 +21,7 @@ public class UserSessionData {
     private String accessToken;
     private List<AppRoleAssignment> appRoleAssignments;
     private List<AppRole> userAppRoles;
+    private Set<LaaApplication> userAccLaaApps;
     private User user;
     private String lastLogin;
 }
