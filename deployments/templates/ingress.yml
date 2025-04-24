@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: laa-landing-page-dev-ingress
+  name: laa-landing-page-ingress
   annotations:
-    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-dev-ingress-${NAMESPACE}-green
+    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: "sticky"
@@ -23,6 +23,6 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: laa-landing-page-dev # this should match the metadata.name in service.yml
+                name: laa-landing-page # this should match the metadata.name in service.yml
                 port:
                   number: 8080
