@@ -35,15 +35,15 @@
         Services
     </h2>
     <div class="grid-container">
-        <div class="grid-item">
+        <div th:each="app:${laaApplications}" class="grid-item">
             <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Contracted Work and Administration
+                <a class="govuk-link" th:href="${app.getUrl()}">
+                    <div th:text="${app.getTitle()}"></div>
                 </a>
             </h3>
             <p class="govuk-body">
-                Manage contracted casework and related administrative tasks.
-            </p>
+            <div th:text="${app.getDescription()}"></div>
+            <p></p>
             <p class="govuk-body">
                 (Placeholder text)
             </p>
@@ -55,66 +55,6 @@
                 </p>
             </div>
 
-        </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    CCMS
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Maintain up-to-date client details and financial records.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
-        </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Submit a CWA Claim
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Submit Claims and Warranties for Administration securely and efficiently.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
-        </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Courts and Fees
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Access detailed information on court fees, procedural guidelines, and filing requirements.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
         </div>
     </div>
 </main>
