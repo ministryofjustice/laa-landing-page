@@ -48,5 +48,5 @@ spec:
             - name: BASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: laa-landing-page-base-url-k8s
+                  name: laa-landing-page-base-url-dev-k8s
                   key: BASE_URL
