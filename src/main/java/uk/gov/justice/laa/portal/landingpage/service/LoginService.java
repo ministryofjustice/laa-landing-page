@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.microsoft.graph.models.Application;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
@@ -32,11 +33,16 @@ public class LoginService {
     private static final String AZURE_CLIENT_ID = System.getenv("AZURE_CLIENT_ID");
     private static final String AZURE_TENANT_ID = System.getenv("AZURE_TENANT_ID");
     private final GraphApiService graphApiService;
+    private final UserService userService;
+
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
-    public LoginService(GraphApiService graphApiService) {
+
+    public LoginService(GraphApiService graphApiService, UserService userService) {
         this.graphApiService = graphApiService;
+        this.userService = userService;
+
     }
 
     /**
@@ -98,7 +104,9 @@ public class LoginService {
             formattedLastLogin = lastLogin.format(formatter);
         }
 
+        List<Application> managedAppRegistrations = userService.getManagedAppRegistrations();
+
         return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin);
+                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations);
     }
 }

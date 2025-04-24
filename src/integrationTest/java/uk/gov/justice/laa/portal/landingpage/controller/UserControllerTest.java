@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.getGraphClient;
 
 class UserControllerTest extends BaseIntegrationTest {
     private static final String ADD_USER_API_ENDPOINT = "/register";
@@ -42,7 +43,7 @@ class UserControllerTest extends BaseIntegrationTest {
         requestParams.add("password", "pw123");
 
         mockStatic(UserService.class);
-        when(UserService.getGraphClient()).thenReturn(graphServiceClient);
+        when(getGraphClient()).thenReturn(graphServiceClient);
         var users = Mockito.mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(users);
         when(graphServiceClient.users().post(any())).thenReturn(new User());
