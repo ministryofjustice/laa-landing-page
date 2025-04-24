@@ -1,13 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.utils.HashUtil;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.microsoft.graph.models.AppRoleAssignment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.utils.HashUtil;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * A temporary store for LAA applications of their name, description, url.
- *
+ * <p>
  * The class loads all the LAA applications details during server startup and map them against the
  * user assigned Entra app details and help populate on landing age.
  */
