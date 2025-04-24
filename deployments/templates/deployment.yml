@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: laa-landing-page-dev
+  name: laa-landing-page
   labels:
-    app: laa-landing-page-dev
+    app: laa-landing-page
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: laa-landing-page-dev # this should match the selector in service.yml
+      app: laa-landing-page # this should match the selector in service.yml
   template:
     metadata:
       labels:
-        app: laa-landing-page-dev # this should match the selector in service.yml
+        app: laa-landing-page # this should match the selector in service.yml
     spec:
       securityContext:
         runAsNonRoot: true
       containers:
-        - name: laa-landing-page-dev
+        - name: laa-landing-page
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           imagePullPolicy: IfNotPresent
           securityContext:
