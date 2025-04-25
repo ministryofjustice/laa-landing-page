@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 /**
  * A temporary store for LAA applications of their name, description, url.
- * <p>
+ *
  * The class loads all the LAA applications details during server startup and map them against the
  * user assigned Entra app details and help populate on landing age.
  */
