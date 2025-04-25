@@ -27,7 +27,7 @@ public class HashUtilTest {
     public void hashNullString() {
         assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> {
             String s = null;
-            assertThat(HashUtil.sha256(s)).isEqualTo("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889");
+            HashUtil.sha256(s);
         }).withMessage("Invalid input string for hashing");
     }
 
@@ -36,7 +36,7 @@ public class HashUtilTest {
     public void hashNullUuid() {
         assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> {
             UUID uuid = null;
-            assertThat(HashUtil.sha256(uuid)).isEqualTo("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889");
+            HashUtil.sha256(uuid);
         }).withMessage("Invalid input value for hashing");
     }
 }

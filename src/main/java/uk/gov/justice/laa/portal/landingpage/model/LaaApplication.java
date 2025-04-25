@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
  * Model class representing Laa Applications
  */
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class LaaApplication {
