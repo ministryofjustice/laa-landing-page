@@ -27,7 +27,7 @@ public class GraphClientConfig {
 
         final String[] scopes = new String[]{"https://graph.microsoft.com/.default"};
 
-         return new GraphServiceClient(credential, scopes);
+        return new GraphServiceClient(credential, scopes);
     }
-    }
+}
 
