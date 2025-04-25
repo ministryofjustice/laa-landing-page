@@ -6,6 +6,9 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Config file for graph client api
+ */
 @Configuration
 public class GraphClientConfig {
 
