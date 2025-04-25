@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.models.Application;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
@@ -104,7 +104,7 @@ public class LoginService {
             formattedLastLogin = lastLogin.format(formatter);
         }
 
-        List<Application> managedAppRegistrations = userService.getManagedAppRegistrations();
+        List<LaaApplication> managedAppRegistrations = userService.getManagedAppRegistrations();
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
                 userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations);
