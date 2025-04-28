@@ -36,21 +36,29 @@ class LoginControllerTest {
 
     @Test
     void loginPageDisplaysIndex() {
+
+        // Arrange
         Model model = new org.springframework.ui.ConcurrentModel();
 
+        // Act
         String view = controller.login(model);
 
+        // Assert
         assertThat(view).isEqualTo("index");
         assertThat(model.containsAttribute("user")).isTrue();
     }
 
     @Test
     void handleLogin_withBlankEmail_redirectsToLoginWithError() {
+
+        // Arrange
         RedirectAttributes attrs = mock(RedirectAttributes.class);
+
+        // Act
         RedirectView result = controller.handleLogin("   ", attrs);
 
+        // Assert
         assertThat(result.getUrl()).isEqualTo("/");
-        // flash attribute "errorMessage" set
         verify(attrs).addFlashAttribute(eq("errorMessage"), contains("incorrect Username"));
     }
 

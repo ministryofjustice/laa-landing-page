@@ -12,12 +12,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class LaaAppDetailsStoreTest {
 
-    private LaaAppDetailsStore store;
-
     @BeforeEach
     void bootstrapCsv() throws IOException {
-        store = new LaaAppDetailsStore();
-        store.populateLaaApps();      // mimic @PostConstruct
+        LaaAppDetailsStore store = new LaaAppDetailsStore();
+        store.populateLaaApps();
     }
 
     @AfterEach

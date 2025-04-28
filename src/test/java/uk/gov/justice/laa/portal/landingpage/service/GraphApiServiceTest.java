@@ -68,4 +68,6 @@ class GraphApiServiceTest {
         List<AppRoleAssignment> result = service.getAppRoleAssignments("t");
         assertThat(result).isEmpty();                       // graceful fallback
     }
+
+
 }
