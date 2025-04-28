@@ -4,14 +4,13 @@ import com.microsoft.graph.models.Application;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.utils.HashUtil;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,14 +34,15 @@ public class LaaAppDetailsStore {
 
     @PostConstruct
     void populateLaaApps() throws IOException {
-        File csvFile = new ClassPathResource(LAA_APP_META_FILE_PATH).getFile();
+        InputStream csvFileStream = getClass().getClassLoader().getResourceAsStream(LAA_APP_META_FILE_PATH);
+
         CsvMapper mapper = new CsvMapper();
         CsvSchema schema = mapper
                 .schemaFor(LaaApplication.class)
                 .withoutHeader();
 
         try (MappingIterator<LaaApplication> iterator =
-                     mapper.readerFor(LaaApplication.class).with(schema).readValues(csvFile)) {
+                     mapper.readerFor(LaaApplication.class).with(schema).readValues(csvFileStream)) {
             laaApplications = iterator.readAll();
         }
     }
