@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * service class for graph api.
@@ -50,7 +51,7 @@ public class GraphApiService {
 
             for (JsonNode node : values) {
                 AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-                appRoleAssignment.setId(node.path("resourceId").asText());
+                appRoleAssignment.setResourceId(UUID.fromString(node.path("resourceId").asText()));
                 appRoleAssignment.setResourceDisplayName(node.path("resourceDisplayName").asText());
 
                 appRoleAssignments.add(appRoleAssignment);

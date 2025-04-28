@@ -33,6 +33,9 @@ jobs:
       - name: Run Coverage
         run: |
           ./gradlew test
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add coverage to PR
         id: jacoco
