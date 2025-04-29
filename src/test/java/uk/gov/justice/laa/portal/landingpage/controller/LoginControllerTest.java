@@ -17,20 +17,20 @@ import static org.mockito.Mockito.contains;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)            // ① Enable Mockito auto-initialization  [oai_citation:1‡JUnit](https://junit.org/junit5/docs/current/user-guide/?utm_source=chatgpt.com)
+@ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
 
     @Mock
-    private LoginService loginService;          // ② Mocked dependency
+    private LoginService loginService;
 
     @InjectMocks
-    private LoginController controller;         // ③ Class under test
+    private LoginController controller;
 
     @Test
     void givenEmptyEmail_whenHandleLogin_thenRedirectToLoginWithError() {
+
         // Arrange
         Model model = new ConcurrentModel();
-        RedirectAttributes attrs = org.mockito.Mockito.mock(RedirectAttributes.class);
 
         // Act
         String viewIndex = controller.login(model);
@@ -42,6 +42,7 @@ class LoginControllerTest {
 
     @Test
     void givenBlankEmail_whenHandleLogin_thenRedirectsWithErrorFlash() {
+
         // Arrange
         RedirectAttributes attrs = org.mockito.Mockito.mock(RedirectAttributes.class);
 
@@ -57,6 +58,7 @@ class LoginControllerTest {
 
     @Test
     void givenValidEmail_whenHandleLogin_thenRedirectsToAzure() {
+
         // Arrange
         String email = "foo@bar.com";
         when(loginService.buildAzureLoginUrl(email))
@@ -74,6 +76,7 @@ class LoginControllerTest {
 
     @Test
     void whenMigrateEndpoint_thenReturnsMigrateView() {
+
         // Act
         String view = controller.migrate();
 
