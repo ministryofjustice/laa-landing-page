@@ -23,11 +23,14 @@ import static org.mockito.Mockito.when;
 
 class GraphApiServiceTest {
 
-    private static final String APP_ROLE_JSON = "{" + "\"value\":[{" + "\"resourceId\":\"11111111-1111-1111-1111-111111111111\"," + "\"resourceDisplayName\":\"Test App\"}]}";
-
-    private static final String USER_PROFILE_JSON = "{\"displayName\":\"Test User\",\"userPrincipalName\":\"test@example.com\"}";
-    private static final String SIGN_IN_JSON = "{\"signInActivity\":{\"lastSignInDateTime\":\"2024-01-01T10:00:00Z\"}}";
-    private static final String MEMBER_OF_JSON = "{\"value\":[{\"displayName\":\"Role A\",\"description\":\"Role A description\"}]}";
+    private static final String APP_ROLE_JSON =
+            "{" + "\"value\":[{" + "\"resourceId\":\"11111111-1111-1111-1111-111111111111\"," + "\"resourceDisplayName\":\"Test App\"}]}";
+    private static final String USER_PROFILE_JSON =
+            "{\"displayName\":\"Test User\",\"userPrincipalName\":\"test@example.com\"}";
+    private static final String SIGN_IN_JSON =
+            "{\"signInActivity\":{\"lastSignInDateTime\":\"2024-01-01T10:00:00Z\"}}";
+    private static final String MEMBER_OF_JSON =
+            "{\"value\":[{\"displayName\":\"Role A\",\"description\":\"Role A description\"}]}";
 
     // Placeholder test - technically works but needs to be refactored to Arrange Act Assert
     @Test
