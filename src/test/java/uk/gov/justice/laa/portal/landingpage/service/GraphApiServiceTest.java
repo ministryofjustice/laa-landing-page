@@ -35,18 +35,21 @@ class GraphApiServiceTest {
     // Placeholder test - technically works but needs to be refactored to Arrange Act Assert
     @Test
     void endpointsAreParsedCorrectly() {
-        try (MockedConstruction<RestTemplate> ignored = mockConstruction(RestTemplate.class, (mock, ctx) -> when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class))).thenAnswer(invocation -> {
-            String url = invocation.getArgument(0);
-            if (url.contains("appRoleAssignments")) {
-                return new ResponseEntity<>(APP_ROLE_JSON, HttpStatus.OK);
-            } else if (url.contains("signInActivity")) {
-                return new ResponseEntity<>(SIGN_IN_JSON, HttpStatus.OK);
-            } else if (url.contains("memberOf")) {
-                return new ResponseEntity<>(MEMBER_OF_JSON, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(USER_PROFILE_JSON, HttpStatus.OK);
-            }
-        }))) {
+        try (MockedConstruction<RestTemplate> ignored =
+                     mockConstruction(RestTemplate.class, (mock, ctx) ->
+                             when(mock.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                                     .thenAnswer(invocation -> {
+                                         String url = invocation.getArgument(0);
+                                         if (url.contains("appRoleAssignments")) {
+                                             return new ResponseEntity<>(APP_ROLE_JSON, HttpStatus.OK);
+                                         } else if (url.contains("signInActivity")) {
+                                             return new ResponseEntity<>(SIGN_IN_JSON, HttpStatus.OK);
+                                         } else if (url.contains("memberOf")) {
+                                             return new ResponseEntity<>(MEMBER_OF_JSON, HttpStatus.OK);
+                                         } else {
+                                             return new ResponseEntity<>(USER_PROFILE_JSON, HttpStatus.OK);
+                                         }
+                                     }))) {
 
             GraphApiService service = new GraphApiService();
             String token = "dummy";
