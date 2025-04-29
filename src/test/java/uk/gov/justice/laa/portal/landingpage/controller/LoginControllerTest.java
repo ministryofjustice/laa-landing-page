@@ -13,7 +13,9 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.contains;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)            // ① Enable Mockito auto-initialization  [oai_citation:1‡JUnit](https://junit.org/junit5/docs/current/user-guide/?utm_source=chatgpt.com)
 class LoginControllerTest {

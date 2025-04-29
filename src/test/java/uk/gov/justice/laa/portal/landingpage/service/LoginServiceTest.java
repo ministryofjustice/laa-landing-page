@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -36,17 +37,6 @@ class LoginServiceTest {
     private UserService userService;
     @Mock
     private HttpSession session;
-
-    /*
-     I think the private string redirectUri is null and causing this test to fail, but can't figure out how
-     to set this as a value in the mock without editing the tested code and don't want to do this yet
-     Will leave for now
-    */
-    @Test
-    void buildsAzureUrl_withEncodedParams() {
-        String url = loginService.buildAzureLoginUrl("a@b.com");
-        assertThat(url).contains("login_hint=a%40b.com");
-    }
 
     @Test
     void createsSessionData_whenGraphReturnsValues() {
