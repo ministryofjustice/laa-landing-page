@@ -39,7 +39,8 @@ class LoginServiceTest {
 
     @Test
     void createsSessionData_whenGraphReturnsValues() {
-        //Arrange (principle and token)
+
+        // Arrange (principle and token)
         var principal = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")), Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"), "preferred_username");
         var authToken = new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "azure");
         var client = MockitoTestUtils.authorizedClient();
@@ -52,20 +53,20 @@ class LoginServiceTest {
         when(userService.getManagedAppRegistrations()).thenReturn(List.of());
 
         // Act
-        var dto = loginService.processUserSession(authToken, client, session);
+        var userSessionData = loginService.processUserSession(authToken, client, session);
 
         // Assert
-        assertThat(dto).isNotNull();
-        assertThat(dto.getName()).isEqualTo("Alice");
+        assertThat(userSessionData).isNotNull();
+        assertThat(userSessionData.getName()).isEqualTo("Alice");
     }
 
-    // This was suggested, not sure if needed but leaving just for now
+    // This is vestigial and will be refactored
     static class MockitoTestUtils {
         static OAuth2AuthorizedClient authorizedClient() {
             var token = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "token-123", Instant.now(), Instant.now().plusSeconds(3600));
-            OAuth2AuthorizedClient c = org.mockito.Mockito.mock(OAuth2AuthorizedClient.class);
-            when(c.getAccessToken()).thenReturn(token);
-            return c;
+            OAuth2AuthorizedClient authorizedClient = org.mockito.Mockito.mock(OAuth2AuthorizedClient.class);
+            when(authorizedClient.getAccessToken()).thenReturn(token);
+            return authorizedClient;
         }
     }
 }
