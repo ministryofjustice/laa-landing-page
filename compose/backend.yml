@@ -1,0 +1,25 @@
+---
+version: '2.4'
+
+services:
+
+  lla-shared-database:
+    build: ../database
+    healthcheck:
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    environment:
+      DB_USERNAME:
+      DB_PASSWORD:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PG_MAJOR: 14.3-alpine
+      PG_VERSION: 14.3-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - lla-docker-shared-database-data:/var/lib/postgresql/data
+
+
+volumes:
+  lla-docker-shared-database-data:
