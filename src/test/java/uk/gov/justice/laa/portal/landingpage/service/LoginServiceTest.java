@@ -22,6 +22,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,12 +41,24 @@ class LoginServiceTest {
     @Test
     void createsSessionData_whenGraphReturnsValues() {
 
-        // Arrange (principle and token)
-        var principal = new DefaultOAuth2User(List.of(new SimpleGrantedAuthority("ROLE_USER")), Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"), "preferred_username");
+        // Arrange
+        var principal =
+                new DefaultOAuth2User(
+                        List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                        Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"),
+                        "preferred_username");
         var authToken = new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "azure");
-        var client = MockitoTestUtils.authorizedClient();
 
-        // Arrange (stub graph responses)
+        // (Stubbed OAuth2 client)
+        var token = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                "token-123",
+                Instant.now(),
+                Instant.now().plusSeconds(3600));
+        OAuth2AuthorizedClient client = mock(OAuth2AuthorizedClient.class);
+        when(client.getAccessToken()).thenReturn(token);
+
+        // (Stub Graph API responses)
         when(graph.getAppRoleAssignments(anyString())).thenReturn(List.of(new AppRoleAssignment()));
         when(graph.getUserAssignedApps(anyString())).thenReturn(List.of(new AppRole()));
         when(graph.getUserProfile(anyString())).thenReturn(new User());
@@ -56,17 +69,8 @@ class LoginServiceTest {
         var userSessionData = loginService.processUserSession(authToken, client, session);
 
         // Assert
+        // (Unfinished - may need to verify more attributes in this section)
         assertThat(userSessionData).isNotNull();
         assertThat(userSessionData.getName()).isEqualTo("Alice");
-    }
-
-    // This is vestigial and will be refactored
-    static class MockitoTestUtils {
-        static OAuth2AuthorizedClient authorizedClient() {
-            var token = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, "token-123", Instant.now(), Instant.now().plusSeconds(3600));
-            OAuth2AuthorizedClient authorizedClient = org.mockito.Mockito.mock(OAuth2AuthorizedClient.class);
-            when(authorizedClient.getAccessToken()).thenReturn(token);
-            return authorizedClient;
-        }
     }
 }
