@@ -1,9 +1,11 @@
 name: ZAP DAST Scan
 
 on:
+  push:
+    branches:
+      - main
+      - zap-dast-test
   workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * *' # runs daily at 2am UTC
 
 jobs:
   zap_scan:
