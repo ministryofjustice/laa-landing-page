@@ -1,0 +1,43 @@
+name: ZAP DAST Scan
+
+on:
+  push:
+    branches:
+      - main
+      - test/STB-1306_ZAP-DAST
+  workflow_dispatch:
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:24.0.2
+        options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Compose
+        run: |
+          docker-compose up -d
+          echo "Waiting for the app to be ready..."
+          for i in {1..10}; do
+            curl -s http://localhost:8089 && break || sleep 5
+          done
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          target: 'http://localhost:8089'
+          cmd_options: '-a -j'
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: |
+            report_html.html
+            report_json.json
