@@ -11,16 +11,11 @@ jobs:
   zap_scan:
     runs-on: ubuntu-latest
 
-    services:
-      docker:
-        image: docker:24.0.2
-        options: --privileged
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Docker Compose
+      - name: Start application with Docker Compose
         run: |
           docker compose up -d
           echo "Waiting for the app to be ready..."
@@ -39,5 +34,9 @@ jobs:
         with:
           name: zap-report
           path: |
-            report_html.html
-            report_json.json
+            report*.html
+            report*.json
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker compose down
