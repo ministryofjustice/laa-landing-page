@@ -130,7 +130,7 @@ public class GraphApiServiceTest {
             List<LaaApplication> results = service.getUserAppsAndRoles("token");
             assertThat(results).isNotEmpty();
             assertThat(results.size()).isEqualTo(1);
-            LaaApplication result = results.get(0);
+            LaaApplication result = results.getFirst();
             assertThat(result.getId()).isEqualTo("870c4f2e-85b6-4d43-bdda-6ed9a579b725");
             assertThat(result.getTitle()).isEqualTo("App One");
 
