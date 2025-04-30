@@ -44,13 +44,12 @@ jobs:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Wait for app to be ready on port 8089
-      - name: Wait for the app to be ready
+      - name: Wait for the app to be ready (in Docker)
         run: |
-          echo "Waiting for the app to be ready..."
+          echo "Waiting for the app to be ready inside Docker..."
           for i in {1..12}; do
-            if curl -s http://localhost:8089 > /dev/null; then
-              echo "App is up!"
+            if docker exec app curl -s http://localhost:8089 > /dev/null; then
+              echo "App is up inside container!"
               break
             fi
             echo "Waiting ($i)..."
