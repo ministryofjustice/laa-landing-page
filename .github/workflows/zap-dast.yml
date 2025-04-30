@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - test/STB-1306_ZAP-DAST
+      - zap-dast-test
   workflow_dispatch:
 
 jobs:
