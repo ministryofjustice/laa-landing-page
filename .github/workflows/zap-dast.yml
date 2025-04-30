@@ -33,9 +33,11 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # Step 4: Run Gradle build to ensure the application is ready
       - name: Build the project
         run: ./gradlew build --no-daemon
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 5: Set up Docker Compose (if required for the environment)
       - name: Set up Docker Compose
