@@ -9,22 +9,23 @@ on:
 
 jobs:
   zap_scan:
+    name: Run ZAP DAST Scan
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
+      # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Set up JDK
-      - name: Set up JDK
+      # Step 2: Set up JDK (needed for Gradle build)
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: 'corretto'
           java-version: '21'
 
-      # Cache Gradle dependencies
-      - name: Cache Gradle
+      # Step 3: Cache Gradle dependencies
+      - name: Cache Gradle dependencies
         uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
@@ -32,16 +33,12 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # Grant Execute Permission for Gradle wrapper (reusing Linter Check)
-      - name: Grant Execute Permission for Gradle
-        run: chmod +x gradlew
+      # Step 4: Run Gradle build to ensure the application is ready
+      - name: Build the project
+        run: ./gradlew build --no-daemon
 
-      # Build application JAR (assuming Gradle build file includes all dependencies)
-      - name: Build application JAR
-        run: ./gradlew build
-
-      # Start application with Docker Compose
-      - name: Start application with Docker Compose
+      # Step 5: Set up Docker Compose (if required for the environment)
+      - name: Set up Docker Compose
         run: |
           docker compose up -d
           echo "Waiting for the app to be ready..."
@@ -49,23 +46,18 @@ jobs:
             curl -s http://localhost:8089 && break || sleep 5
           done
 
-      # Run ZAP Baseline Scan
+      # Step 6: Run ZAP Baseline Scan
       - name: Run ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
         with:
           target: 'http://localhost:8089'
           cmd_options: '-a -j'
 
-      # Upload ZAP Report
+      # Step 7: Upload ZAP Report as artifact
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
           path: |
-            report*.html
-            report*.json
-
-      # Tear down Docker Compose (to keep the runner clean)
-      - name: Tear down Docker Compose
-        if: always()
-        run: docker compose down
+            report_html.html
+            report_json.json
