@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    #    image: laa-landing-page-dev:latest
+    image: laa-landing-page-dev:latest
     container_name: laa-landing-page-container
     ports:
       - "8089:8080"
