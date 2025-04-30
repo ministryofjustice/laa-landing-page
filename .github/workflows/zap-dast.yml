@@ -61,7 +61,7 @@ jobs:
       - name: Run ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
         with:
-          target: 'http://localhost:8089'
+          target: 'http://host.docker.internal:8089'
           cmd_options: '-a -j'
 
       # Upload the ZAP report
