@@ -3,8 +3,12 @@ package uk.gov.justice.laa.portal.landingpage.config;
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.authentication.AuthenticationProvider;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Scope;
 
 /**
  * Config file for graph client api
@@ -22,6 +26,7 @@ public class GraphClientConfig {
      * @return Usable and authenticated Graph Client
      */
     @Bean
+    @Primary
     public static GraphServiceClient getGraphClient() {
 
         // Create secret
@@ -32,5 +37,20 @@ public class GraphClientConfig {
 
         return new GraphServiceClient(credential, scopes);
     }
+
+    /**
+     * Get the GraphApiClient using access token
+     * @param accessToken the access token
+     * @return the Graph service client
+     */
+    @Bean(name = "graphicServiceClientByAccessToken")
+    @Scope(BeanDefinition.SCOPE_PROTOTYPE)
+    public static GraphServiceClient getGraphClientByAccessToken(String accessToken) {
+
+        AuthenticationProvider authProvider = new TokenAuthAccessProvider(accessToken);
+
+        return new GraphServiceClient(authProvider);
+    }
+
 }
 
