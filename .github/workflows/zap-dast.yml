@@ -13,18 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up JDK (needed for Gradle build)
+      # Set up Java 21
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: 'corretto'
           java-version: '21'
 
-      # Step 3: Cache Gradle dependencies
+      # Cache Gradle dependencies
       - name: Cache Gradle dependencies
         uses: actions/cache@v3
         with:
@@ -33,29 +33,38 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Build the project
-        run: ./gradlew build --no-daemon
+      # Grant execute permission for Gradle wrapper
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      # Start the app in the background
+      - name: Start app using bootRun
+        run: ./gradlew bootRun &
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 5: Set up Docker Compose (if required for the environment)
-      - name: Set up Docker Compose
+      # Wait for app to be ready on port 8089
+      - name: Wait for the app to be ready
         run: |
-          docker compose up -d
           echo "Waiting for the app to be ready..."
-          for i in {1..10}; do
-            curl -s http://localhost:8089 && break || sleep 5
+          for i in {1..12}; do
+            if curl -s http://localhost:8089 > /dev/null; then
+              echo "App is up!"
+              break
+            fi
+            echo "Waiting ($i)..."
+            sleep 5
           done
 
-      # Step 6: Run ZAP Baseline Scan
+      # Run ZAP Baseline scan
       - name: Run ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
         with:
           target: 'http://localhost:8089'
           cmd_options: '-a -j'
 
-      # Step 7: Upload ZAP Report as artifact
+      # Upload the ZAP report
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         with:
