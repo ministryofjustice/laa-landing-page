@@ -15,6 +15,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Build application JAR
+        run: ./gradlew build
+
       - name: Start application with Docker Compose
         run: |
           docker compose up -d
