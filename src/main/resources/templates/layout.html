@@ -11,7 +11,15 @@
     <th:block th:replace="~{partials/header :: header}"></th:block>
 
     <div class="govuk-width-container">
-        <div th:if="${breadcrumbs != null}" th:replace="${breadcrumbs}"></div>
+        <div th:if="${feedback != null}">
+            <div th:replace="${feedback}"></div>
+        </div>
+        <nav th:if="${navigation != null}">
+            <div th:replace="${navigation}"></div>
+        </nav>
+        <nav th:if="${breadcrumbs != null}">
+            <div th:replace="${breadcrumbs}"></div>
+        </nav>
         <main class="govuk-main-wrapper" id="main-content" role="main" style="padding-top: 0;">
             <th:block th:replace="${mainContent}">Default Main Content</th:block>
         </main>
@@ -25,7 +33,7 @@
     <script type="module">
         import { initAll } from '/js/govuk-frontend-5.8.0.min.js'
         import * as GOVUKFrontend from '/javascripts/govuk-frontend-5.8.0.min.js'
-        import * as GOVUKFrontend from '/javascripts/moj-frontend-5.1.2.min.js'
+        import * as MOJUKFrontend from '/javascripts/moj-frontend-5.1.2.min.js'
 
         GOVUKFrontend.initAll()
         MOJFrontend.initAll()
