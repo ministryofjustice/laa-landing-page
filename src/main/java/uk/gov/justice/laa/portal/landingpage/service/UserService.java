@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
+import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,11 +38,13 @@ import java.util.stream.Collectors;
  * userService
  */
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private static final String AZURE_CLIENT_ID = System.getenv("AZURE_CLIENT_ID");
     private static final String AZURE_TENANT_ID = System.getenv("AZURE_TENANT_ID");
     private static final String AZURE_CLIENT_SECRET = System.getenv("AZURE_CLIENT_SECRET");
+    private final UserModelRepository userModelRepository;
     private static GraphServiceClient graphClient;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -62,7 +66,14 @@ public class UserService {
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
         GraphServiceClient graphClient = getGraphClient();
-        return graphClient.users().post(user);
+        User saved = graphClient.users().post(user);
+        UserModel userModel = new UserModel();
+        userModel.setEmail(user.getDisplayName());
+        userModel.setPassword("NotSave");
+        userModel.setFullName(user.getDisplayName());
+        userModel.setId(saved.getId());
+        userModelRepository.save(userModel);
+        return saved;
     }
 
     /**
@@ -293,5 +304,9 @@ public class UserService {
         paginatedUsers.setTotalUsers(totalUsers);
 
         return paginatedUsers;
+    }
+
+    public List<UserModel> getSavedUsers() {
+        return userModelRepository.findAll();
     }
 }

@@ -46,7 +46,7 @@ dependencies {
 
     implementation 'com.azure.spring:azure-spring-boot-starter-active-directory:3.14.0'
 
-    implementation 'com.h2database:h2'
+    implementation 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'

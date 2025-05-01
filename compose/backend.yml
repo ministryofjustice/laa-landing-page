@@ -3,7 +3,7 @@ version: '2.4'
 
 services:
 
-  lla-shared-database:
+  laa-shared-database:
     build: ../database
     healthcheck:
       interval: 10s
@@ -18,8 +18,8 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - lla-docker-shared-database-data:/var/lib/postgresql/data
+      - laa-docker-shared-database-data:/var/lib/postgresql/data
 
 
 volumes:
-  lla-docker-shared-database-data:
+  laa-docker-shared-database-data:
