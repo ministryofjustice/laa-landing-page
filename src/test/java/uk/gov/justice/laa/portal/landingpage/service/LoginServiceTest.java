@@ -72,5 +72,6 @@ class LoginServiceTest {
         // (Unfinished - may need to verify more attributes in this section)
         assertThat(userSessionData).isNotNull();
         assertThat(userSessionData.getName()).isEqualTo("Alice");
+
     }
 }
