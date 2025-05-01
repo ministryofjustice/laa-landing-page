@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
-import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
@@ -17,8 +16,12 @@ import com.microsoft.kiota.ApiException;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +37,8 @@ import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.getGraphClient;
+
 /**
  * userService
  */
@@ -41,6 +46,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
 
+    private final GraphServiceClient graphClient;
     private static final String AZURE_CLIENT_ID = System.getenv("AZURE_CLIENT_ID");
     private static final String AZURE_TENANT_ID = System.getenv("AZURE_TENANT_ID");
     private static final String AZURE_CLIENT_SECRET = System.getenv("AZURE_CLIENT_SECRET");
@@ -49,13 +55,17 @@ public class UserService {
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Autowired
+    public UserService(GraphServiceClient graphClient) {
+        this.graphClient = graphClient;
+    }
+
     /**
      * create User at Entra
      *
      * @return {@code User}
      */
     public User createUser(String username, String password) {
-
         User user = new User();
         user.setAccountEnabled(true);
         user.setDisplayName(username);
@@ -76,32 +86,12 @@ public class UserService {
         return saved;
     }
 
-    /**
-     * Get Authenticated Graph Client for API usage
-     *
-     * @return Usable and authenticated Graph Client
-     */
-    public static GraphServiceClient getGraphClient() {
-        if (graphClient == null) {
-
-            // Create secret
-            final ClientSecretCredential credential = new ClientSecretCredentialBuilder()
-                    .clientId(AZURE_CLIENT_ID).tenantId(AZURE_TENANT_ID).clientSecret(AZURE_CLIENT_SECRET).build();
-
-            final String[] scopes = new String[]{"https://graph.microsoft.com/.default"};
-
-            graphClient = new GraphServiceClient(credential, scopes);
-        }
-
-        return graphClient;
-    }
-
     public List<Map<String, Object>> getUserAppRolesByUserId(String userId) {
         List<AppRoleAssignment> userAppRoles = getUserAppRoleAssignmentByUserId(userId);
         List<Map<String, Object>> roleDetails = new ArrayList<>();
 
         for (AppRoleAssignment appRole : userAppRoles) {
-            ServicePrincipal servicePrincipal = getGraphClient()
+            ServicePrincipal servicePrincipal = graphClient
                     .servicePrincipals()
                     .byServicePrincipalId(String.valueOf(appRole.getResourceId()))
                     .get();
@@ -138,7 +128,7 @@ public class UserService {
      * @return {@code List<User>}
      */
     public List<User> getAllUsers() {
-        UserCollectionResponse response = getGraphClient().users().get();
+        UserCollectionResponse response = graphClient.users().get();
         return response != null ? response.getValue() : Collections.emptyList();
     }
 
@@ -188,7 +178,7 @@ public class UserService {
      */
     public List<AppRoleAssignment> getUserAppRoleAssignmentByUserId(String userId) {
         try {
-            return getGraphClient()
+            return graphClient
                     .users()
                     .byUserId(userId)
                     .appRoleAssignments()
@@ -207,7 +197,7 @@ public class UserService {
         appRoleAssignment.setAppRoleId(UUID.fromString(appRoleId));
 
         try {
-            getGraphClient()
+            graphClient
                     .users()
                     .byUserId(userId)
                     .appRoleAssignments()
@@ -221,7 +211,7 @@ public class UserService {
 
     public void removeAppRoleFromUser(String userId, String appRoleAssignmentId) {
         try {
-            getGraphClient()
+            graphClient
                     .users()
                     .byUserId(userId)
                     .appRoleAssignments()
@@ -235,7 +225,6 @@ public class UserService {
     }
 
     public User getUserById(String userId) {
-        GraphServiceClient graphClient = getGraphClient();
 
         try {
             return graphClient.users().byUserId(userId).get();
@@ -254,8 +243,18 @@ public class UserService {
         return dateTime.format(formatter);
     }
 
+    public List<LaaApplication> getManagedAppRegistrations() {
+        try {
+            var response = graphClient.applications().get();
+            return (response != null && response.getValue() != null)
+                    ? LaaAppDetailsStore.getUserAssignedApps(response.getValue()) : Collections.emptyList();
+        } catch (Exception ex) {
+            logger.error("Error fetching managed app registrations: ", ex);
+            return Collections.emptyList();
+        }
+    }
+
     private PaginatedUsers getAllUsersPaginated(int pageSize, String nextPageLink, String previousPageLink) {
-        GraphServiceClient graphClient = getGraphClient();
         UserCollectionResponse response;
 
         if (nextPageLink == null || nextPageLink.isEmpty()) {
