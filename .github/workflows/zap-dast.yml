@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Run ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.11.0
+        uses: zaproxy/action-baseline@v0.14.0
         with:
           target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
           cmd_options: '-a -j'
