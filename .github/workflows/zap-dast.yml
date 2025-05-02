@@ -19,6 +19,13 @@ jobs:
           target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
+      - name: Slack notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+            channel-id: 'zap-scan-events'
+            slack-message: "A new issue ${{ github.event.issue }} has been created"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
