@@ -19,8 +19,6 @@ jobs:
           target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
-        run: |
-          echo  "NUMBER: ${{ github.event.issue.number }} and  URL: ${{ github.event.issue.issue_url }}"
         env:
           NUMBER: ${{ github.event.issue.number }}
           URL: ${{ github.event.issue.issue_url }}
