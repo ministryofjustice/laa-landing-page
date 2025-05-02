@@ -19,6 +19,8 @@ jobs:
           target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
+        run: |
+          echo  "NUMBER: ${{ github.event.issue.number }} and  URL: ${{ github.event.issue.issue_url }}"
         env:
           NUMBER: ${{ github.event.issue.number }}
           URL: ${{ github.event.issue.issue_url }}
@@ -27,7 +29,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.23.0
         with:
             channel-id: 'laa-zap-scan-notifications'
-            slack-message: "A new issue number: ${{ NUMBER }} and url: ${{ URL }} has been created"
+            slack-message: "A new issue number: ${{ env.NUMBER }} and url: ${{ env.URL }}  has been created"
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
 
