@@ -5,21 +5,31 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.serviceprincipals.getbyids.GetByIdsPostRequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.callGraphApi;
 
 /**
  * service class for graph api.
@@ -27,9 +37,17 @@ import java.util.UUID;
 @Service
 public class GraphApiService {
 
-    private static final String GRAPH_URL = "https://graph.microsoft.com/v1.0";
+    public static final UUID DEFAULT_ENTRA_APP_ROLE = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    public static final String GRAPH_URL = "https://graph.microsoft.com/v1.0";
+
+    private final ApplicationContext context;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    public GraphApiService(ApplicationContext context) {
+        this.context = context;
+    }
 
     /**
      * Get App Role Assignments of User
@@ -53,7 +71,7 @@ public class GraphApiService {
                 AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
                 appRoleAssignment.setResourceId(UUID.fromString(node.path("resourceId").asText()));
                 appRoleAssignment.setResourceDisplayName(node.path("resourceDisplayName").asText());
-
+                appRoleAssignment.setAppRoleId(UUID.fromString(node.path("appRoleId").asText()));
                 appRoleAssignments.add(appRoleAssignment);
             }
         } catch (Exception e) {
@@ -62,6 +80,74 @@ public class GraphApiService {
 
         return appRoleAssignments;
     }
+
+    /**
+     * Get the user apps and the user roles for the apps
+     * <p>
+     * This method loads the user role assignments against apps and map them with service principles, then
+     * constructs the laa apps list
+     *
+     * @param accessToken The OAuth2 access token required to authenticate the request.
+     * @return {@code List<LaaApplication}
+     */
+    public List<LaaApplication> getUserAppsAndRoles(String accessToken) {
+
+        // Load app role assignments
+        List<AppRoleAssignment> appRoleAssignments = getAppRoleAssignments(accessToken);
+
+        if (appRoleAssignments == null || appRoleAssignments.isEmpty()) {
+            // no app role assignments so returning empty list
+            return Collections.emptyList();
+        }
+
+        // construct list of service principle Ids from app roles
+        List<String> servicePrincipleIds = appRoleAssignments.stream().map(AppRoleAssignment::getResourceId).filter(Objects::nonNull).map(UUID::toString).toList();
+
+        GetByIdsPostRequestBody getByIdsPostRequestBody = new GetByIdsPostRequestBody();
+        getByIdsPostRequestBody.setIds(servicePrincipleIds);
+
+        // Load the service principles by their ids in app role assignments
+        List<DirectoryObject> servicePrincipals = Objects.requireNonNull(graphicServiceClientByAccessToken(accessToken).servicePrincipals().getByIds().post(getByIdsPostRequestBody)).getValue();
+
+        if (servicePrincipals == null || servicePrincipals.isEmpty()) {
+            // no service principles so returning empty list
+            return Collections.emptyList();
+        }
+
+        // map the app role assignments against service principles
+        Map<String, LaaApplication> laaApplications = new HashMap<>();
+
+        for (AppRoleAssignment appRoleAssignment : appRoleAssignments) {
+            ServicePrincipal servicePrincipal = servicePrincipals.stream().map(ServicePrincipal.class::cast)
+                    .filter(spr -> Objects.equals(spr.getId(), String.valueOf(appRoleAssignment.getResourceId())))
+                    .findFirst().orElse(null);
+            if (servicePrincipal != null) {
+                LaaApplication laaApplication = laaApplications.computeIfAbsent(servicePrincipal.getAppId(),
+                        l -> LaaApplication.builder().id(servicePrincipal.getAppId()).role(new HashSet<>()).build());
+                AppRole role = Optional.ofNullable(servicePrincipal.getAppRoles()).orElse(Collections.emptyList()).stream()
+                        .filter(r -> Objects.equals(r.getId(), appRoleAssignment.getAppRoleId())).findFirst().orElse(null);
+
+                if (role == null) {
+                    role = new AppRole();
+                    if (appRoleAssignment.getAppRoleId() != null && appRoleAssignment.getAppRoleId().equals(DEFAULT_ENTRA_APP_ROLE)) {
+                        role.setId(DEFAULT_ENTRA_APP_ROLE);
+                        role.setDisplayName("Default");
+                    }
+                }
+
+                laaApplication.getRole().add(role);
+                laaApplications.put(servicePrincipal.getAppId(), laaApplication);
+            }
+        }
+
+        // Finally construct the laa apps list which contains all the app information along with the user roles
+        laaApplications.values().forEach(LaaAppDetailsStore::populateAppDetails);
+
+
+        return new ArrayList<>(laaApplications.values());
+
+    }
+
 
     public User getUserProfile(String accessToken) {
         String url = GRAPH_URL + "/me";
@@ -141,16 +227,8 @@ public class GraphApiService {
         return appRoles;
     }
 
-    private String callGraphApi(String accessToken, String url) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + accessToken);
-        headers.set("Accept", "application/json");
-
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, String.class);
-
-        return response.getBody();
+    private GraphServiceClient graphicServiceClientByAccessToken(String accessToken) {
+        return (GraphServiceClient) context.getBean("graphicServiceClientByAccessToken", accessToken);
     }
+
 }
