@@ -1,122 +1,92 @@
 <!DOCTYPE html>
-<html lang="en"
-      th:replace="~{layout :: layout(
+<html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
+      feedback=~{::#feedback},
       mainContent=~{::#main-content},
-      pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs})}"
-      xmlns:th="http://www.thymeleaf.org"
->
+      pageCategory=${'home'},
+      navigation=~{::#navigation},
+      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
+
 <head>
-    <title>Homepage TEST</title>
+    <title>Homepage</title>
 </head>
 
 <body>
-<script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <ol class="govuk-breadcrumbs__list">
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Home</a>
-        </li>
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Portal</a>
-        </li>
-    </ol>
-</nav>
-<main class="govuk-main-wrapper" id="main-content">
-    <div th:if="${#authentication.isAuthenticated()}">
+    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <div class="govuk-phase-banner" id="feedback">
+        <p class="govuk-phase-banner__content">
+            <strong class="govuk-tag govuk-phase-banner__content__tag">
+                Alpha
+            </strong>
+            <span class="govuk-phase-banner__text">
+                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
+                    email</a>.
+            </span>
+        </p>
     </div>
-    <p class="govuk-body">You are logged in as <span th:text="${name}"></span></p>
-    <h1 class="govuk-heading-xl">LAA Portal</h1>
-    <p class="govuk-inset-text">Welcome to the Legal Aid Agency Portal. Here you can access a range of tools and
-        resources
-        to manage your legal aid services.</p>
-    <h2 class="govuk-heading-l">
-        Services
-    </h2>
-    <div class="grid-container">
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Contracted Work and Administration
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Manage contracted casework and related administrative tasks.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
 
-        </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    CCMS
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Maintain up-to-date client details and financial records.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
+    <nav class="moj-sub-navigation" aria-label="Sub navigation" id="navigation">
+        <ul class="moj-sub-navigation__list">
+            <li class="moj-sub-navigation__item">
+                <a class="moj-sub-navigation__link" aria-current="page" href="#1">Services</a>
+            </li>
+
+            <li class="moj-sub-navigation__item">
+                <a class="moj-sub-navigation__link" href="#2">My account</a>
+            </li>
+
+            <li class="moj-sub-navigation__item">
+                <a class="moj-sub-navigation__link" href="#3">Help</a>
+            </li>
+        </ul>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <h1 class="govuk-heading-l">
+                    <span class="govuk-caption-l">123456</span>
+                    <div th:text="${user.displayName}"></div>
+                </h1>
+                <h2 class="govuk-heading-m">Manage user access</h2>
+                <article class="moj-ticket-panel" aria-label="Sub navigation 1">
+                    <section class="moj-ticket-panel__content moj-ticket-panel__content--blue" aria-label="Section 1">
+                        <h3 class="govuk-heading-s govuk-!-margin-bottom-2">Auth app</h3>
+                        <p class="govuk-body">New Matter Starts and manage your LAA Online Users and Contacts
+                        </p>
+                        <p class="govuk-body">
+                            <a href="#" class="govuk-link" rel="noreferrer noopener" target="_blank">Access app
+                                (opens
+                                in new tab)</a>
+                        </p>
+                    </section>
+                </article>
+                <br>
+                <h2 class="govuk-heading-m">Services</h2>
+
+                <p class="govuk-body">Please click a link below to access the service you require. </p>
+                <div class="grid-container">
+                    <div th:each="app:${laaApplications}">
+                        <article class="moj-ticket-panel">
+                            <section
+                                class="ticket-panel-grid-item moj-ticket-panel__content moj-ticket-panel__content--blue"
+                                aria-label="Section 1">
+                                <h3 class="govuk-heading-s govuk-!-margin-bottom-2" th:text="${app.getTitle()}">
+                                </h3>
+                                <p class="govuk-body" th:text="${app.getDescription()}"></p>
+                                <p class="govuk-body">
+                                    <a th:href="${app.getUrl()}" class="govuk-link" rel="noreferrer noopener"
+                                        target="_blank">Access
+                                        service (opens in new tab)</a>
+                                </p>
+                            </section>
+
+                        </article>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Submit a CWA Claim
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Submit Claims and Warranties for Administration securely and efficiently.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
-        </div>
-        <div class="grid-item">
-            <h3 class="govuk-heading-m">
-                <a class="govuk-link" th:href="@{/home}">
-                    Courts and Fees
-                </a>
-            </h3>
-            <p class="govuk-body">
-                Access detailed information on court fees, procedural guidelines, and filing requirements.
-            </p>
-            <p class="govuk-body">
-                (Placeholder text)
-            </p>
-            <div>
-                <p class="govuk-phase-banner__content">
-            <span class="govuk-phase-banner__text green">
-                The service is good
-              </span>
-                </p>
-            </div>
-        </div>
+    </main>
     </div>
-</main>
 </body>
+
 </html>

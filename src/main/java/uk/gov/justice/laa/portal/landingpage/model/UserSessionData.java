@@ -22,4 +22,6 @@ public class UserSessionData {
     private List<AppRole> userAppRoles;
     private User user;
     private String lastLogin;
+    private List<LaaApplication> laaApplications;
+    private List<LaaApplication> userAppsAndRoles;
 }
