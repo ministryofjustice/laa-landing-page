@@ -63,7 +63,6 @@ public class UserService {
         passwordProfile.setForceChangePasswordNextSignIn(true);
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
-        GraphServiceClient graphClient = getGraphClient();
         User saved = graphClient.users().post(user);
         UserModel userModel = new UserModel();
         userModel.setEmail(user.getDisplayName());
