@@ -22,7 +22,7 @@ jobs:
       - name: Slack notification
         uses: slackapi/slack-github-action@v1.23.0
         with:
-            channel-id: 'zap-scan-events'
+            channel-id: 'laa-zap-scan-notifications'
             slack-message: "A new issue ${{ github.event.issue }} has been created"
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
