@@ -1,10 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.microsoft.graph.models.AppRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Set;
 
 /**
  * Model class representing Laa Applications
@@ -24,4 +27,6 @@ public class LaaApplication {
     private String description;
     @JsonProperty(index = 4)
     private String url;
+    @JsonProperty(index = 5)
+    private Set<AppRole> role;
 }

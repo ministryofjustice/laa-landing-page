@@ -105,8 +105,9 @@ public class LoginService {
         }
 
         List<LaaApplication> managedAppRegistrations = userService.getManagedAppRegistrations();
+        List<LaaApplication> userAppsAndRoles = graphApiService.getUserAppsAndRoles(tokenValue);
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations);
+                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles);
     }
 }

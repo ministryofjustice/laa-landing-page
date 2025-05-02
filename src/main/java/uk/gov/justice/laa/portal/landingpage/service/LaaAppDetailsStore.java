@@ -1,9 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.models.Application;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import com.microsoft.graph.models.Application;
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.utils.HashUtil;
@@ -30,6 +30,14 @@ public class LaaAppDetailsStore {
         return laaApplications.stream().filter(app -> registeredApps.stream()
                         .map(Application::getAppId).anyMatch(resId -> HashUtil.sha256(resId).equals(app.getId())))
                 .collect(Collectors.toList());
+    }
+
+    public static void populateAppDetails(LaaApplication application) {
+        LaaApplication laaMeta = laaApplications.stream().filter(app -> app.getId().equals(HashUtil.sha256(application.getId()))).findFirst().orElse(application);
+        application.setDescription(laaMeta.getDescription());
+        application.setUrl(laaMeta.getUrl());
+        application.setTitle(laaMeta.getTitle());
+        application.setOidGroupName(laaMeta.getOidGroupName());
     }
 
     @PostConstruct
