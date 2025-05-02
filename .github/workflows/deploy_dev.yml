@@ -6,6 +6,14 @@ on:
     branches: [main]
 
 jobs:
+  snyk:
+    name: Snyk Security Scan
+    uses: ministryofjustice/laa-reusable-github-actions/.github/workflows/snyk.yml@6981b46931b91e29dcfbf2a7704a7b668f7993de
+    with:
+      tag: "laa-landing-page"
+      args: --severity-threshold=high
+    secrets:
+      snyk_token: ${{ secrets.SNYK_TOKEN }}
   ecr:
     runs-on: ubuntu-latest
     environment: development
@@ -14,7 +22,6 @@ jobs:
       contents: read # This is required for actions/checkout
     steps:
       - uses: actions/checkout@v4
-
 
       - name: Set up JDK
         uses: actions/setup-java@v3

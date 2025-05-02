@@ -1,0 +1,19 @@
+name: Security Scanning
+
+on:
+  pull_request:
+    types:
+      - edited
+      - opened
+      - reopened
+      - synchronize
+
+jobs: 
+  snyk:
+    name: Snyk Security Scan
+    uses: ministryofjustice/laa-reusable-github-actions/.github/workflows/snyk.yml@6981b46931b91e29dcfbf2a7704a7b668f7993de
+    with:
+      tag: "laa-landing-page"
+      args: --severity-threshold=high
+    secrets:
+      snyk_token: ${{ secrets.SNYK_TOKEN }}
