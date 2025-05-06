@@ -69,7 +69,6 @@ class LoginServiceTest {
         var userSessionData = loginService.processUserSession(authToken, client, session);
 
         // Assert
-        // (Unfinished - may need to verify more attributes in this section)
         assertThat(userSessionData).isNotNull();
         assertThat(userSessionData.getName()).isEqualTo("Alice");
 
