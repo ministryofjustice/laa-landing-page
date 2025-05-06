@@ -15,6 +15,7 @@ jobs:
 
     steps:
       - name: Run ZAP Daily Baseline Scan
+        id: baseline_run
         uses: zaproxy/action-baseline@v0.14.0
         with:
           target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
@@ -25,7 +26,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.23.0
         with:
             channel-id: 'laa-zap-scan-notifications'
-            slack-message: "A new issue has been created by Zap Baseline Scan \n Results can be found here: ${{ github.event.issue.issue_url }} "
+            slack-message: "A new issue has been created by Zap Baseline Scan \n Results can be found here:§n ${{join(steps.baseline_run.outputs.*, '\n')}} "
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
 
