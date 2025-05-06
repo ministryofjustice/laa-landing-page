@@ -1,0 +1,35 @@
+name: ZAP DAST Weeky Full Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * SUN'
+
+jobs:
+  zap_scan:
+    name: Run Full ZAP DAST Scan Against Live App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run ZAP Weekly Full Scan
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
+          cmd_options: '-a -j -m 120'
+          fail_action: false
+
+      - name: Slack notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+            channel-id: 'laa-zap-scan-notifications'
+            slack-message: "Zap Weekly Full scan has been run, please review the results here: https://github.com/ministryofjustice/laa-landing-page/issues"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
+
+      - name: Upload Weekly Scan ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-zap-report
+          path: |
+            weekly_report_html.html
+            weekly_report_json.json

@@ -1,0 +1,37 @@
+name: ZAP DAST Daily Baseline Scan
+
+on:
+  workflow_dispatch:
+  push :
+  schedule:
+    - cron: '0 8 * * 1-5'
+
+jobs:
+  zap_scan:
+    name: Run ZAP DAST Daily Baseline Scan Against Live App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run ZAP Daily Baseline Scan
+        id: baseline_run
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
+          cmd_options: '-a -j'
+          fail_action: false
+
+      - name: Slack notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+            channel-id: 'laa-zap-scan-notifications'
+            slack-message: "Zap daily baseline scan has been run, please review the results here: https://github.com/ministryofjustice/laa-landing-page/issues"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
+
+      - name: Upload ZAP Daily Baseline Run Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-zap-report
+          path: |
+            daily_report_html.html
+            daily_report_json.json
