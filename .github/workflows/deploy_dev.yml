@@ -8,7 +8,7 @@ on:
 jobs:
   snyk:
     name: Snyk Security Scan
-    uses: ministryofjustice/laa-reusable-github-actions/.github/workflows/snyk.yml@6981b46931b91e29dcfbf2a7704a7b668f7993de
+    uses: ministryofjustice/laa-reusable-github-actions/.github/workflows/snyk.yml@main
     with:
       tag: "laa-landing-page"
     secrets:
