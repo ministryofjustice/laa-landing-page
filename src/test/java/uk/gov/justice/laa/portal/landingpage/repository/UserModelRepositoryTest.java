@@ -25,7 +25,7 @@ class UserModelRepositoryTest {
     @DisplayName("Test 1:Save user Test")
     @Order(1)
     @Rollback(value = false)
-    public void saveEmployeeTest(){
+    public void saveEmployeeTest() {
 
         //Action
         UserModel user = new UserModel();
@@ -41,7 +41,7 @@ class UserModelRepositoryTest {
 
     @Test
     @Order(2)
-    public void getListOfUsersTest(){
+    public void getListOfUsersTest() {
         //Action
         List<UserModel> users = userModelRepository.findAll();
         //Verify
