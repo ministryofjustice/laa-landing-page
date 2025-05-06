@@ -26,7 +26,7 @@ class LaaAppDetailsStoreTest {
     }
 
     @Test
-    void testGetUserAssignedAppsFiltersMatchingApplications() {
+    void getUserAssignedAppsFiltersMatchingApplications() {
 
         // Arrange
         LaaApplication app1 = LaaApplication.builder()
@@ -65,7 +65,7 @@ class LaaAppDetailsStoreTest {
     }
 
     @Test
-    void testPopulateLaaAppsLoadsData() throws IOException {
+    void populateLaaAppsLoadsData() throws IOException {
 
         // Arrange
         store.populateLaaApps();
