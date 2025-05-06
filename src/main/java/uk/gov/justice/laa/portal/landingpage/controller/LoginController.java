@@ -77,6 +77,7 @@ public class LoginController {
                 model.addAttribute("user", userSessionData.getUser());
                 model.addAttribute("lastLogin", userSessionData.getLastLogin());
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
+                model.addAttribute("userAppsAndRoles", userSessionData.getUserAppsAndRoles());
             } else {
                 logger.info("No access token found");
             }
