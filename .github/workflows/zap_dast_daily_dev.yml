@@ -26,7 +26,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.23.0
         with:
             channel-id: 'laa-zap-scan-notifications'
-            slack-message: "A new issue has been created by Zap Baseline Scan \n Results can be found here:§n ${{join(steps.baseline_run.outputs.*, '\n')}} "
+            slack-message: "A new issue has been created by Zap Baseline Scan \n Results can be found here:§n ${{steps.baseline_run.outputs.*}} "
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
 
