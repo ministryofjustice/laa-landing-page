@@ -10,7 +10,7 @@ jobs:
     name: Snyk Security Scan
     uses: ministryofjustice/laa-reusable-github-actions/.github/workflows/snyk.yml@main
     with:
-      tag: "laa-landing-page"
+      tag: "laa-landing-page-dev"
     secrets:
       snyk_token: ${{ secrets.SNYK_TOKEN }}
   ecr:
