@@ -3,8 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.util.LinkedMultiValueMap;
@@ -19,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class UserControllerTest extends BaseIntegrationTest {
     private static final String ADD_USER_API_ENDPOINT = "/register";
 
@@ -26,6 +26,7 @@ class UserControllerTest extends BaseIntegrationTest {
     private GraphServiceClient graphServiceClient;
 
     @Test
+    @Order(1)
     void shouldRedirectAnonymousUser() throws Exception {
         this.mockMvc
                 .perform(get("/users"))
@@ -34,6 +35,7 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @Test
     @DisplayName("Happy Path Test: addUserToGraph")
+    @Order(2)
     void addUserToGraph() throws Exception {
         LinkedMultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
         requestParams.add("username", "john");
@@ -53,9 +55,19 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @Test
     @DisplayName("Happy Path Test: register get")
+    @Order(3)
     void register() throws Exception {
         this.mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("register"));
+    }
+
+    @Test
+    @DisplayName("Happy Path Test: displaySavedUsers get")
+    @Order(4)
+    void displaySavedUsers() throws Exception {
+        this.mockMvc.perform(get("/userlist"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"));
     }
 }
