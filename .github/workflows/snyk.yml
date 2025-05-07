@@ -20,7 +20,7 @@ jobs:
       - name: Run Snyk to check Docker images for vulnerabilities
         run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
 
-      # Using the Snyk Docker Action to check for vulnerabilities
+      # Using the Snyk Docker Action to check the container for vulnerabilities
       - name: Docker Vulnerabilities
         uses: snyk/actions/docker@master
         continue-on-error: true
@@ -66,6 +66,7 @@ jobs:
           mkdir sarif_files &&
           mv snyk_test.sarif snyk_code_test.sarif snyk_iac_test.sarif snyk_docker_test.sarif sarif_files/
 
+      # A snyk.sarif file is generated in the above steps, which is uploaded to GitHub Code Scanning
       - name: Upload result to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
         with:
