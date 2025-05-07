@@ -1,134 +1,134 @@
 <!DOCTYPE html>
-<html lang="en"
-      th:replace="~{layout :: layout(
+<html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'register'},
-      breadcrumbs=~{::#breadcrumbs})}"
-      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
     <title>Login Page</title>
 </head>
-<body>
-<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <ol class="govuk-breadcrumbs__list">
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="/user/create/offices">< Back</a>
-        </li>
-    </ol>
-</nav>
-<main class="govuk-main-wrapper" id="main-content">
-    <div class="govuk-grid-row">
-        <div class="govuk-grid-column-two-thirds-from-desktop">
-            <span class="govuk-caption-l">Firm 1 | 123455</span>
-            <h1 class="govuk-heading-l">
-                Check your answers
-            </h1>
-            <form th:action="@{/user/create/check-answers}" th:method="post">
-                <div class="govuk-summary-card">
-                    <div class="govuk-summary-card__title-wrapper">
-                        <h2 class="govuk-summary-card__title">
-                            User details
-                        </h2>
-                        <ul class="govuk-summary-card__actions">
-                            <li class="govuk-summary-card__action">
-                                <a class="govuk-link" href="/user/create/details">Change</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="govuk-summary-card__content">
-                        <dl class="govuk-summary-list">
-                            <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">
-                                    Email
-                                </dt>
-                                <dd class="govuk-summary-list__value">
-                                    <span th:text="${user.mail}"></span>
-                                </dd>
-                            </div>
-                            <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">
-                                    First Name
-                                </dt>
-                                <dd class="govuk-summary-list__value">
-                                    <span th:text="${user.givenName}"></span>
-                                </dd>
-                            </div>
-                            <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">
-                                    Last name
-                                </dt>
-                                <dd class="govuk-summary-list__value">
-                                    <span th:text="${user.surname}"></span>
 
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
-                </div>
-                <div class="govuk-summary-card">
-                    <div class="govuk-summary-card__title-wrapper">
-                        <h2 class="govuk-summary-card__title">
-                            Services
-                        </h2>
-                        <ul class="govuk-summary-card__actions">
-                            <li class="govuk-summary-card__action">
-                                <a class="govuk-link" href="/user/create/services">Change</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="govuk-summary-card__content">
-                        <dl class="govuk-summary-list">
-                            <div th:each="appRole : ${roles.values()}">
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/user/create/offices">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds-from-desktop">
+                <span class="govuk-caption-l">Firm 1 | 123455</span>
+                <h1 class="govuk-heading-l">
+                    Check your answers
+                </h1>
+                <form th:action="@{/user/create/check-answers}" th:method="post">
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User details
+                            </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link" href="/user/create/details">Change</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
                                 <div class="govuk-summary-list__row">
                                     <dt class="govuk-summary-list__key">
-                                        <span th:text="${appRole[0].appName}"></span>
+                                        Email
                                     </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:each="role: ${appRole}">
-                                            <span th:text="${role.roleName}"></span><br />
-                                        </span>
+                                        <span th:text="${user.mail}"></span>
                                     </dd>
                                 </div>
-                            </div>
-                        </dl>
-                    </div>
-                </div>
-                <div class="govuk-summary-card">
-                    <div class="govuk-summary-card__title-wrapper">
-                        <h2 class="govuk-summary-card__title">
-                            Offices
-                        </h2>
-                        <ul class="govuk-summary-card__actions">
-                            <li class="govuk-summary-card__action">
-                                <a class="govuk-link" href="/user/create/offices">Change</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="govuk-summary-card__content">
-                        <dl class="govuk-summary-list">
-                            <div th:each="office : ${officeData.getSelectedOffices()}">
                                 <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        First Name
+                                    </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:each="role: ${office}">
-                                            <span th:text="${office}"></span><br />
-                                        </span>
+                                        <span th:text="${user.givenName}"></span>
                                     </dd>
                                 </div>
-                            </div>
-                        </dl>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        Last name
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.surname}"></span>
+
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
                     </div>
-                </div>
-                <div class="govuk-button-group">
-                    <button type="submit" class="govuk-button" data-module="govuk-button"
-                            data-govuk-button-init="">
-                        Create user and send invite
-                    </button>
-                </div>
-            </form>
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                Services
+                            </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link" href="/user/create/services">Change</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div th:each="appRole : ${roles.values()}">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">
+                                            <span th:text="${appRole[0].appName}"></span>
+                                        </dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:each="role: ${appRole}">
+                                                <span th:text="${role.roleName}"></span><br />
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                Offices
+                            </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link" href="/user/create/offices">Change</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div th:each="office : ${officeData.getSelectedOffices()}">
+                                    <div class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:each="role: ${office}">
+                                                <span th:text="${office}"></span><br />
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button" data-module="govuk-button" data-govuk-button-init="">
+                            Create user and send invite
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
-</main>
+    </main>
 </body>
+
 </html>
