@@ -5,7 +5,7 @@ import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 
 /**
- * Javadoc comment.
+ * User Model Repository
  */
 @Repository
 public interface UserModelRepository extends JpaRepository<UserModel, Long> {
