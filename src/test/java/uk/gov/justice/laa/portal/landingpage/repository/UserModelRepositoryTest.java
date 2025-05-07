@@ -2,12 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.annotation.Rollback;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 
 import java.util.List;
@@ -22,9 +20,7 @@ class UserModelRepositoryTest {
     private UserModelRepository userModelRepository;
 
     @Test
-    @DisplayName("Test 1:Save user Test")
-    @Order(1)
-    @Rollback(value = false)
+    @DisplayName("Test :Save user Test")
     public void saveEmployeeTest() {
 
         //Action
@@ -40,9 +36,14 @@ class UserModelRepositoryTest {
     }
 
     @Test
-    @Order(2)
     public void getListOfUsersTest() {
         //Action
+        UserModel user = new UserModel();
+        user.setId("123");
+        user.setEmail("test@test.com");
+        user.setPassword("password");
+        user.setFullName("John Smith");
+        userModelRepository.save(user);
         List<UserModel> users = userModelRepository.findAll();
         //Verify
         assertThat(users.size()).isGreaterThan(0);
