@@ -24,10 +24,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -49,6 +49,11 @@ class UserServiceTest {
         LaaApplication laaApp3 = LaaApplication.builder().id("a32d05f19e64840bf256a7128483db941410e4f86bae5c1d4a03c9514c2266a4").title("App Two").build();
         List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2, laaApp3);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
     }
 
     @Test
@@ -135,10 +140,5 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-    }
-
-    @AfterAll
-    public static void tearDown() {
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
     }
 }
