@@ -1,181 +1,177 @@
 <!DOCTYPE html>
-<html lang="en"
-      th:replace="~{layout :: layout(
+<html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs})}"
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
-      xmlns:th="http://www.thymeleaf.org"
->
 <head>
     <title>Homepage</title>
 </head>
+
 <body>
-<script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <ol class="govuk-breadcrumbs__list">
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Home</a>
-        </li>
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Section</a>
-        </li>
-        <li aria-current="page" class="govuk-breadcrumbs__list-item">Subsection</li>
-    </ol>
-</nav>
-<main class="govuk-main-wrapper" id="main-content">
+    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="#">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="#">Section</a>
+            </li>
+            <li aria-current="page" class="govuk-breadcrumbs__list-item">Subsection</li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
 
-    <div class="govuk-grid-row">
-        <div class="govuk-grid-column-two-thirds">
-            <h1 class="govuk-heading-xl">LAA Online Portal</h1>
-        </div>
-
-        <div class="govuk-grid-column-two-thirds">
-            <p class="govuk-body">To sign in to the Online Portal please enter your username and
-                password.</p>
-            <p class="govuk-body">By logging into this Portal you accept the
-                <a href="https://www.gov.uk/government/publications/laa-online-portal-help-and-information"
-                   target="_blank">Terms
-                    and Conditions</a>.</p>
-            <!--            <div class="govuk-inset-text">-->
-            <!--                <p>If you have registered your account. You can now start using the <a-->
-            <!--                        href="https://www.gov.uk/government/publications/laa-online-portal-help-and-information"-->
-            <!--                        target="_blank">new-->
-            <!--                    portal-->
-            <!--                </a>.</p>-->
-            <!--            </div>-->
-            <form th:action="@{/login}" th:method="post">
-                <div class="govuk-form-group">
-
-                    <div th:if="${errorMessage != null}">
-                        <p th:text="${errorMessage}" class="error-message govuk-body"></p>
-                    </div>
-                     <label class="govuk-label" for="email">
-                    Username:
-                </label>
-                    <input class="govuk-input govuk-input--width-10" name="email" type="email"
-                           id="email">
-                </div>
-
-                <button class="govuk-button govuk-button--start" data-govuk-button-init=""
-                        data-module="govuk-button"
-                        draggable="false"
-                        role="button" type="submit">
-                    Sign in
-                    <svg aria-hidden="true" class="govuk-button__start-icon" focusable="false"
-                         height="19"
-                         viewBox="0 0 33 40" width="17.5" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0 0h13l20 20-20 20H0l20-20z" fill="currentColor"></path>
-                    </svg>
-                </button>
-            </form>
-        </div>
-
-        <div class="govuk-grid-column-one-third">
-            <h2 class="govuk-heading-s">Guidance</h2>
-            <ul class="govuk-list">
-                <li>
-                    <a class="govuk-link" href="#">Terms and Conditions</a>
-                </li>
-                <li>
-                    <a class="govuk-link" href="#">List of Services</a>
-                </li>
-                <li>
-                    <a class="govuk-link" href="#">Privacy Statement</a>
-                </li>
-
-                <li>
-                    <a class="govuk-link" href="#">New portal</a>
-                </li>
-
-                <li>
-                    <a class="govuk-link" href="#">Help</a>
-                </li>
-
-            </ul>
-
-            <h2 class="govuk-heading-s">Services</h2>
-
-            <div class="govuk-inset-text">
-                <p>All services are good</p>
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl">LAA Online Portal</h1>
             </div>
 
-            <table class="govuk-table">
+            <div class="govuk-grid-column-two-thirds">
+                <p class="govuk-body">To sign in to the Online Portal please enter your username and
+                    password.</p>
+                <p class="govuk-body">By logging into this Portal you accept the
+                    <a href="https://www.gov.uk/government/publications/laa-online-portal-help-and-information"
+                        target="_blank">Terms
+                        and Conditions</a>.
+                </p>
+                <!--            <div class="govuk-inset-text">-->
+                <!--                <p>If you have registered your account. You can now start using the <a-->
+                <!--                        href="https://www.gov.uk/government/publications/laa-online-portal-help-and-information"-->
+                <!--                        target="_blank">new-->
+                <!--                    portal-->
+                <!--                </a>.</p>-->
+                <!--            </div>-->
+                <form th:action="@{/login}" th:method="post">
+                    <div class="govuk-form-group">
 
-                <tbody class="govuk-table__body">
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        Apply: civil legal aid
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
-                </tr>
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        Apply: criminal legal aid
+                        <div th:if="${errorMessage != null}">
+                            <p th:text="${errorMessage}" class="error-message govuk-body"></p>
+                        </div>
+                        <label class="govuk-label" for="email">
+                            Username:
+                        </label>
+                        <input class="govuk-input govuk-input--width-10" name="email" type="email" id="email">
+                    </div>
 
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
-                </tr>
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        CCMS
+                    <button class="govuk-button govuk-button--start" data-govuk-button-init=""
+                        data-module="govuk-button" draggable="false" role="button" type="submit">
+                        Sign in
+                        <svg aria-hidden="true" class="govuk-button__start-icon" focusable="false" height="19"
+                            viewBox="0 0 33 40" width="17.5" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M0 0h13l20 20-20 20H0l20-20z" fill="currentColor"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
 
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
-                </tr>
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        CWA
+            <div class="govuk-grid-column-one-third">
+                <h2 class="govuk-heading-s">Guidance</h2>
+                <ul class="govuk-list">
+                    <li>
+                        <a class="govuk-link" href="#">Terms and Conditions</a>
+                    </li>
+                    <li>
+                        <a class="govuk-link" href="#">List of Services</a>
+                    </li>
+                    <li>
+                        <a class="govuk-link" href="#">Privacy Statement</a>
+                    </li>
 
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
-                </tr>
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        LAA Online Portal
+                    <li>
+                        <a class="govuk-link" href="#">New portal</a>
+                    </li>
 
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
-                </tr>
-                <tr class="govuk-table__row">
-                    <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
-                        Submit a crime form
-                    </td>
-                    <td class="govuk-table__cell" style="background-color: green; ">
-                        <p style="margin-left:5px; font-size: 16px; color: white;">
-                            Good Service
-                        </p>
-                    </td>
+                    <li>
+                        <a class="govuk-link" href="#">Help</a>
+                    </li>
 
-                </tr>
-                </tbody>
-            </table>
+                </ul>
 
+                <h2 class="govuk-heading-s">Services</h2>
+
+                <div class="govuk-inset-text">
+                    <p>All services are good</p>
+                </div>
+
+                <table class="govuk-table">
+
+                    <tbody class="govuk-table__body">
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                Apply: civil legal aid
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                Apply: criminal legal aid
+
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                CCMS
+
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                CWA
+
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                LAA Online Portal
+
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell" style="font-size: 16px; height: 30px;">
+                                Submit a crime form
+                            </td>
+                            <td class="govuk-table__cell" style="background-color: green; ">
+                                <p style="margin-left:5px; font-size: 16px; color: white;">
+                                    Good Service
+                                </p>
+                            </td>
+
+                        </tr>
+                    </tbody>
+                </table>
+
+
+            </div>
 
         </div>
-
-    </div>
-</main>
+    </main>
 </body>
+
 </html>
