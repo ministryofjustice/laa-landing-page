@@ -43,9 +43,9 @@ dependencies {
     implementation 'com.microsoft.azure:msal4j:1.19.0'
 
     // Azure Identity SDK for OAuth2 and token management
-    implementation 'com.azure:azure-identity:1.15.0'
+    implementation 'com.azure:azure-identity:1.16.0'
 
-    implementation 'com.azure.spring:azure-spring-boot-starter-active-directory:3.14.0'
+    implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.21.0'
 
     implementation 'com.h2database:h2'
 

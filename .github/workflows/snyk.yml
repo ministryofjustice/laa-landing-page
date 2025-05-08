@@ -1,5 +1,8 @@
 name: workflow for Gradle using Snyk security scan
 on:
+  push:
+    branches:
+      - snyk_vuln_fixes
   pull_request:
     types:
       - opened
