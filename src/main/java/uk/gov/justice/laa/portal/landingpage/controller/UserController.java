@@ -1,8 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
 import java.util.Stack;
 
 /**
@@ -70,5 +71,17 @@ public class UserController {
         User user = userService.getUserById(id);
         model.addAttribute("user", user);
         return "edit-user";
+    }
+
+    /**
+     * Retrieves a list of users from Microsoft Graph API.
+     */
+    @GetMapping("/userlist")
+    public String displaySavedUsers(Model model) {
+
+        List<UserModel> users = userService.getSavedUsers();
+        model.addAttribute("users", users);
+
+        return "users";
     }
 }

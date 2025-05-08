@@ -39,7 +39,7 @@ jobs:
 
       - name: Add coverage to PR
         id: jacoco
-        uses: madrapps/jacoco-report@v1.7.1
+        uses: madrapps/jacoco-report@v1.7.2
         with:
           paths: |
             ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
@@ -51,7 +51,7 @@ jobs:
 
       - name: Fail PR if overall coverage is less than 1%
         if: ${{ steps.jacoco.outputs.coverage-overall < 1 }}
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             core.setFailed('Overall unit test coverage is less than 85%!')    
