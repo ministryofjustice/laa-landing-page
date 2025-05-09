@@ -49,6 +49,12 @@ More information on GDS can be found [here](https://gds-way.digital.cabinet-offi
 - You need a valid **GOV.UK Notify API Key** for GOV.UK Notify authentication.
   - If you do not have one, reach out to an Entra admin in the #laa-portal-stabilisation-tech Slack channel.
 
+#### Obtaining a Sentry.IO API Key
+
+- Ensure you have signed up for Sentry using the [SSO link](https://sentry.io/auth/login/ministryofjustice/).
+- If you are not part of the Portal Stabilisation Sentry team - ask internally to be added.
+- A token can be generated [here](https://ministryofjustice.sentry.io/settings/auth-tokens/).
+
 #### Filling out .env
 
 Using the `.env.template` as a template, fill out each value.
