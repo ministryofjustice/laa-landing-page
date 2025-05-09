@@ -17,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.util.List;
 
@@ -34,6 +36,8 @@ class UserServiceTest {
     private UserService userService;
     @Mock
     private GraphServiceClient graphServiceClient;
+    @Mock
+    private UserModelRepository userModelRepository;
     @Mock
     private ApplicationCollectionResponse mockResponse;
 
@@ -126,5 +130,15 @@ class UserServiceTest {
             // Assert
             assertThat(result).isEmpty();
         }
+    }
+
+    @Test
+    void getSavedUsers() {
+        when(userModelRepository.findAll()).thenReturn(List.of());
+        // Act
+        List<UserModel> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
     }
 }

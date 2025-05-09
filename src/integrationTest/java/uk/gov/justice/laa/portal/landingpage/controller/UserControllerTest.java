@@ -33,7 +33,7 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Happy Path Test: addUserToGraph")
+    @DisplayName("Happy Path Test: addUserToGraph and display user list")
     void addUserToGraph() throws Exception {
         LinkedMultiValueMap<String, String> requestParams = new LinkedMultiValueMap<>();
         requestParams.add("username", "john");
@@ -49,6 +49,10 @@ class UserControllerTest extends BaseIntegrationTest {
 
         //then
         assertThat(model).isNotNull();
+        //display
+        this.mockMvc.perform(get("/userlist"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"));
     }
 
     @Test
@@ -57,5 +61,13 @@ class UserControllerTest extends BaseIntegrationTest {
         this.mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("register"));
+    }
+
+    @Test
+    @DisplayName("Happy Path Test: displaySavedUsers get")
+    void displaySavedUsers() throws Exception {
+        this.mockMvc.perform(get("/userlist"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"));
     }
 }
