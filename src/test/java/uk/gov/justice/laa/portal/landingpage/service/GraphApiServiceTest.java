@@ -79,7 +79,7 @@ public class GraphApiServiceTest {
     }
 
     @Test
-    public void testGetUserAppsAndRolesNoAppRoleAssignments() {
+    public void getUserAppsAndRolesNoAppRoleAssignments() {
         try (MockedStatic<RestUtils> mockedStatic = mockStatic(RestUtils.class)) {
             mockedStatic.when(() -> RestUtils.callGraphApi(anyString(), anyString())).thenReturn("");
 
@@ -88,7 +88,7 @@ public class GraphApiServiceTest {
     }
 
     @Test
-    public void testGetUserAppsAndRolesNoServicePrinciples() {
+    public void getUserAppsAndRolesNoServicePrinciples() {
         try (MockedStatic<RestUtils> mockedStatic = mockStatic(RestUtils.class)) {
             mockedStatic.when(() -> RestUtils.callGraphApi(anyString(), anyString()))
                     .thenReturn(APP_ROLE_ASSIGNMENT)
@@ -106,7 +106,7 @@ public class GraphApiServiceTest {
     }
 
     @Test
-    public void testGetUserAppsAndRole() {
+    public void getUserAppsAndRole() {
 
         ServicePrincipal servicePrincipal = new ServicePrincipal();
         servicePrincipal.setId("b7dc5c41-68a7-4416-ad5d-14a887f1c665");

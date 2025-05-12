@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/user/create/services">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <div id="main-content">
+        <form method="post" th:action="@{/user/create/roles}">
+            <fieldset class="govuk-fieldset">
+                <p class="govuk-hint govuk-!-margin-bottom-3">
+                    Select the roles required within the
+                </p>
+                <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                    <div class="govuk-checkboxes__item" th:each="role : ${roles}">
+                        <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
+                            th:checked="${role.selected}" th:value="${role.appRoleId}" type="checkbox">
+                        <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.appRoleId}">
+                            <span th:text="${role.appName}"></span> - <span th:text="${role.roleName}"></span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <button class="govuk-button govuk-!-margin-top-3" data-module="govuk-button" type="submit">
+                Continue
+            </button>
+        </form>
+
+    </div>
+</body>
+
+</html>

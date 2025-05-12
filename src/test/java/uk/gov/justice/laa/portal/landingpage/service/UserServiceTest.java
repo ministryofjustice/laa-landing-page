@@ -17,15 +17,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -34,6 +36,8 @@ class UserServiceTest {
     private UserService userService;
     @Mock
     private GraphServiceClient graphServiceClient;
+    @Mock
+    private UserModelRepository userModelRepository;
     @Mock
     private ApplicationCollectionResponse mockResponse;
 
@@ -45,6 +49,11 @@ class UserServiceTest {
         LaaApplication laaApp3 = LaaApplication.builder().id("a32d05f19e64840bf256a7128483db941410e4f86bae5c1d4a03c9514c2266a4").title("App Two").build();
         List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2, laaApp3);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
     }
 
     @Test
@@ -123,8 +132,13 @@ class UserServiceTest {
         }
     }
 
-    @AfterAll
-    public static void tearDown() {
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
+    @Test
+    void getSavedUsers() {
+        when(userModelRepository.findAll()).thenReturn(List.of());
+        // Act
+        List<UserModel> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
     }
 }
