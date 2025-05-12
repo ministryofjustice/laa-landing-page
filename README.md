@@ -13,27 +13,47 @@ This is a prototype application developed and maintained by the LAA portal stabi
 
 ### Prerequisites
 
+#### Install Java
+Ensure you have installed the correct version of Java on your local machine. At the time of writing this is Java 21.
+Some MoJ devices will come prepackaged with the latest version of Java
+
+Check your local version of Java: `java -version`
+
+To check all versions of Java you have installed locally run: `/usr/libexec/java_home -V`
+
+Once you have downloaded Java, you can open your bash profile:
+````
+sudo nano ~/.bash_profile
+````
+
+enter your device password add export the version of Java you wish to use:
+````
+export JAVA_HOME=$(/usr/libexec/java_home -v 21.0.7)
+````
+
+Once exported be sure to source your latest bash profile: `source ~/.bash_profile   `
+
 #### Obtaining an Entra user
 
 - You need a valid **MoJ DEVL External email address** for Entra ID authentication. This email will be used for validation.
-  - If you do not have one, reach out to an Entra admin in the #laa-portal-stabilisation-tech Slack channel.
+    - If you do not have one, reach out to an Entra admin in the #laa-portal-stabilisation-tech Slack channel.
 
 #### Obtaining Client Credentials
 
 - The client secret and client ID are available in the Entra UI:
 
-  - Path: App registrations > laa-portal-oidc-playground > Certificates & secrets.
+    - Path: App registrations > laa-portal-oidc-playground > Certificates & secrets.
 
 - If you do not have the necessary permissions to view the client ID and secret, request them from an Entra admin.
 
 #### Creating a GitHub Token
 
-1. Ensure you have created a GitHub Personal Access Token with the following permissions:
-   1. repo
-   2. write:packages
-   3. read:packages
-2. The token must be authorised with (MoJ) SSO.
-3. Add the following parameters to ~/.gradle/gradle.properties:
+1. Ensure you have created a classic GitHub Personal Access Token with the following permissions:
+    1. repo
+    2. write:packages
+    3. read:packages
+2. The token **must be authorised with (MoJ) SSO**.
+3. Add the following parameters to `~/.gradle/gradle.properties`
 
 ```
 project.ext.gitPackageUser = <your GitHub username>
@@ -47,51 +67,52 @@ More information on GDS can be found [here](https://gds-way.digital.cabinet-offi
 #### Obtaining a GOV.UK Notify API Key
 
 - You need a valid **GOV.UK Notify API Key** for GOV.UK Notify authentication.
-  - If you do not have one, reach out to an Entra admin in the #laa-portal-stabilisation-tech Slack channel.
+    - If you do not have one, reach out to an Entra admin in the #laa-portal-stabilisation-tech Slack channel.
 
 #### Obtaining a Sentry.IO API Key
 
 - Ensure you have signed up for Sentry using the [SSO link](https://sentry.io/auth/login/ministryofjustice/).
 - If you are not part of the Portal Stabilisation Sentry team - ask internally to be added.
-- A token can be generated [here](https://ministryofjustice.sentry.io/settings/auth-tokens/).
+- A token can be generated [here](https://ministryofjustice.sentry.io/settings/auth-tokens/new-token/).
 
 #### Filling out .env
 
-Using the `.env.template` as a template, fill out each value.
+Using the `.env-template` file as a template, copy to a new .env file
+`cp .env-template .env`
 
-`cp .env.template .env`
+Be sure to fill out all values as they are required for pulling dependencies for the application to run
 
 ### Running the Application
 
 Ensure that all environment variables from `.env` set
 
-`export $(cat .env | xargs)`
+`export $(grep -v '^#' .env | xargs)`
 
 Once the environment variables are set, you can run the application using Gradle:
 
 - **IntelliJ IDEA:**
 
-  1. Open the project in IntelliJ.
-  2. Open the Gradle tool window (`View > Tool Windows > Gradle`).
-  3. Navigate to `Tasks > application` and double-click `bootRun`.
+    1. Open the project in IntelliJ.
+    2. Open the Gradle tool window (`View > Tool Windows > Gradle`).
+    3. Navigate to `Tasks > application` and double-click `bootRun`.
 
 - **VSCode:**
 
-  1. Open the project in VSCode
-  2. Open a VSCode Terminal
-  3. Ensure the `.env` environment variables are exported inside the terminal
-  4. Run the following command:
-     ```sh
-     ./gradlew bootRun
-     ```
+    1. Open the project in VSCode
+    2. Open a VSCode Terminal
+    3. Ensure the `.env` environment variables are exported inside the terminal
+    4. Run the following command:
+       ```sh
+       ./gradlew bootRun
+       ```
 
 - **Command Line:**
 
-  1. Navigate to the project root directory.
-  2. Run the following command:
-     ```sh
-     ./gradlew bootRun
-     ```
+    1. Navigate to the project root directory.
+    2. Run the following command:
+       ```sh
+       ./gradlew bootRun
+       ```
 
 Once the application is running steadily, you can access the UI by navigating to:
 
