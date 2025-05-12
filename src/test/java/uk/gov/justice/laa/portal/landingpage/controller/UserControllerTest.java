@@ -73,7 +73,6 @@ class UserControllerTest {
         mockPaginatedUsers.setNextPageLink(nextPageLink);
         mockPaginatedUsers.setPreviousPageLink(prevPageLink);
 
-
         when(userService.getPageHistory(session)).thenReturn(history);
         when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), isNull()))
                 .thenReturn(mockPaginatedUsers);

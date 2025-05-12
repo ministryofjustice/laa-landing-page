@@ -36,7 +36,6 @@ class LoginControllerTest {
     @Mock
     private OAuth2AuthorizedClient authClient;
 
-
     @InjectMocks
     private LoginController controller;
 
@@ -118,7 +117,7 @@ class LoginControllerTest {
     @Test
     void whenMigrateEndpoint_thenReturnsMigrateView() {
 
-        // Arrange (and Act)
+        // Arrange & Act
         String view = controller.migrate();
 
         // Assert
