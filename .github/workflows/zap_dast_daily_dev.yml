@@ -20,14 +20,6 @@ jobs:
           cmd_options: '-a -j'
           fail_action: false
 
-      - name: Slack notification
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-            channel-id: 'laa-zap-scan-notifications'
-            slack-message: "Zap daily baseline scan has been run, please review the results here: https://github.com/ministryofjustice/laa-landing-page/issues"
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SLACK_BOT_TOKEN }}
-
       - name: Upload ZAP Daily Baseline Run Report
         uses: actions/upload-artifact@v4
         with:
