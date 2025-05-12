@@ -2,6 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 
 import java.security.SecureRandom;
 
+/**
+ * RandomPasswordGenerator class
+ */
 public class RandomPasswordGenerator {
 
     protected static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
