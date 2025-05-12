@@ -11,19 +11,26 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/home">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/users">Users</a>
+            </li>
+        </ol>
+    </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
-
 
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
                         <span class="govuk-caption-l">Firm | 12345</span>
                         <h1 class="govuk-heading-xl">User Dashboard</h1>
                     </div>
-
                     <form class="form" method="post" action="">
-
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
 
@@ -31,12 +38,8 @@
                                     data-module="govuk-button" data-govuk-button-init="">
                                     Create a user
                                 </button>
-
-
-
                             </div>
                         </div>
-
                     </form>
                 </div>
 
@@ -108,7 +111,9 @@
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b>11</b> to <b>20</b> of <b>30</b> results</p>
+                    <p class="moj-pagination__results">Showing <b>11</b> to <b>20</b> of <b>
+                            <b th:text="${totalUsers}"></b>
+                        </b> results</p>
                 </nav>
                 <div aria-live="polite" role="status" aria-atomic="true" class="govuk-visually-hidden"></div>
             </div>
