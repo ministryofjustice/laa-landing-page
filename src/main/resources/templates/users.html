@@ -91,30 +91,29 @@
                 </table>
 
                 <nav class="moj-pagination" aria-label="Pagination navigation">
-
                     <ul class="moj-pagination__list">
-                        <li class="moj-pagination__item  moj-pagination__item--prev">
+                        <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${previousPageLink}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${pageSize}, previousPageLink=${previousPageLink})}">Previous<span
+                                th:href="@{/users(size=${pageSize}, page=${page - 1}, previousPageLink=${previousPageLink})}">Previous<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
-                        <li class="moj-pagination__item"><a class="moj-pagination__link moj-pagination__item--active"
-                                href="/page=1" aria-label="Page 1 of 5" aria-current="page">1</a></li>
-                        <li class="moj-pagination__item" href="/page=2" aria-label="Page 2 of 5">2</li>
-                        <li class="moj-pagination__item"><a class="moj-pagination__link" href="/page=3"
-                                aria-label="Page 3 of 5">3</a></li>
-                        <li class="moj-pagination__item moj-pagination__item--dots">…</li>
-                        <li class="moj-pagination__item"><a class="moj-pagination__link" href="/page=5"
-                                aria-label="Page 5 of 5">5</a></li>
-                        <li class="moj-pagination__item  moj-pagination__item--next">
+                        <th:block th:each="i: ${#numbers.sequence(1, totalPages)}">
+                            <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
+                            <li class="moj-pagination__item">
+                                <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
+                                    aria-label="Page ${i} of 5" aria-current="page" th:text="${i}"></a>
+                            </li>
+                        </th:block>
+                        <li class="moj-pagination__item  moj-pagination__item--next" th:if="${nextPageLink}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${pageSize}, nextPageLink=${nextPageLink})}">Next<span
+                                th:href="@{/users(size=${pageSize}, page=${page + 1}, nextPageLink=${nextPageLink})}">Next<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b>0</b> to <b th:text="${pageSize}"></b> of <b>
+                    <p class="moj-pagination__results">Showing <b th:text="${pageSize * (page -1)}"></b> to <b
+                            th:text="${pageSize * page}"></b> of <b>
                             <b th:text="${totalUsers}"></b>
                         </b> results</p>
                 </nav>

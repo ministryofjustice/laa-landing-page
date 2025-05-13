@@ -34,7 +34,7 @@ public class UserController {
      */
     @PostMapping("/register")
     public String addUserToGraph(@RequestParam("username") String username,
-                               @RequestParam("password") String password) {
+            @RequestParam("password") String password) {
         User user = userService.createUser(username, password);
         return "register";
     }
@@ -51,21 +51,24 @@ public class UserController {
      * Retrieves a list of users from Microsoft Graph API.
      */
     @GetMapping("/users")
-    public String displayAllUsers(@RequestParam(defaultValue = "10") int size,
-                                  @RequestParam(required = false) String nextPageLink,
-                                  Model model, HttpSession session) {
-        
+    public String displayAllUsers(
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String nextPageLink,
+            Model model, HttpSession session) {
+
         Stack<String> pageHistory = userService.getPageHistory(session);
 
         PaginatedUsers paginatedUsers = userService.getPaginatedUsersWithHistory(pageHistory, size, nextPageLink);
-
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("nextPageLink", paginatedUsers.getNextPageLink());
         model.addAttribute("previousPageLink", paginatedUsers.getPreviousPageLink());
         model.addAttribute("pageSize", size);
         model.addAttribute("pageHistory", pageHistory);
+        model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
 
         return "users";
     }
