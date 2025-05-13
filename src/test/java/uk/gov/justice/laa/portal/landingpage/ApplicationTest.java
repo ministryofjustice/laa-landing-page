@@ -29,7 +29,7 @@ class ApplicationTest {
 
             // Assert
             mockedSpringApplication.verify(() -> SpringApplication.run(eq(Application.class), eq(args)), times(1));
-            }
+        }
     }
 
     @Test

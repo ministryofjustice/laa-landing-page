@@ -60,19 +60,16 @@ class UserControllerTest {
 
     @Test
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
-
         // Arrange
-        String nextPageLink = "nextLink123";
-        String prevPageLink = "prevLink456";
-        Stack<String> history = new Stack<>();
-        history.push(prevPageLink);
         Model model = new ExtendedModelMap();
         int size = 15;
+        Stack<String> history = new Stack<>();
+        history.push("prevLink456");
 
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
-        mockPaginatedUsers.setNextPageLink(nextPageLink);
-        mockPaginatedUsers.setPreviousPageLink(prevPageLink);
+        mockPaginatedUsers.setNextPageLink("nextLink123");
+        mockPaginatedUsers.setPreviousPageLink("prevLink456");
 
         when(userService.getPageHistory(session)).thenReturn(history);
         when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), isNull()))
@@ -84,8 +81,8 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
-        assertThat(model.getAttribute("nextPageLink")).isEqualTo(nextPageLink);
-        assertThat(model.getAttribute("previousPageLink")).isEqualTo(prevPageLink);
+        assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextLink123");
+        assertThat(model.getAttribute("previousPageLink")).isEqualTo("prevLink456");
         assertThat(model.getAttribute("pageSize")).isEqualTo(size);
         assertThat(model.getAttribute("pageHistory")).isEqualTo(history);
         verify(userService).getPageHistory(session);
@@ -94,18 +91,17 @@ class UserControllerTest {
 
     @Test
     void givenNextPageLink_whenDisplayAllUsers_thenUsesLinkAndUpdatesHistory() {
-
         // Arrange
         Model model = new ExtendedModelMap();
         int size = 10;
         String currentPageLink = "currentPageLink";
-        String nextPageLinkFromService = "nextPageLinkFromServer";
-        Stack<String> history = new Stack<>();
 
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel()));
-        mockPaginatedUsers.setNextPageLink(nextPageLinkFromService);
+        mockPaginatedUsers.setNextPageLink("nextPageLinkFromServer");
         mockPaginatedUsers.setPreviousPageLink("somePrevLink");
+
+        Stack<String> history = new Stack<>();
 
         when(userService.getPageHistory(session)).thenReturn(history);
         when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), eq(currentPageLink)))
@@ -116,7 +112,7 @@ class UserControllerTest {
 
         // Assert
         assertThat(viewName).isEqualTo("users");
-        assertThat(model.getAttribute("nextPageLink")).isEqualTo(nextPageLinkFromService);
+        assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextPageLinkFromServer");
         verify(userService).getPageHistory(session);
         verify(userService).getPaginatedUsersWithHistory(history, size, currentPageLink);
     }
