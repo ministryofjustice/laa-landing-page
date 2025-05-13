@@ -250,8 +250,8 @@ public class UserService {
                     .get(requestConfig -> {
                         assert requestConfig.queryParameters != null;
                         requestConfig.queryParameters.top = pageSize;
-                        requestConfig.queryParameters.select = new String[] { "displayName", "userPrincipalName",
-                                "signInActivity" };
+                        requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName",
+                            "signInActivity"};
                         requestConfig.queryParameters.count = true;
                     });
         } else {
