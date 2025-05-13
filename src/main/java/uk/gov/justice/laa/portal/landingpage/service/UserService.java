@@ -1,6 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
+import com.microsoft.kiota.RequestInformation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
@@ -19,18 +23,11 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Stack;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.getGraphClient;
@@ -44,6 +41,7 @@ public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
+    private static final int BATCH_SIZE = 20;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -294,5 +292,28 @@ public class UserService {
 
     public List<UserModel> getSavedUsers() {
         return userModelRepository.findAll();
+    }
+
+    @Async
+    public void disableUsers(List<String> ids) throws IOException {
+        GraphServiceClient graphClient = getGraphClient();
+        Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
+        for (List<String> batch : batchIds) {
+            BatchRequestContent batchRequestContent = new BatchRequestContent(graphClient);
+            for (String id : batch) {
+                User user = new User();
+                user.setAccountEnabled(false);
+                RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
+                batchRequestContent.addBatchRequestStep(patchMessage);
+            }
+            BatchResponseContent responseContent = graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
+        }
+    }
+
+    static <T> Collection<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
+        final AtomicInteger counter = new AtomicInteger(0);
+        return inputList.stream()
+                .collect(Collectors.groupingBy(s -> counter.getAndIncrement() / size))
+                .values();
     }
 }

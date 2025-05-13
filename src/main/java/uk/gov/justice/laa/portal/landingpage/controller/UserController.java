@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
 
@@ -83,5 +85,14 @@ public class UserController {
         model.addAttribute("users", users);
 
         return "users";
+    }
+
+    /**
+     * Disable group of users via graph SDK
+     */
+    @PostMapping("/users/disable")
+    public String disableUsers(@RequestParam List<String> id) throws IOException {
+        userService.disableUsers(id);
+        return "redirect:/users";
     }
 }
