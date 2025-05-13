@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.util.List;
 import java.util.Stack;
@@ -32,8 +33,8 @@ public class UserController {
      */
     @PostMapping("/register")
     public String addUserToGraph(@RequestParam("username") String username,
-                               @RequestParam("password") String password) {
-        User user = userService.createUser(username, password);
+                               @RequestParam("password") String password) throws NotificationClientException {
+        userService.createUser(username, password);
         return "register";
     }
 

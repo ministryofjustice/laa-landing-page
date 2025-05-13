@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +45,7 @@ public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
+    private final CreateUserNotificationService createUserNotificationService;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -53,24 +55,13 @@ public class UserService {
      *
      * @return {@code User}
      */
-    public User createUser(String username, String password) {
-        User user = new User();
-        user.setAccountEnabled(true);
-        user.setDisplayName(username);
-        user.setMailNickname("someone");
-        user.setUserPrincipalName(username + "@mojodevlexternal.onmicrosoft.com");
-        PasswordProfile passwordProfile = new PasswordProfile();
-        passwordProfile.setForceChangePasswordNextSignIn(true);
-        passwordProfile.setPassword(password);
-        user.setPasswordProfile(passwordProfile);
-        User saved = graphClient.users().post(user);
-        UserModel userModel = new UserModel();
-        userModel.setEmail(user.getDisplayName());
-        userModel.setPassword("NotSave");
-        userModel.setFullName(user.getDisplayName());
-        userModel.setId(saved.getId());
-        userModelRepository.save(userModel);
-        return saved;
+    public User createUser(String username, String password) throws NotificationClientException {
+        User newUser = buildNewUser(username, password);
+        User savedUser = graphClient.users().post(newUser);
+        // Add new user to database.
+        persistNewUser(newUser, savedUser);
+        createUserNotificationService.notifyCreateUser(savedUser.getDisplayName(), savedUser.getMail(), password, savedUser.getId());
+        return savedUser;
     }
 
     public List<Map<String, Object>> getUserAppRolesByUserId(String userId) {
@@ -294,5 +285,27 @@ public class UserService {
 
     public List<UserModel> getSavedUsers() {
         return userModelRepository.findAll();
+    }
+
+    private static User buildNewUser(String username, String password) {
+        User user = new User();
+        user.setAccountEnabled(true);
+        user.setDisplayName(username);
+        user.setMailNickname("someone");
+        user.setUserPrincipalName(username + "@mojodevlexternal.onmicrosoft.com");
+        PasswordProfile passwordProfile = new PasswordProfile();
+        passwordProfile.setForceChangePasswordNextSignIn(true);
+        passwordProfile.setPassword(password);
+        user.setPasswordProfile(passwordProfile);
+        return user;
+    }
+
+    private void persistNewUser(User newUser, User savedUser) {
+        UserModel userModel = new UserModel();
+        userModel.setEmail(newUser.getDisplayName());
+        userModel.setPassword("NotSave");
+        userModel.setFullName(newUser.getDisplayName());
+        userModel.setId(savedUser.getId());
+        userModelRepository.save(userModel);
     }
 }

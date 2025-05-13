@@ -25,7 +25,7 @@ class UserControllerTest {
     private UserService userService;
 
     @Test
-    void addUserToGraph() {
+    void addUserToGraph() throws Exception {
         User created = new User();
         when(userService.createUser(anyString(), anyString())).thenReturn(created);
         String view = userController.addUserToGraph("username", "password");
