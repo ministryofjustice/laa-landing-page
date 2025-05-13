@@ -184,6 +184,7 @@ class UserControllerTest {
         assertThat(viewName).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isNull();
         verify(userService).getUserById(userId);
+    }
 
     @Test
     void displaySavedUsers() {
@@ -194,4 +195,5 @@ class UserControllerTest {
         assertThat(model.getAttribute("users")).isNotNull();
 
     }
+
 }
