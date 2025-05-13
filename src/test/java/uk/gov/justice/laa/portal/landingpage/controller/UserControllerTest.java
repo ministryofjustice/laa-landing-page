@@ -62,18 +62,15 @@ class UserControllerTest {
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
         // Arrange
         Model model = new ExtendedModelMap();
-        int size = 15;
         Stack<String> history = new Stack<>();
         history.push("prevLink456");
-
+        int size = 15;
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
-
         when(userService.getPageHistory(session)).thenReturn(history);
-        when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), isNull()))
-                .thenReturn(mockPaginatedUsers);
+        when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), isNull())).thenReturn(mockPaginatedUsers);
 
         // Act
         String viewName = userController.displayAllUsers(size, null, model, session);
