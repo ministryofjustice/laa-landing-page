@@ -62,8 +62,6 @@ class LoginServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(loginService, "redirectUri", TEST_REDIRECT_URI);
-        String AZURE_TENANT_ID = System.getenv("AZURE_TENANT_ID") != null ? System.getenv("AZURE_TENANT_ID") : "mockTenantId";
-        String AZURE_CLIENT_ID = System.getenv("AZURE_CLIENT_ID") != null ? System.getenv("AZURE_CLIENT_ID") : "mockClientId";
     }
 
     @Test
