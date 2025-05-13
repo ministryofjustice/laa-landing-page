@@ -6,6 +6,10 @@ on:
       - reopened
       - edited
       - synchronize
+      - closed
+  schedule:
+    # Runs every Monday at 9AM 
+    - cron: '0 9 * * 1'
 jobs:
   vulnerability-scan:
     runs-on: ubuntu-latest

@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -58,6 +59,7 @@ class UserControllerTest {
     }
 
     @Test
+
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
 
         // Arrange
@@ -182,5 +184,14 @@ class UserControllerTest {
         assertThat(viewName).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isNull();
         verify(userService).getUserById(userId);
+
+    @Test
+    void displaySavedUsers() {
+        Model model = new ExtendedModelMap();
+        when(userService.getSavedUsers()).thenReturn(new ArrayList<>());
+        String view = userController.displaySavedUsers(model);
+        assertThat(view).isEqualTo("users");
+        assertThat(model.getAttribute("users")).isNotNull();
+
     }
 }

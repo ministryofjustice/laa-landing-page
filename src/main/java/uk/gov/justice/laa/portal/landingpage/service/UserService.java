@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import lombok.RequiredArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
@@ -12,11 +15,9 @@ import com.microsoft.kiota.ApiException;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,16 +39,14 @@ import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.get
  * userService
  */
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
     private final GraphServiceClient graphClient;
+    private final UserModelRepository userModelRepository;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    public UserService(GraphServiceClient graphClient) {
-        this.graphClient = graphClient;
-    }
 
     /**
      * create User at Entra
@@ -64,7 +63,14 @@ public class UserService {
         passwordProfile.setForceChangePasswordNextSignIn(true);
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
-        return graphClient.users().post(user);
+        User saved = graphClient.users().post(user);
+        UserModel userModel = new UserModel();
+        userModel.setEmail(user.getDisplayName());
+        userModel.setPassword("NotSave");
+        userModel.setFullName(user.getDisplayName());
+        userModel.setId(saved.getId());
+        userModelRepository.save(userModel);
+        return saved;
     }
 
     public List<Map<String, Object>> getUserAppRolesByUserId(String userId) {
@@ -284,5 +290,9 @@ public class UserService {
         paginatedUsers.setTotalUsers(totalUsers);
 
         return paginatedUsers;
+    }
+
+    public List<UserModel> getSavedUsers() {
+        return userModelRepository.findAll();
     }
 }
