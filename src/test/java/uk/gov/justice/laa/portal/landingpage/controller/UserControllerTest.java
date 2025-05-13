@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +37,12 @@ class UserControllerTest {
     private UserService userService;
     @Mock
     private HttpSession session;
+    private Model model;
+
+    @BeforeEach
+    void setUp() {
+        model = new ExtendedModelMap();
+    }
 
     @Test
     void addUserToGraph() {
@@ -61,91 +68,82 @@ class UserControllerTest {
     @Test
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
         // Arrange
-        Model model = new ExtendedModelMap();
         Stack<String> history = new Stack<>();
         history.push("prevLink456");
-        int size = 15;
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
         when(userService.getPageHistory(session)).thenReturn(history);
-        when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), isNull())).thenReturn(mockPaginatedUsers);
+        when(userService.getPaginatedUsersWithHistory(eq(history), eq(15), isNull())).thenReturn(mockPaginatedUsers);
+       
 
         // Act
-        String viewName = userController.displayAllUsers(size, null, model, session);
+        String viewName = userController.displayAllUsers(15, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextLink123");
         assertThat(model.getAttribute("previousPageLink")).isEqualTo("prevLink456");
-        assertThat(model.getAttribute("pageSize")).isEqualTo(size);
+        assertThat(model.getAttribute("pageSize")).isEqualTo(15);
         assertThat(model.getAttribute("pageHistory")).isEqualTo(history);
         verify(userService).getPageHistory(session);
-        verify(userService).getPaginatedUsersWithHistory(history, size, null);
+        verify(userService).getPaginatedUsersWithHistory(history, 15, null);
     }
 
     @Test
     void givenNextPageLink_whenDisplayAllUsers_thenUsesLinkAndUpdatesHistory() {
         // Arrange
-        Model model = new ExtendedModelMap();
-        int size = 10;
-        String currentPageLink = "currentPageLink";
-
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel()));
         mockPaginatedUsers.setNextPageLink("nextPageLinkFromServer");
         mockPaginatedUsers.setPreviousPageLink("somePrevLink");
-
         Stack<String> history = new Stack<>();
-
         when(userService.getPageHistory(session)).thenReturn(history);
-        when(userService.getPaginatedUsersWithHistory(eq(history), eq(size), eq(currentPageLink)))
+        when(userService.getPaginatedUsersWithHistory(eq(history), eq(10), eq("pageLink")))
                 .thenReturn(mockPaginatedUsers);
+       
 
         // Act
-        String viewName = userController.displayAllUsers(size, currentPageLink, model, session);
+        String viewName = userController.displayAllUsers(10, "pageLink", model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextPageLinkFromServer");
         verify(userService).getPageHistory(session);
-        verify(userService).getPaginatedUsersWithHistory(history, size, currentPageLink);
+        verify(userService).getPaginatedUsersWithHistory(history, 10, "pageLink");
     }
 
     @Test
     void givenNoUsers_whenDisplayAllUsers_thenReturnsEmptyListInModel() {
-
         // Arrange
-        Model model = new ExtendedModelMap();
-        int size = 10;
-        Stack<String> history = new Stack<>();
-
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
+        Stack<String> history = new Stack<>();
 
         when(userService.getPageHistory(session)).thenReturn(history);
         when(userService.getPaginatedUsersWithHistory(any(), anyInt(), isNull()))
                 .thenReturn(mockPaginatedUsers);
+       
 
         // Act
-        String viewName = userController.displayAllUsers(size, null, model, session);
+        String viewName = userController.displayAllUsers(10, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
         assertThat(model.getAttribute("nextPageLink")).isNull();
-        verify(userService).getPaginatedUsersWithHistory(history, size, null);
+        verify(userService).getPaginatedUsersWithHistory(history, 10, null);
     }
 
     @Test
     void givenValidUserId_whenEditUser_thenFetchesUserAndReturnsEditView() {
 
         // Arrange
-        Model model = new ExtendedModelMap();
+       
         String userId = "user123";
         User mockUser = new User();
         mockUser.setId(userId);
@@ -165,7 +163,6 @@ class UserControllerTest {
     void givenInvalidUserId_whenEditUser_thenReturnsEditViewWithErrorOrRedirect() {
 
         // Arrange
-        Model model = new ExtendedModelMap();
         String userId = "invalid-user";
         when(userService.getUserById(userId)).thenReturn(null);
 
@@ -180,7 +177,7 @@ class UserControllerTest {
 
     @Test
     void displaySavedUsers() {
-        Model model = new ExtendedModelMap();
+
         when(userService.getSavedUsers()).thenReturn(new ArrayList<>());
         String view = userController.displaySavedUsers(model);
         assertThat(view).isEqualTo("users");
