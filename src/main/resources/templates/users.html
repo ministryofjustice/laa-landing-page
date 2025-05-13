@@ -98,7 +98,7 @@
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
-                        <th:block th:each="i: ${#numbers.sequence(1, totalPages)}">
+                        <th:block th:each="i: ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
                                 <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
@@ -112,8 +112,8 @@
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b th:text="${pageSize * (page -1)}"></b> to <b
-                            th:text="${pageSize * page}"></b> of <b>
+                    <p class="moj-pagination__results">Showing <b th:text="${(pageSize ?: 10) * ((page ?: 1) - 1)}"></b>
+                        to <b th:text="${(pageSize ?: 10)  * (page ?: 1) }"></b> of <b>
                             <b th:text="${totalUsers}"></b>
                         </b> results</p>
                 </nav>
