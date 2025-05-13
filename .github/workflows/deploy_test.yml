@@ -1,4 +1,4 @@
-name: deploy
+name: Deploy Test
 
 on:
   workflow_dispatch:
@@ -28,6 +28,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       # Assume role in Cloud Platform
       - uses: aws-actions/configure-aws-credentials@v4.0.2
