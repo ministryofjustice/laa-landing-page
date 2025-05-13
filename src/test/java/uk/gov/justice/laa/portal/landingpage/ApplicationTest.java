@@ -24,12 +24,12 @@ class ApplicationTest {
             mockedSpringApplication.when(() -> SpringApplication.run(any(Class.class), any(String[].class)))
                     .thenReturn(null); // Or a mock ApplicationContext if needed for further verification
 
-        // Act
-        Application.main(args);
+            // Act
+            Application.main(args);
 
-        // Assert
-        mockedSpringApplication.verify(() -> SpringApplication.run(eq(Application.class), eq(args)), times(1));
-        }
+            // Assert
+            mockedSpringApplication.verify(() -> SpringApplication.run(eq(Application.class), eq(args)), times(1));
+            }
     }
 
     @Test

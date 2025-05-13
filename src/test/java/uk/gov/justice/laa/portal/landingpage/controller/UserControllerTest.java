@@ -59,16 +59,15 @@ class UserControllerTest {
     }
 
     @Test
-
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
 
         // Arrange
-        Model model = new ExtendedModelMap();
-        int size = 15;
         String nextPageLink = "nextLink123";
         String prevPageLink = "prevLink456";
         Stack<String> history = new Stack<>();
         history.push(prevPageLink);
+        Model model = new ExtendedModelMap();
+        int size = 15;
 
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
