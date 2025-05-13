@@ -1,8 +1,6 @@
 name: ZAP DAST Daily Baseline Scan
 
 on:
-  workflow_dispatch:
-  push :
   schedule:
     - cron: '0 8 * * 1-5'
 
@@ -25,5 +23,5 @@ jobs:
         with:
           name: daily-zap-report
           path: |
-            daily_report_html.html
-            daily_report_json.json
+            report_html.html
+            report_json.json
