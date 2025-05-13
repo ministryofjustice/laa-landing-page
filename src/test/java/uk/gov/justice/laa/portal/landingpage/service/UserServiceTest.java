@@ -41,6 +41,8 @@ class UserServiceTest {
     private UserModelRepository userModelRepository;
     @Mock
     private ApplicationCollectionResponse mockResponse;
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
 
     @BeforeAll
     public static void init() {
