@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.List;
 import java.util.Stack;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -98,6 +99,7 @@ public class UserController {
     /**
      * Disable group of users via graph SDK
      */
+    @PreAuthorize("hasAuthority('SCOPE_User.EnableDisableAccount.All')")
     @PostMapping("/users/disable")
     public String disableUsers(@RequestParam("disable-user") List<String> id) throws IOException {
         userService.disableUsers(id);
