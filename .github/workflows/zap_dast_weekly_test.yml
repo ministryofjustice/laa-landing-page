@@ -1,7 +1,6 @@
 name: ZAP DAST Weeky Full Scan
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 8 * * SUN'
 
@@ -23,5 +22,5 @@ jobs:
         with:
           name: weekly-zap-report
           path: |
-            weekly_report_html.html
-            weekly_report_json.json
+            report_html.html
+            report_json.json
