@@ -144,7 +144,12 @@ public class UserService {
 
         PaginatedUsers paginatedUsers = getAllUsersPaginated(size, nextPageLink, previousPageLink);
         paginatedUsers.setPreviousPageLink(previousPageLink);
-        paginatedUsers.setTotalPages((int) Math.ceil((double) paginatedUsers.getTotalUsers() / size));
+        int totalPages = (int) Math.ceil((double) paginatedUsers.getTotalUsers() / size);
+        if (totalPages > 0) {
+            paginatedUsers.setTotalPages(totalPages);
+        } else {
+            paginatedUsers.setTotalPages(1);
+        }
         return paginatedUsers;
     }
 
