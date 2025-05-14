@@ -9,6 +9,9 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Map;
 
+/**
+ * A service to send email notifications to users
+ */
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -21,12 +24,12 @@ public class NotificationService {
             String emailTemplate,
             Map<String, String> parameters,
             String reference
-    ) throws NotificationClientException {
+    )  {
         try {
             log.info("NotificationService::sendMail::templateID: {}", emailTemplate);
             notificationClient.sendEmail(emailTemplate, targetEmail, parameters, reference);
         } catch (NotificationClientException e) {
-            throw new NotificationClientException(e);
+            log.error("Error sending mail: {}", e.getMessage());
         }
     }
 }

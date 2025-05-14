@@ -4,11 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
-import uk.gov.service.notify.NotificationClientException;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A service to handle email notification specifically for new user creation.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class CreateUserNotificationService {
     private static final String PASSWORD = "password";
     private static final String PORTAL_URL = "portalURL";
 
-    public void notifyCreateUser(String username, String email, String password, String userId) throws NotificationClientException {
+    public void notifyCreateUser(String username, String email, String password, String userId) {
         log.info("Starting add new user notification for User ID: {}", userId);
         if (null != email) {
             notificationService.sendMail(

@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.gov.service.notify.NotificationClient;
 
+/**
+ * Config class for setting up beans related to notifications
+ */
 @Configuration
 public class NotificationsConfiguration {
 

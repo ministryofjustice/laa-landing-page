@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.service.notify.NotificationClientException;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -55,7 +54,7 @@ public class UserService {
      *
      * @return {@code User}
      */
-    public User createUser(String username, String password) throws NotificationClientException {
+    public User createUser(String username, String password) {
         User newUser = buildNewUser(username, password);
         User savedUser = graphClient.users().post(newUser);
         // Add new user to database.
