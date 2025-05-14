@@ -76,7 +76,8 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
-                    '**/model/**'
+                    '**/model/**',
+                    'uk/gov/**/AsyncConfiguration.class'
             ])
         })
     }
