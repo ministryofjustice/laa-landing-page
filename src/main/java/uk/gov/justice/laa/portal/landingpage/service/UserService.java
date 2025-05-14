@@ -348,10 +348,11 @@ public class UserService {
         }
     }
 
-    static <T> Collection<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
-        final AtomicInteger counter = new AtomicInteger(0);
-        return inputList.stream()
-                .collect(Collectors.groupingBy(s -> counter.getAndIncrement() / size))
-                .values();
+    static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
+        List<List<T>> partitions = new ArrayList<>();
+        for (int i = 0; i < inputList.size(); i += size) {
+            partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
+        }
+        return partitions;
     }
 }

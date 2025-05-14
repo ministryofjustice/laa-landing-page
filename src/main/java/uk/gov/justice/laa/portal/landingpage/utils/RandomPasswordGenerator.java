@@ -40,6 +40,7 @@ public class RandomPasswordGenerator {
         for (char c : password) {
             sb.append(c);
         }
+        password = null;
         return sb.toString();
     }
 }
