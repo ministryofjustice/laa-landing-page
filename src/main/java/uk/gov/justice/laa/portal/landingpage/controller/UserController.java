@@ -99,7 +99,7 @@ public class UserController {
      * Disable group of users via graph SDK
      */
     @PostMapping("/users/disable")
-    public String disableUsers(@RequestParam List<String> id) throws IOException {
+    public String disableUsers(@RequestParam("disable-user") List<String> id) throws IOException {
         userService.disableUsers(id);
         return "redirect:/users";
     }
