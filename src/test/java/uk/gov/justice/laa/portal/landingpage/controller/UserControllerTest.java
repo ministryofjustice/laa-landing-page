@@ -10,7 +10,9 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,5 +54,12 @@ class UserControllerTest {
         String view = userController.displaySavedUsers(model);
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isNotNull();
+    }
+
+    @Test
+    void disableUsers() throws IOException {
+        List<String> ids = List.of("1", "2", "3");
+        String view = userController.disableUsers(ids);
+        assertThat(view).isEqualTo("redirect:/users");
     }
 }
