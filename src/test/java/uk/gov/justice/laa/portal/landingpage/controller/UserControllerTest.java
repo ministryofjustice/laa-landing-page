@@ -64,8 +64,6 @@ class UserControllerTest {
 
     @Test
     void displayAllUsers() {
-        Model model = new ExtendedModelMap();
-        Stack<String> pageHistory = new Stack<>();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
         paginatedUsers.setNextPageLink("nextPageLink");
@@ -73,6 +71,7 @@ class UserControllerTest {
         paginatedUsers.setTotalUsers(100);
         paginatedUsers.setTotalPages(10);
 
+        Stack<String> pageHistory = new Stack<>();
         when(userService.getPageHistory(session)).thenReturn(pageHistory);
         when(userService.getPaginatedUsersWithHistory(any(), anyInt(), anyString())).thenReturn(paginatedUsers);
 
@@ -91,7 +90,6 @@ class UserControllerTest {
 
     @Test
     void editUser() {
-        Model model = new ExtendedModelMap();
         User user = new User();
         user.setDisplayName("Test User");
 
