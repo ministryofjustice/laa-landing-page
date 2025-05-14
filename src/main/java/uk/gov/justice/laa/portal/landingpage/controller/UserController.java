@@ -1,10 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
+import java.util.List;
+import java.util.Stack;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +10,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.microsoft.graph.models.User;
+
+import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
@@ -33,7 +37,7 @@ public class UserController {
      */
     @PostMapping("/register")
     public String addUserToGraph(@RequestParam("username") String username,
-                               @RequestParam("password") String password) {
+            @RequestParam("password") String password) {
         User user = userService.createUser(username, password);
         return "register";
     }
@@ -50,10 +54,12 @@ public class UserController {
      * Retrieves a list of users from Microsoft Graph API.
      */
     @GetMapping("/users")
-    public String displayAllUsers(@RequestParam(defaultValue = "10") int size,
-                                  @RequestParam(required = false) String nextPageLink,
-                                  Model model, HttpSession session) {
-        
+    public String displayAllUsers(
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String nextPageLink,
+            Model model, HttpSession session) {
+
         Stack<String> pageHistory = userService.getPageHistory(session);
 
         PaginatedUsers paginatedUsers = userService.getPaginatedUsersWithHistory(pageHistory, size, nextPageLink);
@@ -63,6 +69,9 @@ public class UserController {
         model.addAttribute("previousPageLink", paginatedUsers.getPreviousPageLink());
         model.addAttribute("pageSize", size);
         model.addAttribute("pageHistory", pageHistory);
+        model.addAttribute("page", page);
+        model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
 
         return "users";
     }

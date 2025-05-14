@@ -1,16 +1,29 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
+import com.microsoft.graph.models.User;
+
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -34,6 +47,7 @@ class UserControllerTest {
 
     @InjectMocks
     private UserController userController;
+
     @Mock
     private UserService userService;
     @Mock
@@ -49,21 +63,56 @@ class UserControllerTest {
     void addUserToGraph() {
         User created = new User();
         when(userService.createUser(anyString(), anyString())).thenReturn(created);
+
         String view = userController.addUserToGraph("username", "password");
+
         assertThat(view).isEqualTo("register");
     }
 
     @Test
     void register() {
-        assertThat(userController.register()).isEqualTo("register");
+        String view = userController.register();
+
+        assertThat(view).isEqualTo("register");
     }
 
     @Test
     void displayAllUsers() {
+        PaginatedUsers paginatedUsers = new PaginatedUsers();
+        paginatedUsers.setUsers(new ArrayList<>());
+        paginatedUsers.setNextPageLink("nextPageLink");
+        paginatedUsers.setPreviousPageLink("previousPageLink");
+        paginatedUsers.setTotalUsers(100);
+        paginatedUsers.setTotalPages(10);
+
+        Stack<String> pageHistory = new Stack<>();
+        when(userService.getPageHistory(session)).thenReturn(pageHistory);
+        when(userService.getPaginatedUsersWithHistory(any(), anyInt(), anyString())).thenReturn(paginatedUsers);
+
+        String view = userController.displayAllUsers(10, 1, "nextPageLink", model, session);
+
+        assertThat(view).isEqualTo("users");
+        assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
+        assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextPageLink");
+        assertThat(model.getAttribute("previousPageLink")).isEqualTo("previousPageLink");
+        assertThat(model.getAttribute("pageSize")).isEqualTo(10);
+        assertThat(model.getAttribute("pageHistory")).isEqualTo(pageHistory);
+        assertThat(model.getAttribute("page")).isEqualTo(1);
+        assertThat(model.getAttribute("totalUsers")).isEqualTo(100);
+        assertThat(model.getAttribute("totalPages")).isEqualTo(10);
     }
 
     @Test
     void editUser() {
+        User user = new User();
+        user.setDisplayName("Test User");
+
+        when(userService.getUserById(anyString())).thenReturn(user);
+
+        String view = userController.editUser("userId", model);
+
+        assertThat(view).isEqualTo("edit-user");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
     }
 
     @Test
@@ -76,21 +125,20 @@ class UserControllerTest {
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
         when(userService.getPageHistory(session)).thenReturn(history);
-        when(userService.getPaginatedUsersWithHistory(eq(history), eq(15), isNull())).thenReturn(mockPaginatedUsers);
-
+        when(userService.getPaginatedUsersWithHistory(eq(history), eq(10), isNull())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(15, null, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("nextPageLink")).isEqualTo("nextLink123");
         assertThat(model.getAttribute("previousPageLink")).isEqualTo("prevLink456");
-        assertThat(model.getAttribute("pageSize")).isEqualTo(15);
+        assertThat(model.getAttribute("pageSize")).isEqualTo(10);
         assertThat(model.getAttribute("pageHistory")).isEqualTo(history);
         verify(userService).getPageHistory(session);
-        verify(userService).getPaginatedUsersWithHistory(history, 15, null);
+        verify(userService).getPaginatedUsersWithHistory(history, 10, null);
     }
 
     @Test
@@ -105,9 +153,8 @@ class UserControllerTest {
         when(userService.getPaginatedUsersWithHistory(eq(history), eq(10), eq("pageLink")))
                 .thenReturn(mockPaginatedUsers);
 
-
         // Act
-        String viewName = userController.displayAllUsers(10, "pageLink", model, session);
+        String viewName = userController.displayAllUsers(10, 1, "pageLink", model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -129,9 +176,8 @@ class UserControllerTest {
         when(userService.getPaginatedUsersWithHistory(any(), anyInt(), isNull()))
                 .thenReturn(mockPaginatedUsers);
 
-
         // Act
-        String viewName = userController.displayAllUsers(10, null, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -144,7 +190,6 @@ class UserControllerTest {
     void givenValidUserId_whenEditUser_thenFetchesUserAndReturnsEditView() {
 
         // Arrange
-
         String userId = "user123";
         User mockUser = new User();
         mockUser.setId(userId);
@@ -181,6 +226,7 @@ class UserControllerTest {
 
         when(userService.getSavedUsers()).thenReturn(new ArrayList<>());
         String view = userController.displaySavedUsers(model);
+
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isNotNull();
 

@@ -40,7 +40,27 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.PasswordProfile;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.ApiException;
+
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.getGraphClient;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 /**
  * userService
@@ -54,7 +74,6 @@ public class UserService {
     private static final int BATCH_SIZE = 20;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
-
 
     /**
      * create User at Entra
@@ -137,7 +156,8 @@ public class UserService {
         return pageHistory;
     }
 
-    // Retrieves paginated users and manages the page history for next and previous navigation
+    // Retrieves paginated users and manages the page history for next and previous
+    // navigation
     // Not working as expected for previous page stream
     public PaginatedUsers getPaginatedUsersWithHistory(Stack<String> pageHistory, int size, String nextPageLink) {
         String previousPageLink = null;
@@ -151,10 +171,14 @@ public class UserService {
 
         PaginatedUsers paginatedUsers = getAllUsersPaginated(size, nextPageLink, previousPageLink);
         paginatedUsers.setPreviousPageLink(previousPageLink);
-
+        int totalPages = (int) Math.ceil((double) paginatedUsers.getTotalUsers() / size);
+        if (totalPages > 0) {
+            paginatedUsers.setTotalPages(totalPages);
+        } else {
+            paginatedUsers.setTotalPages(1);
+        }
         return paginatedUsers;
     }
-
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
         return Objects.requireNonNull(getGraphClient().users().byUserId(userId).memberOf().get())
@@ -242,7 +266,8 @@ public class UserService {
         try {
             var response = graphClient.applications().get();
             return (response != null && response.getValue() != null)
-                    ? LaaAppDetailsStore.getUserAssignedApps(response.getValue()) : Collections.emptyList();
+                    ? LaaAppDetailsStore.getUserAssignedApps(response.getValue())
+                    : Collections.emptyList();
         } catch (Exception ex) {
             logger.error("Error fetching managed app registrations: ", ex);
             return Collections.emptyList();
@@ -257,7 +282,8 @@ public class UserService {
                     .get(requestConfig -> {
                         assert requestConfig.queryParameters != null;
                         requestConfig.queryParameters.top = pageSize;
-                        requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName", "signInActivity"};
+                        requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName",
+                            "signInActivity"};
                         requestConfig.queryParameters.count = true;
                     });
         } else {
@@ -277,7 +303,8 @@ public class UserService {
                 user.setFullName(graphUser.getDisplayName());
 
                 if (graphUser.getSignInActivity() != null) {
-                    user.setLastLoggedIn(formatLastSignInDateTime(graphUser.getSignInActivity().getLastSignInDateTime()));
+                    user.setLastLoggedIn(
+                            formatLastSignInDateTime(graphUser.getSignInActivity().getLastSignInDateTime()));
                 } else {
                     user.setLastLoggedIn("NA");
                 }
@@ -288,11 +315,12 @@ public class UserService {
 
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(users);
-        paginatedUsers.setNextPageLink(response != null && response.getOdataNextLink() != null ? response.getOdataNextLink() : null);
+        paginatedUsers.setNextPageLink(
+                response != null && response.getOdataNextLink() != null ? response.getOdataNextLink() : null);
 
         int totalUsers = Optional.ofNullable(graphClient.users()
-                        .count()
-                        .get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual")))
+                .count()
+                .get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual")))
                 .orElse(0);
 
         paginatedUsers.setTotalUsers(totalUsers);

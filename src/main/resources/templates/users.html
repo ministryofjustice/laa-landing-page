@@ -1,125 +1,151 @@
 <!DOCTYPE html>
-<html lang="en"
-      th:replace="~{layout :: layout(
+<html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs})}"
-      xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs},
+      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Users</title>
 </head>
+
 <body>
-<script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-
-<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <ol class="govuk-breadcrumbs__list">
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Home</a>
-        </li>
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="#">Users</a>
-        </li>
-    </ol>
-</nav>
-<div id="main-content">
-    <div th:if="${#authentication.isAuthenticated()}">
-        <div class="govuk-grid-row">
-            <div class="govuk-grid-column-three-quarters">
-                <h1 class="govuk-heading-l">User Dashboard</h1>
-            </div>
-            <div class="govuk-grid-column-one-quarter govuk-!-text-align-right">
-                <a href="/user/create/details" class="govuk-button govuk-!-text-align-right">Create
-                    User</a>
-            </div>
-        </div>
-        <div th:if="${user != null}">
-            <div role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
-                 aria-label="success" data-module="moj-alert"
-                 data-moj-alert-init="">
-                <div>
-                    <svg class="moj-alert__icon" role="presentation" focusable="false"
-                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" height="30"
-                         width="30">
-                        <path d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
-                              fill="currentColor"></path>
-                    </svg>
-                </div>
-                <div class="moj-alert__content">
-                    <h2 class="moj-alert__heading">Success
-                    </h2>
-                    <p class="govuk-body" th:text="${user.displayName} +  ' has been added as an authorised user.'"></p>
-                </div>
-            </div>
-        </div>
-        <form method="post" th:action="@{/users/disable}">
-        <table class="govuk-table">
-            <thead>
-            <tr>
-                <th class="govuk-table__header">User</th>
-                <th class="govuk-table__header">Email</th>
-                <th class="govuk-table__header">Last logged in</th>
-                <th class="govuk-table__header">Status</th>
-                <th class="govuk-table__header"></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="user : ${users}">
-                <td class="govuk-table__cell">
-                    <label>
-                        <input type="checkbox" name="id[]" th:value="${user.id}"/>
-                    </label>
-                </td>
-                <td class="govuk-table__cell">
-                    <a class="govuk-link"
-                       th:href="@{/users/edit/{id}/roles(id=${user.id})}"
-                       th:text="${user.fullName}"></a>
-                </td>
-                <td class="govuk-table__cell" th:text="${user.email}"></td>
-                <td class="govuk-table__cell">
-                    <span style="white-space: nowrap;" th:text="${user.lastLoggedIn}"></span>
-                </td>
-                <td class="govuk-table__cell"></td>
-            </tr>
-            </tbody>
-        </table>
-        <button type="submit">Disable selected</button>
-        </form>
-        <div aria-label="Pagination" class="govuk-pagination">
-            <div class="govuk-pagination__prev" th:if="${previousPageLink}">
-                <a class="govuk-link govuk-pagination__link"
-                   rel="prev"
-                   th:href="@{/users(size=${pageSize}, previousPageLink=${previousPageLink})}">
-                    <svg aria-hidden="true"
-                         class="govuk-pagination__icon govuk-pagination__icon--prev"
-                         focusable="false" height="13" viewBox="0 0 15 13" width="15"
-                         xmlns="http://www.w3.org/2000/svg">
-                        <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
-                    </svg>
-                    <span class="govuk-pagination__link-title">
-                        Previous<span class="govuk-visually-hidden"> page</span>
-                    </span>
-                </a>
-            </div>
-
-            <div class="govuk-pagination__next" th:if="${nextPageLink}">
-                <a class="govuk-link govuk-pagination__link"
-                   rel="next"
-                   th:href="@{/users(size=${pageSize}, nextPageLink=${nextPageLink})}">
-                    <span class="govuk-pagination__link-title">
-                        Next<span class="govuk-visually-hidden"> page</span>
-                    </span>
-                    <svg aria-hidden="true"
-                         class="govuk-pagination__icon govuk-pagination__icon--next"
-                         focusable="false" height="13" viewBox="0 0 15 13" width="15"
-                         xmlns="http://www.w3.org/2000/svg">
-                        <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
-                    </svg>
-                </a>
-            </div>
-        </div>
+    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <div class="govuk-phase-banner" id="feedback">
+        <p class="govuk-phase-banner__content">
+            <strong class="govuk-tag govuk-phase-banner__content__tag">
+                Beta
+            </strong>
+            <span class="govuk-phase-banner__text">
+                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
+                    email</a>.
+            </span>
+        </p>
     </div>
-</div>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/home">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/users">Users</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+
+                <div class="moj-page-header-actions">
+                    <div class="moj-page-header-actions__title">
+                        <span class="govuk-caption-l">Firm | 12345</span>
+                        <h1 class="govuk-heading-xl">User Dashboard</h1>
+                    </div>
+                    <form class="form" method="post" action="">
+                        <div class="moj-page-header-actions__actions">
+                            <div class="moj-button-group moj-button-group--inline">
+                                <button type="button" class="govuk-button govuk-button--secondary"
+                                    data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/user/create/details';">
+                                    Create a user
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="govuk-grid-row">
+                    <div class="govuk-grid-column-one-half">
+                        <div class="moj-search">
+                            <div class="govuk-form-group">
+                                <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
+                                    Search by name
+                                </label>
+                                <input class="govuk-input moj-search__input " id="search" name="search" type="search"
+                                    aria-describedby="search-hint">
+                            </div>
+                            <button type="submit" class="govuk-button moj-search__button " data-module="govuk-button"
+                                data-govuk-button-init="">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <form method="post" th:action="@{/users/disable}">
+                    <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
+                        <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th scope="col" class="govuk-table__header"></th>
+                                <th scope="col" class="govuk-table__header" aria-sort="ascending"><button type="button"
+                                        data-index="0">Name</button></th>
+                                <th scope="col" class="govuk-table__header" aria-sort="none"><button type="button"
+                                        data-index="1">Email</button></th>
+                                <th scope="col" class="govuk-table__header" aria-sort="none"><button type="button"
+                                        data-index="2">Last logged in</button></th>
+                                <th scope="col" class="govuk-table__header" aria-sort="none"><button type="button"
+                                        data-index="3">Status</button></th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="govuk-table__body">
+                            <tr th:each="user : ${users}">
+                                <td class="govuk-table__cell govuk-checkboxes govuk-checkboxes--small"
+                                    data-module="govuk-checkboxes">
+                                    <div class="govuk-checkboxes__item">
+                                        <input class="govuk-checkboxes__input" id="disable-user" name="disable-user"
+                                            type="checkbox" th:value="${user.id}" />
+                                        <label class="govuk-label govuk-checkboxes__label" for="disable-user">
+                                            <span class="govuk-visually-hidden">Select to disable user</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="govuk-table__cell">
+                                    <a class="govuk-link" th:href="@{/users/edit/{id}/roles(id=${user.id})}"
+                                        th:text="${user.fullName}"></a>
+                                </td>
+                                <td class="govuk-table__cell" th:text="${user.email}"></td>
+                                <td class="govuk-table__cell">
+                                    <span style="white-space: nowrap;" th:text="${user.lastLoggedIn}"></span>
+                                </td>
+                                <td class="govuk-table__cell"> <span class="moj-badge moj-badge--green">Active</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+                <nav class="moj-pagination" aria-label="Pagination navigation">
+                    <ul class="moj-pagination__list">
+                        <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${previousPageLink}">
+                            <a class="moj-pagination__link"
+                                th:href="@{/users(size=${pageSize}, page=${page - 1}, previousPageLink=${previousPageLink})}">Previous<span
+                                    class="govuk-visually-hidden">
+                                    page</span></a>
+                        </li>
+                        <th:block th:each="i: ${#numbers.sequence(1, totalPages ?: 1)}">
+                            <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
+                            <li class="moj-pagination__item">
+                                <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
+                                    aria-label="Page ${i} of 5" aria-current="page" th:text="${i}"></a>
+                            </li>
+                        </th:block>
+                        <li class="moj-pagination__item  moj-pagination__item--next" th:if="${nextPageLink}">
+                            <a class="moj-pagination__link"
+                                th:href="@{/users(size=${pageSize}, page=${page + 1}, nextPageLink=${nextPageLink})}">Next<span
+                                    class="govuk-visually-hidden">
+                                    page</span></a>
+                        </li>
+                    </ul>
+                    <p class="moj-pagination__results">Showing <b th:text="${(pageSize ?: 10) * ((page ?: 1) - 1)}"></b>
+                        to <b th:text="${(pageSize ?: 10)  * (page ?: 1) }"></b> of <b>
+                            <b th:text="${totalUsers}"></b>
+                        </b> results</p>
+                </nav>
+                <div aria-live="polite" role="status" aria-atomic="true" class="govuk-visually-hidden"></div>
+            </div>
+        </div>
+    </main>
 </body>
+
 </html>
