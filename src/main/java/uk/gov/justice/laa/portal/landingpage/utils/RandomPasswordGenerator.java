@@ -37,8 +37,9 @@ public class RandomPasswordGenerator {
         }
         Collections.shuffle(password);
         StringBuilder sb = new StringBuilder(); //now rebuild the word
-        for(char c : password)
+        for (char c : password) {
             sb.append(c);
+        }
         return sb.toString();
     }
 }
