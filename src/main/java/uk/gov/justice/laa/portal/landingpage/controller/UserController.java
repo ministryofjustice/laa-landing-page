@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.springframework.security.access.prepost.PreAuthorize;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
