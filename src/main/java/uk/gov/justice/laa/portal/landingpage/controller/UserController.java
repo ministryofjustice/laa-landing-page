@@ -1,8 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,43 +14,31 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
 import uk.gov.service.notify.NotificationClientException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 /**
  * User Controller
  */
 @Controller
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+    private final CreateUserNotificationService createUserNotificationService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
-    /**
-     * Add new user via Microsoft Graph API.
-     */
-    @PostMapping("/register")
-    public String addUserToGraph(@RequestParam("username") String username,
-            @RequestParam("password") String password) throws NotificationClientException {
-        userService.createUser(username, password);
-        return "register";
-    }
-
-    /**
-     * Retrieves a list of users from Microsoft Graph API.
-     */
-    @GetMapping("/register")
-    public String register() {
-        return "register";
-    }
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -105,5 +93,159 @@ public class UserController {
     public String disableUsers(@RequestParam("disable-user") List<String> id) throws IOException {
         userService.disableUsers(id);
         return "redirect:/users";
+    }
+
+    @GetMapping("/user/create/details")
+    public String createUser(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (Objects.isNull(user)) {
+            user = new User();
+        }
+        model.addAttribute("user", user);
+        return "user/user-details";
+    }
+
+    @PostMapping("/user/create/details")
+    public RedirectView postUser(@RequestParam("firstName") String firstName,
+                                 @RequestParam("lastName") String lastName,
+                                 @RequestParam("email") String email,
+                                 HttpSession session) throws Exception {
+        User user = (User) session.getAttribute("user");
+        if (Objects.isNull(user)) {
+            user = new User();
+        }
+        user.setGivenName(firstName);
+        user.setSurname(lastName);
+        user.setDisplayName(firstName + " " + lastName);
+        user.setMail(email);
+        session.setAttribute("user", user);
+        return new RedirectView("/user/create/services");
+    }
+
+    @GetMapping("/user/create/services")
+    public String addUserTwo(Model model, HttpSession session) throws Exception {
+        List<ServicePrincipalModel> apps = userService.getServicePrincipals().stream()
+                .map(x -> new ServicePrincipalModel(x, false)).collect(Collectors.toList());
+        List<String> selectedApps = (List<String>) session.getAttribute("apps");
+        for (ServicePrincipalModel app : apps) {
+            if (Objects.nonNull(selectedApps) && selectedApps.contains(app.getServicePrincipal().getAppId())) {
+                app.setSelected(true);
+            }
+        }
+        model.addAttribute("apps", apps);
+        User user = (User) session.getAttribute("user");
+
+        if (user == null) {
+            user = new User();
+        }
+        model.addAttribute("user", user);
+        return "add-user-apps";
+    }
+
+    @PostMapping("/user/create/services")
+    public String addUserTwo(@RequestParam("apps") List<String> apps,
+                             HttpSession session) throws Exception {
+        session.setAttribute("apps", apps);
+
+        return "redirect:/user/create/roles";
+    }
+
+    @GetMapping("/user/create/roles")
+    public String addUserThree(Model model, HttpSession session) throws Exception {
+        List<String> selectedApps = (List<String>) session.getAttribute("apps");
+        if (Objects.isNull(selectedApps)) {
+            selectedApps = new ArrayList<>();
+        }
+        List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
+        List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+        for (UserRole role : roles) {
+            if (Objects.nonNull(selectedRoles) && selectedRoles.contains(role.getAppRoleId())) {
+                role.setSelected(true);
+            }
+        }
+        model.addAttribute("roles", roles);
+        return "add-user-roles";
+    }
+
+    @PostMapping("/user/create/roles")
+    public String addUserThree(@RequestParam("selectedRoles") List<String> roles,
+                               HttpSession session) throws Exception {
+        session.setAttribute("roles", roles);
+        return "redirect:/user/create/offices";
+    }
+
+    @GetMapping("/user/create/offices")
+    public String offices(HttpSession session, Model model) {
+        OfficeData officeData = (OfficeData) session.getAttribute("officeData");
+        if (officeData == null) {
+            officeData = new OfficeData();
+        }
+        model.addAttribute("officeData", officeData);
+        return "user/offices";
+    }
+
+    @PostMapping("/user/create/offices")
+    public String postOffices(HttpSession session, @RequestParam(value = "office", required = false) List<String> selectedOffices) {
+        OfficeData officeData = new OfficeData();
+        officeData.setSelectedOffices(selectedOffices);
+        session.setAttribute("officeData", officeData);
+        return "redirect:/user/create/check-answers";
+    }
+
+    @GetMapping("/user/create/check-answers")
+    public String addUserCya(Model model, HttpSession session) throws Exception {
+        List<String> selectedApps = (List<String>) session.getAttribute("apps");
+        if (Objects.isNull(selectedApps)) {
+            selectedApps = new ArrayList<>();
+        }
+        if (!selectedApps.isEmpty()) {
+            List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
+            List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+            Map<String, List<UserRole>> cyaRoles = new HashMap<>();
+            if (Objects.nonNull(selectedRoles)) {
+                for (UserRole role : roles) {
+                    if (selectedRoles.contains(role.getAppRoleId())) {
+                        List<UserRole> appRoles = cyaRoles.getOrDefault(role.getAppId(), new ArrayList<>());
+                        appRoles.add(role);
+                        cyaRoles.put(role.getAppId(), appRoles);
+                    }
+                }
+            }
+            model.addAttribute("roles", cyaRoles);
+        }
+
+        User user = (User) session.getAttribute("user");
+        if (Objects.isNull(user)) {
+            user = new User();
+        }
+        model.addAttribute("user", user);
+
+        OfficeData officeData = (OfficeData) session.getAttribute("officeData");
+        if (officeData == null) {
+            officeData = new OfficeData();
+        }
+        model.addAttribute("officeData", officeData);
+        return "add-user-cya";
+    }
+
+    @PostMapping("/user/create/check-answers")
+    //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
+    public String addUserCya(HttpSession session) throws Exception {
+        String password = RandomPasswordGenerator.generateRandomPassword(8);
+        User user = (User) session.getAttribute("user");
+
+        List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+        user = userService.createUser(user, password, selectedRoles);
+        createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
+        session.removeAttribute("roles");
+        session.removeAttribute("apps");
+        return "redirect:/users";
+    }
+
+    @GetMapping("/user/create/confirmation")
+    public String addUsercreated(Model model, HttpSession session) throws Exception {
+        User user = (User) session.getAttribute("user");
+        model.addAttribute("user", user);
+        return "add-user-created";
     }
 }

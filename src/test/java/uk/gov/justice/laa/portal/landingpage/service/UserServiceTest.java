@@ -71,19 +71,6 @@ class UserServiceTest {
     }
 
     @Test
-    void createUser() throws NotificationClientException {
-        try (MockedStatic<GraphClientConfig> mockedStatic = mockStatic(GraphClientConfig.class)) {
-            mockedStatic.when(GraphClientConfig::getGraphClient).thenReturn(graphServiceClient);
-
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-            when(usersRequestBuilder.post(any(User.class))).thenReturn(new User());
-
-            assertThat(userService.createUser("user", "pw")).isNotNull();
-        }
-    }
-
-    @Test
     void getManagedAppRegistrations() {
         // Arrange
         Application app1 = new Application();

@@ -60,23 +60,6 @@ class UserControllerTest {
     }
 
     @Test
-    void addUserToGraph() throws Exception {
-        User created = new User();
-        when(userService.createUser(anyString(), anyString())).thenReturn(created);
-
-        String view = userController.addUserToGraph("username", "password");
-
-        assertThat(view).isEqualTo("register");
-    }
-
-    @Test
-    void register() {
-        String view = userController.register();
-
-        assertThat(view).isEqualTo("register");
-    }
-
-    @Test
     void displayAllUsers() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
