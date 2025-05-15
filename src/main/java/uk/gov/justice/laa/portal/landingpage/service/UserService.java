@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.microsoft.graph.models.AppRole;
@@ -29,8 +30,6 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 
 import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import static uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig.getGraphClient;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
@@ -40,11 +39,15 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
  * userService
  */
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
+
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
+        this.graphClient = graphClient;
+        this.userModelRepository = userModelRepository;
+    }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -154,7 +157,7 @@ public class UserService {
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
-        return Objects.requireNonNull(getGraphClient().users().byUserId(userId).memberOf().get())
+        return Objects.requireNonNull(graphClient.users().byUserId(userId).memberOf().get())
                 .getValue()
                 .stream()
                 .filter(obj -> obj instanceof DirectoryRole)
