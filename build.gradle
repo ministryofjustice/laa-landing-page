@@ -54,6 +54,11 @@ dependencies {
     implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.22.0'
     implementation 'com.h2database:h2'
 //    implementation 'org.postgresql:postgresql'
+    // UK Gov Notify dependency for email notifications
+    implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
+    // Needed for the @Validated annotation, used when injecting properties.
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
+
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
@@ -76,9 +81,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
-                    '**/config/**',
-                    '**/model/**',
-                    'uk/gov/**/Application.class',
+                    '**/model/**'
             ])
         })
     }

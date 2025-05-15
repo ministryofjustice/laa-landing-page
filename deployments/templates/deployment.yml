@@ -50,3 +50,8 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
+            - name: GOV_NOTIFY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-gov-notify-api-key-k8s
+                  key: GOV_NOTIFY_API_KEY
