@@ -1,59 +1,169 @@
 <!DOCTYPE html>
-<html lang="en" th:replace="~{layout :: layout(
+<html lang="en"
+      th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
-
+      breadcrumbs=~{::#breadcrumbs})}"
+      xmlns:th="http://www.thymeleaf.org"
+>
 <head>
     <title>Offices</title>
 </head>
-
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/user/create/roles">
-                    < Back</a>
-            </li>
-        </ol>
-    </nav>
-    <main class="govuk-main-wrapper" id="main-content">
-        <h1 class="govuk-heading-m">Offices</h1>
-        <p class="govuk-body">Which of these offices will they have access to?</p>
-        <form th:action="@{/user/create/offices}" th:method="post" th:object="${officeData}">
+<script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" href="/user/create/roles">< Back</a>
+        </li>
+    </ol>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <h1 class="govuk-heading-m">Offices</h1>
+    <p class="govuk-body">Which of these offices will they have access to?</p>
+    <form th:action="@{/user/create/offices}" th:method="post">
+        <div class="moj-filter" data-module="moj-filter">
 
-            <div class="govuk-checkboxes__item">
-                <input class="govuk-checkboxes__input" id="office" name="office" type="checkbox"
-                    th:checked="${officeData.selectedOffices != null && officeData.selectedOffices.contains('office')}"
-                    value="all">
-                <label class="govuk-label govuk-checkboxes__label" for="office">
-                    All Offices
-                </label>
+            <div class="moj-filter__content">
+
+                <div class="moj-filter__selected">
+
+                    <div class="moj-filter__selected-heading">
+
+                        <div class="moj-filter__heading-title">
+                            <h2 class="govuk-heading-m">Selected offices</h2>
+                        </div>
+
+                        <div class="moj-filter__heading-action">
+                            <p><a class="govuk-link govuk-link--no-visited-state" href="">Clear
+                                offices</a></p>
+                        </div>
+
+                    </div>
+
+                    <ul class="moj-filter-tags">
+
+                        <li><a class="moj-filter__tag" href="/path/to/remove/this"><span
+                                class="govuk-visually-hidden">Remove this filter</span> Bristol -
+                            6961</a></li>
+
+                    </ul>
+
+                </div>
+
+                <div class="moj-filter__options">
+                    <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--m" for="offices">
+                            Search offices
+                        </label>
+
+                        <input class="govuk-input" id="offices" name="offices" type="text">
+
+                    </div>
+
+                    <div class="govuk-form-group">
+                        <table class="govuk-table" data-module="moj-multi-select"
+                               data-id-prefix="mountains-" data-moj-multi-select-init="">
+                            <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th class="govuk-table__header" scope="col"
+                                    id="mountains-select-all">
+                                    <div class="govuk-checkboxes__item govuk-checkboxes--small moj-multi-select__checkbox">
+                                        <input id="mountains-checkboxes-all" type="checkbox"
+                                               class="govuk-checkboxes__input"><label
+                                            for="mountains-checkboxes-all"
+                                            class="govuk-label govuk-checkboxes__label moj-multi-select__toggle-label"><span
+                                            class="govuk-visually-hidden">Select all</span></label>
+                                    </div>
+                                </th>
+                                <th class="govuk-table__header" scope="col">Office Name</th>
+                                <th class="govuk-table__header" scope="col">Office ID</th>
+                                <th class="govuk-table__header" scope="col">Office Address</th>
+                            </tr>
+                            </thead>
+                            <tbody class="govuk-table__body">
+                            <tr class="govuk-table__row govuk-table__row--selected">
+                                <td class="govuk-table__cell">
+                                    <div class="govuk-checkboxes__item govuk-checkboxes--small moj-multi-select__checkbox">
+                                        <input type="checkbox" class="govuk-checkboxes__input"
+                                               id="bristol" checked>
+                                        <label class="govuk-label govuk-checkboxes__label"
+                                               for="bristol">
+                                            <span class="govuk-visually-hidden">Select Bristol</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="govuk-table__cell">Bristol</td>
+                                <td class="govuk-table__cell">6961</td>
+                                <td class="govuk-table__cell">Generator Towers, Countership,
+                                    Whitecliff Bristol
+                                </td>
+                            </tr>
+                            <tr class="govuk-table__row">
+                                <td class="govuk-table__cell">
+                                    <div class="govuk-checkboxes__item govuk-checkboxes--small moj-multi-select__checkbox">
+                                        <input type="checkbox" class="govuk-checkboxes__input"
+                                               id="cardiff" value="cardiff">
+                                        <label class="govuk-label govuk-checkboxes__label"
+                                               for="cardiff">
+                                            <span class="govuk-visually-hidden">Select Cardiff</span>
+                                        </label>
+                                    </div>
+                                </td>
+
+                                <td class="govuk-table__cell">Cardiff</td>
+                                <td class="govuk-table__cell">6594</td>
+                                <td class="govuk-table__cell">Brunel Estate, 2 Fitsalan Drive,
+                                    Cardiff
+                                </td>
+                            </tr>
+                            <tr class="govuk-table__row">
+                                <td class="govuk-table__cell">
+                                    <div class="govuk-checkboxes__item govuk-checkboxes--small moj-multi-select__checkbox">
+                                        <input type="checkbox" class="govuk-checkboxes__input"
+                                               id="liverpool" value="liverpool">
+                                        <label class="govuk-label govuk-checkboxes__label"
+                                               for="liverpool">
+                                            <span class="govuk-visually-hidden">Select liverpool</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="govuk-table__cell">Liverpool</td>
+                                <td class="govuk-table__cell">1642</td>
+                                <td class="govuk-table__cell">Harold Pavillon, Rodney Dock,
+                                    LIVERPOOL
+                                </td>
+                            </tr>
+                            <tr class="govuk-table__row">
+                                <td class="govuk-table__cell">
+                                    <div class="govuk-checkboxes__item govuk-checkboxes--small moj-multi-select__checkbox">
+                                        <input type="checkbox" class="govuk-checkboxes__input"
+                                               id="manchester" value="manchester">
+                                        <label class="govuk-label govuk-checkboxes__label"
+                                               for="manchester">
+                                            <span class="govuk-visually-hidden">Select Manchester</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="govuk-table__cell">Manchester</td>
+                                <td class="govuk-table__cell">8850</td>
+                                <td class="govuk-table__cell">The Lincoln, Abraham Square, Barnes
+                                    Road, Manchester
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
             </div>
-            <div class="govuk-checkboxes__item">
-                <input class="govuk-checkboxes__input" id="office1" name="office" type="checkbox"
-                    th:checked="${officeData.selectedOffices != null && officeData.selectedOffices.contains('office1')}"
-                    value="office1">
-                <label class="govuk-label govuk-checkboxes__label" for="office1">
-                    Office 1
-                </label>
-            </div>
-            <div class="govuk-checkboxes__item">
-                <input class="govuk-checkboxes__input" id="office2" name="office" type="checkbox"
-                    th:checked="${officeData.selectedOffices != null && officeData.selectedOffices.contains('office2')}"
-                    value="office2">
-                <label class="govuk-label govuk-checkboxes__label" for="office2">
-                    Office 2
-                </label>
-            </div>
-            <div class="govuk-form-group">
-                <button type="submit" class="govuk-button">Continue</button>
-            </div>
-        </form>
-    </main>
+
+        </div>
+        <div class="govuk-form-group">
+            <button type="submit" class="govuk-button">Continue</button>
+        </div>
+    </form>
+</main>
 </body>
-
 </html>

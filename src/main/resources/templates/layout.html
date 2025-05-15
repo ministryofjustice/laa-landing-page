@@ -31,12 +31,11 @@
     <script type="module" th:src="@{/js/govuk-frontend-5.8.0.min.js}"></script>
     <script type="module" th:src="@{/js/moj-frontend-5.1.2.min.js}"></script>
     <script type="module">
-        import { initAll } from '/js/govuk-frontend-5.8.0.min.js'
-        import * as GOVUKFrontend from '/javascripts/govuk-frontend-5.8.0.min.js'
-        import * as MOJUKFrontend from '/javascripts/moj-frontend-5.1.2.min.js'
+        import * as GOVUKFrontend from '/js/govuk-frontend-5.8.0.min.js'
+        import * as MOJUKFrontend from '/js/moj-frontend-5.1.2.min.js'
 
         GOVUKFrontend.initAll()
-        MOJFrontend.initAll()
+        MOJUKFrontend.initAll()
     </script>
 </body>
 
