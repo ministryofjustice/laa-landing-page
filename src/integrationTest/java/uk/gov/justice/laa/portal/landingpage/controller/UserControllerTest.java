@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.util.LinkedMultiValueMap;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 
 import java.util.Map;
 
@@ -24,6 +25,8 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private GraphServiceClient graphServiceClient;
+    @MockitoBean
+    private NotificationService notificationService;
 
     @Test
     void shouldRedirectAnonymousUser() throws Exception {
@@ -39,15 +42,19 @@ class UserControllerTest extends BaseIntegrationTest {
         requestParams.add("username", "john");
         requestParams.add("password", "pw123");
 
+        User user = new User();
+        user.setMail("test@test.com");
+
         var users = Mockito.mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(users);
-        when(graphServiceClient.users().post(any())).thenReturn(new User());
+        when(graphServiceClient.users().post(any())).thenReturn(user);
 
         // when
         Map<String, Object> model =
                 performPostRequestWithParams(ADD_USER_API_ENDPOINT, requestParams, status().is2xxSuccessful(), "register");
 
         //then
+        Mockito.verify(notificationService, Mockito.times(1)).sendMail(any(), any(), any(), any());
         assertThat(model).isNotNull();
         //display
         this.mockMvc.perform(get("/userlist"))

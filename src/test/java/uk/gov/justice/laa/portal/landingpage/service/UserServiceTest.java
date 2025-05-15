@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,6 +52,8 @@ class UserServiceTest {
     private UserModelRepository userModelRepository;
     @Mock
     private ApplicationCollectionResponse mockResponse;
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
 
     @BeforeAll
     public static void init() {
@@ -68,7 +71,7 @@ class UserServiceTest {
     }
 
     @Test
-    void createUser() {
+    void createUser() throws NotificationClientException {
         try (MockedStatic<GraphClientConfig> mockedStatic = mockStatic(GraphClientConfig.class)) {
             mockedStatic.when(GraphClientConfig::getGraphClient).thenReturn(graphServiceClient);
 

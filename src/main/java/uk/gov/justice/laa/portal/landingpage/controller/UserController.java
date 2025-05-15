@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.service.notify.NotificationClientException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
@@ -38,8 +39,8 @@ public class UserController {
      */
     @PostMapping("/register")
     public String addUserToGraph(@RequestParam("username") String username,
-            @RequestParam("password") String password) {
-        User user = userService.createUser(username, password);
+            @RequestParam("password") String password) throws NotificationClientException {
+        userService.createUser(username, password);
         return "register";
     }
 

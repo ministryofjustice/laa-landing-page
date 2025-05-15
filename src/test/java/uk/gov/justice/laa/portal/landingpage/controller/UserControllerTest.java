@@ -60,7 +60,7 @@ class UserControllerTest {
     }
 
     @Test
-    void addUserToGraph() {
+    void addUserToGraph() throws Exception {
         User created = new User();
         when(userService.createUser(anyString(), anyString())).thenReturn(created);
 
