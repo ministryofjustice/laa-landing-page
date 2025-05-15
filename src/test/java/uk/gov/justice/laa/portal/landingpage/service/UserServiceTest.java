@@ -1,11 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
+import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.RequestInformation;
+import okhttp3.Request;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +27,11 @@ import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.service.notify.NotificationClientException;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +39,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +54,8 @@ class UserServiceTest {
     private UserModelRepository mockUserModelRepository;
     @Mock
     private ApplicationCollectionResponse mockResponse;
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -158,5 +172,39 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getFullName()).isEqualTo("alice");
         assertThat(result.get(1).getFullName()).isEqualTo("bob");
+    }
+
+    @Test
+    void disableUsers() {
+        try (MockedStatic<GraphClientConfig> mockedStatic = mockStatic(GraphClientConfig.class)) {
+            mockedStatic.when(GraphClientConfig::getGraphClient).thenReturn(graphServiceClient);
+
+            BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
+            when(graphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
+            RequestAdapter requestAdapter = mock(RequestAdapter.class, RETURNS_DEEP_STUBS);
+            Request request = mock(Request.class, RETURNS_DEEP_STUBS);
+            when(requestAdapter.convertToNativeRequest(any())).thenReturn(request);
+            when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+            BatchResponseContent responseContent = mock(BatchResponseContent.class, RETURNS_DEEP_STUBS);
+            RequestInformation requestInformation = mock(RequestInformation.class, RETURNS_DEEP_STUBS);
+            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+            when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+            when(graphServiceClient.users().byUserId(any()).toPatchRequestInformation(any())).thenReturn(requestInformation);
+            when(batchRequestBuilder.post(any(BatchRequestContent.class), any())).thenReturn(responseContent);
+            userService.disableUsers(List.of("user1", "user2"));
+            verify(graphServiceClient, times(1)).getBatchRequestBuilder();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void partitionBasedOnSize() {
+        List<Character> characters = List.of('a', 'b', 'c');
+        Collection<List<Character>> subsets = UserService.partitionBasedOnSize(characters, 2);
+        List<List<Character>> subList = new ArrayList(subsets);
+        assertThat(subList).hasSize(2);
+        assertThat(subList.get(0)).hasSize(2);
+        assertThat(subList.get(1)).hasSize(1);
     }
 }
