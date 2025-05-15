@@ -1,0 +1,27 @@
+name: ZAP DAST Daily Baseline Scan
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'
+
+jobs:
+  zap_scan:
+    name: Run ZAP DAST Daily Baseline Scan Against Live App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run ZAP Daily Baseline Scan
+        id: baseline_run
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
+          cmd_options: '-a -j'
+          fail_action: false
+
+      - name: Upload ZAP Daily Baseline Run Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-zap-report
+          path: |
+            report_html.html
+            report_json.json
