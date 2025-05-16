@@ -59,6 +59,8 @@ class UserServiceTest {
     private CreateUserNotificationService createUserNotificationService;
     @Mock
     private HttpSession session;
+    @Mock
+    private UsersRequestBuilder usersRequestBuilder;
 
     @BeforeAll
     public static void init() {
@@ -193,6 +195,19 @@ class UserServiceTest {
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
         assertThat(subList.get(1)).hasSize(1);
+    }
+
+    @Test
+    void getAllUsersWhenGraphApiReturnsNullResponseReturnsEmptyList() {
+        // Arrange
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.get()).thenReturn(null);
+
+        // Act
+        List<User> users = userService.getAllUsers();
+
+        // Assert
+        assertThat(users).isNotNull().isEmpty();
     }
 
     @Test
