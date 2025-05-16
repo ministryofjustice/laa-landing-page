@@ -11,9 +11,9 @@ public class TokenCredentialFactoryConfig {
 
     @Bean
     public TokenCredentialFactory tokenCredentialFactory(
-            @Value("${AZURE_CLIENT_ID}") String clientId,
-            @Value("${AZURE_CLIENT_SECRET}") String clientSecret,
-            @Value("${AZURE_TENANT_ID}") String tenantId) {
+            @Value("${spring.security.oauth2.client.registration.azure.client-id}") String clientId,
+            @Value("${spring.security.oauth2.client.registration.azure.client-secret}") String clientSecret,
+            @Value("${spring.security.oauth2.client.registration.azure.tenant-id}") String tenantId) {
         return new DefaultTokenCredentialFactory(clientId, clientSecret, tenantId);
     }
 }

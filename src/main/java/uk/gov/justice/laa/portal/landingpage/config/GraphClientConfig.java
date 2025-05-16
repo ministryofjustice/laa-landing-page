@@ -1,4 +1,3 @@
-
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import com.azure.core.credential.TokenCredential;
