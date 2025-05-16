@@ -11,6 +11,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,9 +32,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Stack;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -53,7 +56,7 @@ class UserServiceTest {
     @Mock
     private ApplicationCollectionResponse mockResponse;
     @Mock
-    private CreateUserNotificationService createUserNotificationService;
+    private HttpSession session;
 
     @BeforeAll
     public static void init() {
@@ -188,5 +191,18 @@ class UserServiceTest {
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
         assertThat(subList.get(1)).hasSize(1);
+    }
+
+    @Test
+    void getPageHistory_whenNoHistoryInSession_initializesAndReturnsEmptyStack() {
+        // Arrange
+        when(session.getAttribute("pageHistory")).thenReturn(null);
+
+        // Act
+        Stack<String> history = userService.getPageHistory(session);
+
+        // Assert
+        assertThat(history).isNotNull().isEmpty();
+        verify(session).setAttribute(eq("pageHistory"), any(Stack.class));
     }
 }
