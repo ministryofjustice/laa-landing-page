@@ -5,6 +5,7 @@ import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.*;
 import com.microsoft.kiota.RequestInformation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.util.ObjectUtils;
 import uk.gov.justice.laa.portal.landingpage.model.*;
@@ -57,6 +58,9 @@ public class UserService {
     private final UserModelRepository userModelRepository;
     private final CreateUserNotificationService createUserNotificationService;
     private static final int BATCH_SIZE = 20;
+
+    @Value("${entra.defaultDomain}")
+    private String defaultDomain;
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -355,9 +359,7 @@ public class UserService {
         user.setAccountEnabled(true);
         ObjectIdentity objectIdentity = new ObjectIdentity();
         objectIdentity.setSignInType("emailAddress");
-        //read from login user
-        objectIdentity.setIssuer("mojodevlexternal.onmicrosoft.com");
-        //read from login user
+        objectIdentity.setIssuer(defaultDomain);
         objectIdentity.setIssuerAssignedId(user.getMail());
         LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
         identities.add(objectIdentity);
