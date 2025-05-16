@@ -321,15 +321,11 @@ public class UserService {
     }
 
     public List<ServicePrincipal> getServicePrincipals() {
-        GraphServiceClient graphClient = getGraphClient();
         return Objects.requireNonNull(graphClient.servicePrincipals().get()).getValue();
     }
 
     public List<UserRole> getAllAvailableRolesForApps(List<String> selectedApps) {
-        List<ServicePrincipal> servicePrincipals = Objects.requireNonNull(getGraphClient()
-                        .servicePrincipals()
-                        .get())
-                .getValue();
+        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
 
         List<UserRole> roles = new ArrayList<>();
         if (!ObjectUtils.isEmpty(servicePrincipals)) {
@@ -368,7 +364,6 @@ public class UserService {
         passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
-        GraphServiceClient graphClient = getGraphClient();
         user = graphClient.users().post(user);
 
         ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
