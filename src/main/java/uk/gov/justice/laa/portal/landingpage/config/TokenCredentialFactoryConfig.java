@@ -1,6 +1,6 @@
-
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.gov.justice.laa.portal.landingpage.auth.DefaultTokenCredentialFactory;
@@ -10,11 +10,10 @@ import uk.gov.justice.laa.portal.landingpage.auth.TokenCredentialFactory;
 public class TokenCredentialFactoryConfig {
 
     @Bean
-    public TokenCredentialFactory tokenCredentialFactory() {
-        return new DefaultTokenCredentialFactory(
-            System.getenv("AZURE_CLIENT_ID"),
-            System.getenv("AZURE_CLIENT_SECRET"),
-            System.getenv("AZURE_TENANT_ID")
-        );
+    public TokenCredentialFactory tokenCredentialFactory(
+            @Value("${azure.client-id}") String clientId,
+            @Value("${azure.client-secret}") String clientSecret,
+            @Value("${azure.tenant-id}") String tenantId) {
+        return new DefaultTokenCredentialFactory(clientId, clientSecret, tenantId);
     }
 }
