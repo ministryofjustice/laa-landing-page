@@ -196,7 +196,7 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageHistory_whenNoHistoryInSession_initializesAndReturnsEmptyStack() {
+    void getPageHistoryWhenNoHistoryInSessionInitializesAndReturnsEmptyStack() {
         // Arrange
         when(session.getAttribute("pageHistory")).thenReturn(null);
 
