@@ -72,9 +72,10 @@ public class UserService {
     private final CreateUserNotificationService createUserNotificationService;
     private static final int BATCH_SIZE = 20;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository, CreateUserNotificationService createUserNotificationService) {
         this.graphClient = graphClient;
         this.userModelRepository = userModelRepository;
+        this.createUserNotificationService = createUserNotificationService;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -349,7 +350,6 @@ public class UserService {
 
     @Async
     public void disableUsers(List<String> ids) throws IOException {
-        GraphServiceClient graphClient = getGraphClient();
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
         for (List<String> batch : batchIds) {
             BatchRequestContent batchRequestContent = new BatchRequestContent(graphClient);

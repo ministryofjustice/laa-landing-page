@@ -19,15 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
-import uk.gov.service.notify.NotificationClientException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,16 +50,19 @@ class UserServiceTest {
     @Mock
     private UserModelRepository mockUserModelRepository;
     @Mock
-    private ApplicationCollectionResponse mockResponse;
+    private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
-    private CreateUserNotificationService createUserNotificationService;
+    private CreateUserNotificationService mockCreateUserNotificationService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        userService = new UserService(mockGraphServiceClient, mockUserModelRepository);
+        userService = new UserService(
+                mockGraphServiceClient,
+                mockUserModelRepository,
+                mockCreateUserNotificationService
+        );
     }
-
 
     @BeforeAll
     public static void init() {
@@ -93,7 +93,6 @@ class UserServiceTest {
         assertThat(createdUser).isNotNull();
     }
 
-
     @Test
     void getManagedAppRegistrations() {
         //Setup
@@ -106,10 +105,10 @@ class UserServiceTest {
         app2.setDisplayName("App Two");
 
         // Mocked response from Graph API
-        when(mockResponse.getValue()).thenReturn(List.of(app1, app2));
+        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
         ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
         when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenReturn(mockResponse);
+        when(applicationsRequestBuilder.get()).thenReturn(mockApplicationCollectionResponse);
 
         // Act
         List<LaaApplication> result = userService.getManagedAppRegistrations();
@@ -175,27 +174,25 @@ class UserServiceTest {
     }
 
     @Test
-    void disableUsers() {
-        try (MockedStatic<GraphClientConfig> mockedStatic = mockStatic(GraphClientConfig.class)) {
-            mockedStatic.when(GraphClientConfig::getGraphClient).thenReturn(graphServiceClient);
+    void disableUsers() throws IOException {
+        BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
 
-            BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(graphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
-            RequestAdapter requestAdapter = mock(RequestAdapter.class, RETURNS_DEEP_STUBS);
-            Request request = mock(Request.class, RETURNS_DEEP_STUBS);
-            when(requestAdapter.convertToNativeRequest(any())).thenReturn(request);
-            when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-            BatchResponseContent responseContent = mock(BatchResponseContent.class, RETURNS_DEEP_STUBS);
-            RequestInformation requestInformation = mock(RequestInformation.class, RETURNS_DEEP_STUBS);
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-            when(graphServiceClient.users().byUserId(any()).toPatchRequestInformation(any())).thenReturn(requestInformation);
-            when(batchRequestBuilder.post(any(BatchRequestContent.class), any())).thenReturn(responseContent);
-            userService.disableUsers(List.of("user1", "user2"));
-            verify(graphServiceClient, times(1)).getBatchRequestBuilder();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        RequestAdapter requestAdapter = mock(RequestAdapter.class, RETURNS_DEEP_STUBS);
+        Request request = mock(Request.class, RETURNS_DEEP_STUBS);
+        when(requestAdapter.convertToNativeRequest(any())).thenReturn(request);
+        when(mockGraphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+
+        BatchResponseContent responseContent = mock(BatchResponseContent.class, RETURNS_DEEP_STUBS);
+        RequestInformation requestInformation = mock(RequestInformation.class, RETURNS_DEEP_STUBS);
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(any()).toPatchRequestInformation(any())).thenReturn(requestInformation);
+        when(batchRequestBuilder.post(any(BatchRequestContent.class), any())).thenReturn(responseContent);
+
+        userService.disableUsers(List.of("user1", "user2"));
+
+        verify(mockGraphServiceClient, times(1)).getBatchRequestBuilder();
     }
 
     @Test
@@ -203,6 +200,7 @@ class UserServiceTest {
         List<Character> characters = List.of('a', 'b', 'c');
         Collection<List<Character>> subsets = UserService.partitionBasedOnSize(characters, 2);
         List<List<Character>> subList = new ArrayList(subsets);
+
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
         assertThat(subList.get(1)).hasSize(1);
