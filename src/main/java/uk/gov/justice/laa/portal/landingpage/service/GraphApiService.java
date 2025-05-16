@@ -31,9 +31,6 @@ import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.callGraphApi;
 
-/**
- * service class for graph api.
- */
 @Service
 public class GraphApiService {
 
