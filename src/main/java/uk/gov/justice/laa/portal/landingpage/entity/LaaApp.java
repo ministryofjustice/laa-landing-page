@@ -4,42 +4,37 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.io.Serializable;
 import java.util.Set;
-import java.util.UUID;
 
-/**
- * Entity class for LAA Applications
- */
 @Entity
-@Table(name = "laa_app")
+@Table(name = "laa_app", indexes = {
+        @Index(name = "LaaAppCreatedByIdx", columnList = "created_by"),
+        @Index(name = "LaaAppCreatedDateIdx", columnList = "created_date"),
+        @Index(name = "LaaAppLastModifiedDateIdx", columnList = "last_modified_date"),
+        @Index(name = "LaaAppLastModifiedByIdx", columnList = "last_modified_by"),
+        @Index(name = "LaaAppNameIdx", columnList = "name"),
+})
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaApp implements Serializable {
+public class LaaApp extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "laa_app_id", nullable = false)
-    @JsonIgnore
-    private UUID laaAppId;
-
-    @Column(name = "app_name", nullable = false)
-    private String appName;
+    @Column(name = "name", nullable = false, length = 255, unique = true)
+    @Size(min = 1, max = 255)
+    private String name;
 
     @OneToOne
     @JoinColumn(name = "entra_app_registration_id", nullable = false,

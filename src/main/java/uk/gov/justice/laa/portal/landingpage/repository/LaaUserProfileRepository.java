@@ -6,9 +6,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.LaaUserProfile;
 
 import java.util.UUID;
 
-/**
- * Repository class for LAA App Roles
- */
 @Repository
 public interface LaaUserProfileRepository extends JpaRepository<LaaUserProfile, UUID> {
 }

@@ -5,9 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -19,32 +17,33 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
-/**
- * Entity class for LAA Users
- */
 @Entity
-@Table(name = "laa_user_profile")
+@Table(name = "laa_user_profile", indexes = {
+        @Index(name = "LaaUserProfileCreatedByIdx", columnList = "created_by"),
+        @Index(name = "LaaUserProfileCreatedDateIdx", columnList = "created_date"),
+        @Index(name = "LaaUserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
+        @Index(name = "LaaUserProfileLastModifiedByIdx", columnList = "last_modified_by"),
+})
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaUserProfile implements Serializable {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "user_profile_id", nullable = false)
-    private UUID userProfileId;
+public class LaaUserProfile extends BaseEntity {
 
     @Column(name = "is_multi_firm", nullable = false)
-    private boolean isMultiFirm;
+    private boolean multiFirm;
 
     @Column(name = "is_admin", nullable = false)
-    private boolean isAdmin;
+    private boolean admin;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_laa_user_profile_entra_user_id"))
+    @ToString.Exclude
+    @JsonIgnore
+    private EntraUser entraUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "firm_id", foreignKey = @ForeignKey(name = "FK_laa_user_profile_firm_id"))

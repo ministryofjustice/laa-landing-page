@@ -6,9 +6,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
 
 import java.util.UUID;
 
-/**
- * Repository class for Entra App Registrations
- */
 @Repository
 public interface EntraAppRegistrationRepository extends JpaRepository<EntraAppRegistration, UUID> {
 }

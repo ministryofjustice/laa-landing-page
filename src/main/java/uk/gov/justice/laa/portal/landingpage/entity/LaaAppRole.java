@@ -5,42 +5,39 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
-/**
- * Entity class for LAA Application Roles
- */
 @Entity
-@Table(name = "laa_app_role")
+@Table(name = "laa_app_role", indexes = {
+        @Index(name = "LaaAppRoleCreatedByIdx", columnList = "created_by"),
+        @Index(name = "LaaAppRoleCreatedDateIdx", columnList = "created_date"),
+        @Index(name = "LaaAppRoleLastModifiedDateIdx", columnList = "last_modified_date"),
+        @Index(name = "LaaAppRoleLastModifiedByIdx", columnList = "last_modified_by"),
+        @Index(name = "LaaAppRoleNameIdx", columnList = "name"),
+})
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaAppRole implements Serializable {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "app_role_id", nullable = false)
-    private UUID appRoleId;
+public class LaaAppRole extends BaseEntity {
 
-    @Column(name = "role_name", nullable = false)
-    private String roleName;
+    @Column(name = "name", nullable = false, length = 255, unique = true)
+    @Size(min = 1, max = 255)
+    private String name;
 
     @ManyToOne
     @JoinColumn(name = "laa_app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_laa_app_role_laa_app_id"))

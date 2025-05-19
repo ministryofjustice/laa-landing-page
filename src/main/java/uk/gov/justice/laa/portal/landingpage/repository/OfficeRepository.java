@@ -6,9 +6,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 
 import java.util.UUID;
 
-/**
- * Repository class for LAA Firms
- */
 @Repository
 public interface OfficeRepository extends JpaRepository<Office, UUID> {
 }

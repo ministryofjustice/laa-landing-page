@@ -6,9 +6,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.LaaApp;
 
 import java.util.UUID;
 
-/**
- * Repository class for LAA Apps
- */
 @Repository
 public interface LaaAppRepository extends JpaRepository<LaaApp, UUID> {
 }

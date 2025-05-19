@@ -2,9 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 
 import lombok.Getter;
 
-/**
- * Enum of firm types
- */
 @Getter
 public enum FirmType {
 
