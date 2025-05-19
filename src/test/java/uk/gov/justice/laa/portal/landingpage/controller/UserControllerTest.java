@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Stack;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.microsoft.graph.models.ServicePrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,22 +30,13 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -274,22 +267,61 @@ class UserControllerTest {
 
     @Test
     void addUserTwoGet() {
-
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setAppId("1");
+        when(userService.getServicePrincipals()).thenReturn(List.of(servicePrincipal));
+        List<String> ids = List.of("1");
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", ids);
+        String view = userController.addUserTwo(model, session);
+        assertThat(view).isEqualTo("add-user-apps");
+        assertThat(model.getAttribute("apps")).isNotNull();
+        List<ServicePrincipalModel> modeApps = (List<ServicePrincipalModel>) model.getAttribute("apps");
+        assertThat(modeApps.get(0).getServicePrincipal().getAppId()).isEqualTo("1");
+        assertThat(modeApps.get(0).isSelected()).isTrue();
     }
 
     @Test
     void addUserTwoPost() {
-
+        HttpSession session = new MockHttpSession();
+        List<String> ids = List.of("1");
+        RedirectView view = userController.addUserTwo(ids, session);
+        assertThat(session.getAttribute("apps")).isNotNull();
+        assertThat(view.getUrl()).isEqualTo("/user/create/roles");
     }
 
     @Test
     void addUserThreeGet() {
-
+        List<String> selectedApps = new ArrayList<>();
+        selectedApps.add("app1");
+        List<String> selectedRoles = new ArrayList<>();
+        selectedRoles.add("dev");
+        List<UserRole> roles = new ArrayList<>();
+        UserRole userRole = new UserRole();
+        userRole.setAppRoleId("tester");
+        UserRole userRole2 = new UserRole();
+        userRole2.setAppRoleId("dev");
+        roles.add(userRole);
+        roles.add(userRole2);
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(roles);
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        String view = userController.addUserThree(model, session);
+        assertThat(view).isEqualTo("add-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<UserRole> sessionRoles = (List<UserRole>) model.getAttribute("roles");
+        assertThat(sessionRoles.get(0).isSelected()).isFalse();
+        assertThat(sessionRoles.get(1).isSelected()).isTrue();
     }
 
     @Test
     void addUserThreePost() {
-
+        HttpSession session = new MockHttpSession();
+        List<String> roles = List.of("1");
+        RedirectView view = userController.addUserThree(roles, session);
+        assertThat(session.getAttribute("roles")).isNotNull();
+        assertThat(view.getUrl()).isEqualTo("/user/create/offices");
     }
 
     @Test

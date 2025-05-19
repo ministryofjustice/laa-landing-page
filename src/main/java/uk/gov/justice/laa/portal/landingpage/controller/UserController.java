@@ -143,11 +143,11 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public String addUserTwo(@RequestParam("apps") List<String> apps,
+    public RedirectView addUserTwo(@RequestParam("apps") List<String> apps,
                              HttpSession session) {
         session.setAttribute("apps", apps);
 
-        return "redirect:/user/create/roles";
+        return new RedirectView("/user/create/roles");
     }
 
     @GetMapping("/user/create/roles")
@@ -168,10 +168,10 @@ public class UserController {
     }
 
     @PostMapping("/user/create/roles")
-    public String addUserThree(@RequestParam("selectedRoles") List<String> roles,
+    public RedirectView addUserThree(@RequestParam("selectedRoles") List<String> roles,
                                HttpSession session) {
         session.setAttribute("roles", roles);
-        return "redirect:/user/create/offices";
+        return new RedirectView("/user/create/offices");
     }
 
     @GetMapping("/user/create/offices")
