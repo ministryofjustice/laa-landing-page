@@ -109,7 +109,7 @@ public class UserController {
     public RedirectView postUser(@RequestParam("firstName") String firstName,
                                  @RequestParam("lastName") String lastName,
                                  @RequestParam("email") String email,
-                                 HttpSession session) throws Exception {
+                                 HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
@@ -123,7 +123,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/services")
-    public String addUserTwo(Model model, HttpSession session) throws Exception {
+    public String addUserTwo(Model model, HttpSession session) {
         List<ServicePrincipalModel> apps = userService.getServicePrincipals().stream()
                 .map(x -> new ServicePrincipalModel(x, false)).collect(Collectors.toList());
         List<String> selectedApps = (List<String>) session.getAttribute("apps");
@@ -144,14 +144,14 @@ public class UserController {
 
     @PostMapping("/user/create/services")
     public String addUserTwo(@RequestParam("apps") List<String> apps,
-                             HttpSession session) throws Exception {
+                             HttpSession session) {
         session.setAttribute("apps", apps);
 
         return "redirect:/user/create/roles";
     }
 
     @GetMapping("/user/create/roles")
-    public String addUserThree(Model model, HttpSession session) throws Exception {
+    public String addUserThree(Model model, HttpSession session) {
         List<String> selectedApps = (List<String>) session.getAttribute("apps");
         if (Objects.isNull(selectedApps)) {
             selectedApps = new ArrayList<>();
@@ -169,7 +169,7 @@ public class UserController {
 
     @PostMapping("/user/create/roles")
     public String addUserThree(@RequestParam("selectedRoles") List<String> roles,
-                               HttpSession session) throws Exception {
+                               HttpSession session) {
         session.setAttribute("roles", roles);
         return "redirect:/user/create/offices";
     }
@@ -193,7 +193,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/check-answers")
-    public String addUserCya(Model model, HttpSession session) throws Exception {
+    public String addUserCya(Model model, HttpSession session) {
         List<String> selectedApps = (List<String>) session.getAttribute("apps");
         if (Objects.isNull(selectedApps)) {
             selectedApps = new ArrayList<>();
@@ -230,7 +230,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public String addUserCya(HttpSession session) throws Exception {
+    public String addUserCya(HttpSession session) {
         String password = RandomPasswordGenerator.generateRandomPassword(8);
         User user = (User) session.getAttribute("user");
 
@@ -243,7 +243,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/confirmation")
-    public String addUsercreated(Model model, HttpSession session) throws Exception {
+    public String addUsercreated(Model model, HttpSession session) {
         User user = (User) session.getAttribute("user");
         model.addAttribute("user", user);
         return "add-user-created";

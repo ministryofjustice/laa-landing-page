@@ -18,12 +18,15 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
 import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -221,4 +224,97 @@ class UserControllerTest {
         String view = userController.disableUsers(ids);
         assertThat(view).isEqualTo("redirect:/users");
     }
+
+    @Test
+    void createNewUser() {
+        when(session.getAttribute("user")).thenReturn(null);
+        String view = userController.createUser(session, model);
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(view).isEqualTo("user/user-details");
+    }
+
+    @Test
+    void createUserFromSession() {
+        User mockUser = new User();
+        mockUser.setDisplayName("Test User");
+        when(session.getAttribute("user")).thenReturn(mockUser);
+        String view = userController.createUser(session, model);
+        assertThat(model.getAttribute("user")).isNotNull();
+        User sessionUser = (User) session.getAttribute("user");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
+        assertThat(view).isEqualTo("user/user-details");
+    }
+
+    @Test
+    void postNewUser() {
+        HttpSession session = new MockHttpSession();
+        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        User sessionUser = (User) session.getAttribute("user");
+        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
+        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getMail()).isEqualTo("email");
+        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+    }
+
+    @Test
+    void postSessionUser() {
+        User mockUser = new User();
+        mockUser.setDisplayName("Test User");
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("user", mockUser);
+        User sessionUser = (User) session.getAttribute("user");
+        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
+        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getMail()).isEqualTo("email");
+        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+    }
+
+    @Test
+    void addUserTwoGet() {
+
+    }
+
+    @Test
+    void addUserTwoPost() {
+
+    }
+
+    @Test
+    void addUserThreeGet() {
+
+    }
+
+    @Test
+    void addUserThreePost() {
+
+    }
+
+    @Test
+    void offices() {
+        //TODO
+    }
+
+    @Test
+    void postOffices() {
+        //TODO
+    }
+
+    @Test
+    void addUserCyaGet() {
+
+    }
+
+    @Test
+    void addUserCyaPost() {
+
+    }
+
+    @Test
+    void addUsercreated() {
+        //TODO
+    }
+
 }
