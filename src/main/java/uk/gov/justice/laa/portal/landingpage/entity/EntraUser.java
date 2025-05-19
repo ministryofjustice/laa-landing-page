@@ -27,13 +27,13 @@ import java.util.Set;
 
 @Entity
 @Table(name = "entra_user", indexes = {
-        @Index(name = "EntraUserCreatedByIdx", columnList = "created_by"),
-        @Index(name = "EntraUserCreatedDateIdx", columnList = "created_date"),
-        @Index(name = "EntraUserLastModifiedDateIdx", columnList = "last_modified_date"),
-        @Index(name = "EntraUserLastModifiedByIdx", columnList = "last_modified_by"),
-        @Index(name = "EntraUserNameIdx", columnList = "first_name"),
-        @Index(name = "EntraUserNameIdx", columnList = "last_name"),
-        @Index(name = "EntraUserEmailIdx", columnList = "email"),
+    @Index(name = "EntraUserCreatedByIdx", columnList = "created_by"),
+    @Index(name = "EntraUserCreatedDateIdx", columnList = "created_date"),
+    @Index(name = "EntraUserLastModifiedDateIdx", columnList = "last_modified_date"),
+    @Index(name = "EntraUserLastModifiedByIdx", columnList = "last_modified_by"),
+    @Index(name = "EntraUserNameIdx", columnList = "first_name"),
+    @Index(name = "EntraUserNameIdx", columnList = "last_name"),
+    @Index(name = "EntraUserEmailIdx", columnList = "email"),
 })
 @Getter
 @Setter

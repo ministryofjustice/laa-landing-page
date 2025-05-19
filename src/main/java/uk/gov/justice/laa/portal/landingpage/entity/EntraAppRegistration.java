@@ -19,14 +19,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "entra_app_registration",
-        indexes = {
-                @Index(name = "EntraAppRegistrationCreatedByIdx", columnList = "created_by"),
-                @Index(name = "EntraAppRegistrationCreatedDateIdx", columnList = "created_date"),
-                @Index(name = "EntraAppRegistrationLastModifiedDateIdx", columnList = "last_modified_date"),
-                @Index(name = "EntraAppRegistrationLastModifiedByIdx", columnList = "last_modified_by"),
-                @Index(name = "EntraAppRegistrationNameIdx", columnList = "name")
-        }
+@Table(name = "entra_app_registration", indexes = {
+    @Index(name = "EntraAppRegistrationCreatedByIdx", columnList = "created_by"),
+    @Index(name = "EntraAppRegistrationCreatedDateIdx", columnList = "created_date"),
+    @Index(name = "EntraAppRegistrationLastModifiedDateIdx", columnList = "last_modified_date"),
+    @Index(name = "EntraAppRegistrationLastModifiedByIdx", columnList = "last_modified_by"),
+    @Index(name = "EntraAppRegistrationNameIdx", columnList = "name")
+    }
 )
 @Getter
 @Setter

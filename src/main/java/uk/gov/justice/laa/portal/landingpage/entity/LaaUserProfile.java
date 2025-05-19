@@ -22,10 +22,10 @@ import java.util.Set;
 
 @Entity
 @Table(name = "laa_user_profile", indexes = {
-        @Index(name = "LaaUserProfileCreatedByIdx", columnList = "created_by"),
-        @Index(name = "LaaUserProfileCreatedDateIdx", columnList = "created_date"),
-        @Index(name = "LaaUserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
-        @Index(name = "LaaUserProfileLastModifiedByIdx", columnList = "last_modified_by"),
+    @Index(name = "LaaUserProfileCreatedByIdx", columnList = "created_by"),
+    @Index(name = "LaaUserProfileCreatedDateIdx", columnList = "created_date"),
+    @Index(name = "LaaUserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
+    @Index(name = "LaaUserProfileLastModifiedByIdx", columnList = "last_modified_by"),
 })
 @Getter
 @Setter
