@@ -4,9 +4,6 @@ import java.util.List;
 
 import lombok.Data;
 
-/**
- * Javadoc comment.
- */
 @Data
 public class PaginatedUsers {
 
