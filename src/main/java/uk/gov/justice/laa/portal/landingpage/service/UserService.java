@@ -29,6 +29,7 @@ import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
@@ -359,10 +360,14 @@ public class UserService {
      * available.
      */
     public String getLastLoggedInByUserId(String userId) {
-        User user = getUserById(userId);
-        if (user != null && user.getSignInActivity() != null && user.getSignInActivity().getLastSignInDateTime() != null) {
-            return formatLastSignInDateTime(user.getSignInActivity().getLastSignInDateTime());
+        User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
+            requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
+        });
+        SignInActivity signInActivity = user.getSignInActivity();
+        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+        if (lastSignInDateTime != null) {
+            return formatLastSignInDateTime(lastSignInDateTime);
         }
-        return "NA";
+        return "Not Available";
     }
 }
