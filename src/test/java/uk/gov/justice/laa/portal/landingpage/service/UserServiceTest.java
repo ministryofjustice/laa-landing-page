@@ -4,21 +4,19 @@ import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
-import com.microsoft.graph.models.Application;
-import com.microsoft.graph.models.ApplicationCollectionResponse;
-import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
+import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -30,6 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -204,5 +203,40 @@ class UserServiceTest {
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
         assertThat(subList.get(1)).hasSize(1);
+    }
+
+    @Test
+    void testGetUserAppRoleAssignmentByUserId() {
+        // Given
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(new UUID(1L, 2L));
+        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
+        mockUserAppRoleAssignments(appRoleAssignments);
+
+        // When
+        List<AppRoleAssignment> returnedAppRoleAssignments = userService.getUserAppRoleAssignmentByUserId("testUserId");
+
+        // Then
+        Assertions.assertEquals(returnedAppRoleAssignments.size(), appRoleAssignments.size());
+        Assertions.assertEquals(returnedAppRoleAssignments.getFirst().getResourceId(), appRoleAssignment.getResourceId());
+    }
+
+    private void mockUserAppRoleAssignments(List<AppRoleAssignment> appRoleAssignments) {
+        // Mock chaining methods to fetch app role assignments
+        // Mocks graphClient.users().byUserId(userId).appRoleAssignments().get().getValue();
+
+        AppRoleAssignmentCollectionResponse appRoleAssignmentCollectionResponse = new AppRoleAssignmentCollectionResponse();
+        appRoleAssignmentCollectionResponse.getBackingStore().set("value", appRoleAssignments);
+
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class);
+        when(appRoleAssignmentsRequestBuilder.get()).thenReturn(appRoleAssignmentCollectionResponse);
+
+        UserItemRequestBuilder userItemRequestBuilder = mock(UserItemRequestBuilder.class);
+        when(userItemRequestBuilder.appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+
+        UsersRequestBuilder userRequestBuilder = mock(UsersRequestBuilder.class);
+        when(userRequestBuilder.byUserId(any())).thenReturn(userItemRequestBuilder);
+
+        when(mockGraphServiceClient.users()).thenReturn(userRequestBuilder);
     }
 }

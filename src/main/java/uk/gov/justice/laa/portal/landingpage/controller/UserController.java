@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.*;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,18 +20,23 @@ import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
+import uk.gov.justice.laa.portal.landingpage.utils.RestUtils;
 import uk.gov.service.notify.NotificationClientException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
  */
+@Slf4j
 @Controller
 public class UserController {
 
@@ -43,43 +49,31 @@ public class UserController {
     }
 
     @GetMapping("/user/create/services")
-    public String addUserTwo(Model model, HttpSession session) throws Exception {
+    public String selectUserApps(Model model, HttpSession session) {
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<ServicePrincipalModel> apps = userService.getServicePrincipals().stream()
-                .map(x -> new ServicePrincipalModel(x, false)).collect(Collectors.toList());
-        List<String> selectedApps = (List<String>) session.getAttribute("apps");
-        for (ServicePrincipalModel app : apps) {
-            if (Objects.nonNull(selectedApps) && selectedApps.contains(app.getServicePrincipal().getAppId())) {
-                app.setSelected(true);
-            }
-        }
+                .map(servicePrincipal -> new ServicePrincipalModel(servicePrincipal, selectedApps.contains(servicePrincipal.getAppId())))
+                .collect(Collectors.toList());
         model.addAttribute("apps", apps);
-        User user = (User) session.getAttribute("user");
-
-        if (user == null) {
-            user = new User();
-        }
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
         return "add-user-apps";
     }
 
     @PostMapping("/user/create/services")
-    public String addUserTwo(@RequestParam("apps") List<String> apps,
-                             HttpSession session) throws Exception {
+    public String setSelectedApps(@RequestParam("apps") List<String> apps,
+                             HttpSession session) {
         session.setAttribute("apps", apps);
-
         return "redirect:/user/create/roles";
     }
 
     @GetMapping("/user/create/roles")
-    public String addUserThree(Model model, HttpSession session) throws Exception {
-        List<String> selectedApps = (List<String>) session.getAttribute("apps");
-        if (Objects.isNull(selectedApps)) {
-            selectedApps = new ArrayList<>();
-        }
+    public String getSelectedRoles(Model model, HttpSession session) {
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
-        List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+        List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
         for (UserRole role : roles) {
-            if (Objects.nonNull(selectedRoles) && selectedRoles.contains(role.getAppRoleId())) {
+            if (selectedRoles.contains(role.getAppRoleId())) {
                 role.setSelected(true);
             }
         }
@@ -88,18 +82,15 @@ public class UserController {
     }
 
     @PostMapping("/user/create/roles")
-    public String addUserThree(@RequestParam("selectedRoles") List<String> roles,
-                               HttpSession session) throws Exception {
+    public String setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
+                               HttpSession session) {
         session.setAttribute("roles", roles);
         return "redirect:/user/create/offices";
     }
 
     @GetMapping("/user/create/offices")
-    public String offices(HttpSession session, Model model) {
-        OfficeData officeData = (OfficeData) session.getAttribute("officeData");
-        if (officeData == null) {
-            officeData = new OfficeData();
-        }
+    public String getOffices(HttpSession session, Model model) {
+        OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
         return "user/offices";
     }
@@ -114,36 +105,25 @@ public class UserController {
 
     @GetMapping("/user/create/check-answers")
     public String addUserCya(Model model, HttpSession session) throws Exception {
-        List<String> selectedApps = (List<String>) session.getAttribute("apps");
-        if (Objects.isNull(selectedApps)) {
-            selectedApps = new ArrayList<>();
-        }
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         if (!selectedApps.isEmpty()) {
             List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
-            List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
             Map<String, List<UserRole>> cyaRoles = new HashMap<>();
-            if (Objects.nonNull(selectedRoles)) {
-                for (UserRole role : roles) {
-                    if (selectedRoles.contains(role.getAppRoleId())) {
-                        List<UserRole> appRoles = cyaRoles.getOrDefault(role.getAppId(), new ArrayList<>());
-                        appRoles.add(role);
-                        cyaRoles.put(role.getAppId(), appRoles);
-                    }
+            for (UserRole role : roles) {
+                if (selectedRoles.contains(role.getAppRoleId())) {
+                    List<UserRole> appRoles = cyaRoles.getOrDefault(role.getAppId(), new ArrayList<>());
+                    appRoles.add(role);
+                    cyaRoles.put(role.getAppId(), appRoles);
                 }
             }
             model.addAttribute("roles", cyaRoles);
         }
 
-        User user = (User) session.getAttribute("user");
-        if (Objects.isNull(user)) {
-            user = new User();
-        }
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
 
-        OfficeData officeData = (OfficeData) session.getAttribute("officeData");
-        if (officeData == null) {
-            officeData = new OfficeData();
-        }
+        OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
         return "add-user-cya";
     }
@@ -154,7 +134,7 @@ public class UserController {
         String password = RandomPasswordGenerator.generateRandomPassword(8);
         User user = (User) session.getAttribute("user");
 
-        List<String> selectedRoles = (List<String>) session.getAttribute("roles");
+        List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
         user = userService.createUser(user, password, selectedRoles);
         createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
         session.removeAttribute("roles");

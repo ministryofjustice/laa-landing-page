@@ -72,11 +72,11 @@ public class UserService {
      */
     public User createUser(String username, String password) {
         User newUser = buildNewUser(username, password);
-        User savedUser = graphClient.users().post(newUser);
+        newUser = graphClient.users().post(newUser);
         // Add new user to database.
-        persistNewUser(newUser, savedUser);
-        createUserNotificationService.notifyCreateUser(savedUser.getDisplayName(), savedUser.getMail(), password, savedUser.getId());
-        return savedUser;
+        persistNewUser(newUser);
+        createUserNotificationService.notifyCreateUser(newUser.getDisplayName(), newUser.getMail(), password, newUser.getId());
+        return newUser;
     }
 
     public User createUser(User user, String password, List<String> roles) {
@@ -95,16 +95,19 @@ public class UserService {
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
         user = graphClient.users().post(user);
+        persistNewUser(user);
 
-        ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
+        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
         String resourceId = null;
         UUID roleId = null;
-        for (ServicePrincipal servicePrincipal : principalCollection.getValue()) {
-            for (AppRole appRole : servicePrincipal.getAppRoles()) {
-                if (roles.contains(appRole.getId().toString())) {
-                    resourceId = servicePrincipal.getId();
-                    roleId = appRole.getId();
-                    assignAppRoleToUser(user.getId(), resourceId, roleId.toString());
+        for (ServicePrincipal servicePrincipal : servicePrincipals) {
+            if (servicePrincipal.getAppRoles() != null) {
+                for (AppRole appRole : servicePrincipal.getAppRoles()) {
+                    if (roles.contains(appRole.getId().toString())) {
+                        resourceId = servicePrincipal.getId();
+                        roleId = appRole.getId();
+                        assignAppRoleToUser(user.getId(), resourceId, roleId.toString());
+                    }
                 }
             }
         }
@@ -112,7 +115,14 @@ public class UserService {
     }
 
     public List<ServicePrincipal> getServicePrincipals() {
-        return Objects.requireNonNull(graphClient.servicePrincipals().get()).getValue();
+        ServicePrincipalCollectionResponse servicePrincipalsResponse = graphClient.servicePrincipals().get();
+        List<ServicePrincipal> servicePrincipals;
+        if (servicePrincipalsResponse != null  && (servicePrincipals = servicePrincipalsResponse.getValue()) != null) {
+            return servicePrincipals;
+        } else {
+            logger.warn("No service principals found or response was null");
+            return new ArrayList<>();
+        }
     }
 
     public List<UserRole> getUserAppRolesByUserId(String userId) {
@@ -258,7 +268,7 @@ public class UserService {
                     .get()
                     .getValue();
         } catch (ApiException e) {
-            System.err.println("Error fetching roles: " + e.getMessage());
+            logger.error("Error fetching roles: {}", e.getMessage());
             return List.of();
         }
     }
@@ -457,12 +467,12 @@ public class UserService {
         return user;
     }
 
-    private void persistNewUser(User newUser, User savedUser) {
+    private void persistNewUser(User newUser) {
         UserModel userModel = new UserModel();
         userModel.setEmail(newUser.getDisplayName());
         userModel.setPassword("NotSave");
         userModel.setFullName(newUser.getDisplayName());
-        userModel.setId(savedUser.getId());
+        userModel.setId(newUser.getId());
         userModelRepository.save(userModel);
     }
 
