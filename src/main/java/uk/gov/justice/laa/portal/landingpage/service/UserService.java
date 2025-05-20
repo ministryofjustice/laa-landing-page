@@ -353,11 +353,11 @@ public class UserService {
     }
 
     /**
-     * Get the last logged in date for a user by their ID.
+     * Get the last logged in date and time of a user by their user ID.
      *
      * @param userId The ID of the user.
-     * @return The last logged in date as a formatted string, or "NA" if not
-     * available.
+     * @return A string representing the last logged in date and time, or a
+     * message if not available.
      */
     public String getLastLoggedInByUserId(String userId) {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
@@ -368,6 +368,6 @@ public class UserService {
         if (lastSignInDateTime != null) {
             return formatLastSignInDateTime(lastSignInDateTime);
         }
-        return "Not Available";
+        return user.getDisplayName() + " has not logged in yet.";
     }
 }
