@@ -6,9 +6,14 @@ import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
+import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
+import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
@@ -28,17 +33,19 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,15 +65,13 @@ class UserServiceTest {
     private CreateUserNotificationService mockCreateUserNotificationService;
     @Mock
     private HttpSession session;
-    @Mock
-    private UsersRequestBuilder usersRequestBuilder;
 
     @BeforeAll
     public static void init() {
         // Test data for app registrations in local store
         LaaApplication laaApp1 = LaaApplication.builder().id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
         LaaApplication laaApp2 = LaaApplication.builder().id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
-        LaaApplication laaApp3 = LaaApplication.builder().id("a32d05f19e64840bf256a7128483db941410e4f86bae5c1d4a03c9514c2266a4").title("App Two").build();
+        LaaApplication laaApp3 = LaaApplication.builder().id("a32d05f19e64840bf256a7128483db941410e4f86bae5c1d4a03c9514c2266a4").title("App Three").build();
         List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2, laaApp3);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
     }
@@ -238,4 +243,132 @@ class UserServiceTest {
         assertThat(history).isNotNull().isEmpty();
         verify(session).setAttribute(eq("pageHistory"), any(Stack.class));
     }
+
+    // TODO: This test works but I intend to simplify or condense it
+    @Test
+    void retrieveUserAppRolesWhenServicePrincipalFound() {
+        // Arrange
+        String userId = "test-user-id";
+        String resourceIdStr = UUID.randomUUID().toString();
+        String appRoleIdStr = UUID.randomUUID().toString();
+        String servicePrincipalDisplayName = "Test App"; // may need to remove or hardcode for brevity?
+        String appRoleDisplayName = "Test Role"; // may need to remove or hardcode for brevity?
+
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(UUID.fromString(resourceIdStr));
+        appRoleAssignment.setAppRoleId(UUID.fromString(appRoleIdStr));
+
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setDisplayName(servicePrincipalDisplayName);
+        AppRole appRole = new AppRole();
+        appRole.setId(UUID.fromString(appRoleIdStr));
+        appRole.setDisplayName(appRoleDisplayName);
+        servicePrincipal.setAppRoles(List.of(appRole));
+
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        UserItemRequestBuilder userItemRequestBuilder = mock(UserItemRequestBuilder.class);
+        UsersRequestBuilder usersRequestBuilderMock = mock(UsersRequestBuilder.class);
+
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilderMock);
+        when(usersRequestBuilderMock.byUserId(userId)).thenReturn(userItemRequestBuilder);
+        when(userItemRequestBuilder.appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+        when(appRoleAssignmentsRequestBuilder.get().getValue()).thenReturn(List.of(appRoleAssignment));
+
+        com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder servicePrincipalItemRequestBuilderMock = mock(com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder.class); // Explicit mock, need to refactor
+        com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilderMock = mock(com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder.class); // Explicit mock, need to refactor
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilderMock);
+        when(servicePrincipalsRequestBuilderMock.byServicePrincipalId(resourceIdStr)).thenReturn(servicePrincipalItemRequestBuilderMock);
+        when(servicePrincipalItemRequestBuilderMock.get()).thenReturn(servicePrincipal);
+
+        // Act
+        List<Map<String, Object>> roleDetails = userService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(roleDetails).hasSize(1);
+        Map<String, Object> detail = roleDetails.get(0);
+        assertThat(detail.get("appId").toString()).isEqualTo(resourceIdStr);
+        assertThat(detail.get("appName")).isEqualTo("Test App");
+        assertThat(detail.get("roleName")).isEqualTo("Test Role");
+    }
+
+    @Test
+    void applicationRoleAssignmentToUser() {
+        // Arrange
+        String userId = UUID.randomUUID().toString();
+        String appId = UUID.randomUUID().toString();
+        String appRoleId = UUID.randomUUID().toString();
+
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
+        AppRoleAssignmentsRequestBuilder appAssignmentsRb = mock(AppRoleAssignmentsRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(userItemRb.appRoleAssignments()).thenReturn(appAssignmentsRb);
+        when(appAssignmentsRb.post(any(AppRoleAssignment.class))).thenReturn(new AppRoleAssignment());
+
+        // Act
+        userService.assignAppRoleToUser(userId, appId, appRoleId);
+
+        // Assert
+        verify(appAssignmentsRb).post(any(AppRoleAssignment.class));
+    }
+
+    @Test
+    void existingUserRetrievalById() {
+        // Arrange
+        String userId = "existing-user-id";
+        User expectedUser = new User();
+        expectedUser.setId(userId);
+
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(userItemRb.get()).thenReturn(expectedUser);
+
+        // Act
+        User actualUser = userService.getUserById(userId);
+
+        // Assert
+        assertThat(actualUser).isEqualTo(expectedUser);
+    }
+
+    @Test
+    void signInDateTimeFormatting() {
+        // Arrange
+        OffsetDateTime signInTime = OffsetDateTime.parse("2023-05-15T10:30:00Z");
+        // Act
+        String formattedDate = userService.formatLastSignInDateTime(signInTime);
+        // Assert
+        assertThat(formattedDate).isEqualTo("15 May 2023, 10:30");
+    }
+
+    @Test
+    void nullSignInDateTimeFormatting() {
+        // Arrange & Act
+        String formattedDate = userService.formatLastSignInDateTime(null);
+        // Assert
+        assertThat(formattedDate).isEqualTo("N/A");
+    }
+
+    @Test
+    void userCreationNotification() {
+        // Arrange
+        String username = "newnotifyuser";
+        String password = "password123";
+        User graphUser = new User();
+        graphUser.setId("notify-user-id");
+        graphUser.setDisplayName(username);
+
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.post(any(User.class))).thenReturn(graphUser);
+
+        // Act
+        userService.createUser(username, password);
+
+        // Assert
+        verify(mockCreateUserNotificationService).notifyCreateUser(username, null, password, "notify-user-id");
+    }
+
 }
