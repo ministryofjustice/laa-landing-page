@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -27,20 +28,6 @@ import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -237,5 +224,45 @@ class UserControllerTest {
         List<String> ids = List.of("1", "2", "3");
         String view = userController.disableUsers(ids);
         assertThat(view).isEqualTo("redirect:/users");
+    }
+
+    @Test
+    void manageUser_shouldAddUserAndLastLoggedInToModelAndReturnManageUserView() {
+        // Arrange
+        String userId = "user42";
+        User mockUser = new User();
+        mockUser.setId(userId);
+        mockUser.setDisplayName("Managed User");
+        String lastLoggedIn = "2024-06-01T12:00:00Z";
+        when(userService.getUserById(userId)).thenReturn(mockUser);
+        when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
+
+        // Act
+        String view = userController.manageUser(userId, model);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
+        verify(userService).getUserById(userId);
+        verify(userService).getLastLoggedInByUserId(userId);
+    }
+
+    @Test
+    void manageUser_whenUserNotFound_shouldAddNullUserAndReturnManageUserView() {
+        // Arrange
+        String userId = "notfound";
+        when(userService.getUserById(userId)).thenReturn(null);
+        when(userService.getLastLoggedInByUserId(userId)).thenReturn(null);
+
+        // Act
+        String view = userController.manageUser(userId, model);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isNull();
+        assertThat(model.getAttribute("lastLoggedIn")).isNull();
+        verify(userService).getUserById(userId);
+        verify(userService).getLastLoggedInByUserId(userId);
     }
 }
