@@ -97,6 +97,19 @@ public class UserController {
         return "redirect:/users";
     }
 
+    /**
+     * Manage user via graph SDK
+     */
+    @GetMapping("/users/manage/{id}")
+    public String manageUser(@PathVariable String id, Model model) {
+        User user = userService.getUserById(id);
+        String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        model.addAttribute("user", user);
+        model.addAttribute("lastLoggedIn", lastLoggedIn);
+        return "manage-user";
+    }
+
+
     @GetMapping("/user/create/details")
     public String createUser(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");

@@ -1,5 +1,29 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -10,6 +34,7 @@ import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
@@ -17,17 +42,8 @@ import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
@@ -194,6 +210,87 @@ class UserServiceTest {
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
         assertThat(subList.get(1)).hasSize(1);
+    }
+
+    @Test
+    void formatLastSignInDateTime_returnsFormattedString() {
+        OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
+        String formatted = userService.formatLastSignInDateTime(dateTime);
+        assertThat(formatted).isEqualTo("1 January 2024, 10:15");
+    }
+
+    @Test
+    void formatLastSignInDateTime_returnsNaIfNull() {
+        String formatted = userService.formatLastSignInDateTime(null);
+        assertThat(formatted).isEqualTo("N/A");
+    }
+
+    @Test
+    void getLastLoggedInByUserId_returnsFormattedDate() {
+        // Arrange
+        User user = new User();
+        SignInActivity signInActivity = new SignInActivity();
+        OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
+        signInActivity.setLastSignInDateTime(dateTime);
+        user.setSignInActivity(signInActivity);
+        user.setDisplayName("Test User");
+
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
+
+        // Act
+        String result = userService.getLastLoggedInByUserId(userId);
+
+        // Assert
+        assertThat(result).isEqualTo("1 January 2024, 10:15");
+    }
+
+    @Test
+    void getLastLoggedInByUserId_returnsMessageIfNeverLoggedIn() {
+        User user = new User();
+        user.setDisplayName("Test User");
+        user.setSignInActivity(null);
+
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
+
+        String result = userService.getLastLoggedInByUserId(userId);
+
+        assertThat(result).isEqualTo("Test User has not logged in yet.");
+    }
+
+    @Test
+    void getUserById_returnsUser_whenUserExists() {
+        String userId = "user-123";
+        User mockUser = new User();
+        mockUser.setId(userId);
+        mockUser.setDisplayName("Test User");
+
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenReturn(mockUser);
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getDisplayName()).isEqualTo("Test User");
+    }
+
+    @Test
+    void getUserById_returnsNull_whenExceptionThrown() {
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenThrow(new RuntimeException("Not found"));
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNull();
     }
 
     @Test

@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
@@ -40,8 +42,12 @@ import com.microsoft.graph.models.ObjectIdentity;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.RequestInformation;
 
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -321,6 +327,18 @@ public class UserService {
             partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
         }
         return partitions;
+    }
+
+    public String getLastLoggedInByUserId(String userId) {
+        User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
+            requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
+        });
+        SignInActivity signInActivity = user.getSignInActivity();
+        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+        if (lastSignInDateTime != null) {
+            return formatLastSignInDateTime(lastSignInDateTime);
+        }
+        return user.getDisplayName() + " has not logged in yet.";
     }
 
     public List<ServicePrincipal> getServicePrincipals() {
