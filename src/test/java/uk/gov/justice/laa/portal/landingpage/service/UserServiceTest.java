@@ -4,16 +4,20 @@ import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
-import com.microsoft.graph.models.Application;
-import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.Application;
+import com.microsoft.graph.models.ApplicationCollectionResponse;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
+import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder; // EXTRA_IMPORT
+import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
@@ -29,6 +33,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers; // EXTRA_IMPORT
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
@@ -65,6 +70,9 @@ class UserServiceTest {
     private CreateUserNotificationService mockCreateUserNotificationService;
     @Mock
     private HttpSession session;
+    @Mock
+    private GraphApiService graphApiService;
+
 
     @BeforeAll
     public static void init() {
@@ -334,6 +342,23 @@ class UserServiceTest {
     }
 
     @Test
+    void nonExistentUserRetrievalByIdReturnsNull() { // EXTRA_TEST
+        // Arrange
+        String userId = "non-existent-user-id";
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(userItemRb.get()).thenThrow(new ApiException("User not found"));
+
+        // Act
+        User actualUser = userService.getUserById(userId);
+
+        // Assert
+        assertThat(actualUser).isNull();
+    }
+
+    @Test
     void signInDateTimeFormatting() {
         // Arrange
         OffsetDateTime signInTime = OffsetDateTime.parse("2023-05-15T10:30:00Z");
@@ -369,6 +394,32 @@ class UserServiceTest {
 
         // Assert
         verify(mockCreateUserNotificationService).notifyCreateUser(username, null, password, "notify-user-id");
+    }
+
+    @Test
+    void userDirectoryRolesRetrieval() { // EXTRA_TEST
+        // Arrange
+        String userId = "test-user-id";
+        DirectoryRole directoryRole = new DirectoryRole();
+        directoryRole.setDisplayName("AdminRole");
+
+        DirectoryObjectCollectionResponse dirObjectCollectionResponse = mock(DirectoryObjectCollectionResponse.class);
+        when(dirObjectCollectionResponse.getValue()).thenReturn(List.of(directoryRole));
+
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
+        MemberOfRequestBuilder memberOfRb = mock(MemberOfRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(userItemRb.memberOf()).thenReturn(memberOfRb);
+        when(memberOfRb.get()).thenReturn(dirObjectCollectionResponse);
+
+        // Act
+        List<DirectoryRole> roles = userService.getDirectoryRolesByUserId(userId);
+
+        // Assert
+        assertThat(roles).hasSize(1);
+        assertThat(roles.getFirst().getDisplayName()).isEqualTo("AdminRole");
     }
 
 }

@@ -144,4 +144,5 @@ class GraphApiServiceTest {
         assertThat(appRoles).isNotEmpty();
         assertThat(appRoles.iterator().next().getId()).isEqualTo(appRole.getId());
     }
+
 }
