@@ -18,7 +18,6 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -55,7 +54,7 @@ public class LaaUserProfile extends BaseEntity {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "laa_user_profile_office",
+        name = "laa_user_profile_office",
             joinColumns = @JoinColumn(name = "laa_user_profile_id"),
             foreignKey = @ForeignKey(name = "FK_laa_user_profile_office_user_profile_id"),
             inverseJoinColumns = @JoinColumn(name = "office_id"),

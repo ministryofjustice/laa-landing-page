@@ -42,7 +42,7 @@ public class EntraAppRegistration extends BaseEntity {
     @ManyToMany(mappedBy = "userAppRegistrations", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<EntraUser> entraUsers = new HashSet<>();
+    private Set<EntraUser> entraUsers;
 
     @OneToOne(mappedBy = "entraAppRegistration")
     @ToString.Exclude
