@@ -20,9 +20,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -37,6 +37,7 @@ import java.util.Set;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class EntraUser extends BaseEntity {
@@ -76,7 +77,7 @@ public class EntraUser extends BaseEntity {
     )
     @ToString.Exclude
     @JsonIgnore
-    private Set<EntraAppRegistration> userAppRegistrations = new HashSet<>();
+    private Set<EntraAppRegistration> userAppRegistrations;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY)
     @ToString.Exclude

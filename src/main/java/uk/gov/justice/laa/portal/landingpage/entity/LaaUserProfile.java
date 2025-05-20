@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -29,6 +30,7 @@ import java.util.Set;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class LaaUserProfile extends BaseEntity {
@@ -53,20 +55,20 @@ public class LaaUserProfile extends BaseEntity {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "user_profile_office",
-            joinColumns = @JoinColumn(name = "user_profile_id"),
+            name = "laa_user_profile_office",
+            joinColumns = @JoinColumn(name = "laa_user_profile_id"),
             foreignKey = @ForeignKey(name = "FK_laa_user_profile_office_user_profile_id"),
             inverseJoinColumns = @JoinColumn(name = "office_id"),
             inverseForeignKey = @ForeignKey(name = "FK_laa_user_profile_office_office_id")
     )
     @ToString.Exclude
     @JsonIgnore
-    private Set<Office> offices = new HashSet<>();
+    private Set<Office> offices;
 
 
     @ManyToMany(mappedBy = "userProfiles", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaAppRole> appRoles = new HashSet<>();
+    private Set<LaaAppRole> appRoles;
 
 }

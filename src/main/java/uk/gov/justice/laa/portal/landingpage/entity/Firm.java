@@ -11,21 +11,24 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.Set;
 
 @Entity
 @Table(name = "firm", indexes = {
-    @Index(name = "FirmCreatedByIdx", columnList = "created_by"),
-    @Index(name = "FirmCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "FirmLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "FirmLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "FirmNameIdx", columnList = "name"),
+        @Index(name = "FirmCreatedByIdx", columnList = "created_by"),
+        @Index(name = "FirmCreatedDateIdx", columnList = "created_date"),
+        @Index(name = "FirmLastModifiedDateIdx", columnList = "last_modified_date"),
+        @Index(name = "FirmLastModifiedByIdx", columnList = "last_modified_by"),
+        @Index(name = "FirmNameIdx", columnList = "name"),
 })
+@SuperBuilder
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)

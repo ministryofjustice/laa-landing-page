@@ -48,9 +48,9 @@ public class LaaAppRole extends BaseEntity {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_profile_app_role",
-            joinColumns = @JoinColumn(name = "app_role_id"),
+            joinColumns = @JoinColumn(name = "laa_app_role_id"),
             foreignKey = @ForeignKey(name = "FK_laa_app_role_app_role_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "laa_user_profile_id"),
             inverseForeignKey = @ForeignKey(name = "FK_laa_app_role_user_profile_id")
     )
     @ToString.Exclude

@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -29,6 +30,7 @@ import java.util.Set;
 )
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class EntraAppRegistration extends BaseEntity {

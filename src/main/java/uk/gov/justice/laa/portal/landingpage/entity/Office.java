@@ -16,20 +16,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
-import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "office", indexes = {
-    @Index(name = "OfficeCreatedByIdx", columnList = "created_by"),
-    @Index(name = "OfficeCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "OfficeLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "OfficeLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "OfficeNameIdx", columnList = "name"),
+        @Index(name = "OfficeCreatedByIdx", columnList = "created_by"),
+        @Index(name = "OfficeCreatedDateIdx", columnList = "created_date"),
+        @Index(name = "OfficeLastModifiedDateIdx", columnList = "last_modified_date"),
+        @Index(name = "OfficeLastModifiedByIdx", columnList = "last_modified_by"),
+        @Index(name = "OfficeNameIdx", columnList = "name"),
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class Office extends BaseEntity {
@@ -55,6 +56,6 @@ public class Office extends BaseEntity {
     @ManyToMany(mappedBy = "offices", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaUserProfile> userProfiles = new HashSet<>();
+    private Set<LaaUserProfile> userProfiles;
 
 }
