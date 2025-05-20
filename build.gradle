@@ -1,8 +1,6 @@
 plugins {
-    id 'org.springframework.boot' version '3.2.0'
-    id 'io.spring.dependency-management' version '1.1.7'
-    id 'java'
-    id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.25'
+    id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.32'
+    id "io.sentry.jvm.gradle" version "5.5.0"
 }
 
 java {
@@ -17,6 +15,14 @@ checkstyle {
 
 repositories {
     mavenCentral()
+}
+
+sentry {
+  includeSourceContext = true
+
+  org = "ministryofjustice"
+  projectName = "laa-portal-stabilisation"
+  authToken = System.getenv("SENTRY_AUTH_TOKEN")
 }
 
 dependencies {
@@ -40,19 +46,25 @@ dependencies {
     implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
 
     // MSAL for authentication
-    implementation 'com.microsoft.azure:msal4j:1.19.0'
+    implementation 'com.microsoft.azure:msal4j:1.19.1'
 
     // Azure Identity SDK for OAuth2 and token management
-    implementation 'com.azure:azure-identity:1.15.0'
+    implementation 'com.azure:azure-identity:1.16.0'
 
-    implementation 'com.azure.spring:azure-spring-boot-starter-active-directory:3.14.0'
+    implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.22.0'
     implementation 'com.h2database:h2'
 //    implementation 'org.postgresql:postgresql'
+    // UK Gov Notify dependency for email notifications
+    implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
+    // Needed for the @Validated annotation, used when injecting properties.
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
+
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
-//    testImplementation 'com.h2database:h2'
+    testImplementation("io.zonky.test:embedded-database-spring-test:2.5.1")
+    testImplementation("io.zonky.test:embedded-postgres:2.0.7")
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
@@ -69,9 +81,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
-                    '**/config/**',
-                    '**/model/**',
-                    'uk/gov/**/Application.class',
+                    '**/model/**'
             ])
         })
     }
