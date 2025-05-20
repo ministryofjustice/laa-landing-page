@@ -1,28 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.kiota.RequestInformation;
-import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.PasswordProfile;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.ApiException;
-import jakarta.servlet.http.HttpSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,23 +14,27 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.RequestInformation;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
@@ -369,5 +350,17 @@ public class UserService {
             partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
         }
         return partitions;
+    }
+
+    public String getLastLoggedInByUserId(String userId) {
+        User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
+            requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
+        });
+        SignInActivity signInActivity = user.getSignInActivity();
+        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+        if (lastSignInDateTime != null) {
+            return formatLastSignInDateTime(lastSignInDateTime);
+        }
+        return user.getDisplayName() + " has not logged in yet.";
     }
 }

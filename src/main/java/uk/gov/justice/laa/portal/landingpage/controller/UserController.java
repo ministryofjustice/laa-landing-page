@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Stack;
 
@@ -18,9 +19,6 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.service.notify.NotificationClientException;
-import java.io.IOException;
-import java.util.List;
-import java.util.Stack;
 
 /**
  * User Controller
@@ -106,4 +104,17 @@ public class UserController {
         userService.disableUsers(id);
         return "redirect:/users";
     }
+
+    /**
+     * Manage user via graph SDK
+     */
+    @GetMapping("/users/manage/{id}")
+    public String manageUser(@PathVariable String id, Model model) {
+        User user = userService.getUserById(id);
+        String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        model.addAttribute("user", user);
+        model.addAttribute("lastLoggedIn", lastLoggedIn);
+        return "manage-user";
+    }
+
 }
