@@ -224,16 +224,16 @@ class UserServiceTest {
     @Test
     void getLastLoggedInByUserId_returnsFormattedDate() {
         // Arrange
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-
         User user = new User();
         SignInActivity signInActivity = new SignInActivity();
         OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
-        String userId = "user-123";
         signInActivity.setLastSignInDateTime(dateTime);
         user.setSignInActivity(signInActivity);
         user.setDisplayName("Test User");
 
+
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
 
@@ -246,12 +246,12 @@ class UserServiceTest {
 
     @Test
     void getLastLoggedInByUserId_returnsMessageIfNeverLoggedIn() {
-        String userId = "user-123";
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         User user = new User();
         user.setDisplayName("Test User");
         user.setSignInActivity(null);
 
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
 
