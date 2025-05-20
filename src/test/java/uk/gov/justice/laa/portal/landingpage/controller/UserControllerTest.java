@@ -1,8 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,10 +27,12 @@ import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.io.IOException;
@@ -48,6 +48,8 @@ class UserControllerTest {
     private UserService userService;
     @Mock
     private HttpSession session;
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
     private Model model;
 
     @BeforeEach
@@ -336,12 +338,44 @@ class UserControllerTest {
 
     @Test
     void addUserCyaGet() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        UserRole userRole = new UserRole();
+        userRole.setAppRoleId("app1-tester");
+        userRole.setAppId("app1");
+        UserRole userRole2 = new UserRole();
+        userRole2.setAppRoleId("app1-dev");
+        userRole2.setAppId("app1");
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        List<String> selectedRoles = List.of("app1-dev");
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
+        session.setAttribute("officeData", new OfficeData());
+        String view = userController.addUserCya(model, session);
+        assertThat(view).isEqualTo("add-user-cya");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        Map<String, List<UserRole>> cyaRoles =  (Map<String, List<UserRole>>) model.getAttribute("roles");
 
+        assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("officeData")).isNotNull();
     }
 
     @Test
     void addUserCyaPost() {
-
+        HttpSession session = new MockHttpSession();
+        User user = new User();
+        session.setAttribute("user", user);
+        List<String> roles = List.of("app1");
+        session.setAttribute("roles", roles);
+        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        RedirectView view = userController.addUserCya(session);
+        assertThat(view.getUrl()).isEqualTo("/users");
+        assertThat(model.getAttribute("roles")).isNull();
+        assertThat(model.getAttribute("apps")).isNull();
     }
 
     @Test

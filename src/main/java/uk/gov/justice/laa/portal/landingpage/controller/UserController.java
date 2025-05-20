@@ -230,7 +230,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public String addUserCya(HttpSession session) {
+    public RedirectView addUserCya(HttpSession session) {
         String password = RandomPasswordGenerator.generateRandomPassword(8);
         User user = (User) session.getAttribute("user");
 
@@ -239,7 +239,7 @@ public class UserController {
         createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
         session.removeAttribute("roles");
         session.removeAttribute("apps");
-        return "redirect:/users";
+        return new RedirectView("/users");
     }
 
     @GetMapping("/user/create/confirmation")
