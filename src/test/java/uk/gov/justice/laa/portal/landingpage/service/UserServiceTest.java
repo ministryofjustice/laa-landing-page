@@ -231,7 +231,6 @@ class UserServiceTest {
         user.setSignInActivity(signInActivity);
         user.setDisplayName("Test User");
 
-
         String userId = "user-123";
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
@@ -258,5 +257,35 @@ class UserServiceTest {
         String result = userService.getLastLoggedInByUserId(userId);
 
         assertThat(result).isEqualTo("Test User has not logged in yet.");
+    }
+
+    @Test
+    void getUserById_returnsUser_whenUserExists() {
+        String userId = "user-123";
+        User mockUser = new User();
+        mockUser.setId(userId);
+        mockUser.setDisplayName("Test User");
+
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenReturn(mockUser);
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getDisplayName()).isEqualTo("Test User");
+    }
+
+    @Test
+    void getUserById_returnsNull_whenExceptionThrown() {
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenThrow(new RuntimeException("Not found"));
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNull();
     }
 }
