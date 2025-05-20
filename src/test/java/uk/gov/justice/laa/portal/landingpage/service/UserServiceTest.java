@@ -216,7 +216,7 @@ class UserServiceTest {
     }
 
     @Test
-    void formatLastSignInDateTime_returnsNAIfNull() {
+    void formatLastSignInDateTime_returnsNaIfNull() {
         String formatted = userService.formatLastSignInDateTime(null);
         assertThat(formatted).isEqualTo("N/A");
     }
