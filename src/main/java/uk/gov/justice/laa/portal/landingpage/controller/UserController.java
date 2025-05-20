@@ -200,11 +200,11 @@ public class UserController {
     }
 
     @PostMapping("/user/create/offices")
-    public String postOffices(HttpSession session, @RequestParam(value = "office", required = false) List<String> selectedOffices) {
+    public RedirectView postOffices(HttpSession session, @RequestParam(value = "office", required = false) List<String> selectedOffices) {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(selectedOffices);
         session.setAttribute("officeData", officeData);
-        return "redirect:/user/create/check-answers";
+        return new RedirectView("/user/create/check-answers");
     }
 
     @GetMapping("/user/create/check-answers")
@@ -258,7 +258,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/confirmation")
-    public String addUsercreated(Model model, HttpSession session) {
+    public String addUserCreated(Model model, HttpSession session) {
         User user = (User) session.getAttribute("user");
         model.addAttribute("user", user);
         return "add-user-created";

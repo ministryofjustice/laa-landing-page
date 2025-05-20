@@ -38,7 +38,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
-import java.io.IOException;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -371,12 +370,21 @@ class UserControllerTest {
 
     @Test
     void offices() {
-        //TODO
+        HttpSession session = new MockHttpSession();
+        OfficeData officeData = new OfficeData();
+        session.setAttribute("officeData", officeData);
+        String view = userController.offices(session, model);
+        assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(view).isEqualTo("user/offices");
     }
 
     @Test
     void postOffices() {
-        //TODO
+        HttpSession session = new MockHttpSession();
+        List<String> selectedOffices = List.of("1");
+        RedirectView view = userController.postOffices(session, selectedOffices);
+        assertThat(view.getUrl()).isEqualTo("/user/create/check-answers");
+        assertThat(session.getAttribute("officeData")).isNotNull();
     }
 
     @Test
@@ -422,8 +430,13 @@ class UserControllerTest {
     }
 
     @Test
-    void addUsercreated() {
-        //TODO
+    void addUserCreated() {
+        HttpSession session = new MockHttpSession();
+        User user = new User();
+        session.setAttribute("user", user);
+        String view = userController.addUserCreated(model, session);
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(view).isEqualTo("add-user-created");
     }
 
 }
