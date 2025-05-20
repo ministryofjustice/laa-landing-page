@@ -352,13 +352,6 @@ public class UserService {
         return partitions;
     }
 
-    /**
-     * Get the last logged in date and time of a user by their user ID.
-     *
-     * @param userId The ID of the user.
-     * @return A string representing the last logged in date and time, or a
-     * message if not available.
-     */
     public String getLastLoggedInByUserId(String userId) {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
             requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
