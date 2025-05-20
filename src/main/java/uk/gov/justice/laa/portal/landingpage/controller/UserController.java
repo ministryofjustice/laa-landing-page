@@ -1,6 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Stack;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,10 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
-import uk.gov.service.notify.NotificationClientException;
 import java.io.IOException;
-import java.util.List;
-import java.util.Stack;
 import java.util.stream.Collectors;
 
 /**

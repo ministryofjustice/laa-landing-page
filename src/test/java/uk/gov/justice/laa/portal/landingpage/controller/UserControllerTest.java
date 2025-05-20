@@ -1,6 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,7 +28,6 @@ import org.springframework.ui.Model;
 import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
