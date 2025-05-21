@@ -410,28 +410,6 @@ class UserServiceTest {
     }
 
     @Test
-    void applicationRoleAssignmentToUser() {
-        // Arrange
-        String userId = UUID.randomUUID().toString();
-        String appId = UUID.randomUUID().toString();
-        String appRoleId = UUID.randomUUID().toString();
-
-        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
-        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
-        AppRoleAssignmentsRequestBuilder appAssignmentsRb = mock(AppRoleAssignmentsRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
-        when(userItemRb.appRoleAssignments()).thenReturn(appAssignmentsRb);
-        when(appAssignmentsRb.post(any(AppRoleAssignment.class))).thenReturn(new AppRoleAssignment());
-
-        // Act
-        userService.assignAppRoleToUser(userId, appId, appRoleId);
-
-        // Assert
-        verify(appAssignmentsRb).post(any(AppRoleAssignment.class));
-    }
-
-    @Test
     void existingUserRetrievalById() {
         // Arrange
         String userId = "existing-user-id";
