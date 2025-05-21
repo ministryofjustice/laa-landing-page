@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.serviceprincipals.getbyids.GetByIdsPostRequestBody;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.utils.RestUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
@@ -37,16 +42,16 @@ class GraphApiServiceTest {
 
     private static final String APP_ROLE_ASSIGNMENT =
             "{\"@odata.context\": \"https://graph.microsoft.com/v1.0/$metadata#appRoleAssignments\","
-            + "\"value\": [ {"
-            + "\"id\": \"hxjTSK1fc02p9Tw1bmigOH5fJdqoSSNInDHAF7MOyaA\","
-            + "\"deletedDateTime\": null,"
-            + "\"appRoleId\": \"8b2071cd-015a-4025-8052-1c0dba2d3f64\","
-            + "\"createdDateTime\": \"2017-07-31T17:45:18.9559566Z\","
-            + "\"principalDisplayName\": \"Megan Bowen\","
-            + "\"principalId\": \"48d31887-5fad-4d73-a9f5-3c356e68a038\","
-            + "\"principalType\": \"User\","
-            + "\"resourceDisplayName\": \"MOD Demo Platform UnifiedApiConsumer\","
-            + "\"resourceId\": \"b7dc5c41-68a7-4416-ad5d-14a887f1c665\" }]}";
+                    + "\"value\": [ {"
+                    + "\"id\": \"hxjTSK1fc02p9Tw1bmigOH5fJdqoSSNInDHAF7MOyaA\","
+                    + "\"deletedDateTime\": null,"
+                    + "\"appRoleId\": \"8b2071cd-015a-4025-8052-1c0dba2d3f64\","
+                    + "\"createdDateTime\": \"2017-07-31T17:45:18.9559566Z\","
+                    + "\"principalDisplayName\": \"Megan Bowen\","
+                    + "\"principalId\": \"48d31887-5fad-4d73-a9f5-3c356e68a038\","
+                    + "\"principalType\": \"User\","
+                    + "\"resourceDisplayName\": \"MOD Demo Platform UnifiedApiConsumer\","
+                    + "\"resourceId\": \"b7dc5c41-68a7-4416-ad5d-14a887f1c665\" }]}";
 
     @Mock
     private GraphServiceClient client;
@@ -145,4 +150,102 @@ class GraphApiServiceTest {
         assertThat(appRoles.iterator().next().getId()).isEqualTo(appRole.getId());
     }
 
+    @Nested
+    class GetAppRoleAssignments {
+
+        @Test
+        void parsesAssignments_correctly() {
+            // Arrange
+            String json = """
+                    {"value":[{"resourceId":"11111111-1111-1111-1111-111111111111",
+                               "resourceDisplayName":"App1",
+                               "appRoleId":"22222222-2222-2222-2222-222222222222"}]}""";
+            mockedRestUtils.when(() -> RestUtils.callGraphApi(
+                    anyString(),
+                    argThat(u -> u.contains("/me/appRoleAssignments")))).thenReturn(json);
+
+            // Act
+            List<AppRoleAssignment> result = service.getAppRoleAssignments("");
+
+            // Assert
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getResourceDisplayName()).isEqualTo("App1");
+            mockedRestUtils.verify(() -> RestUtils.callGraphApi(
+                    anyString(),
+                    argThat(u -> u.contains("/me/appRoleAssignments"))));
+        }
+    }
+
+    @Nested
+    class GetLastSignInTime {
+
+        @Test
+        void returnsTimestamp_whenPresent() {
+            // Arrange
+            String json = """
+                    {"signInActivity":{"lastSignInDateTime":"2024-01-01T12:34:56Z"}}""";
+            mockedRestUtils.when(() -> RestUtils.callGraphApi(anyString(), anyString()))
+                    .thenReturn(json);
+
+            // Act
+            LocalDateTime ts = service.getLastSignInTime("");
+
+            // Assert
+            assertThat(ts).isEqualTo(LocalDateTime.parse("2024-01-01T12:34:56"));
+        }
+
+        @Test
+        void returnsNull_whenAbsent() {
+            // Arrange
+            mockedRestUtils.when(() -> RestUtils.callGraphApi(anyString(), anyString()))
+                    .thenReturn("{}");
+
+            // Act & Assert
+            assertThat(service.getLastSignInTime("")).isNull();
+        }
+    }
+
+    @Nested
+    class GetUserProfile {
+
+        @Test
+        void deserialisesUser_fromGraphJson() {
+            // Arrange
+            String json = """
+                    {"displayName":"Alice Smith","mail":"alice@example.com"}""";
+            mockedRestUtils.when(() -> RestUtils.callGraphApi(anyString(), anyString()))
+                    .thenReturn(json);
+
+            // Act
+            User user = service.getUserProfile("");
+
+            // Assert
+            assertThat(user.getDisplayName()).isEqualTo("Alice Smith");
+            mockedRestUtils.verify(() -> RestUtils.callGraphApi(anyString(), anyString()));
+        }
+    }
+
+    @Nested
+    class GetUserAssignedApps {
+
+        @Test
+        void extractsRoles_fromGroupListing() {
+            // Arrange
+            String json = """
+                    {"value":[{"displayName":"Role1","description":"Desc1"}]}""";
+            mockedRestUtils.when(() -> RestUtils.callGraphApi(
+                    anyString(),
+                    argThat(u -> u.contains("/memberOf")))).thenReturn(json);
+
+            // Act
+            List<AppRole> roles = service.getUserAssignedApps("");
+
+            // Assert
+            assertThat(roles).hasSize(1);
+            assertThat(roles.getFirst().getDisplayName()).isEqualTo("Role1");
+            mockedRestUtils.verify(() -> RestUtils.callGraphApi(
+                    anyString(),
+                    argThat(u -> u.contains("/memberOf"))));
+        }
+    }
 }

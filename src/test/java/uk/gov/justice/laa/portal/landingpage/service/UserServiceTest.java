@@ -12,11 +12,12 @@ import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
-import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder; // EXTRA_IMPORT
+import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
@@ -25,6 +26,7 @@ import okhttp3.Request;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,7 +35,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers; // EXTRA_IMPORT
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
@@ -41,6 +43,7 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -50,10 +53,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -70,9 +75,6 @@ class UserServiceTest {
     private CreateUserNotificationService mockCreateUserNotificationService;
     @Mock
     private HttpSession session;
-    @Mock
-    private GraphApiService graphApiService;
-
 
     @BeforeAll
     public static void init() {
@@ -252,15 +254,14 @@ class UserServiceTest {
         verify(session).setAttribute(eq("pageHistory"), any(Stack.class));
     }
 
-    // TODO: This test works but I intend to simplify or condense it
     @Test
     void retrieveUserAppRolesWhenServicePrincipalFound() {
         // Arrange
         String userId = "test-user-id";
         String resourceIdStr = UUID.randomUUID().toString();
         String appRoleIdStr = UUID.randomUUID().toString();
-        String servicePrincipalDisplayName = "Test App"; // may need to remove or hardcode for brevity?
-        String appRoleDisplayName = "Test Role"; // may need to remove or hardcode for brevity?
+        String servicePrincipalDisplayName = "Test App";
+        String appRoleDisplayName = "Test Role";
 
         AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
         appRoleAssignment.setResourceId(UUID.fromString(resourceIdStr));
@@ -293,7 +294,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(roleDetails).hasSize(1);
-        Map<String, Object> detail = roleDetails.get(0);
+        Map<String, Object> detail = roleDetails.getFirst();
         assertThat(detail.get("appId").toString()).isEqualTo(resourceIdStr);
         assertThat(detail.get("appName")).isEqualTo("Test App");
         assertThat(detail.get("roleName")).isEqualTo("Test Role");
@@ -342,7 +343,7 @@ class UserServiceTest {
     }
 
     @Test
-    void nonExistentUserRetrievalByIdReturnsNull() { // EXTRA_TEST
+    void nonExistentUserRetrievalByIdReturnsNull() {
         // Arrange
         String userId = "non-existent-user-id";
         UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
@@ -397,7 +398,7 @@ class UserServiceTest {
     }
 
     @Test
-    void userDirectoryRolesRetrieval() { // EXTRA_TEST
+    void userDirectoryRolesRetrieval() {
         // Arrange
         String userId = "test-user-id";
         DirectoryRole directoryRole = new DirectoryRole();
@@ -422,4 +423,150 @@ class UserServiceTest {
         assertThat(roles.getFirst().getDisplayName()).isEqualTo("AdminRole");
     }
 
+    @Nested
+    class PaginationTests {
+
+        private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
+        private final UserService paginationSvc =
+                new UserService(mockGraph, mockUserModelRepository, mockCreateUserNotificationService);
+
+        // Helpers
+        private UserCollectionResponse buildPage(List<User> users, String next) {
+            UserCollectionResponse r = new UserCollectionResponse();
+            r.setValue(users);
+            r.setOdataNextLink(next);
+            return r;
+        }
+        private static User graphUser(String id, String name) {
+            User u = new User();
+            u.setId(id);
+            u.setUserPrincipalName(id + "@test");
+            u.setDisplayName(name);
+            return u;
+        }
+
+        @Test
+        void firstPage_returnsNextLink_noPrev() {
+            // Arrange
+            when(mockGraph.users().get(any()))
+                    .thenReturn(buildPage(List.of(graphUser("1", "Alice")), "https://next"));
+            when(mockGraph.users().count().get(any())).thenReturn(1);
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(new Stack<>(), 10, null);
+
+            // Assert
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getNextPageLink()).isEqualTo("https://next");
+            assertThat(result.getPreviousPageLink()).isNull();
+            assertThat(result.getTotalPages()).isEqualTo(1);
+        }
+
+        @Test
+        void backNav_usesWithUrl_andPopsHistory() {
+            // Arrange
+            Stack<String> history = new Stack<>();
+            history.push("https://first");
+            when(mockGraph.users().get(any())).thenReturn(buildPage(List.of(), "ignored"));
+            when(mockGraph.users().count().get(any())).thenReturn(2);
+            when(mockGraph.users().withUrl("https://first").get())
+                    .thenReturn(buildPage(List.of(graphUser("1", "Alice")), null));
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(history, 1, "https://ignored");
+
+            // Assert
+            assertThat(result.getUsers()).extracting(UserModel::getFullName).containsExactly("Alice");
+            assertThat(history).doesNotContain("https://first");
+        }
+
+        @Test
+        void zeroUsers_setsTotalPagesToOne() {
+            // Arrange
+            when(mockGraph.users().get(any()))
+                    .thenReturn(buildPage(Collections.emptyList(), null));
+            when(mockGraph.users().count().get(any())).thenReturn(0);
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(new Stack<>(), 5, null);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isZero();
+            assertThat(result.getTotalPages()).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    class AssignAppRoleToUser {
+
+        @Test
+        void postsAssignmentToGraph() {
+            // Arrange
+            String userId   = UUID.randomUUID().toString();
+            UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+            AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+            when(mockGraphServiceClient.users()).thenReturn(users);
+            when(users.byUserId(userId).appRoleAssignments()).thenReturn(appRoles);
+
+            // Act
+            userService.assignAppRoleToUser(
+                    userId,
+                    "00000000-0000-0000-0000-000000000222",
+                    "00000000-0000-0000-0000-000000000333");
+
+            // Assert
+            verify(appRoles).post(any(AppRoleAssignment.class));
+        }
+
+        @Test
+        void swallowsGraphExceptions_gracefully() {
+            // Arrange
+            String userId   = UUID.randomUUID().toString();
+            UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+            AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+            when(mockGraphServiceClient.users()).thenReturn(users);
+            when(users.byUserId(userId).appRoleAssignments()).thenReturn(appRoles);
+            doThrow(new RuntimeException("boom")).when(appRoles).post(any(AppRoleAssignment.class));
+
+            // Act
+            userService.assignAppRoleToUser(
+                    userId,
+                    "00000000-0000-0000-0000-000000000222",
+                    "00000000-0000-0000-0000-000000000333");
+
+            // Assert
+            verify(appRoles).post(any(AppRoleAssignment.class));
+        }
+    }
+
+    @Nested
+    class PartitionBasedOnSize {
+
+        @Test
+        void partitionsEvenly_whenDivisible() {
+            // Arrange
+            List<Integer> input = List.of(1, 2, 3, 4);
+
+            // Act
+            List<List<Integer>> result = UserService.partitionBasedOnSize(input, 2);
+
+            // Assert
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0)).containsExactly(1, 2);
+            assertThat(result.get(1)).containsExactly(3, 4);
+        }
+
+        @Test
+        void keepsRemainder_inFinalChunk() {
+            // Arrange
+            List<Integer> input = List.of(1, 2, 3, 4, 5);
+
+            // Act
+            List<List<Integer>> result = UserService.partitionBasedOnSize(input, 2);
+
+            // Assert
+            assertThat(result).hasSize(3);
+            assertThat(result.get(2)).containsExactly(5);
+        }
+    }
 }
