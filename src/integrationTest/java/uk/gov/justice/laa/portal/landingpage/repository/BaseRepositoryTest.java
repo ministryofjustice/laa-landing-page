@@ -25,7 +25,7 @@ public class BaseRepositoryTest {
 
     @Container
     @ServiceConnection
-    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:17-alpine")
+    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("test_db")
             .withUsername("postgres")
             .withPassword("password");
