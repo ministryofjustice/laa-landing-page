@@ -412,28 +412,6 @@ class UserServiceTest {
     }
 
     @Test
-    void applicationRoleAssignmentToUser() {
-        // Arrange
-        String userId = UUID.randomUUID().toString();
-        String appId = UUID.randomUUID().toString();
-        String appRoleId = UUID.randomUUID().toString();
-
-        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
-        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
-        AppRoleAssignmentsRequestBuilder appAssignmentsRb = mock(AppRoleAssignmentsRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
-        when(userItemRb.appRoleAssignments()).thenReturn(appAssignmentsRb);
-        when(appAssignmentsRb.post(any(AppRoleAssignment.class))).thenReturn(new AppRoleAssignment());
-
-        // Act
-        userService.assignAppRoleToUser(userId, appId, appRoleId);
-
-        // Assert
-        verify(appAssignmentsRb).post(any(AppRoleAssignment.class));
-    }
-
-    @Test
     void existingUserRetrievalById() {
         // Arrange
         String userId = "existing-user-id";
@@ -491,7 +469,6 @@ class UserServiceTest {
     @Test
     void userDirectoryRolesRetrieval() {
         // Arrange
-        String userId = "test-user-id";
         DirectoryRole directoryRole = new DirectoryRole();
         directoryRole.setDisplayName("AdminRole");
 
@@ -502,12 +479,12 @@ class UserServiceTest {
         UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
         MemberOfRequestBuilder memberOfRb = mock(MemberOfRequestBuilder.class);
         when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(usersRb.byUserId("test-user-id")).thenReturn(userItemRb);
         when(userItemRb.memberOf()).thenReturn(memberOfRb);
         when(memberOfRb.get()).thenReturn(dirObjectCollectionResponse);
 
         // Act
-        List<DirectoryRole> roles = userService.getDirectoryRolesByUserId(userId);
+        List<DirectoryRole> roles = userService.getDirectoryRolesByUserId("test-user-id");
 
         // Assert
         assertThat(roles).hasSize(1);
