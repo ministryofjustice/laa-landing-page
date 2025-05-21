@@ -25,7 +25,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.getLogsB
  * Unit tests for the NotificationService class
  */
 @ExtendWith(MockitoExtension.class)
-public class /**/NotificationServiceTest {
+public class NotificationServiceTest {
 
     @InjectMocks
     private NotificationService notificationService;
