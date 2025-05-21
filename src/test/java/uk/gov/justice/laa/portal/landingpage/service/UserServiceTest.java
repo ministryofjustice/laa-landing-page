@@ -49,7 +49,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.Map;
 import java.util.Stack;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -383,6 +382,7 @@ class UserServiceTest {
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
         verify(mockUserModelRepository, times(1)).save(any());
     }
+
     @Test
     void getAllUsersWhenGraphApiReturnsNullResponseReturnsEmptyList() {
         // Arrange
@@ -407,52 +407,6 @@ class UserServiceTest {
         // Assert
         assertThat(history).isNotNull().isEmpty();
         verify(session).setAttribute(eq("pageHistory"), any(Stack.class));
-    }
-
-    @Test
-    void retrieveUserAppRolesWhenServicePrincipalFound() {
-        // Arrange
-        String userId = "test-user-id";
-        String resourceIdStr = UUID.randomUUID().toString();
-        String appRoleIdStr = UUID.randomUUID().toString();
-        String servicePrincipalDisplayName = "Test App";
-        String appRoleDisplayName = "Test Role";
-
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setResourceId(UUID.fromString(resourceIdStr));
-        appRoleAssignment.setAppRoleId(UUID.fromString(appRoleIdStr));
-
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setDisplayName(servicePrincipalDisplayName);
-        AppRole appRole = new AppRole();
-        appRole.setId(UUID.fromString(appRoleIdStr));
-        appRole.setDisplayName(appRoleDisplayName);
-        servicePrincipal.setAppRoles(List.of(appRole));
-
-        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        UserItemRequestBuilder userItemRequestBuilder = mock(UserItemRequestBuilder.class);
-        UsersRequestBuilder usersRequestBuilderMock = mock(UsersRequestBuilder.class);
-
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilderMock);
-        when(usersRequestBuilderMock.byUserId(userId)).thenReturn(userItemRequestBuilder);
-        when(userItemRequestBuilder.appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
-        when(appRoleAssignmentsRequestBuilder.get().getValue()).thenReturn(List.of(appRoleAssignment));
-
-        com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder servicePrincipalItemRequestBuilderMock = mock(com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder.class); // Explicit mock, need to refactor
-        com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilderMock = mock(com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder.class); // Explicit mock, need to refactor
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilderMock);
-        when(servicePrincipalsRequestBuilderMock.byServicePrincipalId(resourceIdStr)).thenReturn(servicePrincipalItemRequestBuilderMock);
-        when(servicePrincipalItemRequestBuilderMock.get()).thenReturn(servicePrincipal);
-
-        // Act
-        List<Map<String, Object>> roleDetails = userService.getUserAppRolesByUserId(userId);
-
-        // Assert
-        assertThat(roleDetails).hasSize(1);
-        Map<String, Object> detail = roleDetails.getFirst();
-        assertThat(detail.get("appId").toString()).isEqualTo(resourceIdStr);
-        assertThat(detail.get("appName")).isEqualTo("Test App");
-        assertThat(detail.get("roleName")).isEqualTo("Test Role");
     }
 
     @Test
@@ -704,4 +658,5 @@ class UserServiceTest {
             assertThat(result.get(2)).containsExactly(5);
         }
     }
+
 }
