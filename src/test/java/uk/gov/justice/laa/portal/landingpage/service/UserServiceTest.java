@@ -1,5 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -8,57 +23,44 @@ import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
-import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.UUID;
 import java.util.Map;
 import java.util.Stack;
-import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -72,9 +74,16 @@ class UserServiceTest {
     @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
-    private CreateUserNotificationService mockCreateUserNotificationService;
-    @Mock
     private HttpSession session;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        userService = new UserService(
+                mockGraphServiceClient,
+                mockUserModelRepository
+        );
+    }
 
     @BeforeAll
     public static void init() {
@@ -89,30 +98,6 @@ class UserServiceTest {
     @AfterAll
     public static void tearDown() {
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
-    }
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        userService = new UserService(
-                mockGraphServiceClient,
-                mockUserModelRepository,
-                mockCreateUserNotificationService
-        );
-    }
-
-    @Test
-    void createUser() {
-        // Mocking call chain
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.post(any(User.class))).thenReturn(new User());
-
-        // Call createUser method
-        User createdUser = userService.createUser("user", "pw");
-
-        // Assert the result
-        assertThat(createdUser).isNotNull();
     }
 
     @Test
@@ -228,6 +213,176 @@ class UserServiceTest {
         assertThat(subList.get(1)).hasSize(1);
     }
 
+    @Test
+    void formatLastSignInDateTime_returnsFormattedString() {
+        OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
+        String formatted = userService.formatLastSignInDateTime(dateTime);
+        assertThat(formatted).isEqualTo("1 January 2024, 10:15");
+    }
+
+    @Test
+    void formatLastSignInDateTime_returnsNaIfNull() {
+        String formatted = userService.formatLastSignInDateTime(null);
+        assertThat(formatted).isEqualTo("N/A");
+    }
+
+    @Test
+    void getLastLoggedInByUserId_returnsFormattedDate() {
+        // Arrange
+        User user = new User();
+        SignInActivity signInActivity = new SignInActivity();
+        OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
+        signInActivity.setLastSignInDateTime(dateTime);
+        user.setSignInActivity(signInActivity);
+        user.setDisplayName("Test User");
+
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
+
+        // Act
+        String result = userService.getLastLoggedInByUserId(userId);
+
+        // Assert
+        assertThat(result).isEqualTo("1 January 2024, 10:15");
+    }
+
+    @Test
+    void getLastLoggedInByUserId_returnsMessageIfNeverLoggedIn() {
+        User user = new User();
+        user.setDisplayName("Test User");
+        user.setSignInActivity(null);
+
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
+
+        String result = userService.getLastLoggedInByUserId(userId);
+
+        assertThat(result).isEqualTo("Test User has not logged in yet.");
+    }
+
+    @Test
+    void getUserById_returnsUser_whenUserExists() {
+        String userId = "user-123";
+        User mockUser = new User();
+        mockUser.setId(userId);
+        mockUser.setDisplayName("Test User");
+
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenReturn(mockUser);
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getDisplayName()).isEqualTo("Test User");
+    }
+
+    @Test
+    void getUserById_returnsNull_whenExceptionThrown() {
+        String userId = "user-123";
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(userId).get()).thenThrow(new RuntimeException("Not found"));
+
+        User result = userService.getUserById(userId);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void getServicePrincipals() {
+        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
+        List<ServicePrincipal> value = new ArrayList<>();
+        servicePrincipals.setValue(value);
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        List<ServicePrincipal> result = userService.getServicePrincipals();
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void getAllAvailableRolesForApps() {
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setId("sId");
+        servicePrincipal.setAppId("appId");
+        servicePrincipal.setDisplayName("appDisplayName");
+        AppRole appRole = new AppRole();
+        appRole.setId(UUID.randomUUID());
+        appRole.setDisplayName("appRoleDisplayName");
+        servicePrincipal.setAppRoles(List.of(appRole));
+        List<ServicePrincipal> value = new ArrayList<>();
+        value.add(servicePrincipal);
+        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
+        servicePrincipals.setValue(value);
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        List<UserRole> result = userService.getAllAvailableRolesForApps(List.of("appId"));
+        assertThat(result).isNotNull();
+        assertThat(result.get(0).getAppId()).isEqualTo("sId");
+        assertThat(result.get(0).getAppName()).isEqualTo("appDisplayName");
+        assertThat(result.get(0).getAppRoleName()).isEqualTo("appRoleDisplayName");
+        assertThat(result.get(0).getRoleName()).isEqualTo("appRoleDisplayName");
+    }
+
+    @Test
+    void assignAppRoleToUser() {
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
+        userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
+    }
+
+    @Test
+    void createUser() {
+        //post user
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        User user = new User();
+        when(mockGraphServiceClient.users().post(any())).thenReturn(user);
+        //get roles
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setId("sId");
+        servicePrincipal.setAppId("appId");
+        servicePrincipal.setDisplayName("appDisplayName");
+        AppRole appRole = new AppRole();
+        appRole.setId(UUID.randomUUID());
+        appRole.setDisplayName("appRoleDisplayName");
+        servicePrincipal.setAppRoles(List.of(appRole));
+        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
+        List<ServicePrincipal> value = new ArrayList<>();
+        value.add(servicePrincipal);
+        servicePrincipals.setValue(value);
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        //assign role
+        UsersRequestBuilder usersRoleRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRoleRequestBuilder);
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
+        userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
+        List<String> roles = new ArrayList<>();
+        roles.add("role1");
+        org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
+
+        userService.createUser(user, "pw", roles);
+        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
+        verify(mockUserModelRepository, times(1)).save(any());
+    }
     @Test
     void getAllUsersWhenGraphApiReturnsNullResponseReturnsEmptyList() {
         // Arrange
@@ -378,26 +533,6 @@ class UserServiceTest {
     }
 
     @Test
-    void userCreationNotification() {
-        // Arrange
-        String username = "newnotifyuser";
-        String password = "password123";
-        User graphUser = new User();
-        graphUser.setId("notify-user-id");
-        graphUser.setDisplayName(username);
-
-        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.post(any(User.class))).thenReturn(graphUser);
-
-        // Act
-        userService.createUser(username, password);
-
-        // Assert
-        verify(mockCreateUserNotificationService).notifyCreateUser(username, null, password, "notify-user-id");
-    }
-
-    @Test
     void userDirectoryRolesRetrieval() {
         // Arrange
         String userId = "test-user-id";
@@ -428,7 +563,7 @@ class UserServiceTest {
 
         private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
         private final UserService paginationSvc =
-                new UserService(mockGraph, mockUserModelRepository, mockCreateUserNotificationService);
+                new UserService(mockGraph, mockUserModelRepository);
 
         // Helpers
         private UserCollectionResponse buildPage(List<User> users, String next) {
