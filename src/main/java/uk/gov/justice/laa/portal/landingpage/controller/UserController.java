@@ -208,7 +208,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/check-answers")
-    public String addUserCya(Model model, HttpSession session) {
+    public String addUserCheckAnswers(Model model, HttpSession session) {
         List<String> selectedApps = (List<String>) session.getAttribute("apps");
         if (Objects.isNull(selectedApps)) {
             selectedApps = new ArrayList<>();
@@ -240,12 +240,12 @@ public class UserController {
             officeData = new OfficeData();
         }
         model.addAttribute("officeData", officeData);
-        return "add-user-cya";
+        return "add-user-check-answers";
     }
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public RedirectView addUserCya(HttpSession session) {
+    public RedirectView addUserCheckAnswers(HttpSession session) {
         String password = RandomPasswordGenerator.generateRandomPassword(8);
         User user = (User) session.getAttribute("user");
 

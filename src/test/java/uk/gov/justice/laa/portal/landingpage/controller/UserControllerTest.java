@@ -403,8 +403,8 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        String view = userController.addUserCya(model, session);
-        assertThat(view).isEqualTo("add-user-cya");
+        String view = userController.addUserCheckAnswers(model, session);
+        assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
         Map<String, List<UserRole>> cyaRoles =  (Map<String, List<UserRole>>) model.getAttribute("roles");
 
@@ -423,7 +423,7 @@ class UserControllerTest {
         when(userService.createUser(any(), any(), any())).thenReturn(user);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
-        RedirectView view = userController.addUserCya(session);
+        RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
