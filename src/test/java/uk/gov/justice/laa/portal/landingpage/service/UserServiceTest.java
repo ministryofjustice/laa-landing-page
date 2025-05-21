@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+
 import java.util.Collections;
 import java.util.UUID;
 import java.util.Stack;
@@ -75,15 +77,6 @@ class UserServiceTest {
     @Mock
     private HttpSession session;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        userService = new UserService(
-                mockGraphServiceClient,
-                mockUserModelRepository
-        );
-    }
-
     @BeforeAll
     public static void init() {
         // Test data for app registrations in local store
@@ -97,6 +90,15 @@ class UserServiceTest {
     @AfterAll
     public static void tearDown() {
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
+    }
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        userService = new UserService(
+                mockGraphServiceClient,
+                mockUserModelRepository
+        );
     }
 
     @Test
@@ -410,6 +412,28 @@ class UserServiceTest {
     }
 
     @Test
+    void applicationRoleAssignmentToUser() {
+        // Arrange
+        String userId = UUID.randomUUID().toString();
+        String appId = UUID.randomUUID().toString();
+        String appRoleId = UUID.randomUUID().toString();
+
+        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
+        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
+        AppRoleAssignmentsRequestBuilder appAssignmentsRb = mock(AppRoleAssignmentsRequestBuilder.class);
+        when(mockGraphServiceClient.users()).thenReturn(usersRb);
+        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
+        when(userItemRb.appRoleAssignments()).thenReturn(appAssignmentsRb);
+        when(appAssignmentsRb.post(any(AppRoleAssignment.class))).thenReturn(new AppRoleAssignment());
+
+        // Act
+        userService.assignAppRoleToUser(userId, appId, appRoleId);
+
+        // Assert
+        verify(appAssignmentsRb).post(any(AppRoleAssignment.class));
+    }
+
+    @Test
     void existingUserRetrievalById() {
         // Arrange
         String userId = "existing-user-id";
@@ -497,19 +521,20 @@ class UserServiceTest {
         private final UserService paginationSvc =
                 new UserService(mockGraph, mockUserModelRepository);
 
-        // Helpers
-        private UserCollectionResponse buildPage(List<User> users, String next) {
-            UserCollectionResponse r = new UserCollectionResponse();
-            r.setValue(users);
-            r.setOdataNextLink(next);
-            return r;
-        }
         private static User graphUser(String id, String name) {
             User u = new User();
             u.setId(id);
             u.setUserPrincipalName(id + "@test");
             u.setDisplayName(name);
             return u;
+        }
+
+        // Helpers
+        private UserCollectionResponse buildPage(List<User> users, String next) {
+            UserCollectionResponse r = new UserCollectionResponse();
+            r.setValue(users);
+            r.setOdataNextLink(next);
+            return r;
         }
 
         @Test
@@ -569,7 +594,7 @@ class UserServiceTest {
         @Test
         void postsAssignmentToGraph() {
             // Arrange
-            String userId   = UUID.randomUUID().toString();
+            String userId = UUID.randomUUID().toString();
             UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
             AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
             when(mockGraphServiceClient.users()).thenReturn(users);
@@ -588,7 +613,7 @@ class UserServiceTest {
         @Test
         void swallowsGraphExceptions_gracefully() {
             // Arrange
-            String userId   = UUID.randomUUID().toString();
+            String userId = UUID.randomUUID().toString();
             UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
             AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
             when(mockGraphServiceClient.users()).thenReturn(users);
@@ -636,5 +661,4 @@ class UserServiceTest {
             assertThat(result.get(2)).containsExactly(5);
         }
     }
-
 }
