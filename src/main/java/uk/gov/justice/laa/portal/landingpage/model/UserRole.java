@@ -4,9 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * A POJO to encapsulate user roles
- */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

@@ -102,7 +102,7 @@
                                     </div>
                                 </td>
                                 <td class="govuk-table__cell">
-                                    <a class="govuk-link" th:href="@{/users/edit/{id}/roles(id=${user.id})}"
+                                    <a class="govuk-link" th:href="@{/users/manage/{id}(id=${user.id})}"
                                         th:text="${user.fullName}"></a>
                                 </td>
                                 <td class="govuk-table__cell" th:text="${user.email}"></td>

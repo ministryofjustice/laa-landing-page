@@ -27,7 +27,6 @@ class UserModelRepositoryTest {
         UserModel user = new UserModel();
         user.setId("123");
         user.setEmail("test@test.com");
-        user.setPassword("password");
         user.setFullName("John Smith");
         userModelRepository.save(user);
 
@@ -41,7 +40,6 @@ class UserModelRepositoryTest {
         UserModel user = new UserModel();
         user.setId("123");
         user.setEmail("test@test.com");
-        user.setPassword("password");
         user.setFullName("John Smith");
         userModelRepository.save(user);
         List<UserModel> users = userModelRepository.findAll();

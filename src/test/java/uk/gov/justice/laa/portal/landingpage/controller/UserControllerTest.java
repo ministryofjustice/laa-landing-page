@@ -1,10 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.microsoft.graph.models.ServicePrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,29 +22,23 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
 import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -52,28 +50,13 @@ class UserControllerTest {
     private UserService userService;
     @Mock
     private HttpSession session;
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
     private Model model;
 
     @BeforeEach
     void setUp() {
         model = new ExtendedModelMap();
-    }
-
-    @Test
-    void addUserToGraph() throws Exception {
-        User created = new User();
-        when(userService.createUser(anyString(), anyString())).thenReturn(created);
-
-        String view = userController.addUserToGraph("username", "password");
-
-        assertThat(view).isEqualTo("register");
-    }
-
-    @Test
-    void register() {
-        String view = userController.register();
-
-        assertThat(view).isEqualTo("register");
     }
 
     @Test
@@ -238,4 +221,222 @@ class UserControllerTest {
         String view = userController.disableUsers(ids);
         assertThat(view).isEqualTo("redirect:/users");
     }
+
+    @Test
+    void manageUser_shouldAddUserAndLastLoggedInToModelAndReturnManageUserView() {
+        // Arrange
+        String userId = "user42";
+        User mockUser = new User();
+        mockUser.setId(userId);
+        mockUser.setDisplayName("Managed User");
+        String lastLoggedIn = "2024-06-01T12:00:00Z";
+        when(userService.getUserById(userId)).thenReturn(mockUser);
+        when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
+
+        // Act
+        String view = userController.manageUser(userId, model);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
+        verify(userService).getUserById(userId);
+        verify(userService).getLastLoggedInByUserId(userId);
+    }
+
+    @Test
+    void manageUser_whenUserNotFound_shouldAddNullUserAndReturnManageUserView() {
+        // Arrange
+        String userId = "notfound";
+        when(userService.getUserById(userId)).thenReturn(null);
+        when(userService.getLastLoggedInByUserId(userId)).thenReturn(null);
+
+        // Act
+        String view = userController.manageUser(userId, model);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isNull();
+        assertThat(model.getAttribute("lastLoggedIn")).isNull();
+        verify(userService).getUserById(userId);
+        verify(userService).getLastLoggedInByUserId(userId);
+    }
+
+    @Test
+    void createNewUser() {
+        when(session.getAttribute("user")).thenReturn(null);
+        String view = userController.createUser(session, model);
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(view).isEqualTo("user/user-details");
+    }
+
+    @Test
+    void createUserFromSession() {
+        User mockUser = new User();
+        mockUser.setDisplayName("Test User");
+        when(session.getAttribute("user")).thenReturn(mockUser);
+        String view = userController.createUser(session, model);
+        assertThat(model.getAttribute("user")).isNotNull();
+        User sessionUser = (User) session.getAttribute("user");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
+        assertThat(view).isEqualTo("user/user-details");
+    }
+
+    @Test
+    void postNewUser() {
+        HttpSession session = new MockHttpSession();
+        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        User sessionUser = (User) session.getAttribute("user");
+        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
+        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getMail()).isEqualTo("email");
+        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+    }
+
+    @Test
+    void postSessionUser() {
+        User mockUser = new User();
+        mockUser.setDisplayName("Test User");
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("user", mockUser);
+        User sessionUser = (User) session.getAttribute("user");
+        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
+        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getMail()).isEqualTo("email");
+        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+    }
+
+    @Test
+    void addUserTwoGet() {
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setAppId("1");
+        when(userService.getServicePrincipals()).thenReturn(List.of(servicePrincipal));
+        List<String> ids = List.of("1");
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", ids);
+        String view = userController.selectUserApps(model, session);
+        assertThat(view).isEqualTo("add-user-apps");
+        assertThat(model.getAttribute("apps")).isNotNull();
+        List<ServicePrincipalModel> modeApps = (List<ServicePrincipalModel>) model.getAttribute("apps");
+        assertThat(modeApps.get(0).getServicePrincipal().getAppId()).isEqualTo("1");
+        assertThat(modeApps.get(0).isSelected()).isTrue();
+    }
+
+    @Test
+    void addUserTwoPost() {
+        HttpSession session = new MockHttpSession();
+        List<String> ids = List.of("1");
+        RedirectView view = userController.setSelectedApps(ids, session);
+        assertThat(session.getAttribute("apps")).isNotNull();
+        assertThat(view.getUrl()).isEqualTo("/user/create/roles");
+    }
+
+    @Test
+    void addUserThreeGet() {
+        List<String> selectedApps = new ArrayList<>();
+        selectedApps.add("app1");
+        List<String> selectedRoles = new ArrayList<>();
+        selectedRoles.add("dev");
+        List<UserRole> roles = new ArrayList<>();
+        UserRole userRole = new UserRole();
+        userRole.setAppRoleId("tester");
+        UserRole userRole2 = new UserRole();
+        userRole2.setAppRoleId("dev");
+        roles.add(userRole);
+        roles.add(userRole2);
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(roles);
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        String view = userController.getSelectedRoles(model, session);
+        assertThat(view).isEqualTo("add-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<UserRole> sessionRoles = (List<UserRole>) model.getAttribute("roles");
+        assertThat(sessionRoles.get(0).isSelected()).isFalse();
+        assertThat(sessionRoles.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    void addUserThreePost() {
+        HttpSession session = new MockHttpSession();
+        List<String> roles = List.of("1");
+        RedirectView view = userController.setSelectedRoles(roles, session);
+        assertThat(session.getAttribute("roles")).isNotNull();
+        assertThat(view.getUrl()).isEqualTo("/user/create/offices");
+    }
+
+    @Test
+    void offices() {
+        HttpSession session = new MockHttpSession();
+        OfficeData officeData = new OfficeData();
+        session.setAttribute("officeData", officeData);
+        String view = userController.offices(session, model);
+        assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(view).isEqualTo("user/offices");
+    }
+
+    @Test
+    void postOffices() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedOffices = List.of("1");
+        RedirectView view = userController.postOffices(session, selectedOffices);
+        assertThat(view.getUrl()).isEqualTo("/user/create/check-answers");
+        assertThat(session.getAttribute("officeData")).isNotNull();
+    }
+
+    @Test
+    void addUserCyaGet() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        UserRole userRole = new UserRole();
+        userRole.setAppRoleId("app1-tester");
+        userRole.setAppId("app1");
+        UserRole userRole2 = new UserRole();
+        userRole2.setAppRoleId("app1-dev");
+        userRole2.setAppId("app1");
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        List<String> selectedRoles = List.of("app1-dev");
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
+        session.setAttribute("officeData", new OfficeData());
+        String view = userController.addUserCheckAnswers(model, session);
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        Map<String, List<UserRole>> cyaRoles =  (Map<String, List<UserRole>>) model.getAttribute("roles");
+
+        assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("officeData")).isNotNull();
+    }
+
+    @Test
+    void addUserCyaPost() {
+        HttpSession session = new MockHttpSession();
+        User user = new User();
+        session.setAttribute("user", user);
+        List<String> roles = List.of("app1");
+        session.setAttribute("roles", roles);
+        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        RedirectView view = userController.addUserCheckAnswers(session);
+        assertThat(view.getUrl()).isEqualTo("/users");
+        assertThat(model.getAttribute("roles")).isNull();
+        assertThat(model.getAttribute("apps")).isNull();
+    }
+
+    @Test
+    void addUserCreated() {
+        HttpSession session = new MockHttpSession();
+        User user = new User();
+        session.setAttribute("user", user);
+        String view = userController.addUserCreated(model, session);
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(view).isEqualTo("add-user-created");
+    }
+
 }
