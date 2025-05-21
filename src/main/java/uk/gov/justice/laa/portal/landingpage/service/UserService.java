@@ -1,5 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
+import com.microsoft.kiota.RequestInformation;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.util.ObjectUtils;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.ApiException;
+import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -7,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -16,19 +31,17 @@ import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.ObjectIdentity;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
@@ -36,11 +49,10 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
 
-import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 /**
  * userService
@@ -50,30 +62,17 @@ public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
-    private final CreateUserNotificationService createUserNotificationService;
     private static final int BATCH_SIZE = 20;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository, CreateUserNotificationService createUserNotificationService) {
+    @Value("${entra.defaultDomain}")
+    private String defaultDomain;
+
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
         this.graphClient = graphClient;
         this.userModelRepository = userModelRepository;
-        this.createUserNotificationService = createUserNotificationService;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    /**
-     * create User at Entra
-     *
-     * @return {@code User}
-     */
-    public User createUser(String username, String password) {
-        User newUser = buildNewUser(username, password);
-        User savedUser = graphClient.users().post(newUser);
-        // Add new user to database.
-        persistNewUser(newUser, savedUser);
-        createUserNotificationService.notifyCreateUser(savedUser.getDisplayName(), savedUser.getMail(), password, savedUser.getId());
-        return savedUser;
-    }
 
     public List<Map<String, Object>> getUserAppRolesByUserId(String userId) {
         List<AppRoleAssignment> userAppRoles = getUserAppRoleAssignmentByUserId(userId);
@@ -307,28 +306,6 @@ public class UserService {
         return userModelRepository.findAll();
     }
 
-    private static User buildNewUser(String username, String password) {
-        User user = new User();
-        user.setAccountEnabled(true);
-        user.setDisplayName(username);
-        user.setMailNickname("someone");
-        user.setUserPrincipalName(username + "@mojodevlexternal.onmicrosoft.com");
-        PasswordProfile passwordProfile = new PasswordProfile();
-        passwordProfile.setForceChangePasswordNextSignIn(true);
-        passwordProfile.setPassword(password);
-        user.setPasswordProfile(passwordProfile);
-        return user;
-    }
-
-    private void persistNewUser(User newUser, User savedUser) {
-        UserModel userModel = new UserModel();
-        userModel.setEmail(newUser.getDisplayName());
-        userModel.setPassword("NotSave");
-        userModel.setFullName(newUser.getDisplayName());
-        userModel.setId(savedUser.getId());
-        userModelRepository.save(userModel);
-    }
-
     @Async
     public void disableUsers(List<String> ids) throws IOException {
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
@@ -362,5 +339,75 @@ public class UserService {
             return formatLastSignInDateTime(lastSignInDateTime);
         }
         return user.getDisplayName() + " has not logged in yet.";
+    }
+
+    public List<ServicePrincipal> getServicePrincipals() {
+        return Objects.requireNonNull(graphClient.servicePrincipals().get()).getValue();
+    }
+
+    public List<UserRole> getAllAvailableRolesForApps(List<String> selectedApps) {
+        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
+
+        List<UserRole> roles = new ArrayList<>();
+        if (!ObjectUtils.isEmpty(servicePrincipals)) {
+            for (ServicePrincipal sp : servicePrincipals) {
+                if (selectedApps.contains(sp.getAppId())) {
+                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
+                        UserRole roleInfo = new UserRole(
+                                sp.getId(),
+                                sp.getDisplayName(),
+                                Objects.requireNonNull(role.getId()).toString(),
+                                role.getDisplayName(),
+                                null,
+                                role.getDisplayName(),
+                                null,
+                                false
+                        );
+                        roles.add(roleInfo);
+                    }
+                }
+            }
+        }
+        return roles;
+    }
+
+    public User createUser(User user, String password, List<String> roles) {
+
+        user.setAccountEnabled(true);
+        ObjectIdentity objectIdentity = new ObjectIdentity();
+        objectIdentity.setSignInType("emailAddress");
+        objectIdentity.setIssuer(defaultDomain);
+        objectIdentity.setIssuerAssignedId(user.getMail());
+        LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
+        identities.add(objectIdentity);
+        user.setIdentities(identities);
+        PasswordProfile passwordProfile = new PasswordProfile();
+        passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
+        passwordProfile.setPassword(password);
+        user.setPasswordProfile(passwordProfile);
+        user = graphClient.users().post(user);
+
+        ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
+        String resourceId = null;
+        UUID roleId = null;
+        for (ServicePrincipal servicePrincipal : principalCollection.getValue()) {
+            for (AppRole appRole : servicePrincipal.getAppRoles()) {
+                if (roles.contains(appRole.getId().toString())) {
+                    resourceId = servicePrincipal.getId();
+                    roleId = appRole.getId();
+                    assignAppRoleToUser(user.getId(), resourceId, roleId.toString());
+                }
+            }
+        }
+        persistNewUser(user);
+        return user;
+    }
+
+    private void persistNewUser(User newUser) {
+        UserModel userModel = new UserModel();
+        userModel.setEmail(newUser.getDisplayName());
+        userModel.setFullName(newUser.getDisplayName());
+        userModel.setId(newUser.getId());
+        userModelRepository.save(userModel);
     }
 }
