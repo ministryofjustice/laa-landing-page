@@ -69,7 +69,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
-                  key: database_name        
+                  key: database_name
             - name: POSTGRES_DB_ADDRESS
               valueFrom:
                 secretKeyRef:
