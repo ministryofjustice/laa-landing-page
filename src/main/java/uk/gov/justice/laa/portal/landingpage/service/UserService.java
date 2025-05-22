@@ -3,61 +3,29 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.*;
-import com.microsoft.kiota.RequestInformation;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.ObjectUtils;
-import uk.gov.justice.laa.portal.landingpage.model.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Stack;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Qualifier;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ObjectIdentity;
-import com.microsoft.graph.models.PasswordProfile;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
-import com.microsoft.graph.models.SignInActivity;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.ApiException;
-import com.microsoft.kiota.RequestInformation;
-
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 /**
  * userService
@@ -68,7 +36,7 @@ public class UserService {
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
     private static final int BATCH_SIZE = 20;
-    private static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
+    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
 
     @Value("${entra.defaultDomain}")
     private String defaultDomain;
@@ -273,10 +241,7 @@ public class UserService {
     }
 
     public List<UserRole> getAllAvailableRoles() {
-        List<ServicePrincipal> servicePrincipals = Objects.requireNonNull(graphClient
-                        .servicePrincipals()
-                        .get())
-                .getValue();
+        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
 
         List<UserRole> roles = new ArrayList<>();
         if (!ObjectUtils.isEmpty(servicePrincipals)) {

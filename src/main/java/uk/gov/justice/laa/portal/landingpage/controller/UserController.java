@@ -1,15 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Stack;
-
-import lombok.extern.slf4j.Slf4j;
+import com.microsoft.graph.models.User;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,11 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import com.microsoft.graph.models.User;
-
-import jakarta.servlet.http.HttpSession;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -31,11 +20,9 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
-import uk.gov.justice.laa.portal.landingpage.utils.RestUtils;
-import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
+
 import java.io.IOException;
-import java.util.stream.Collectors;
-import java.util.function.Supplier;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
@@ -282,9 +269,9 @@ public class UserController {
      * Update user roles via graph SDK
      */
     @PostMapping("/users/edit/{id}/roles")
-    public String updateUserRoles(@PathVariable String id,
+    public RedirectView updateUserRoles(@PathVariable String id,
                                   @RequestParam(required = false) List<String> selectedRoles) {
         userService.updateUserRoles(id, selectedRoles);
-        return "redirect:/users";
+        return new RedirectView("/users");
     }
 }
