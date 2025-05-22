@@ -1,10 +1,44 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.models.*;
+import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.Application;
+import com.microsoft.graph.models.ApplicationCollectionResponse;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
+import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder;
@@ -359,6 +393,132 @@ class UserServiceTest {
         userService.createUser(user, "pw", roles);
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
         verify(mockUserModelRepository, times(1)).save(any());
+    }
+
+    @Test
+    void getUserAppRolesByUserId_returnsRoleDetails_whenServicePrincipalAndRoleExist() {
+        // Arrange
+        String userId = "user-123";
+        UUID resourceId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(resourceId);
+        appRoleAssignment.setAppRoleId(appRoleId);
+
+        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
+
+        // Mock getUserAppRoleAssignmentByUserId to return our assignment
+        UserService spyUserService = org.mockito.Mockito.spy(userService);
+        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+
+        // Mock ServicePrincipal and AppRole
+        AppRole appRole = new AppRole();
+        appRole.setId(appRoleId);
+        appRole.setDisplayName("Test Role");
+
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setDisplayName("Test App");
+        servicePrincipal.setAppRoles(List.of(appRole));
+
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
+
+        // Act
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
+        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
+        assertThat(roleInfo.getRoleName()).isEqualTo("Test Role");
+    }
+
+    @Test
+    void getUserAppRolesByUserId_returnsUnknown_whenServicePrincipalIsNull() {
+        // Arrange
+        String userId = "user-123";
+        UUID resourceId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(resourceId);
+        appRoleAssignment.setAppRoleId(appRoleId);
+
+        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
+
+        UserService spyUserService = org.mockito.Mockito.spy(userService);
+        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(null);
+
+        // Act
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isNull();
+        assertThat(roleInfo.getAppName()).isEqualTo("UNKNOWN");
+        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
+    }
+
+    @Test
+    void getUserAppRolesByUserId_returnsUnknown_whenAppRoleNotFound() {
+        // Arrange
+        String userId = "user-123";
+        UUID resourceId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(resourceId);
+        appRoleAssignment.setAppRoleId(appRoleId);
+
+        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
+
+        UserService spyUserService = org.mockito.Mockito.spy(userService);
+        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+
+        // ServicePrincipal with no matching AppRole
+        AppRole otherRole = new AppRole();
+        otherRole.setId(UUID.randomUUID());
+        otherRole.setDisplayName("Other Role");
+
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setDisplayName("Test App");
+        servicePrincipal.setAppRoles(List.of(otherRole));
+
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
+
+        // Act
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
+        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
+        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
+    }
+
+    @Test
+    void getUserAppRolesByUserId_returnsEmptyList_whenNoAssignments() {
+        // Arrange
+        String userId = "user-123";
+        UserService spyUserService = org.mockito.Mockito.spy(userService);
+        org.mockito.Mockito.doReturn(List.of()).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+
+        // Act
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(result).isEmpty();
     }
 
     @Test

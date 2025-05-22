@@ -225,8 +225,11 @@ class UserControllerTest {
         mockUser.setId(userId);
         mockUser.setDisplayName("Managed User");
         String lastLoggedIn = "2024-06-01T12:00:00Z";
+        List<UserRole> appRoles = List.of(new UserRole());
+
         when(userService.getUserById(userId)).thenReturn(mockUser);
         when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(appRoles);
 
         // Act
         String view = userController.manageUser(userId, model);
@@ -235,6 +238,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
+        assertThat(model.getAttribute("userAppRoles")).isEqualTo(appRoles);
         verify(userService).getUserById(userId);
         verify(userService).getLastLoggedInByUserId(userId);
     }
@@ -245,6 +249,7 @@ class UserControllerTest {
         String userId = "notfound";
         when(userService.getUserById(userId)).thenReturn(null);
         when(userService.getLastLoggedInByUserId(userId)).thenReturn(null);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(null);
 
         // Act
         String view = userController.manageUser(userId, model);
@@ -253,8 +258,10 @@ class UserControllerTest {
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isNull();
         assertThat(model.getAttribute("lastLoggedIn")).isNull();
+        assertThat(model.getAttribute("appRoles")).isNull();
         verify(userService).getUserById(userId);
         verify(userService).getLastLoggedInByUserId(userId);
+        verify(userService).getUserAppRolesByUserId(userId);
     }
 
     @Test
@@ -401,7 +408,7 @@ class UserControllerTest {
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<UserRole>> cyaRoles =  (Map<String, List<UserRole>>) model.getAttribute("roles");
+        Map<String, List<UserRole>> cyaRoles = (Map<String, List<UserRole>>) model.getAttribute("roles");
 
         assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();

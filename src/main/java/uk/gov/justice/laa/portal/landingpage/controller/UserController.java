@@ -39,7 +39,6 @@ public class UserController {
     private final UserService userService;
     private final CreateUserNotificationService createUserNotificationService;
 
-
     /**
      * Retrieves a list of users from Microsoft Graph API.
      */
@@ -102,11 +101,12 @@ public class UserController {
     public String manageUser(@PathVariable String id, Model model) {
         User user = userService.getUserById(id);
         String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        List<UserRole> userAppRoles = userService.getUserAppRolesByUserId(id);
         model.addAttribute("user", user);
         model.addAttribute("lastLoggedIn", lastLoggedIn);
+        model.addAttribute("userAppRoles", userAppRoles);
         return "manage-user";
     }
-
 
     @GetMapping("/user/create/details")
     public String createUser(HttpSession session, Model model) {
@@ -120,9 +120,9 @@ public class UserController {
 
     @PostMapping("/user/create/details")
     public RedirectView postUser(@RequestParam("firstName") String firstName,
-                                 @RequestParam("lastName") String lastName,
-                                 @RequestParam("email") String email,
-                                 HttpSession session) {
+            @RequestParam("lastName") String lastName,
+            @RequestParam("email") String email,
+            HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
@@ -149,7 +149,7 @@ public class UserController {
 
     @PostMapping("/user/create/services")
     public RedirectView setSelectedApps(@RequestParam("apps") List<String> apps,
-                             HttpSession session) {
+            HttpSession session) {
         session.setAttribute("apps", apps);
         return new RedirectView("/user/create/roles");
     }
@@ -170,7 +170,7 @@ public class UserController {
 
     @PostMapping("/user/create/roles")
     public RedirectView setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
-                               HttpSession session) {
+            HttpSession session) {
         session.setAttribute("roles", roles);
         return new RedirectView("/user/create/offices");
     }
