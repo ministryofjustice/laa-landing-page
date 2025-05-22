@@ -13,10 +13,12 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +33,7 @@ import java.util.Set;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class LaaAppRole extends BaseEntity {
@@ -55,6 +58,7 @@ public class LaaAppRole extends BaseEntity {
     )
     @ToString.Exclude
     @JsonIgnore
+    @Builder.Default
     private Set<LaaUserProfile> userProfiles = new HashSet<>();
 
 }

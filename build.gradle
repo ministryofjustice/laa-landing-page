@@ -65,6 +65,9 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation("io.zonky.test:embedded-database-spring-test:2.5.1")
     testImplementation("io.zonky.test:embedded-postgres:2.0.7")
+    testImplementation('org.testcontainers:postgresql')
+    testImplementation('org.testcontainers:junit-jupiter')
+    testImplementation('org.springframework.boot:spring-boot-testcontainers')
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
