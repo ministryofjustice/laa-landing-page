@@ -737,19 +737,19 @@ class UserServiceTest {
                 new UserService(mockGraph, mockUserModelRepository);
 
         private static User graphUser(String id, String name) {
-            User u = new User();
-            u.setId(id);
-            u.setUserPrincipalName(id + "@test");
-            u.setDisplayName(name);
-            return u;
+            User testUser = new User();
+            testUser.setId(id);
+            testUser.setUserPrincipalName(id + "@test");
+            testUser.setDisplayName(name);
+            return testUser;
         }
 
         // Helpers
         private UserCollectionResponse buildPage(List<User> users, String next) {
-            UserCollectionResponse r = new UserCollectionResponse();
-            r.setValue(users);
-            r.setOdataNextLink(next);
-            return r;
+            UserCollectionResponse testResponse = new UserCollectionResponse();
+            testResponse.setValue(users);
+            testResponse.setOdataNextLink(next);
+            return testResponse;
         }
 
         @Test
