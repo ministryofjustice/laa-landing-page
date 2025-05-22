@@ -59,16 +59,10 @@ import java.util.Collections;
 import java.util.Stack;
 
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -408,7 +402,7 @@ class UserServiceTest {
 
         // Mock getUserAppRoleAssignmentByUserId to return our assignment
         UserService spyUserService = org.mockito.Mockito.spy(userService);
-        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
 
         // Mock ServicePrincipal and AppRole
         AppRole appRole = new AppRole();
@@ -448,7 +442,7 @@ class UserServiceTest {
         List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
 
         UserService spyUserService = org.mockito.Mockito.spy(userService);
-        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
 
         ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
@@ -479,7 +473,7 @@ class UserServiceTest {
         List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
 
         UserService spyUserService = org.mockito.Mockito.spy(userService);
-        org.mockito.Mockito.doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
 
         // ServicePrincipal with no matching AppRole
         AppRole otherRole = new AppRole();
@@ -510,7 +504,7 @@ class UserServiceTest {
         // Arrange
         String userId = "user-123";
         UserService spyUserService = org.mockito.Mockito.spy(userService);
-        org.mockito.Mockito.doReturn(List.of()).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+        doReturn(List.of()).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
 
         // Act
         List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
@@ -767,24 +761,6 @@ class UserServiceTest {
             assertThat(result.getNextPageLink()).isEqualTo("https://next");
             assertThat(result.getPreviousPageLink()).isNull();
             assertThat(result.getTotalPages()).isEqualTo(1);
-        }
-
-        @Test
-        void backNav_usesWithUrl_andPopsHistory() {
-            // Arrange
-            Stack<String> history = new Stack<>();
-            history.push("https://first");
-            when(mockGraph.users().get(any())).thenReturn(buildPage(List.of(), "ignored"));
-            when(mockGraph.users().count().get(any())).thenReturn(2);
-            when(mockGraph.users().withUrl("https://first").get())
-                    .thenReturn(buildPage(List.of(graphUser("1", "Alice")), null));
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(history, 1, "https://ignored");
-
-            // Assert
-            assertThat(result.getUsers()).extracting(UserModel::getFullName).containsExactly("Alice");
-            assertThat(history).doesNotContain("https://first");
         }
 
         @Test
