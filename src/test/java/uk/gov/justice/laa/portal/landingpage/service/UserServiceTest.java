@@ -99,8 +99,7 @@ class UserServiceTest {
         // Test data for app registrations in local store
         LaaApplication laaApp1 = LaaApplication.builder().id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
         LaaApplication laaApp2 = LaaApplication.builder().id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
-        LaaApplication laaApp3 = LaaApplication.builder().id("a32d05f19e64840bf256a7128483db941410e4f86bae5c1d4a03c9514c2266a4").title("App Three").build();
-        List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2, laaApp3);
+        List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
     }
 
