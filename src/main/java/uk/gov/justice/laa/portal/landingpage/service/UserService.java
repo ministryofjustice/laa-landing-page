@@ -2,7 +2,16 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.models.*;
+import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.ObjectIdentity;
+import com.microsoft.graph.models.PasswordProfile;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
@@ -23,8 +32,18 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.List;
+import java.util.Stack;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
