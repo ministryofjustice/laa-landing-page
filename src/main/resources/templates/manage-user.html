@@ -85,7 +85,7 @@
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="/update-user-details">Change</a>
+                                        <a class="govuk-link" href="#">Change</a>
                                     </li>
                                 </ul>
                             </div>
@@ -100,13 +100,13 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            First name
+                                            First Name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.givenName}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            Last name
+                                            Last Name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.surname}"></dd>
                                     </div>
@@ -116,12 +116,45 @@
                     </div>
                     <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="services">
                         <h2 class="govuk-heading-m">Services</h2>
-                    </div>
-                    <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
-                        <h2 class="govuk-heading-m">Offices</h2>
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h2 class="govuk-summary-card__title">
+                                    Services
+                                </h2>
+                                <ul class="govuk-summary-card__actions">
+                                    <li class="govuk-summary-card__action">
+                                        <a class="govuk-link" href="#">Manage</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row" th:each="role : ${userAppRoles}">
+                                        <dt class="govuk-summary-list__key" th:text="${role.appName}"></dt>
+                                        <dd class="govuk-summary-list__value" th:text="${role.roleName}"></dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <ul class="govuk-summary-list__actions-list">
+                                                <li class="govuk-summary-list__actions-list-item">
+                                                    <a class="govuk-link" href="#">Edit<span
+                                                            class="govuk-visually-hidden"> service details</span></a>
+                                                </li>
+                                                <li class="govuk-summary-list__actions-list-item">
+                                                    <a class="govuk-link" href="#">Remove<span
+                                                            class="govuk-visually-hidden"> service details</span></a>
+                                                </li>
+                                            </ul>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
+                    <h2 class="govuk-heading-m">Offices</h2>
+                </div>
             </div>
+        </div>
         </div>
     </main>
     </div>

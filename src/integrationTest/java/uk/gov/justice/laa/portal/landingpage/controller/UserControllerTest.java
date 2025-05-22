@@ -1,16 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.microsoft.graph.serviceclient.GraphServiceClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
+
 class UserControllerTest extends BaseIntegrationTest {
+
     private static final String ADD_USER_API_ENDPOINT = "/register";
 
     @MockitoBean
