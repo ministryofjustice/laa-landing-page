@@ -5,11 +5,13 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.microsoft.graph.models.AppRoleAssignmentCollectionResponse;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -40,16 +43,19 @@ import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
+import com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
+import com.microsoft.graph.users.item.approleassignments.item.AppRoleAssignmentItemRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
-
 import okhttp3.Request;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -62,6 +68,8 @@ class UserServiceTest {
     private UserModelRepository mockUserModelRepository;
     @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
+
+    private static String LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID;
 
     @BeforeEach
     void setUp() {
@@ -402,14 +410,14 @@ class UserServiceTest {
         when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
 
         // Act
-        List<Map<String, Object>> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
 
         // Assert
         assertThat(result).hasSize(1);
-        Map<String, Object> roleInfo = result.get(0);
-        assertThat(roleInfo.get("appId")).isEqualTo(resourceId);
-        assertThat(roleInfo.get("appName")).isEqualTo("Test App");
-        assertThat(roleInfo.get("roleName")).isEqualTo("Test Role");
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
+        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
+        assertThat(roleInfo.getRoleName()).isEqualTo("Test Role");
     }
 
     @Test
@@ -433,14 +441,14 @@ class UserServiceTest {
         when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(null);
 
         // Act
-        List<Map<String, Object>> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
 
         // Assert
         assertThat(result).hasSize(1);
-        Map<String, Object> roleInfo = result.get(0);
-        assertThat(roleInfo.get("appId")).isEqualTo(resourceId);
-        assertThat(roleInfo.get("appName")).isEqualTo("UNKNOWN");
-        assertThat(roleInfo.get("roleName")).isEqualTo("UNKNOWN");
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isNull();
+        assertThat(roleInfo.getAppName()).isEqualTo("UNKNOWN");
+        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
     }
 
     @Test
@@ -473,14 +481,14 @@ class UserServiceTest {
         when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
 
         // Act
-        List<Map<String, Object>> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
 
         // Assert
         assertThat(result).hasSize(1);
-        Map<String, Object> roleInfo = result.get(0);
-        assertThat(roleInfo.get("appId")).isEqualTo(resourceId);
-        assertThat(roleInfo.get("appName")).isEqualTo("Test App");
-        assertThat(roleInfo.get("roleName")).isEqualTo("UNKNOWN");
+        UserRole roleInfo = result.get(0);
+        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
+        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
+        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
     }
 
     @Test
@@ -491,9 +499,113 @@ class UserServiceTest {
         org.mockito.Mockito.doReturn(List.of()).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
 
         // Act
-        List<Map<String, Object>> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
 
         // Assert
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    public void testUpdateUserRolesByAddingAndRemovingRoles() {
+        // Given
+        // Setup user Id
+        final String userId = UUID.randomUUID().toString();
+
+        // Setup test App
+        ServicePrincipal app = new ServicePrincipal();
+        UUID appId = UUID.randomUUID();
+        app.setId(appId.toString());
+        app.setDisplayName("testApp");
+        app.setAppId(UserService.APPLICATION_ID);
+
+        // Set test roles for app
+        AppRole appRole1 = new AppRole();
+        UUID appRole1Id = UUID.randomUUID();
+        appRole1.setId(appRole1Id);
+        appRole1.setDisplayName("testRole1");
+
+        AppRole appRole2 = new AppRole();
+        UUID appRole2Id = UUID.randomUUID();
+        appRole2.setId(appRole2Id);
+        appRole2.setDisplayName("testRole2");
+
+        AppRole appRole3 = new AppRole();
+        UUID appRole3Id = UUID.randomUUID();
+        appRole3.setId(appRole3Id);
+        appRole3.setDisplayName("testRole3");
+
+        // Set roles on app
+        List<AppRole> roles = new ArrayList<>();
+        roles.add(appRole1);
+        roles.add(appRole2);
+        roles.add(appRole3);
+        app.setAppRoles(roles);
+
+        // Build role assignments and assign user to test role 1
+        String appRoleAssignmentId = UUID.randomUUID().toString();
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setResourceId(appId);
+        appRoleAssignment.setAppRoleId(appRole1Id);
+        appRoleAssignment.setId(appRoleAssignmentId);
+        List<AppRoleAssignment> testAppRoleAssignments = new ArrayList<>();
+        testAppRoleAssignments.add(appRoleAssignment);
+
+        // Mock response so the above app role assignments are associated with the user.
+        AppRoleAssignmentCollectionResponse appRoleAssignmentCollectionResponse = new AppRoleAssignmentCollectionResponse();
+        appRoleAssignmentCollectionResponse.getBackingStore().set("value", testAppRoleAssignments);
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class);
+        when(appRoleAssignmentsRequestBuilder.get()).thenReturn(appRoleAssignmentCollectionResponse);
+        UserItemRequestBuilder userItemRequestBuilder = mock(UserItemRequestBuilder.class);
+        when(userItemRequestBuilder.appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class);
+        when(usersRequestBuilder.byUserId(userId)).thenReturn(userItemRequestBuilder);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        // Setup service principal all response
+        ServicePrincipalCollectionResponse servicePrincipalCollectionResponse = new ServicePrincipalCollectionResponse();
+        servicePrincipalCollectionResponse.getBackingStore().set("value", List.of(app));
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipalCollectionResponse);
+
+        // Setup service by Id response
+        ServicePrincipalItemRequestBuilder servicePrincipalItemRequestBuilder = mock(ServicePrincipalItemRequestBuilder.class);
+        when(servicePrincipalItemRequestBuilder.get()).thenReturn(app);
+        when(servicePrincipalsRequestBuilder.byServicePrincipalId(appId.toString())).thenReturn(servicePrincipalItemRequestBuilder);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+
+        // Added the new app role assignment to our list of app role assignment when we post using the mock graph client.
+        when(appRoleAssignmentsRequestBuilder.post(any(AppRoleAssignment.class))).then(invocation -> {
+            AppRoleAssignment newAppRoleAssignment = invocation.getArgument(0);
+            testAppRoleAssignments.add(newAppRoleAssignment);
+            return newAppRoleAssignment;
+        });
+
+
+        // Remember the last app role assignment we queried so we can use it for the delete behaviour later.
+        AppRoleAssignmentItemRequestBuilder appRoleAssignmentItemRequestBuilder = mock(AppRoleAssignmentItemRequestBuilder.class);
+        when(appRoleAssignmentsRequestBuilder.byAppRoleAssignmentId(anyString())).then(invocation -> {
+            LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID = invocation.getArgument(0);
+            return appRoleAssignmentItemRequestBuilder;
+        });
+
+        // Remove the given app role assignment from our list of app role assignment when we call delete on the mock graph client.
+        doAnswer(invocation -> {
+            AppRoleAssignment returnedAppRoleAssignment = null;
+            for (AppRoleAssignment assignment : testAppRoleAssignments) {
+                if (LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID.equals(assignment.getId())) {
+                    returnedAppRoleAssignment = assignment;
+                }
+            }
+            if (returnedAppRoleAssignment != null) {
+                testAppRoleAssignments.remove(returnedAppRoleAssignment);
+            }
+            return null;
+        }).when(appRoleAssignmentItemRequestBuilder).delete();
+
+        // When
+        // We add an extra ID for the user
+        userService.updateUserRoles(userId, List.of(appRole2.getId().toString()));
+        // Then
+        Assertions.assertEquals(1, testAppRoleAssignments.size());
     }
 }

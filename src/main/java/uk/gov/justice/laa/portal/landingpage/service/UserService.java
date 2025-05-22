@@ -2,57 +2,49 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.kiota.RequestInformation;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.util.ObjectUtils;
+import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.ObjectIdentity;
+import com.microsoft.graph.models.PasswordProfile;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.SignInActivity;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.AppRole;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.List;
 import java.util.Stack;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Qualifier;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ObjectIdentity;
-import com.microsoft.graph.models.PasswordProfile;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
-import com.microsoft.graph.models.SignInActivity;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.ApiException;
-import com.microsoft.kiota.RequestInformation;
-
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 /**
  * userService
@@ -63,6 +55,7 @@ public class UserService {
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
     private static final int BATCH_SIZE = 20;
+    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
 
     @Value("${entra.defaultDomain}")
     private String defaultDomain;
@@ -74,37 +67,39 @@ public class UserService {
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public List<Map<String, Object>> getUserAppRolesByUserId(String userId) {
+    public List<UserRole> getUserAppRolesByUserId(String userId) {
         List<AppRoleAssignment> userAppRoles = getUserAppRoleAssignmentByUserId(userId);
-        List<Map<String, Object>> roleDetails = new ArrayList<>();
+        List<UserRole> userRoles = new ArrayList<>();
+        UserRole userRole = new UserRole();
 
         for (AppRoleAssignment appRole : userAppRoles) {
             ServicePrincipal servicePrincipal = graphClient
                     .servicePrincipals()
-                    .byServicePrincipalId(String.valueOf(appRole.getResourceId()))
+                    .byServicePrincipalId(Objects.requireNonNull(appRole.getResourceId()).toString())
                     .get();
 
-            Map<String, Object> roleInfo = new HashMap<>();
-            roleInfo.put("appId", appRole.getResourceId());
+            if (servicePrincipal != null) {
+                userRole.setAppId(String.valueOf(appRole.getResourceId()));
+                userRole.setAppRoleId(String.valueOf(appRole.getAppRoleId()));
+                userRole.setAssignmentId(appRole.getId());
+                userRole.setAppName(servicePrincipal.getDisplayName());
 
-            if (servicePrincipal == null) {
-                roleInfo.put("appName", "UNKNOWN");
-                roleInfo.put("roleName", "UNKNOWN");
-            } else {
-                roleInfo.put("appName", servicePrincipal.getDisplayName());
-
-                // Find the actual role name based on appRoleId
-                String roleName = servicePrincipal.getAppRoles().stream()
-                        .filter(role -> role.getId().equals(appRole.getAppRoleId()))
+                String roleName = Objects.requireNonNull(servicePrincipal.getAppRoles()).stream()
+                        .filter(role -> Objects.equals(role.getId(), appRole.getAppRoleId()))
                         .map(AppRole::getDisplayName)
                         .findFirst()
                         .orElse("UNKNOWN");
 
-                roleInfo.put("roleName", roleName);
+                userRole.setRoleName(roleName);
+            } else {
+                userRole.setAppName("UNKNOWN");
+                userRole.setRoleName("UNKNOWN");
             }
-            roleDetails.add(roleInfo);
+
+            userRoles.add(userRole);
         }
-        return roleDetails;
+
+        return userRoles;
     }
 
     /**
@@ -154,6 +149,43 @@ public class UserService {
         return paginatedUsers;
     }
 
+    public void updateUserRoles(String userId, List<String> selectedRoles) {
+        List<UserRole> existingRoles = getUserAppRolesByUserId(userId);
+
+        Set<String> currentRoleIds = existingRoles.stream()
+                .map(UserRole::getAppRoleId)
+                .collect(Collectors.toSet());
+
+        Set<String> selectedRoleIds = new HashSet<>(selectedRoles != null ? selectedRoles : List.of());
+
+        List<UserRole> availableRoles = getAllAvailableRoles();
+
+        for (String roleId : selectedRoleIds) {
+            if (!currentRoleIds.contains(roleId)) {
+                String appId = findAppIdForRole(roleId, availableRoles);
+                assignAppRoleToUser(userId, appId, roleId);
+            }
+        }
+
+        for (UserRole role : existingRoles) {
+            if (!selectedRoleIds.contains(role.getAppRoleId())) {
+                removeAppRoleFromUser(userId, role.getAssignmentId());
+            }
+        }
+    }
+
+    private String findAppIdForRole(String roleId, List<UserRole> existingRoles) throws IllegalArgumentException {
+        Optional<UserRole> userRole = existingRoles.stream()
+                .filter(role -> role.getAppRoleId().equals(roleId))
+                .findFirst();
+
+        if (userRole.isPresent()) {
+            return userRole.get().getAppId();
+        } else {
+            throw new IllegalArgumentException("App ID not found for role ID: " + roleId);
+        }
+    }
+
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
         return Objects.requireNonNull(graphClient.users().byUserId(userId).memberOf().get())
                 .getValue()
@@ -178,7 +210,7 @@ public class UserService {
                     .get()
                     .getValue();
         } catch (ApiException e) {
-            System.err.println("Error fetching roles: " + e.getMessage());
+            logger.error("Error fetching roles: {}", e.getMessage());
             return List.of();
         }
     }
@@ -225,6 +257,32 @@ public class UserService {
             logger.error("Error fetching user with ID: {}", userId, e);
             return null;
         }
+    }
+
+    public List<UserRole> getAllAvailableRoles() {
+        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
+
+        List<UserRole> roles = new ArrayList<>();
+        if (!ObjectUtils.isEmpty(servicePrincipals)) {
+            for (ServicePrincipal sp : servicePrincipals) {
+                if (Objects.equals(sp.getAppId(), APPLICATION_ID)) {
+                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
+                        UserRole roleInfo = new UserRole(
+                                sp.getId(),
+                                sp.getDisplayName(),
+                                Objects.requireNonNull(role.getId()).toString(),
+                                role.getDisplayName(),
+                                null,
+                                role.getDisplayName(),
+                                null,
+                                false
+                        );
+                        roles.add(roleInfo);
+                    }
+                }
+            }
+        }
+        return roles;
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -342,7 +400,14 @@ public class UserService {
     }
 
     public List<ServicePrincipal> getServicePrincipals() {
-        return Objects.requireNonNull(graphClient.servicePrincipals().get()).getValue();
+        ServicePrincipalCollectionResponse servicePrincipalsResponse = graphClient.servicePrincipals().get();
+        List<ServicePrincipal> servicePrincipals;
+        if (servicePrincipalsResponse != null  && (servicePrincipals = servicePrincipalsResponse.getValue()) != null) {
+            return servicePrincipals;
+        } else {
+            logger.warn("No service principals found or response was null");
+            return new ArrayList<>();
+        }
     }
 
     public List<UserRole> getAllAvailableRolesForApps(List<String> selectedApps) {
