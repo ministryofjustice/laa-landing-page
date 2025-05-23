@@ -15,7 +15,7 @@ metadata:
       nginx.ingress.kubernetes.io/modsecurity-snippet: |
         SecRuleEngine On
         SecDefaultAction "phase:2,pass,log,tag:github_team=laa-portal-stabilisation-tech
-        SecDebugLogLevel 4 
+        SecDebugLogLevel 4
 spec:
   ingressClassName: modsec-non-prod
   tls:
