@@ -10,8 +10,14 @@ metadata:
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    annotations:
+      nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+      nginx.ingress.kubernetes.io/modsecurity-snippet: |
+        SecAuditEngine On
+        SecRuleEngine On
+        SecDefaultAction "phase:2,pass,log,tag:github_team=laa-portal-stabilisation-tech
 spec:
-  ingressClassName: default
+  ingressClassName: modsec-non-prod
   tls:
     - hosts:
         - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
