@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,13 +8,12 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 
 import java.util.List;
 
-import static io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @DataJpaTest
-@AutoConfigureEmbeddedDatabase(type = AutoConfigureEmbeddedDatabase.DatabaseType.POSTGRES, provider = ZONKY)
-class UserModelRepositoryTest {
+class UserModelRepositoryTest extends BaseRepositoryTest {
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private UserModelRepository userModelRepository;
 

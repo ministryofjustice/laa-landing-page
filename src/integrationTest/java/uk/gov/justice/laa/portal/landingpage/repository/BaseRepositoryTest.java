@@ -19,7 +19,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 
-@DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class BaseRepositoryTest {
 

@@ -63,8 +63,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation("io.zonky.test:embedded-database-spring-test:2.5.1")
-    testImplementation("io.zonky.test:embedded-postgres:2.0.7")
+    testImplementation 'org.postgresql:postgresql'
     testImplementation('org.testcontainers:postgresql')
     testImplementation('org.testcontainers:junit-jupiter')
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
