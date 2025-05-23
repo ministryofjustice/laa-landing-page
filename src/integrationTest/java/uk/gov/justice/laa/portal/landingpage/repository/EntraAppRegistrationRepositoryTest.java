@@ -5,10 +5,12 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@DataJpaTest
 public class EntraAppRegistrationRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
