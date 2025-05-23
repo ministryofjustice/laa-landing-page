@@ -71,8 +71,9 @@ public class BaseRepositoryTest {
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
-    protected LaaUserProfile buildLaaUserProfile(EntraUser entraUser) {
+    protected LaaUserProfile buildLaaUserProfile(EntraUser entraUser, boolean isAdmin, boolean isMultiFirm) {
         return LaaUserProfile.builder().entraUser(entraUser)
+                .admin(isAdmin).multiFirm(isMultiFirm)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
