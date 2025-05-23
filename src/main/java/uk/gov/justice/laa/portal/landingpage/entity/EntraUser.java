@@ -14,6 +14,8 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -43,19 +45,23 @@ import java.util.Set;
 public class EntraUser extends BaseEntity {
 
     @Column(name = "first_name", nullable = false, length = 255)
-    @Size(min = 1, max = 255)
+    @NotBlank(message = "Entra user first name must be provided")
+    @Size(min = 1, max = 255, message = "Entra user first name must be between 1 and 255 characters")
     private String firstName;
 
     @Column(name = "last_name", nullable = false, length = 255)
-    @Size(min = 1, max = 255)
+    @NotBlank(message = "Entra user last name must be provided")
+    @Size(min = 1, max = 255, message = "Entra user last name must be between 1 and 255 characters")
     private String lastName;
 
     @Column(name = "email", nullable = false, length = 255, unique = true)
-    @Email
+    @NotBlank(message = "Entra user email must be provided")
+    @Email(message = "Entra user email must be a valid email address")
     private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false, length = 255)
+    @NotNull(message = "Entra user type must be provided")
     private UserType userType;
 
     @Column(name = "is_active", nullable = false)

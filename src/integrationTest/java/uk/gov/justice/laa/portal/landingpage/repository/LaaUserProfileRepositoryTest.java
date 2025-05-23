@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.LaaUserProfile;
@@ -11,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
 
+@DataJpaTest
 public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -32,7 +34,7 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5", UserType.EXTERNAL);
         entraUserRepository.saveAndFlush(entraUser);
 
-        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser);
+        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, false, false);
         repository.saveAndFlush(laaUserProfile);
 
         LaaUserProfile result = repository.getById(laaUserProfile.getId());
@@ -53,8 +55,8 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6", UserType.EXTERNAL);
         entraUserRepository.saveAndFlush(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser);
+        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, false, false);
+        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, true, true);
         entraUser.getLaaUserProfiles().add(laaUserProfile1);
         entraUser.getLaaUserProfiles().add(laaUserProfile2);
 

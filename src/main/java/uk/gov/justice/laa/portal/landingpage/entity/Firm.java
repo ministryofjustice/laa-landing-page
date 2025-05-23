@@ -9,9 +9,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -37,10 +38,12 @@ public class Firm extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 255)
+    @NotNull(message = "Firm type must be provided")
     private FirmType type;
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @Size(min = 1, max = 255)
+    @NotBlank(message = "Firm name must be provided")
+    @Size(min = 1, max = 255, message = "Firm name must be between 1 and 255 characters")
     private String name;
 
     @OneToMany(mappedBy = "firm", fetch = FetchType.LAZY)
