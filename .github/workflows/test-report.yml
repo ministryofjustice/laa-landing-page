@@ -49,12 +49,12 @@ jobs:
           title: Code Coverage
           update-comment: true
 
-      - name: Fail PR if overall coverage is less than 75%
-        if: ${{ steps.jacoco.outputs.coverage-overall < 75 }}
+      - name: Fail PR if overall coverage is less than 85%
+        if: ${{ steps.jacoco.outputs.coverage-overall < 85 }}
         uses: actions/github-script@v7
         with:
           script: |
-            core.setFailed('Overall unit test coverage is less than 75%!')    
+            core.setFailed('Overall unit test coverage is less than 85%!')    
 
       - name: Run IntegrationTest
         run: |
