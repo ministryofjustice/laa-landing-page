@@ -12,11 +12,14 @@ class TokenAuthAccessProviderTests {
 
     @Test
     void addsHeaderWhenMissing() {
+        // Arrange
         TokenAuthAccessProvider provider = new TokenAuthAccessProvider(TOKEN);
         RequestInformation request = new RequestInformation();
 
+        // Act
         provider.authenticateRequest(request, null);
 
+        // Assert
         assertThat(request.headers.containsKey(AUTH_HEADER)).isTrue();
         assertThat(request.headers.get(AUTH_HEADER))
                 .containsExactly("Bearer " + TOKEN);
@@ -24,12 +27,16 @@ class TokenAuthAccessProviderTests {
 
     @Test
     void doesNotOverwriteExistingHeader() {
+
+        // Arrange
         TokenAuthAccessProvider provider = new TokenAuthAccessProvider("SHOULD-NOT-BE-USED");
         RequestInformation request = new RequestInformation();
         request.headers.add(AUTH_HEADER, "Bearer existing-value");
 
+        // Act
         provider.authenticateRequest(request, null);
 
+        // Assert
         assertThat(request.headers.get(AUTH_HEADER))
                 .containsExactly("Bearer existing-value");
     }
