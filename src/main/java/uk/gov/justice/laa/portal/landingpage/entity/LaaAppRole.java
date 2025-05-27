@@ -11,6 +11,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -39,7 +40,8 @@ import java.util.Set;
 public class LaaAppRole extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @Size(min = 1, max = 255)
+    @NotBlank(message = "LAA application role name must be provided")
+    @Size(min = 1, max = 255, message = "LAA application role name must be between 1 and 255 characters")
     private String name;
 
     @ManyToOne
