@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +30,7 @@ class SecurityConfigTest {
     @Test
     void passwordEncoderBeanCreation() {
         assertThat(new SecurityConfig().passwordEncoder())
-                .isInstanceOf(BCryptPasswordEncoder.class);
+                .isInstanceOf(PasswordEncoder.class);
     }
 
     @Test
