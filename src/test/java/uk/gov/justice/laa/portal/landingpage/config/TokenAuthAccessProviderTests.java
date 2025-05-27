@@ -27,7 +27,6 @@ class TokenAuthAccessProviderTests {
 
     @Test
     void doesNotOverwriteExistingHeader() {
-
         // Arrange
         TokenAuthAccessProvider provider = new TokenAuthAccessProvider("SHOULD-NOT-BE-USED");
         RequestInformation request = new RequestInformation();
