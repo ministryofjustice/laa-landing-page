@@ -33,8 +33,9 @@ import java.util.Set;
     @Index(name = "EntraUserCreatedDateIdx", columnList = "created_date"),
     @Index(name = "EntraUserLastModifiedDateIdx", columnList = "last_modified_date"),
     @Index(name = "EntraUserLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "EntraUserNameIdx", columnList = "first_name"),
-    @Index(name = "EntraUserNameIdx", columnList = "last_name"),
+    @Index(name = "EntraUserNameIdx", columnList = "user_name"),
+    @Index(name = "EntraUserFirstNameIdx", columnList = "first_name"),
+    @Index(name = "EntraUserLastNameIdx", columnList = "last_name"),
     @Index(name = "EntraUserEmailIdx", columnList = "email"),
 })
 @Getter
@@ -43,6 +44,11 @@ import java.util.Set;
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class EntraUser extends BaseEntity {
+
+    @Column(name = "user_name", nullable = false, length = 255, unique = true)
+    @NotBlank(message = "Entra username must be provided")
+    @Size(min = 1, max = 255, message = "Entra username must be between 1 and 255 characters")
+    private String userName;
 
     @Column(name = "first_name", nullable = false, length = 255)
     @NotBlank(message = "Entra user first name must be provided")

@@ -18,6 +18,7 @@ public class EntraUserTest extends BaseEntityTest {
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isEmpty();
+        assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
         assertThat(entraUser.isActive()).isTrue();
@@ -27,6 +28,47 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(entraUser.getUserType()).isEqualTo(UserType.INTERNAL);
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();
+    }
+
+    @Test
+    public void testEntraUserNullUserName() {
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, entra -> entra.setUserName(null));
+
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra username must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
+    }
+
+    @Test
+    public void testEntraUserEmptyUserName() {
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, entra -> entra.setUserName(""));
+
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(java.util.stream.Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Entra username must be provided",
+                "Entra username must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
+    }
+
+    @Test
+    public void testEntraUserUserNameTooLong() {
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, entra -> entra.setUserName("UserNameThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra username must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
     }
 
     @Test
@@ -177,20 +219,16 @@ public class EntraUserTest extends BaseEntityTest {
 
     @Test
     public void testEntraUserInvalidUserType() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            EntraUser entraUser = EntraUser.builder().firstName("FirstName").lastName("LastName")
-                    .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
-                    .email("test@email").userType(UserType.valueOf("INVALID"))
-                    .createdBy("test").createdDate(LocalDateTime.now()).build();
-        });
+        assertThrows(IllegalArgumentException.class, () -> EntraUser.builder().firstName("FirstName").lastName("LastName")
+                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
+                .email("test@email").userType(UserType.valueOf("INVALID"))
+                .createdBy("test").createdDate(LocalDateTime.now()).build());
     }
 
     @Test
     public void testEntraUserNullStartDate() {
-        EntraUser entraUser = EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .active(true).startDate(null).endDate(LocalDateTime.now().plusYears(1))
-                .email("test@email.com").userType(UserType.INTERNAL)
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, entra -> entra.setStartDate(null));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
@@ -199,10 +237,9 @@ public class EntraUserTest extends BaseEntityTest {
 
     @Test
     public void testEntraUserNullEndDate() {
-        EntraUser entraUser = EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .active(true).startDate(LocalDateTime.now()).endDate(null)
-                .email("test@email.com").userType(UserType.INTERNAL)
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, entra -> entra.setEndDate(null));
+
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isEmpty();

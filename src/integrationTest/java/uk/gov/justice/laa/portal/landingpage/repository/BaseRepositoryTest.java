@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -35,7 +34,7 @@ public class BaseRepositoryTest {
     }
 
     protected EntraUser buildEntraUser(String email, String firstName, String lastName, UserType userType) {
-        return EntraUser.builder().userType(userType).email(email)
+        return EntraUser.builder().userType(userType).email(email).userName(email)
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .laaUserProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
