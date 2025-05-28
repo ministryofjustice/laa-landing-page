@@ -9,12 +9,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.Set;
 
@@ -28,12 +30,14 @@ import java.util.Set;
 })
 @Getter
 @Setter
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class LaaApp extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @Size(min = 1, max = 255)
+    @NotBlank(message = "LAA application name must be provided")
+    @Size(min = 1, max = 255, message = "LAA application name must be between 1 and 255 characters")
     private String name;
 
     @OneToOne
