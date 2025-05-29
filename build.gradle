@@ -60,6 +60,10 @@ dependencies {
     implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
 
 
+    // Metrics
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
