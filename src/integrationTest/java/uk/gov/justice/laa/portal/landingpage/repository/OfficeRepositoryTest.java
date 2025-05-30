@@ -1,0 +1,65 @@
+package uk.gov.justice.laa.portal.landingpage.repository;
+
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+
+import java.util.Arrays;
+
+@DataJpaTest
+public class OfficeRepositoryTest extends BaseRepositoryTest {
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private OfficeRepository repository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private FirmRepository firmRepository;
+
+    @BeforeEach
+    public void beforeEach() {
+        repository.deleteAll();
+        firmRepository.deleteAll();
+    }
+
+    @Test
+    public void testSaveAndRetrieveOffice() {
+        Firm firm1 = buildFirm("Firm1");
+        Firm firm2 = buildFirm("Firm2");
+        firmRepository.saveAllAndFlush(Arrays.asList(firm1, firm2));
+
+        Office office1 = buildOffice(firm1, "Office1", "Addr 1", "12345");
+        Office office2 = buildOffice(firm2, "Office2", "Addr 2", "23456");
+        Office office3 = buildOffice(firm2, "Office3", "Addr 3", "34567");
+        firm1.getOffices().add(office1);
+        firm2.getOffices().add(office2);
+        firm2.getOffices().add(office3);
+
+        repository.saveAllAndFlush(Arrays.asList(office1, office2, office3));
+
+        Office result = repository.findById(office2.getId()).orElseThrow();
+
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.getId()).isEqualTo(office2.getId());
+        Assertions.assertThat(result.getName()).isEqualTo("Office2");
+        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
+        Assertions.assertThat(result.getCreatedDate()).isNotNull();
+        Assertions.assertThat(result.getFirm()).isNotNull();
+
+        Firm firm = result.getFirm();
+        Assertions.assertThat(firm.getId()).isEqualTo(firm2.getId());
+        Assertions.assertThat(firm.getName()).isEqualTo("Firm2");
+        Assertions.assertThat(firm.getCreatedBy()).isEqualTo("Test");
+        Assertions.assertThat(firm.getCreatedDate()).isNotNull();
+        Assertions.assertThat(firm.getType()).isEqualTo(FirmType.INDIVIDUAL);
+        Assertions.assertThat(firm.getOffices()).containsExactlyInAnyOrder(office2, office3);
+
+    }
+
+}

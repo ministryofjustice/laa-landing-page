@@ -21,7 +21,8 @@
                     Select the roles required within the
                 </p>
                 <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                    <div class="govuk-checkboxes__item" th:each="role : ${roles}">
+                    <div class="govuk-checkboxes__item" th:each="role : ${roles}"
+                        th:id="'role-' + ${role.appRoleId}">
                         <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
                             th:checked="${role.selected}" th:value="${role.appRoleId}" type="checkbox">
                         <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.appRoleId}">
