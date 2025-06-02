@@ -33,7 +33,7 @@ public class UserModel {
 
     private String lastLoggedIn;
 
-    @Column(name="offices")
-    @ElementCollection(targetClass=String.class)
+    @Column(name = "offices")
+    @ElementCollection(targetClass = String.class)
     private List<String> offices;
 }
