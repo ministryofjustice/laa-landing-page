@@ -13,11 +13,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.model.*;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
 
@@ -46,6 +45,7 @@ public class UserController {
 
     private final UserService userService;
     private final CreateUserNotificationService createUserNotificationService;
+    private final OfficeService officeService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -185,7 +185,21 @@ public class UserController {
 
     @GetMapping("/user/create/offices")
     public String offices(HttpSession session, Model model) {
-        OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
+        OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
+        //if user has firms, use officeService.getOfficesByFirms();
+        List<Office> offices = officeService.getOffices();
+        List<OfficeModel> officeData = new ArrayList<>();
+        for (Office office : offices) {
+            OfficeModel officeModel = new OfficeModel();
+            if (Objects.nonNull(selectedOfficeData.getSelectedOffices())
+                    && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())) {
+                officeModel.setSelected(true);
+            }
+            officeModel.setId(office.getId().toString());
+            officeModel.setName(office.getName());
+            officeModel.setAddress(office.getAddress());
+            officeData.add(officeModel);
+        }
         model.addAttribute("officeData", officeData);
         return "user/offices";
     }
@@ -194,6 +208,16 @@ public class UserController {
     public RedirectView postOffices(HttpSession session, @RequestParam(value = "office", required = false) List<String> selectedOffices) {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(selectedOffices);
+        //if user has firms, use officeService.getOfficesByFirms();
+        List<Office> offices = officeService.getOffices();
+        List<String> selectedDisplayNames = new ArrayList<>();
+        for (Office office : offices) {
+            if (Objects.nonNull(selectedOffices)
+                    && selectedOffices.contains(office.getId().toString())) {
+                selectedDisplayNames.add(office.getName());
+            }
+        }
+        officeData.setSelectedOffices(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
         return new RedirectView("/user/create/check-answers");
     }
@@ -231,13 +255,21 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            user = userService.createUser(user, password, selectedRoles);
+            Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
+            List<String> selectedOffices;
+            if (optionalSelectedOfficeData.isPresent()) {
+                selectedOffices = optionalSelectedOfficeData.get().getSelectedOffices();
+            } else {
+                selectedOffices = new ArrayList<>();
+            }
+            user = userService.createUser(user, password, selectedRoles, selectedOffices);
             createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
         session.removeAttribute("roles");
         session.removeAttribute("apps");
+        session.removeAttribute("officeData");
         return new RedirectView("/users");
     }
 

@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -51,6 +52,8 @@ class UserControllerTest {
 
     @Mock
     private UserService userService;
+    @Mock
+    private OfficeService officeService;
     @Mock
     private HttpSession session;
     @Mock
@@ -450,7 +453,7 @@ class UserControllerTest {
         session.setAttribute("user", user);
         List<String> roles = List.of("app1");
         session.setAttribute("roles", roles);
-        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         RedirectView view = userController.addUserCheckAnswers(session);

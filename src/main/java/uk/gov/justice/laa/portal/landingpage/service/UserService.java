@@ -436,7 +436,7 @@ public class UserService {
         return roles;
     }
 
-    public User createUser(User user, String password, List<String> roles) {
+    public User createUser(User user, String password, List<String> roles, List<String> selectedOffices) {
 
         user.setAccountEnabled(true);
         ObjectIdentity objectIdentity = new ObjectIdentity();
@@ -464,15 +464,16 @@ public class UserService {
                 }
             }
         }
-        persistNewUser(user);
+        persistNewUser(user, selectedOffices);
         return user;
     }
 
-    private void persistNewUser(User newUser) {
+    private void persistNewUser(User newUser, List<String> selectedOffices) {
         UserModel userModel = new UserModel();
         userModel.setEmail(newUser.getDisplayName());
         userModel.setFullName(newUser.getDisplayName());
         userModel.setId(newUser.getId());
+        userModel.setOffices(selectedOffices);
         userModelRepository.save(userModel);
     }
 }
