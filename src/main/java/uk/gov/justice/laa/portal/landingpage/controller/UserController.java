@@ -54,21 +54,16 @@ public class UserController {
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String nextPageLink,
-            Model model, HttpSession session) {
+            Model model) {
 
-        Stack<String> pageHistory = userService.getPageHistory(session);
-
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsersWithHistory(pageHistory, size, nextPageLink);
+        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size);
 
         model.addAttribute("users", paginatedUsers.getUsers());
-        model.addAttribute("nextPageLink", paginatedUsers.getNextPageLink());
-        model.addAttribute("previousPageLink", paginatedUsers.getPreviousPageLink());
-        model.addAttribute("pageSize", size);
-        model.addAttribute("pageHistory", pageHistory);
+        model.addAttribute("requestedPageSize", size);
+        model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
 
         return "users";
     }

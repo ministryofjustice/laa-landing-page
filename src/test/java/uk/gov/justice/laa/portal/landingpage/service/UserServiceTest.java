@@ -637,19 +637,6 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageHistoryWhenNoHistoryInSessionInitialisesAndReturnsEmptyStack() {
-        // Arrange
-        when(session.getAttribute("pageHistory")).thenReturn(null);
-
-        // Act
-        Stack<String> history = userService.getPageHistory(session);
-
-        // Assert
-        assertThat(history).isNotNull().isEmpty();
-        verify(session).setAttribute(eq("pageHistory"), any(Stack.class));
-    }
-
-    @Test
     void existingUserRetrievalById() {
         // Arrange
         String userId = "existing-user-id";
@@ -753,23 +740,6 @@ class UserServiceTest {
         }
 
         @Test
-        void firstPage_returnsNextLink_noPrev() {
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(List.of(graphUser("1", "Alice")), "https://next"));
-            when(mockGraph.users().count().get(any())).thenReturn(1);
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(new Stack<>(), 10, null);
-
-            // Assert
-            assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getNextPageLink()).isEqualTo("https://next");
-            assertThat(result.getPreviousPageLink()).isNull();
-            assertThat(result.getTotalPages()).isEqualTo(1);
-        }
-
-        @Test
         void zeroUsers_setsTotalPagesToOne() {
             // Arrange
             when(mockGraph.users().get(any()))
@@ -777,11 +747,68 @@ class UserServiceTest {
             when(mockGraph.users().count().get(any())).thenReturn(0);
 
             // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsersWithHistory(new Stack<>(), 5, null);
+            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isZero();
-            assertThat(result.getTotalPages()).isEqualTo(1);
+            assertThat(result.getTotalPages(10)).isEqualTo(1);
+        }
+
+        @Test
+        void requestingPage2ReturnsSecondPageOfUsers() {
+            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
+            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
+            // Arrange
+            when(mockGraph.users().get(any()))
+                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
+            when(mockGraph.users().count().get(any())).thenReturn(3);
+            when(mockGraph.users().withUrl("secondPageLink").get())
+                    .thenReturn(buildPage(secondPageOfUsers, "thirdPageLink"));
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsers(2, 1);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+            assertThat(result.getTotalPages(1)).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(1);
+            assertThat(result.getUsers().get(0).getFullName()).isEqualTo("SecondPageUser1");
+        }
+
+        @Test
+        void requestingPage5ReturnsNothingWhenOnly2PagesAreAvailable() {
+            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
+            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
+            // Arrange
+            when(mockGraph.users().get(any()))
+                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
+            when(mockGraph.users().count().get(any())).thenReturn(3);
+            when(mockGraph.users().withUrl("secondPageLink").get())
+                    .thenReturn(buildPage(secondPageOfUsers, "thirdPageLink"));
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 1);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+            assertThat(result.getTotalPages(1)).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(0);
+        }
+
+        @Test
+        void requestingPageReturnsNothingWhenUserResponseIsNull() {
+            // Arrange
+            when(mockGraph.users().get(any()))
+                    .thenReturn(null);
+            when(mockGraph.users().count().get(any())).thenReturn(null);
+
+            // Act
+            PaginatedUsers result = paginationSvc.getPaginatedUsers(1, 10);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages(10)).isEqualTo(1);
+            assertThat(result.getUsers().size()).isEqualTo(0);
         }
     }
 

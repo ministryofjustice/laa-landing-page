@@ -39,7 +39,6 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.List;
-import java.util.Stack;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
@@ -113,40 +112,6 @@ public class UserService {
     public List<User> getAllUsers() {
         UserCollectionResponse response = graphClient.users().get();
         return response != null ? response.getValue() : Collections.emptyList();
-    }
-
-    @SuppressWarnings("unchecked")
-    public Stack<String> getPageHistory(HttpSession session) {
-        Stack<String> pageHistory = (Stack<String>) session.getAttribute("pageHistory");
-        if (pageHistory == null) {
-            pageHistory = new Stack<>();
-            session.setAttribute("pageHistory", pageHistory);
-        }
-        return pageHistory;
-    }
-
-    // Retrieves paginated users and manages the page history for next and previous
-    // navigation
-    // Not working as expected for previous page stream
-    public PaginatedUsers getPaginatedUsersWithHistory(Stack<String> pageHistory, int size, String nextPageLink) {
-        String previousPageLink = null;
-
-        if (nextPageLink != null) {
-            if (!pageHistory.isEmpty()) {
-                previousPageLink = pageHistory.pop();
-            }
-            pageHistory.push(nextPageLink);
-        }
-
-        PaginatedUsers paginatedUsers = getAllUsersPaginated(size, nextPageLink, previousPageLink);
-        paginatedUsers.setPreviousPageLink(previousPageLink);
-        int totalPages = (int) Math.ceil((double) paginatedUsers.getTotalUsers() / size);
-        if (totalPages > 0) {
-            paginatedUsers.setTotalPages(totalPages);
-        } else {
-            paginatedUsers.setTotalPages(1);
-        }
-        return paginatedUsers;
     }
 
     public void updateUserRoles(String userId, List<String> selectedRoles) {
@@ -306,58 +271,54 @@ public class UserService {
         }
     }
 
-    private PaginatedUsers getAllUsersPaginated(int pageSize, String nextPageLink, String previousPageLink) {
-        UserCollectionResponse response;
-
-        if (nextPageLink == null || nextPageLink.isEmpty()) {
-            response = graphClient.users()
-                    .get(requestConfig -> {
-                        assert requestConfig.queryParameters != null;
-                        requestConfig.queryParameters.top = pageSize;
-                        requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName",
-                            "signInActivity"};
-                        requestConfig.queryParameters.count = true;
-                    });
-        } else {
-            response = graphClient.users()
-                    .withUrl(previousPageLink)
-                    .get();
-        }
-
-        List<User> graphUsers = response != null ? response.getValue() : Collections.emptyList();
-        List<UserModel> users = List.of();
-
-        if (graphUsers != null && !graphUsers.isEmpty()) {
-            users = graphUsers.stream().map(graphUser -> {
-                UserModel user = new UserModel();
-                user.setId(graphUser.getId());
-                user.setEmail(graphUser.getUserPrincipalName());
-                user.setFullName(graphUser.getDisplayName());
-
-                if (graphUser.getSignInActivity() != null) {
-                    user.setLastLoggedIn(
-                            formatLastSignInDateTime(graphUser.getSignInActivity().getLastSignInDateTime()));
-                } else {
-                    user.setLastLoggedIn("NA");
-                }
-
-                return user;
-            }).collect(Collectors.toList());
-        }
-
+    public PaginatedUsers getPaginatedUsers(int page, int size) {
+        Optional<List<User>> users = getPageOfUsers(page, size);
         PaginatedUsers paginatedUsers = new PaginatedUsers();
-        paginatedUsers.setUsers(users);
-        paginatedUsers.setNextPageLink(
-                response != null && response.getOdataNextLink() != null ? response.getOdataNextLink() : null);
-
-        int totalUsers = Optional.ofNullable(graphClient.users()
-                .count()
-                .get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual")))
-                .orElse(0);
-
-        paginatedUsers.setTotalUsers(totalUsers);
-
+        Integer totalUsers = graphClient.users().count().get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual"));
+        paginatedUsers.setTotalUsers(totalUsers == null ? 0 : totalUsers);
+        if (users.isPresent()) {
+            paginatedUsers.setUsers(mapGraphUsersToPagedUserModel(users.get()));
+        } else {
+            paginatedUsers.setUsers(Collections.emptyList());
+            logger.warn("Attempt to find users on page {} of size {} returned no users", page, size);
+        }
         return paginatedUsers;
+    }
+
+    private List<UserModel> mapGraphUsersToPagedUserModel(List<User> users) {
+        return users.stream().map(graphUser -> {
+            UserModel user = new UserModel();
+            user.setId(graphUser.getId());
+            user.setEmail(graphUser.getUserPrincipalName());
+            user.setFullName(graphUser.getDisplayName());
+            if (graphUser.getSignInActivity() != null) {
+                user.setLastLoggedIn(formatLastSignInDateTime(graphUser.getSignInActivity().getLastSignInDateTime()));
+            } else {
+                user.setLastLoggedIn("NA");
+            }
+            return user;
+        }).collect(Collectors.toList());
+    }
+
+    public Optional<List<User>> getPageOfUsers(int page, int pageSize) {
+        // Get first page as a starting point for iterating through pages
+        UserCollectionResponse response = getFirstPageOfUsersResponse(pageSize);
+        int currentPage = 1;
+        while (response != null && response.getOdataNextLink() != null && currentPage < page) {
+            response = graphClient.users().withUrl(response.getOdataNextLink()).get();
+            currentPage++;
+        }
+        return response != null && page == currentPage ? Optional.ofNullable(response.getValue()) : Optional.empty();
+    }
+
+    public UserCollectionResponse getFirstPageOfUsersResponse(int pageSize) {
+        return graphClient.users()
+                .get(requestConfig -> {
+                    assert requestConfig.queryParameters != null;
+                    requestConfig.queryParameters.top = pageSize;
+                    requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName", "signInActivity"};
+                    requestConfig.queryParameters.count = true;
+                });
     }
 
     public List<UserModel> getSavedUsers() {
