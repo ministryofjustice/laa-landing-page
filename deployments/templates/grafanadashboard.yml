@@ -822,7 +822,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "builder",
-              "expr": "sum(kube_pod_container_info{namespace='${NAMESPACE}',pod=~'.*gpfd.*'})",
+              "expr": "sum(kube_pod_container_info{namespace='${NAMESPACE}',pod=~'.*laa-landing-page.*'})",
               "legendFormat": "Total",
               "range": true,
               "refId": "A"
@@ -833,7 +833,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum({namespace='${NAMESPACE}',phase='Running',pod=~'.*gpfd.*'} + 0)",
+              "expr": "sum({namespace='${NAMESPACE}',phase='Running',pod=~'.*laa-landing-page.*'} + 0)",
               "hide": false,
               "legendFormat": "Running",
               "range": true,
@@ -845,7 +845,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "builder",
-              "expr": "sum({namespace='${NAMESPACE}',phase='Pending',pod=~'.*gpfd.*'} + 0)",
+              "expr": "sum({namespace='${NAMESPACE}',phase='Pending',pod=~'.*laa-landing-page.*'} + 0)",
               "hide": false,
               "legendFormat": "Pending",
               "range": true,
@@ -857,7 +857,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum({namespace='${NAMESPACE}',phase='Failed',pod=~'.*gpfd.*'} + 0)",
+              "expr": "sum({namespace='${NAMESPACE}',phase='Failed',pod=~'.*laa-landing-page.*'} + 0)",
               "hide": false,
               "legendFormat": "Failed",
               "range": true,
@@ -1189,7 +1189,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "sum(aws_ecr_repository_image_count{repository_name=~'payforlegalaid/.*'}) by (repository_name)",
+              "expr": "sum(aws_ecr_repository_image_count{repository_name=~'${NAMESPACE}/.*'}) by (repository_name)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "ECR Image Count",
@@ -1299,7 +1299,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!='',namespace='${NAMESPACE}',pod=~\"gpfd.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_requests{resource='memory', namespace='${NAMESPACE}',pod=~\"gpfd.*\"} > 0) by (container, pod)\n)",
+              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!='',namespace='${NAMESPACE}',pod=~\"laa-landing-page.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_requests{resource='memory', namespace='${NAMESPACE}',pod=~\"laa-landing-page.*\"} > 0) by (container, pod)\n)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "{{pod}}",
@@ -1396,7 +1396,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!=\"\", namespace='${NAMESPACE}', container_name!=\"gpfd.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_requests{namespace='${NAMESPACE}', container_name!=\"gpfd.*\",resource=\"memory\"} > 0) by (container, pod)\n)",
+              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!=\"\", namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_requests{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\",resource=\"memory\"} > 0) by (container, pod)\n)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "{{pod}}",
@@ -1492,7 +1492,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "container_memory_usage_bytes{namespace=\"${NAMESPACE}\", pod=~'gpfd.*'}",
+              "expr": "container_memory_usage_bytes{namespace=\"${NAMESPACE}\", pod=~'laa-landing-page.*'}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "{{pod}}",
@@ -1507,7 +1507,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "container_memory_max_usage_bytes{namespace=\"${NAMESPACE}\", pod=~'gpfd.*'}",
+              "expr": "container_memory_max_usage_bytes{namespace=\"${NAMESPACE}\", pod=~'laa-landing-page.*'}",
               "fullMetaSearch": false,
               "hide": false,
               "includeNullMetadata": true,
@@ -1635,7 +1635,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "round(\n  100 *\n    sum(\n      rate(container_cpu_usage_seconds_total{namespace='${NAMESPACE}', container_name!=\"gpfd.*\"}[5m])\n    ) by (pod, container_name, namespace)\n      /\n    sum(\n      kube_pod_container_resource_limits{namespace='${NAMESPACE}', container_name!='gpfd.*', resource='cpu'}\n    ) by (pod, container_name, namespace)\n)",
+              "expr": "round(\n  100 *\n    sum(\n      rate(container_cpu_usage_seconds_total{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\"}[5m])\n    ) by (pod, container_name, namespace)\n      /\n    sum(\n      kube_pod_container_resource_limits{namespace='${NAMESPACE}', container_name!='laa-landing-page.*', resource='cpu'}\n    ) by (pod, container_name, namespace)\n)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "__auto",
@@ -1736,7 +1736,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "round(\n  100 *\n    sum(\n      rate(container_cpu_usage_seconds_total{namespace='${NAMESPACE}', container_name!=\"gpfd.*\"}[5m])\n    ) by (pod_name, container_name, namespace)\n      /\n    sum(\n      kube_pod_container_resource_limits{namespace='${NAMESPACE}', container_name!=\"gpfd.*\",resource='cpu'}\n    ) by (pod_name, container_name, namespace)\n)",
+              "expr": "round(\n  100 *\n    sum(\n      rate(container_cpu_usage_seconds_total{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\"}[5m])\n    ) by (pod_name, container_name, namespace)\n      /\n    sum(\n      kube_pod_container_resource_limits{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\",resource='cpu'}\n    ) by (pod_name, container_name, namespace)\n)",
               "fullMetaSearch": false,
               "hide": false,
               "includeNullMetadata": true,
@@ -1835,7 +1835,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "topk(3, max by (pod, container)(rate(container_cpu_usage_seconds_total{image!='', namespace='${NAMESPACE}',pod=~\"gpfd.*\"}[$__rate_interval]))) / 10",
+              "expr": "topk(3, max by (pod, container)(rate(container_cpu_usage_seconds_total{image!='', namespace='${NAMESPACE}',pod=~\"laa-landing-page.*\"}[$__rate_interval]))) / 10",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "__auto",
@@ -2456,10 +2456,7 @@ data:
       "tags": [
         "api",
         "LAA",
-        "LAA Get Payments & Finance Data",
-        "GPFD",
-        "Get Legal Aid Data",
-        "GLAD"
+        "LAA Landing Page"
       ],
       "templating": {
         "list": []
