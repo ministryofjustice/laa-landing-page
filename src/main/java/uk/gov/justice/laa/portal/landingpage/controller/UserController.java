@@ -192,18 +192,11 @@ public class UserController {
         OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         //if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
-        List<OfficeModel> officeData = new ArrayList<>();
-        for (Office office : offices) {
-            OfficeModel officeModel = new OfficeModel();
-            if (Objects.nonNull(selectedOfficeData.getSelectedOffices())
-                    && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())) {
-                officeModel.setSelected(true);
-            }
-            officeModel.setId(office.getId().toString());
-            officeModel.setName(office.getName());
-            officeModel.setAddress(office.getAddress());
-            officeData.add(officeModel);
-        }
+        List<OfficeModel> officeData = offices.stream()
+                .map(office -> new OfficeModel(office.getName(), office.getAddress(),
+                        office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
+                        && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
+                .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
         return "user/offices";
     }
