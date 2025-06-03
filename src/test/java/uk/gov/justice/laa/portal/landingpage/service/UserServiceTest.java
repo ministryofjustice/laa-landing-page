@@ -530,7 +530,7 @@ class UserServiceTest {
         UUID appId = UUID.randomUUID();
         app.setId(appId.toString());
         app.setDisplayName("testApp");
-        app.setAppId(UserService.APPLICATION_ID);
+        app.setAppId("123456");
 
         // Set test roles for app
         AppRole appRole1 = new AppRole();

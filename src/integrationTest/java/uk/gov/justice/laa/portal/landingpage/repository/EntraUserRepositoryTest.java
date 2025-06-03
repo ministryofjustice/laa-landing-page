@@ -31,7 +31,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveEntraUser() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
         repository.saveAndFlush(entraUser);
 
         EntraUser result = repository.findById(entraUser.getId()).orElseThrow();
@@ -50,7 +50,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveEntraUserWithAppRegistration() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
         repository.saveAndFlush(entraUser);
 
         EntraAppRegistration entraAppRegistration = buildEntraAppRegistration("Entra App");
@@ -76,7 +76,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveEntraUserWithInvalidEmail() {
-        EntraUser entraUser = buildEntraUser("testemail.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("testemail.com", "FirstName", "LastName");
 
         assertThrows(ConstraintViolationException.class,
                 () -> repository.saveAndFlush(entraUser), "Exception expected");

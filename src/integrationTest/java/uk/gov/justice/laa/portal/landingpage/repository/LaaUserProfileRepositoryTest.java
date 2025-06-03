@@ -31,7 +31,7 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaUserProfile() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5", UserType.EXTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5");
         entraUserRepository.saveAndFlush(entraUser);
 
         LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, false, false);
@@ -52,7 +52,7 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
     public void testSaveAndRetrieveMultipleLaaUserProfilesForEntraUser() {
         Firm firm = buildFirm("Firm1");
 
-        EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6", UserType.EXTERNAL);
+        EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6");
         entraUserRepository.saveAndFlush(entraUser);
 
         LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, false, false);

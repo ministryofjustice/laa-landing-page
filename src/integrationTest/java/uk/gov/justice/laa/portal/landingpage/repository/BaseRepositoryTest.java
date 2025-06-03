@@ -33,8 +33,8 @@ public class BaseRepositoryTest {
         postgresContainer.start();
     }
 
-    protected EntraUser buildEntraUser(String email, String firstName, String lastName, UserType userType) {
-        return EntraUser.builder().userType(userType).email(email).userName(email)
+    protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
+        return EntraUser.builder().email(email).userName(email)
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .laaUserProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)

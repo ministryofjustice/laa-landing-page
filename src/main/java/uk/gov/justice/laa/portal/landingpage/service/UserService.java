@@ -4,6 +4,8 @@ import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.Invitation;
+import com.microsoft.graph.models.InvitedUserMessageInfo;
 import com.microsoft.graph.models.ObjectIdentity;
 import com.microsoft.graph.models.PasswordProfile;
 import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
@@ -32,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -55,10 +58,13 @@ public class UserService {
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
     private static final int BATCH_SIZE = 20;
-    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
 
     @Value("${entra.defaultDomain}")
     private String defaultDomain;
+
+    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
+    private String redirectUri;
+
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
         this.graphClient = graphClient;
@@ -265,20 +271,18 @@ public class UserService {
         List<UserRole> roles = new ArrayList<>();
         if (!ObjectUtils.isEmpty(servicePrincipals)) {
             for (ServicePrincipal sp : servicePrincipals) {
-                if (Objects.equals(sp.getAppId(), APPLICATION_ID)) {
-                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
-                        UserRole roleInfo = new UserRole(
-                                sp.getId(),
-                                sp.getDisplayName(),
-                                Objects.requireNonNull(role.getId()).toString(),
-                                role.getDisplayName(),
-                                null,
-                                role.getDisplayName(),
-                                null,
-                                false
-                        );
-                        roles.add(roleInfo);
-                    }
+                for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
+                    UserRole roleInfo = new UserRole(
+                            sp.getId(),
+                            sp.getDisplayName(),
+                            Objects.requireNonNull(role.getId()).toString(),
+                            role.getDisplayName(),
+                            null,
+                            role.getDisplayName(),
+                            null,
+                            false
+                    );
+                    roles.add(roleInfo);
                 }
             }
         }
@@ -436,22 +440,63 @@ public class UserService {
         return roles;
     }
 
-    public User createUser(User user, String password, List<String> roles) {
 
-        user.setAccountEnabled(true);
+
+
+    private void updateNames(User user) {
+        if (user.getGivenName() != null && !user.getGivenName().isEmpty()) {
+            user.setDisplayName(user.getGivenName() + " " + user.getSurname());
+        } else {
+            user.setDisplayName(user.getMail().split("@")[0]);
+        }
+
+        if (user.getMailNickname() == null || user.getMailNickname().isEmpty()) {
+            user.setMailNickname(user.getMail().split("@")[0]);
+        }
+
+        user.setUserPrincipalName(user.getMail());
+    }
+
+    public User createGuestUser(User user, List<String> roles) {
+
+
+        User invitedUser = inviteUser(user);
+
+        assert invitedUser != null;
+
+        assignAppRoleToUser(invitedUser, roles);
+
+        persistNewUser(user);
+        return invitedUser;
+    }
+
+    private void populateInvitedUser(User user) {
+        user.setUserType("Guest");
+    }
+
+
+
+    private void updateIdentities(User user) {
         ObjectIdentity objectIdentity = new ObjectIdentity();
         objectIdentity.setSignInType("emailAddress");
         objectIdentity.setIssuer(defaultDomain);
         objectIdentity.setIssuerAssignedId(user.getMail());
+
         LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
         identities.add(objectIdentity);
         user.setIdentities(identities);
+    }
+
+
+    private void addPasswordProfile(User user, String password) {
         PasswordProfile passwordProfile = new PasswordProfile();
         passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
         passwordProfile.setPassword(password);
         user.setPasswordProfile(passwordProfile);
-        user = graphClient.users().post(user);
+    }
 
+
+    private void assignAppRoleToUser(User user, List<String> roles) {
         ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
         String resourceId = null;
         UUID roleId = null;
@@ -464,8 +509,32 @@ public class UserService {
                 }
             }
         }
+    }
+
+    public User createUser(User user, String password, List<String> roles) {
+        User invitedUser = inviteUser(user);
+
+        assert invitedUser != null;
+        assignAppRoleToUser(invitedUser, roles);
+
         persistNewUser(user);
-        return user;
+
+        return invitedUser;
+    }
+
+    private User inviteUser(User user) {
+        Invitation invitation = new Invitation();
+        invitation.setInvitedUserEmailAddress(user.getMail());
+        invitation.setInviteRedirectUrl(redirectUri);
+        invitation.setInvitedUserType("Guest");
+        invitation.setSendInvitationMessage(true);
+        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
+        Invitation result = graphClient.invitations().post(invitation);
+        InvitedUserMessageInfo invitedUserMessageInfo = result.getInvitedUserMessageInfo();
+        invitedUserMessageInfo.getAdditionalData();
+        String inviteRedeemUrl = result.getInviteRedeemUrl();
+        assert result != null;
+        return result.getInvitedUser();
     }
 
     private void persistNewUser(User newUser) {
