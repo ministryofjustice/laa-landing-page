@@ -9,9 +9,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-/**
- * Javadoc comment.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

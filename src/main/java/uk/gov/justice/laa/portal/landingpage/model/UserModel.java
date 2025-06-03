@@ -9,9 +9,6 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Javadoc comment.
- */
 @Data
 @NoArgsConstructor
 @Entity
@@ -27,9 +24,6 @@ public class UserModel {
 
     @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
-    private String password;
 
     @Column(nullable = false)
     private String fullName;

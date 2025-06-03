@@ -31,7 +31,7 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@v4.2.0
+      - uses: aws-actions/configure-aws-credentials@v4.2.1
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
@@ -62,8 +62,12 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+<<<<<<< HEAD
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
           ENV_NAME: ${{ vars.ENV_NAME }}
+=======
+          INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+>>>>>>> main
 
       - name: Deploy to Cloud Platform
         run: |
