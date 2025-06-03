@@ -31,9 +31,11 @@ public class LoginService {
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
 
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
+    // CHECKSTYLE.SUPPRESS: AbbreviationAsWordInName
     private String AZURE_CLIENT_ID;
 
     @Value("${spring.security.oauth2.client.registration.azure.tenant-id}")
+    // CHECKSTYLE.SUPPRESS: AbbreviationAsWordInName
     private String AZURE_TENANT_ID;
 
     private final GraphApiService graphApiService;
