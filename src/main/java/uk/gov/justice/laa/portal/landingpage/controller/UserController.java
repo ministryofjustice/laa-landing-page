@@ -53,10 +53,24 @@ public class UserController {
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            Model model) {
+            @RequestParam(required = false) Integer page,
+            Model model,
+            HttpSession session) {
 
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size);
+        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
+        if (page == null) {
+            page = 1;
+            session.setAttribute("cachedUsers", null);
+            session.setAttribute("lastResponse", null);
+            session.setAttribute("totalUsers", null);
+        }
+
+        // Initialise cached user list if not already.
+        if (session.getAttribute("cachedUsers") == null) {
+            session.setAttribute("cachedUsers", new ArrayList<>());
+        }
+
+        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);

@@ -16,6 +16,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -55,6 +56,9 @@ public class UserService {
     private final UserModelRepository userModelRepository;
     private static final int BATCH_SIZE = 20;
     protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
+
+    /** The number of pages to load in advance when doing user pagination */
+    private static final int PAGES_TO_PRELOAD = 5;
 
     @Value("${entra.defaultDomain}")
     private String defaultDomain;
@@ -271,17 +275,12 @@ public class UserService {
         }
     }
 
-    public PaginatedUsers getPaginatedUsers(int page, int size) {
-        Optional<List<User>> users = getPageOfUsers(page, size);
+    public PaginatedUsers getPaginatedUsers(int page, int size, HttpSession session) {
+        List<User> users = getPageOfUsers(page, size, session);
         PaginatedUsers paginatedUsers = new PaginatedUsers();
-        Integer totalUsers = graphClient.users().count().get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual"));
+        Integer totalUsers = getTotalNumberOfUsers(session);
         paginatedUsers.setTotalUsers(totalUsers == null ? 0 : totalUsers);
-        if (users.isPresent()) {
-            paginatedUsers.setUsers(mapGraphUsersToPagedUserModel(users.get()));
-        } else {
-            paginatedUsers.setUsers(Collections.emptyList());
-            logger.warn("Attempt to find users on page {} of size {} returned no users", page, size);
-        }
+        paginatedUsers.setUsers(mapGraphUsersToPagedUserModel(users));
         return paginatedUsers;
     }
 
@@ -300,15 +299,59 @@ public class UserService {
         }).collect(Collectors.toList());
     }
 
-    public Optional<List<User>> getPageOfUsers(int page, int pageSize) {
-        // Get first page as a starting point for iterating through pages
-        UserCollectionResponse response = getFirstPageOfUsersResponse(pageSize);
-        int currentPage = 1;
-        while (response != null && response.getOdataNextLink() != null && currentPage < page) {
-            response = graphClient.users().withUrl(response.getOdataNextLink()).get();
-            currentPage++;
+    public List<User> getPageOfUsers(int page, int pageSize, HttpSession session) {
+        List<User> cachedUsers = (List<User>) session.getAttribute("cachedUsers");
+        Integer totalUsers = getTotalNumberOfUsers(session);
+        // Calculate the bounds of the page we wish to display e.g. 0-9, 10-19
+        int startPageIndex = (page - 1) * pageSize;
+        int endPageIndex = Math.min(totalUsers, startPageIndex + (pageSize - 1));
+        if (cachedUsers.size() - 1 < endPageIndex) {
+            UserCollectionResponse response = (UserCollectionResponse) session.getAttribute("lastResponse");
+            // Calculate how many pages we've already loaded based on size of cached users.
+            int currentPage = (cachedUsers.size() / pageSize) + 1;
+            // Eager-load some pages in advance.
+            while (currentPage < page + PAGES_TO_PRELOAD) {
+                if (response == null) {
+                    // First run
+                    response = getFirstPageOfUsersResponse(pageSize);
+                } else if (response.getOdataNextLink() != null) {
+                    // Fetch next page
+                    response = graphClient.users().withUrl(response.getOdataNextLink()).get();
+                } else {
+                    // No more users, break.
+                    break;
+                }
+                if (response == null || response.getValue() == null) {
+                    // If response is still null after network call, then something has gone wrong, break.
+                    break;
+                }
+
+                session.setAttribute("lastResponse", response);
+                cachedUsers.addAll(response.getValue());
+                currentPage++;
+            }
         }
-        return response != null && page == currentPage ? Optional.ofNullable(response.getValue()) : Optional.empty();
+        if (startPageIndex < cachedUsers.size()) {
+            return cachedUsers.subList(startPageIndex, Math.min(endPageIndex + 1, cachedUsers.size()));
+        } else {
+            return Collections.emptyList();
+        }
+
+    }
+
+    private Integer getTotalNumberOfUsers(HttpSession session) {
+        Integer totalUsers;
+        if (session.getAttribute("totalUsers") == null) {
+            totalUsers = getTotalNumberOfUsers();
+            session.setAttribute("totalUsers", totalUsers);
+        } else {
+            totalUsers = (Integer) session.getAttribute("totalUsers");
+        }
+        return totalUsers;
+    }
+
+    private Integer getTotalNumberOfUsers() {
+        return graphClient.users().count().get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual"));
     }
 
     public UserCollectionResponse getFirstPageOfUsersResponse(int pageSize) {

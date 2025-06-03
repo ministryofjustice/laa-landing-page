@@ -69,11 +69,11 @@ class UserControllerTest {
         paginatedUsers.setNextPageLink("nextPageLink");
         paginatedUsers.setPreviousPageLink("previousPageLink");
         paginatedUsers.setTotalUsers(100);
+        HttpSession session = new MockHttpSession();
 
-        Stack<String> pageHistory = new Stack<>();
-        when(userService.getPaginatedUsers(anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(userService.getPaginatedUsers(anyInt(), anyInt(), any(HttpSession.class))).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, model);
+        String view = userController.displayAllUsers(10, 1, model, session);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -103,16 +103,17 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
-        when(userService.getPaginatedUsers(eq(1), eq(10))).thenReturn(mockPaginatedUsers);
+        HttpSession session = new MockHttpSession();
+        when(userService.getPaginatedUsers(eq(1), eq(10), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, model);
+        String viewName = userController.displayAllUsers(10, 1, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPaginatedUsers(1, 10);
+        verify(userService).getPaginatedUsers(1, 10, session);
     }
 
     @Test
@@ -122,16 +123,34 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
-        when(userService.getPaginatedUsers(anyInt(), anyInt()))
-                .thenReturn(mockPaginatedUsers);
+        HttpSession session = new MockHttpSession();
+        when(userService.getPaginatedUsers(anyInt(), anyInt(), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, model);
+        String viewName = userController.displayAllUsers(10, 1, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPaginatedUsers(1, 10);
+        verify(userService).getPaginatedUsers(1, 10, session);
+    }
+
+    @Test
+    void testDisplayAllUsersDefaultsToPageOneWhenNoPageIsGiven() {
+        // Arrange
+        PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
+        mockPaginatedUsers.setUsers(List.of(new UserModel(), new UserModel()));
+        HttpSession session = new MockHttpSession();
+        when(userService.getPaginatedUsers(eq(1), eq(10), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
+
+        // Act
+        String viewName = userController.displayAllUsers(10, null, model, session);
+
+        // Assert
+        assertThat(viewName).isEqualTo("users");
+        assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
+        assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
+        verify(userService).getPaginatedUsers(1, 10, session);
     }
 
     @Test
