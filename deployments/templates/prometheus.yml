@@ -9,93 +9,93 @@ metadata:
     release: prometheus-operator
 spec:
   groups:
-  - name: kubernetes-rules
-    rules:
-    - alert: KubePodNotReady
-      annotations:
-        message: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready
-          state for longer than fifteen minutes.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: sum by (namespace, pod) (kube_pod_status_phase{job="kube-state-metrics",phase!~"Running|Succeeded", namespace="${NAMESPACE}"}) > 0
-      for: 15m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: KubePodCrashLooping
-      annotations:
-        message: Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting excessively
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: rate(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="${NAMESPACE}"}[10m]) * 60 * 10 > 1
-      for: 5m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: KubeNamespaceQuotaNearing
-      annotations:
-        message: Namespace {{ $labels.namespace }} is using {{ printf "%0.0f" $value }}% of its {{ $labels.resource }} quota.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaexceeded
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: |-
-        100 * kube_resourcequota{job="kube-state-metrics", type="used", namespace="${NAMESPACE}"}
-          / ignoring(instance, job, type)
-        (kube_resourcequota{job="kube-state-metrics", type="hard", namespace="${NAMESPACE}"} > 0)
-          > 80
-      for: 5m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: KubeJobFailed
-      annotations:
-        message: Failed Cron Job in {{ $labels.namespace }}/{{ $labels.job_name }}
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: kube_job_status_failed{job="kube-state-metrics", namespace="${NAMESPACE}"}  > 0
-      for: 1h
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: KubeDeploymentGenerationMismatch
-      annotations:
-        message: Deployment generation mismatch in {{ $labels.namespace }} due to possible roll-back.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentgenerationmismatch
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: (kube_deployment_status_observed_generation{job="kube-state-metrics",namespace="${NAMESPACE}"} != kube_deployment_metadata_generation{job="kube-state-metrics",namespace="${NAMESPACE}"})
-      for: 15m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: KubeDeploymentReplicasMismatch
-      annotations:
-        message: Deployment in {{ $labels.namespace }} has not matched the expected number of replicas.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/blob/master/runbook.md#alert-name-kubedeploymentreplicasmismatch
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: (kube_deployment_spec_replicas{job="kube-state-metrics",namespace="${NAMESPACE}"} != kube_deployment_status_replicas_available{job="kube-state-metrics",namespace="${NAMESPACE}"})
-      for: 15m
-      labels:
-        severity: ${ALERT_SEVERITY}
-  - name: application-rules
-    rules:
-    - alert: nginx-SlowResponses
-      annotations:
-        message: Ingress {{ $labels.ingress }} is serving slow responses over 2 seconds.
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: |-
-        avg(rate(nginx_ingress_controller_request_duration_seconds_sum{exported_namespace = "${NAMESPACE}"}[5m])
-        /
-        rate(nginx_ingress_controller_request_duration_seconds_count{exported_namespace = "${NAMESPACE}"}[5m]) > 0) by (ingress) >2
-      for: 1m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: 5xxErrorResponses
-      annotations:
-        message: Ingress {{ $labels.ingress }} is serving 5XX responses.
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"5.*"}[5m]))*270 > 10
-      for: 1m
-      labels:
-        severity: ${ALERT_SEVERITY}
-    - alert: 4xxErrorResponses
-      annotations:
-        message: Ingress {{ $labels.ingress }} is serving 4XX responses.
-        dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-      expr: sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"4.*"}[5m]))*270 > 10
-      for: 1m
-      labels:
-        severity: ${ALERT_SEVERITY}
+    - name: kubernetes-rules
+      rules:
+        - alert: KubePodNotReady
+          annotations:
+            message: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready
+              state for longer than fifteen minutes.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: sum by (namespace, pod) (kube_pod_status_phase{job="kube-state-metrics",phase!~"Running|Succeeded", namespace="${NAMESPACE}"}) > 0
+          for: 15m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: KubePodCrashLooping
+          annotations:
+            message: Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting excessively
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: rate(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace="${NAMESPACE}"}[10m]) * 60 * 10 > 1
+          for: 5m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: KubeNamespaceQuotaNearing
+          annotations:
+            message: Namespace {{ $labels.namespace }} is using {{ printf "%0.0f" $value }}% of its {{ $labels.resource }} quota.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaexceeded
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |-
+            100 * kube_resourcequota{job="kube-state-metrics", type="used", namespace="${NAMESPACE}"}
+              / ignoring(instance, job, type)
+            (kube_resourcequota{job="kube-state-metrics", type="hard", namespace="${NAMESPACE}"} > 0)
+              > 80
+          for: 5m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: KubeJobFailed
+          annotations:
+            message: Failed Cron Job in {{ $labels.namespace }}/{{ $labels.job_name }}
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: kube_job_status_failed{job="kube-state-metrics", namespace="${NAMESPACE}"}  > 0
+          for: 1h
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: KubeDeploymentGenerationMismatch
+          annotations:
+            message: Deployment generation mismatch in {{ $labels.namespace }} due to possible roll-back.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentgenerationmismatch
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: (kube_deployment_status_observed_generation{job="kube-state-metrics",namespace="${NAMESPACE}"} != kube_deployment_metadata_generation{job="kube-state-metrics",namespace="${NAMESPACE}"})
+          for: 15m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: KubeDeploymentReplicasMismatch
+          annotations:
+            message: Deployment in {{ $labels.namespace }} has not matched the expected number of replicas.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/blob/master/runbook.md#alert-name-kubedeploymentreplicasmismatch
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: (kube_deployment_spec_replicas{job="kube-state-metrics",namespace="${NAMESPACE}"} != kube_deployment_status_replicas_available{job="kube-state-metrics",namespace="${NAMESPACE}"})
+          for: 15m
+          labels:
+            severity: ${ALERT_SEVERITY}
+    - name: application-rules
+      rules:
+        - alert: nginx-SlowResponses
+          annotations:
+            message: Ingress {{ $labels.ingress }} is serving slow responses over 2 seconds.
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |-
+            avg(rate(nginx_ingress_controller_request_duration_seconds_sum{exported_namespace = "${NAMESPACE}"}[5m])
+            /
+            rate(nginx_ingress_controller_request_duration_seconds_count{exported_namespace = "${NAMESPACE}"}[5m]) > 0) by (ingress) >2
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: 5xxErrorResponses
+          annotations:
+            message: Ingress {{ $labels.ingress }} is serving 5XX responses.
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"5.*"}[5m]))*270 > 10
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+        - alert: 4xxErrorResponses
+          annotations:
+            message: Ingress {{ $labels.ingress }} is serving 4XX responses.
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"4.*"}[5m]))*270 > 10
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
