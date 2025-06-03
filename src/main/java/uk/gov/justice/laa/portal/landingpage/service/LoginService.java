@@ -30,9 +30,6 @@ public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
 
-    // private static final String AZURE_CLIENT_ID = System.getenv("AZURE_CLIENT_ID");
-    // private static final String AZURE_TENANT_ID = System.getenv("AZURE_TENANT_ID");
-
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
     private String AZURE_CLIENT_ID;
 
