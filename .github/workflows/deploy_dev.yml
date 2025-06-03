@@ -8,7 +8,7 @@ on:
 jobs:
   ecr:
     runs-on: ubuntu-latest
-    environment: development
+    environment: ${{ vars.ENV_NAME }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
@@ -53,11 +53,16 @@ jobs:
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
+          cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY' > deployments/prometheus.yml
+          cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME'> deployments/grafanadashboard.yml
         env:
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
 
 
