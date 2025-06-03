@@ -134,11 +134,11 @@
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
-                        <th:block th:each="i: ${#numbers.sequence(1, totalPages ?: 1)}">
+                        <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
                                 <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
-                                    aria-label="Page ${i} of 5" aria-current="page" th:text="${i}"></a>
+                                   th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
                         <li class="moj-pagination__item  moj-pagination__item--next" th:if="${nextPageLink}">
