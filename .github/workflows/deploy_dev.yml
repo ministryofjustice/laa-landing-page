@@ -61,13 +61,10 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
-<<<<<<< HEAD
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
           ENV_NAME: ${{ vars.ENV_NAME }}
-=======
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
 
->>>>>>> main
 
       - name: Deploy to Cloud Platform
         run: |
