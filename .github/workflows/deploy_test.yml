@@ -28,6 +28,7 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       # Assume role in Cloud Platform
