@@ -57,21 +57,29 @@
 
                 <div class="govuk-grid-row">
                     <div class="govuk-grid-column-one-half">
-                        <div class="moj-search">
-                            <div class="govuk-form-group">
-                                <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
-                                    Search by name
-                                </label>
-                                <input class="govuk-input moj-search__input " id="search" name="search" type="search"
-                                    aria-describedby="search-hint">
+                        <form method="get" th:action="@{/users}" role="search">
+                            <div class="moj-search">
+                                <div class="govuk-form-group">
+                                    <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
+                                        Search users
+                                    </label>
+                                    <input  class="govuk-input moj-search__input"
+                                            id="search"
+                                            name="search"
+                                            type="search"
+                                            th:value="${param.search}"
+                                            autocomplete="off">
+                                </div>
+                                <button type="submit"
+                                        class="govuk-button moj-search__button"
+                                        data-module="govuk-button">
+                                    Search
+                                </button>
                             </div>
-                            <button type="submit" class="govuk-button moj-search__button " data-module="govuk-button"
-                                data-govuk-button-init="">
-                                Search
-                            </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
+
                 <br>
                 <form method="post" th:action="@{/users/disable}">
                     <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
