@@ -221,7 +221,7 @@ public class UserController {
                 selectedDisplayNames.add(office.getName());
             }
         }
-        officeData.setSelectedOffices(selectedDisplayNames);
+        officeData.setSelectedOfficesDisplay(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
         return new RedirectView("/user/create/check-answers");
     }
