@@ -34,7 +34,7 @@ public class BaseRepositoryTest {
     }
 
     protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
-        return EntraUser.builder().email(email)
+        return EntraUser.builder().email(email).userName(email)
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .laaUserProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
