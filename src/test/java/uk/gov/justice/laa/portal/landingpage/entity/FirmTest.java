@@ -75,9 +75,8 @@ class FirmTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages.iterator().next()).isEqualTo("Firm type must be provided");
-        assertThat(messages.iterator().next()).isEqualTo("type");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Firm type must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("type");
     }
 
 

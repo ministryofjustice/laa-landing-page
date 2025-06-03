@@ -224,10 +224,8 @@ public class EntraUserTest extends BaseEntityTest {
 
     @Test
     public void testEntraUserStartDateAfterEndDate() {
-        EntraUser entraUser = EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().minusYears(1))
-                .email("test@email.com")
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, eu -> eu.setEndDate(LocalDateTime.now().minusYears(1)));
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isNotEmpty();
