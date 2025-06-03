@@ -21,6 +21,10 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
+    private FirmRepository firmRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
     private LaaUserProfileRepository repository;
 
     @BeforeEach
@@ -31,10 +35,10 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaUserProfile() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5", UserType.EXTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5");
         entraUserRepository.saveAndFlush(entraUser);
 
-        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, false, false);
+        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
         repository.saveAndFlush(laaUserProfile);
 
         LaaUserProfile result = repository.getById(laaUserProfile.getId());
@@ -50,13 +54,17 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveMultipleLaaUserProfilesForEntraUser() {
-        Firm firm = buildFirm("Firm1");
+        Firm firm1 = buildFirm("Firm1");
+        Firm firm2 = buildFirm("Firm2");
+        firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
-        EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6", UserType.EXTERNAL);
-        entraUserRepository.saveAndFlush(entraUser);
+        EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6");
+        entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, false, false);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, true, true);
+        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        laaUserProfile1.setFirm(firm1);
+        laaUserProfile2.setFirm(firm2);
         entraUser.getLaaUserProfiles().add(laaUserProfile1);
         entraUser.getLaaUserProfiles().add(laaUserProfile2);
 

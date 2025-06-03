@@ -23,10 +23,6 @@ import java.util.Set;
 
 @Entity
 @Table(name = "firm", indexes = {
-    @Index(name = "FirmCreatedByIdx", columnList = "created_by"),
-    @Index(name = "FirmCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "FirmLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "FirmLastModifiedByIdx", columnList = "last_modified_by"),
     @Index(name = "FirmNameIdx", columnList = "name"),
 })
 @SuperBuilder

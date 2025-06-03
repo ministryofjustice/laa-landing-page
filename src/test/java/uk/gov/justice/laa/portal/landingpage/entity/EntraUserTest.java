@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EntraUserTest extends BaseEntityTest {
 
@@ -25,7 +24,6 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(entraUser.getStartDate()).isNotNull();
         assertThat(entraUser.getEndDate()).isNotNull();
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
-        assertThat(entraUser.getUserType()).isEqualTo(UserType.INTERNAL);
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();
     }
@@ -205,27 +203,6 @@ public class EntraUserTest extends BaseEntityTest {
     }
 
     @Test
-    public void testEntraUserNullUserType() {
-        EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setUserType(null));
-
-        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user type must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userType");
-    }
-
-    @Test
-    public void testEntraUserInvalidUserType() {
-        assertThrows(IllegalArgumentException.class, () -> EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
-                .email("test@email").userType(UserType.valueOf("INVALID"))
-                .createdBy("test").createdDate(LocalDateTime.now()).build());
-    }
-
-    @Test
     public void testEntraUserNullStartDate() {
         EntraUser entraUser = buildTestEntraUser();
         update(entraUser, entra -> entra.setStartDate(null));
@@ -244,4 +221,18 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isEmpty();
     }
+
+    @Test
+    public void testEntraUserStartDateAfterEndDate() {
+        EntraUser entraUser = EntraUser.builder().firstName("FirstName").lastName("LastName")
+                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().minusYears(1))
+                .email("test@email.com")
+                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("End date must be after start date");
+    }
+
 }

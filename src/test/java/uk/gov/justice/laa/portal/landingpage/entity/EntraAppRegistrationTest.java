@@ -21,8 +21,6 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
         assertThat(violations).isEmpty();
         assertNotNull(entraAppRegistration);
         assertEquals("Test Entra app reg", entraAppRegistration.getName());
-        assertThat("test").isEqualTo(entraAppRegistration.getCreatedBy());
-        assertThat(entraAppRegistration.getCreatedDate()).isNotNull();
 
     }
 

@@ -52,16 +52,12 @@ public class LaaAppRoleRepositoryTest extends BaseRepositoryTest {
 
         Assertions.assertThat(result.getId()).isEqualTo(laaAppRole1.getId());
         Assertions.assertThat(result.getName()).isEqualTo("LAA App Role 1");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(result.getCreatedDate()).isNotNull();
         Assertions.assertThat(result.getLaaApp()).isNotNull();
 
         LaaApp resultLaaApp = result.getLaaApp();
         Assertions.assertThat(resultLaaApp).isNotNull();
         Assertions.assertThat(resultLaaApp.getId()).isEqualTo(laaApp.getId());
         Assertions.assertThat(resultLaaApp.getName()).isEqualTo("LAA App1");
-        Assertions.assertThat(resultLaaApp.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(resultLaaApp.getCreatedDate()).isNotNull();
         Assertions.assertThat(resultLaaApp.getAppRoles()).isNotEmpty();
         Assertions.assertThat(resultLaaApp.getAppRoles()).containsExactlyInAnyOrder(laaAppRole1, laaAppRole2);
         Assertions.assertThat(resultLaaApp.getEntraAppRegistration()).isNotNull();

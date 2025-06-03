@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -31,7 +30,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveEntraUser() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
         repository.saveAndFlush(entraUser);
 
         EntraUser result = repository.findById(entraUser.getId()).orElseThrow();
@@ -44,13 +43,12 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getEmail()).isEqualTo("test@email.com");
         Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
         Assertions.assertThat(result.getCreatedDate()).isNotNull();
-        Assertions.assertThat(result.getUserType()).isEqualTo(UserType.INTERNAL);
 
     }
 
     @Test
     public void testSaveAndRetrieveEntraUserWithAppRegistration() {
-        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
         repository.saveAndFlush(entraUser);
 
         EntraAppRegistration entraAppRegistration = buildEntraAppRegistration("Entra App");
@@ -67,8 +65,6 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         EntraAppRegistration resultEntraAppRegistration = result.getUserAppRegistrations().stream().findFirst().orElseThrow();
         Assertions.assertThat(resultEntraAppRegistration.getId()).isEqualTo(entraAppRegistration.getId());
         Assertions.assertThat(resultEntraAppRegistration.getName()).isEqualTo("Entra App");
-        Assertions.assertThat(resultEntraAppRegistration.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(resultEntraAppRegistration.getCreatedDate()).isNotNull();
         Assertions.assertThat(resultEntraAppRegistration.getEntraUsers()).isNotEmpty();
         Assertions.assertThat(resultEntraAppRegistration.getEntraUsers().stream().findFirst().orElseThrow()).isEqualTo(result);
 
@@ -76,7 +72,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveEntraUserWithInvalidEmail() {
-        EntraUser entraUser = buildEntraUser("testemail.com", "FirstName", "LastName", UserType.INTERNAL);
+        EntraUser entraUser = buildEntraUser("testemail.com", "FirstName", "LastName");
 
         assertThrows(ConstraintViolationException.class,
                 () -> repository.saveAndFlush(entraUser), "Exception expected");

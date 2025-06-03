@@ -26,10 +26,6 @@ import java.util.Set;
 
 @Entity
 @Table(name = "laa_app_role", indexes = {
-    @Index(name = "LaaAppRoleCreatedByIdx", columnList = "created_by"),
-    @Index(name = "LaaAppRoleCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "LaaAppRoleLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "LaaAppRoleLastModifiedByIdx", columnList = "last_modified_by"),
     @Index(name = "LaaAppRoleNameIdx", columnList = "name"),
 })
 @Getter

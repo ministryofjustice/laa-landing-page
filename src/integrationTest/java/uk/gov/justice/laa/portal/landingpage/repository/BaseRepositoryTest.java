@@ -33,8 +33,8 @@ public class BaseRepositoryTest {
         postgresContainer.start();
     }
 
-    protected EntraUser buildEntraUser(String email, String firstName, String lastName, UserType userType) {
-        return EntraUser.builder().userType(userType).email(email).userName(email)
+    protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
+        return EntraUser.builder().email(email)
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .laaUserProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
@@ -44,34 +44,30 @@ public class BaseRepositoryTest {
 
     protected EntraAppRegistration buildEntraAppRegistration(String name) {
         return EntraAppRegistration.builder().name(name)
-                .entraUsers(HashSet.newHashSet(1))
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .entraUsers(HashSet.newHashSet(1)).build();
     }
 
     protected Firm buildFirm(String name) {
-        return Firm.builder().name(name).createdBy("Test").offices(HashSet.newHashSet(11))
-                .createdDate(LocalDateTime.now()).type(FirmType.INDIVIDUAL).build();
+        return Firm.builder().name(name).offices(HashSet.newHashSet(11))
+                .type(FirmType.INDIVIDUAL).build();
     }
 
     protected Office buildOffice(Firm firm, String name, String address, String phone) {
-        return Office.builder().name(name).address(address).phone(phone)
-                .createdBy("Test").createdDate(LocalDateTime.now()).firm(firm).build();
+        return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
     }
 
     protected LaaApp buildLaaApp(EntraAppRegistration entraAppRegistration, String name) {
         return LaaApp.builder().name(name).entraAppRegistration(entraAppRegistration)
-                .appRoles(HashSet.newHashSet(1))
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .appRoles(HashSet.newHashSet(1)).build();
     }
 
     protected LaaAppRole buildLaaAppRole(LaaApp laaApp, String name) {
-        return LaaAppRole.builder().name(name).laaApp(laaApp)
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+        return LaaAppRole.builder().name(name).laaApp(laaApp).build();
     }
 
-    protected LaaUserProfile buildLaaUserProfile(EntraUser entraUser, boolean isAdmin, boolean isMultiFirm) {
+    protected LaaUserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return LaaUserProfile.builder().entraUser(entraUser)
-                .admin(isAdmin).multiFirm(isMultiFirm)
+                .userType(userType)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 

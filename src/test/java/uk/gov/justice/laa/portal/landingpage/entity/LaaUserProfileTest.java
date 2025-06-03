@@ -4,11 +4,10 @@ import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LaaUserProfileTest extends BaseEntityTest {
 
@@ -20,8 +19,6 @@ class LaaUserProfileTest extends BaseEntityTest {
 
         assertThat(violations).isEmpty();
         assertNotNull(laaUserProfile);
-        assertTrue(laaUserProfile.isAdmin());
-        assertTrue(laaUserProfile.isMultiFirm());
         assertThat(laaUserProfile.getCreatedBy()).isNotEmpty();
         assertNotNull(laaUserProfile.getCreatedDate());
     }
@@ -30,15 +27,100 @@ class LaaUserProfileTest extends BaseEntityTest {
     public void testLaaUserProfileNullName() {
         LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
         update(laaUserProfile, laaProf -> {
-            laaProf.setAdmin(false);
-            laaProf.setMultiFirm(false);
         });
 
         Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
 
         assertThat(violations).isEmpty();
         assertNotNull(laaUserProfile);
-        assertFalse(laaUserProfile.isAdmin());
-        assertFalse(laaUserProfile.isMultiFirm());
+    }
+
+    @Test
+    public void testLaaUserProfileNullCreatedBy() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile, laaProf -> laaProf.setCreatedBy(null));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Created by must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("createdBy");
+    }
+
+    @Test
+    public void testLaaUserProfileEmptyCreatedBy() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile, l -> l.setCreatedBy(""));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Created by must be provided", "Created by must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("createdBy");
+    }
+
+    @Test
+    public void testLaaUserProfileCreatedByTooLong() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile, f -> f.setCreatedBy("TestCreatedByThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Created by must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("createdBy");
+    }
+
+    @Test
+    public void testLaaUserProfileNullCreatedDate() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile,  l -> l.setCreatedDate(null));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Created date must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("createdDate");
+    }
+
+    @Test
+    public void testLaaUserProfileEmptyLastModifiedBy() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile,  l -> l.setLastModifiedBy(""));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Last modified by must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastModifiedBy");
+    }
+
+    @Test
+    public void testLaaUserProfileLastModifiedByTooLong() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile,  l -> l.setLastModifiedBy("TheLastModifiedByIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Last modified by must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastModifiedBy");
+    }
+
+    @Test
+    public void testLaaUserProfileNullLastModifiedBy() {
+        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        update(laaUserProfile,  l -> l.setLastModifiedBy(null));
+
+        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+
+        assertThat(violations).isEmpty();
     }
 }

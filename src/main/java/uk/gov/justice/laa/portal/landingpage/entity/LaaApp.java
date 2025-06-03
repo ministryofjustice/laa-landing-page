@@ -22,15 +22,11 @@ import java.util.Set;
 
 @Entity
 @Table(name = "laa_app", indexes = {
-    @Index(name = "LaaAppCreatedByIdx", columnList = "created_by"),
-    @Index(name = "LaaAppCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "LaaAppLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "LaaAppLastModifiedByIdx", columnList = "last_modified_by"),
     @Index(name = "LaaAppNameIdx", columnList = "name"),
 })
 @Getter
 @Setter
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
 public class LaaApp extends BaseEntity {

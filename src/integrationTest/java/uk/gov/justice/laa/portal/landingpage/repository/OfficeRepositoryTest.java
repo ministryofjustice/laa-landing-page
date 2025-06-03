@@ -48,15 +48,11 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(office2.getId());
         Assertions.assertThat(result.getName()).isEqualTo("Office2");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(result.getCreatedDate()).isNotNull();
         Assertions.assertThat(result.getFirm()).isNotNull();
 
         Firm firm = result.getFirm();
         Assertions.assertThat(firm.getId()).isEqualTo(firm2.getId());
         Assertions.assertThat(firm.getName()).isEqualTo("Firm2");
-        Assertions.assertThat(firm.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(firm.getCreatedDate()).isNotNull();
         Assertions.assertThat(firm.getType()).isEqualTo(FirmType.INDIVIDUAL);
         Assertions.assertThat(firm.getOffices()).containsExactlyInAnyOrder(office2, office3);
 

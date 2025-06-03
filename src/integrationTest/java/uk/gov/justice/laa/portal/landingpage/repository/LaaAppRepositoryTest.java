@@ -38,15 +38,11 @@ public class LaaAppRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(laaApp.getId());
         Assertions.assertThat(result.getName()).isEqualTo("LAA App1");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(result.getCreatedDate()).isNotNull();
         Assertions.assertThat(result.getEntraAppRegistration()).isNotNull();
 
         EntraAppRegistration resultEntraAppRegistration = result.getEntraAppRegistration();
         Assertions.assertThat(resultEntraAppRegistration.getId()).isEqualTo(entraAppRegistration.getId());
         Assertions.assertThat(resultEntraAppRegistration.getName()).isEqualTo("Entra App");
-        Assertions.assertThat(resultEntraAppRegistration.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(resultEntraAppRegistration.getCreatedDate()).isNotNull();
 
     }
 }

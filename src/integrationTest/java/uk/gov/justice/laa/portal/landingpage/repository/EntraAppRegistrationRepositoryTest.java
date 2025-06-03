@@ -32,8 +32,6 @@ public class EntraAppRegistrationRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(entraAppRegistration.getId());
         Assertions.assertThat(result.getName()).isEqualTo("Entra App 1");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(result.getCreatedDate()).isNotNull();
 
     }
 
