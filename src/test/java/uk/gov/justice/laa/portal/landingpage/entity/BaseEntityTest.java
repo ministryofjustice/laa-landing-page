@@ -25,39 +25,35 @@ public class BaseEntityTest {
     }
 
     protected Firm buildTestFirm() {
-        return Firm.builder().name("TestFirm").type(FirmType.LEGAL_SERVICES_PROVIDER)
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        return Firm.builder().name("TestFirm").type(FirmType.LEGAL_SERVICES_PROVIDER).build();
     }
 
     protected Office buildTestOffice() {
-        return Office.builder().name("TestOffice").address("Address").phone("123456")
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+        return Office.builder().name("TestOffice").address("Address").phone("123456").build();
     }
 
-    protected EntraAppRegistration buildTestEntraAppRegistration() {
-        return EntraAppRegistration.builder().name("Test Entra app reg")
-                .createdBy("test").createdDate(LocalDateTime.now()).build();
+    protected AppRegistration buildTestEntraAppRegistration() {
+        return AppRegistration.builder().name("Test app reg").build();
     }
 
     protected EntraUser buildTestEntraUser() {
-        return EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .userName("test@email.com")
-                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
-                .email("test@email.com").userType(UserType.INTERNAL)
+        return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
+                .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
+                .userName("firstname.lastname").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }
 
-    protected LaaApp buildTestLaaApp() {
-        return LaaApp.builder().name("Test Laa App").createdBy("test").createdDate(LocalDateTime.now()).build();
+    protected App buildTestLaaApp() {
+        return App.builder().name("Test App").build();
     }
 
-    protected LaaAppRole buildTestLaaAppRole() {
-        return LaaAppRole.builder().name("Test Laa App Role").createdBy("test").createdDate(LocalDateTime.now()).build();
+    protected AppRole buildTestLaaAppRole() {
+        return AppRole.builder().name("Test App Role").build();
     }
 
-    protected LaaUserProfile buildTestLaaUserProfile() {
-        return LaaUserProfile.builder().entraUser(buildTestEntraUser())
-                .admin(true).multiFirm(true)
+    protected UserProfile buildTestLaaUserProfile() {
+        return UserProfile.builder().entraUser(buildTestEntraUser())
+                .userType(UserType.INTERNAL)
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }
 

@@ -34,8 +34,9 @@ jobs:
         run: |
           ./gradlew test
         env:
-          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR}}
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
 
       - name: Add coverage to PR
         id: jacoco

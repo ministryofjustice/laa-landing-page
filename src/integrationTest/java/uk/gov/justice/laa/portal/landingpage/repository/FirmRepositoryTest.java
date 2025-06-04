@@ -33,8 +33,6 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(firm1.getId());
         Assertions.assertThat(result.getName()).isEqualTo("Firm1");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("Test");
-        Assertions.assertThat(result.getCreatedDate()).isNotNull();
         Assertions.assertThat(result.getType()).isEqualTo(FirmType.INDIVIDUAL);
 
     }
