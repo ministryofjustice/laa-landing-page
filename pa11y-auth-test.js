@@ -6,6 +6,16 @@ const puppeteer = require('puppeteer');
   const username = process.env.ENTRA_USERNAME;
   const password = process.env.ENTRA_PASSWORD;
 
+  console.log('KUBE_NAMESPACE:', process.env.KUBE_NAMESPACE ? '[SET]' : '[MISSING]');
+  console.log('ENTRA_USERNAME:', process.env.ENTRA_USERNAME ? '[SET]' : '[MISSING]');
+  console.log('ENTRA_PASSWORD:', process.env.ENTRA_PASSWORD ? '[SET]' : '[MISSING]');
+  
+  ['KUBE_NAMESPACE', 'ENTRA_USERNAME', 'ENTRA_PASSWORD'].forEach((key) => {
+    if (!process.env[key]) {
+      console.error(`Missing required env var: ${key}`);
+    }
+    });
+
   if (!namespace || !username || !password) {
     console.error("One or more required environment variables (KUBE_NAMESPACE, ENTRA_USERNAME, ENTRA_PASSWORD) are missing.");
     process.exit(1);
