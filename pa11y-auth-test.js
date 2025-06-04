@@ -7,7 +7,7 @@ const puppeteer = require('puppeteer');
   const password = process.env.ENTRA_PASSWORD;
 
   if (!namespace || !username || !password) {
-    console.error("One or more required environment variables (NAMESPACE, ENTRA_USERNAME, ENTRA_PASSWORD) are missing.");
+    console.error("One or more required environment variables (KUBE_NAMESPACE, ENTRA_USERNAME, ENTRA_PASSWORD) are missing.");
     process.exit(1);
   }
 
