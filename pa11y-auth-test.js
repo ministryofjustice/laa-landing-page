@@ -2,7 +2,7 @@ const pa11y = require('pa11y');
 const puppeteer = require('puppeteer');
 
 (async () => {
-  const namespace = process.env.NAMESPACE;
+  const namespace = process.env.KUBE_NAMESPACE;
   const username = process.env.ENTRA_USERNAME;
   const password = process.env.ENTRA_PASSWORD;
 
