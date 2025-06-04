@@ -34,3 +34,5 @@ jobs:
         run: npm run test:accessibility
         env:
           NAMESPACE: ${{ secrets.NAMESPACE }}  
+          ENTRA_USERNAME: ${{ secrets.ENTRA_USERNAME }}
+          ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
