@@ -36,20 +36,32 @@ const puppeteer = require('puppeteer');
 
   // Simulate login - you MUST adjust selectors to match your login page
   try {
+    // Step 1: Enter username/email
+    await page.waitForSelector('input[type="email"]', { visible: true });
     await page.type('input[type="email"]', username);
     await page.click('input[type="submit"]');
-    await page.waitForTimeout(2000); // Adjust delay for tenant redirect
-
+    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+  
+    // Step 2: Enter password
+    await page.waitForSelector('input[type="password"]', { visible: true });
     await page.type('input[type="password"]', password);
     await page.click('input[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-    console.log("Successfully logged in.");
-  } catch (err) {
-    console.error("Login failed. Check form selectors and authentication flow.");
-    await browser.close();
+  
+    // Optional: Handle "Stay signed in?" prompt
+    const staySignedInSelector = 'input[id="idBtn_Back"], input[id="idBtn_Foreground"]';
+    const staySignedInExists = await page.$(staySignedInSelector);
+    if (staySignedInExists) {
+      await page.click(staySignedInSelector); // Choose Back or Foreground based on your flow
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    }
+  
+  } catch (error) {
+    console.error('Login automation failed:', error);
+    await page.screenshot({ path: 'login-failure.png' });
     process.exit(1);
   }
+  
 
   // Loop through URLs after login
   for (const url of urls) {
