@@ -26,7 +26,9 @@ const puppeteer = require('puppeteer');
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
   ];
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
   const page = await browser.newPage();
 
   // Navigate to login page
