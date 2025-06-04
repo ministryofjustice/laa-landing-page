@@ -41,6 +41,8 @@ const puppeteer = require('puppeteer');
     await page.type('#email', username);
   
     // Click "Sign in" (email submit)
+    const html = await page.content();
+    console.log(html);
     await page.waitForSelector('input[type="submit"]', { visible: true });
     await page.click('input[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
