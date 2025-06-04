@@ -42,7 +42,6 @@ const puppeteer = require('puppeteer');
   
     // Click "Sign in" (email submit)
     await page.waitForSelector('input[type="submit"]', { visible: true });
-    await page.screenshot({ path: 'before-email-submit.png' });
     await page.click('input[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
@@ -52,7 +51,8 @@ const puppeteer = require('puppeteer');
   
     // Click "Sign in" (password submit)
     await page.waitForSelector('input[type="submit"]', { visible: true });
-    await page.screenshot({ path: 'before-password-submit.png' });
+    const frames = page.frames();
+    console.log('Frames on page:', frames.map(f => f.url()));
     await page.click('input[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
@@ -64,7 +64,7 @@ const puppeteer = require('puppeteer');
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
     }
   
-    console.log('✅ Login successful');
+    console.log('Login successful');
   
   } catch (error) {
     console.error('Login automation failed:', error);
