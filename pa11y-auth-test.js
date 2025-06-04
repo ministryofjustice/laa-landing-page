@@ -39,8 +39,15 @@ const puppeteer = require('puppeteer');
     // Step 1: Enter username/email
     await page.waitForSelector('input[type="email"]', { visible: true });
     await page.type('input[type="email"]', username);
-    await page.waitForSelector('#idSIButton9', { visible: true });
-    await page.click('#idSIButton9');
+    
+    const buttons = await page.$$eval('button, input', els =>
+        els.map(el => ({ text: el.innerText, id: el.id, type: el.type }))
+      );
+    console.log('Available buttons:', buttons);
+
+    await page.screenshot({ path: 'before-failure.png' });
+    await page.waitForSelector('input[type="submit"], button[type="submit"], #idSIButton9', { visible: true });
+    await page.click('input[type="submit"], button[type="submit"], #idSIButton9');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
     // Step 2: Enter password
