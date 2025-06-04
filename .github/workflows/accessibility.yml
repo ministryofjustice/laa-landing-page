@@ -33,6 +33,6 @@ jobs:
       - name: Run Pa11y with Puppeteer
         run: npm run test:accessibility
         env:
-          NAMESPACE: ${{ secrets.NAMESPACE }}  
+          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           ENTRA_USERNAME: ${{ secrets.ENTRA_USERNAME }}
           ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
