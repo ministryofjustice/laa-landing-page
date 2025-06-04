@@ -39,13 +39,15 @@ const puppeteer = require('puppeteer');
     // Step 1: Enter username/email
     await page.waitForSelector('input[type="email"]', { visible: true });
     await page.type('input[type="email"]', username);
-    await page.click('input[type="submit"]');
+    await page.waitForSelector('#idSIButton9', { visible: true });
+    await page.click('#idSIButton9');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
     // Step 2: Enter password
     await page.waitForSelector('input[type="password"]', { visible: true });
     await page.type('input[type="password"]', password);
-    await page.click('input[type="submit"]');
+    await page.waitForSelector('#idSIButton9', { visible: true });
+    await page.click('#idSIButton9');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
     // Optional: Handle "Stay signed in?" prompt
