@@ -18,6 +18,10 @@ jobs:
     # if: ${{ github.event.workflow_run.conclusion == 'success' }}  # Only if deploy succeeds
     runs-on: ubuntu-latest
     environment: development
+    env:
+      NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+      ENTRA_USERNAME: ${{ secrets.ENTRA_USERNAME }}
+      ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -32,7 +36,4 @@ jobs:
 
       - name: Run Pa11y with Puppeteer
         run: npm run test:accessibility
-        env:
-          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
-          ENTRA_USERNAME: ${{ secrets.ENTRA_USERNAME }}
-          ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
+        
