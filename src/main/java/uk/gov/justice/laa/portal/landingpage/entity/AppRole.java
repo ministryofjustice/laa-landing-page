@@ -25,42 +25,38 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "laa_app_role", indexes = {
-    @Index(name = "LaaAppRoleCreatedByIdx", columnList = "created_by"),
-    @Index(name = "LaaAppRoleCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "LaaAppRoleLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "LaaAppRoleLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "LaaAppRoleNameIdx", columnList = "name"),
+@Table(name = "app_role", indexes = {
+    @Index(name = "AppRoleNameIdx", columnList = "name"),
 })
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaAppRole extends BaseEntity {
+public class AppRole extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "LAA application role name must be provided")
-    @Size(min = 1, max = 255, message = "LAA application role name must be between 1 and 255 characters")
+    @NotBlank(message = "Application role name must be provided")
+    @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
     @ManyToOne
-    @JoinColumn(name = "laa_app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_laa_app_role_laa_app_id"))
+    @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude
     @JsonIgnore
-    private LaaApp laaApp;
+    private App app;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_profile_app_role",
-            joinColumns = @JoinColumn(name = "laa_app_role_id"),
-            foreignKey = @ForeignKey(name = "FK_laa_app_role_app_role_id"),
-            inverseJoinColumns = @JoinColumn(name = "laa_user_profile_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_laa_app_role_user_profile_id")
+            joinColumns = @JoinColumn(name = "app_role_id"),
+            foreignKey = @ForeignKey(name = "FK_app_role_app_role_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_profile_id"),
+            inverseForeignKey = @ForeignKey(name = "FK_app_role_user_profile_id")
     )
     @ToString.Exclude
     @JsonIgnore
     @Builder.Default
-    private Set<LaaUserProfile> userProfiles = new HashSet<>();
+    private Set<UserProfile> userProfiles = new HashSet<>();
 
 }
