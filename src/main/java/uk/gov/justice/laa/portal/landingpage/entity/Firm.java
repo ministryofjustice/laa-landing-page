@@ -50,6 +50,6 @@ public class Firm extends BaseEntity {
     @OneToMany(mappedBy = "firm", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaUserProfile> userProfiles;
+    private Set<UserProfile> userProfiles;
 
 }

@@ -2,10 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import uk.gov.justice.laa.portal.landingpage.entity.LaaApp;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 
 import java.util.UUID;
 
 @Repository
-public interface LaaAppRepository extends JpaRepository<LaaApp, UUID> {
+public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
 }

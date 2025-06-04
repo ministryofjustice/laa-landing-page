@@ -10,26 +10,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class EntraAppRegistrationTest extends BaseEntityTest {
+public class AppRegistrationTest extends BaseEntityTest {
 
     @Test
     public void testEntraAppRegistration() {
-        EntraAppRegistration entraAppRegistration = buildTestEntraAppRegistration();
+        AppRegistration appRegistration = buildTestEntraAppRegistration();
 
-        Set<ConstraintViolation<EntraAppRegistration>> violations = validator.validate(entraAppRegistration);
+        Set<ConstraintViolation<AppRegistration>> violations = validator.validate(appRegistration);
 
         assertThat(violations).isEmpty();
-        assertNotNull(entraAppRegistration);
-        assertEquals("Test Entra app reg", entraAppRegistration.getName());
+        assertNotNull(appRegistration);
+        assertEquals("Test app reg", appRegistration.getName());
 
     }
 
     @Test
     public void testEntraAppRegistrationNullName() {
-        EntraAppRegistration entraAppRegistration = buildTestEntraAppRegistration();
-        update(entraAppRegistration, entra -> entra.setName(null));
+        AppRegistration appRegistration = buildTestEntraAppRegistration();
+        update(appRegistration, entra -> entra.setName(null));
 
-        Set<ConstraintViolation<EntraAppRegistration>> violations = validator.validate(entraAppRegistration);
+        Set<ConstraintViolation<AppRegistration>> violations = validator.validate(appRegistration);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -39,10 +39,10 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
 
     @Test
     public void testEntraAppRegistrationEmptyName() {
-        EntraAppRegistration entraAppRegistration = buildTestEntraAppRegistration();
-        update(entraAppRegistration, entra -> entra.setName(""));
+        AppRegistration appRegistration = buildTestEntraAppRegistration();
+        update(appRegistration, entra -> entra.setName(""));
 
-        Set<ConstraintViolation<EntraAppRegistration>> violations = validator.validate(entraAppRegistration);
+        Set<ConstraintViolation<AppRegistration>> violations = validator.validate(appRegistration);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
@@ -54,10 +54,10 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
 
     @Test
     public void testEntraAppRegistrationNameTooLong() {
-        EntraAppRegistration entraAppRegistration = buildTestEntraAppRegistration();
-        update(entraAppRegistration, entra -> entra.setName("TestEntraAppRegNameThatIsTooLong".repeat(10)));
+        AppRegistration appRegistration = buildTestEntraAppRegistration();
+        update(appRegistration, entra -> entra.setName("TestAppRegNameThatIsTooLong".repeat(10)));
 
-        Set<ConstraintViolation<EntraAppRegistration>> violations = validator.validate(entraAppRegistration);
+        Set<ConstraintViolation<AppRegistration>> violations = validator.validate(appRegistration);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);

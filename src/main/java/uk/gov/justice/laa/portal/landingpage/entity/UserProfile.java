@@ -38,7 +38,7 @@ import java.util.Set;
 @ToString(doNotUseGetters = true)
 @Check(name = "firm_not_null_for_non_internal_users_only",
         constraints = "(firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')")
-public class LaaUserProfile extends AuditableEntity {
+public class UserProfile extends AuditableEntity {
 
     @Column(name = "default_profile", nullable = false)
     private boolean defaultProfile;
@@ -79,6 +79,6 @@ public class LaaUserProfile extends AuditableEntity {
     @ManyToMany(mappedBy = "userProfiles", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaAppRole> appRoles;
+    private Set<AppRole> appRoles;
 
 }

@@ -56,6 +56,6 @@ public class Office extends BaseEntity {
     @ManyToMany(mappedBy = "offices", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaUserProfile> userProfiles;
+    private Set<UserProfile> userProfiles;
 
 }

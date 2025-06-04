@@ -11,39 +11,39 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class LaaUserProfileTest extends BaseEntityTest {
+class UserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfile() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
+        UserProfile userProfile = buildTestLaaUserProfile();
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isEmpty();
-        assertNotNull(laaUserProfile);
-        assertNotNull(laaUserProfile.getCreatedBy());
-        assertThat(laaUserProfile.getCreatedBy()).isEqualTo("test");
-        assertNotNull(laaUserProfile.getCreatedDate());
+        assertNotNull(userProfile);
+        assertNotNull(userProfile.getCreatedBy());
+        assertThat(userProfile.getCreatedBy()).isEqualTo("test");
+        assertNotNull(userProfile.getCreatedDate());
     }
 
     @Test
     public void testLaaUserProfileNullName() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile, laaProf -> {
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, laaProf -> {
         });
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isEmpty();
-        assertNotNull(laaUserProfile);
+        assertNotNull(userProfile);
     }
 
     @Test
     public void testLaaUserProfileNullCreatedBy() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile, laaProf -> laaProf.setCreatedBy(null));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, laaProf -> laaProf.setCreatedBy(null));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -53,10 +53,10 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileEmptyCreatedBy() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile, l -> l.setCreatedBy(""));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, l -> l.setCreatedBy(""));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
@@ -67,10 +67,10 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileCreatedByTooLong() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile, f -> f.setCreatedBy("TestCreatedByThatIsTooLong".repeat(15)));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, f -> f.setCreatedBy("TestCreatedByThatIsTooLong".repeat(15)));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -80,10 +80,10 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileNullCreatedDate() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile,  l -> l.setCreatedDate(null));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, l -> l.setCreatedDate(null));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -93,10 +93,10 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileEmptyLastModifiedBy() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile,  l -> l.setLastModifiedBy(""));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, l -> l.setLastModifiedBy(""));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -106,10 +106,10 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileLastModifiedByTooLong() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile,  l -> l.setLastModifiedBy("TheLastModifiedByIsTooLong".repeat(15)));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, l -> l.setLastModifiedBy("TheLastModifiedByIsTooLong".repeat(15)));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -119,20 +119,20 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileNullLastModifiedBy() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile,  l -> l.setLastModifiedBy(null));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, l -> l.setLastModifiedBy(null));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isEmpty();
     }
 
     @Test
     public void testLaaUserProfileNullUserType() {
-        LaaUserProfile laaUserProfile = buildTestLaaUserProfile();
-        update(laaUserProfile, lup -> lup.setUserType(null));
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, lup -> lup.setUserType(null));
 
-        Set<ConstraintViolation<LaaUserProfile>> violations = validator.validate(laaUserProfile);
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -142,7 +142,7 @@ class LaaUserProfileTest extends BaseEntityTest {
 
     @Test
     public void testLaaUserProfileInvalidUserType() {
-        assertThrows(IllegalArgumentException.class, () -> LaaUserProfile.builder().entraUser(buildTestEntraUser())
+        assertThrows(IllegalArgumentException.class, () -> UserProfile.builder().entraUser(buildTestEntraUser())
                 .userType(UserType.valueOf("INVALID"))
                 .createdDate(LocalDateTime.now()).createdBy("test").build());
     }

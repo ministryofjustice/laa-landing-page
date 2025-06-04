@@ -10,25 +10,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class LaaAppRoleTest extends BaseEntityTest {
+public class AppRoleTest extends BaseEntityTest {
 
     @Test
     public void testLaaAppRole() {
-        LaaAppRole laaAppRole = buildTestLaaAppRole();
+        AppRole appRole = buildTestLaaAppRole();
 
-        Set<ConstraintViolation<LaaAppRole>> violations = validator.validate(laaAppRole);
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isEmpty();
-        assertNotNull(laaAppRole);
-        assertEquals("Test Laa App Role", laaAppRole.getName());
+        assertNotNull(appRole);
+        assertEquals("Test App Role", appRole.getName());
     }
 
     @Test
     public void testLaaAppRoleNullName() {
-        LaaAppRole laaAppRole = buildTestLaaAppRole();
-        update(laaAppRole, f -> f.setName(null));
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setName(null));
 
-        Set<ConstraintViolation<LaaAppRole>> violations = validator.validate(laaAppRole);
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
@@ -38,10 +38,10 @@ public class LaaAppRoleTest extends BaseEntityTest {
 
     @Test
     public void testLaaAppRoleEmptyName() {
-        LaaAppRole laaAppRole = buildTestLaaAppRole();
-        update(laaAppRole, f -> f.setName(""));
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setName(""));
 
-        Set<ConstraintViolation<LaaAppRole>> violations = validator.validate(laaAppRole);
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
@@ -52,10 +52,10 @@ public class LaaAppRoleTest extends BaseEntityTest {
 
     @Test
     public void testLaaAppRoleNameTooLong() {
-        LaaAppRole laaAppRole = buildTestLaaAppRole();
-        update(laaAppRole, f -> f.setName("TestLaaAppRoleNameThatIsTooLong".repeat(15)));
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setName("TestAppRoleNameThatIsTooLong".repeat(20)));
 
-        Set<ConstraintViolation<LaaAppRole>> violations = validator.validate(laaAppRole);
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);

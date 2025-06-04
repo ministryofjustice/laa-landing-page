@@ -9,7 +9,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.LaaUserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
@@ -17,7 +17,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
-public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
+public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
@@ -29,7 +29,7 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private LaaUserProfileRepository repository;
+    private UserProfileRepository repository;
 
     @BeforeEach
     public void beforeEach() {
@@ -42,13 +42,13 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test@email.com", "First Name5", "Last Name5");
         entraUserRepository.saveAndFlush(entraUser);
 
-        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
-        repository.saveAndFlush(laaUserProfile);
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        repository.saveAndFlush(userProfile);
 
-        LaaUserProfile result = repository.findById(laaUserProfile.getId()).orElseThrow();
+        UserProfile result = repository.findById(userProfile.getId()).orElseThrow();
 
         Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(laaUserProfile.getId());
+        Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
@@ -65,25 +65,25 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test6@email.com", "First Name6", "Last Name6");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        laaUserProfile1.setFirm(firm1);
-        laaUserProfile2.setFirm(firm2);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile2);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile1.setFirm(firm1);
+        userProfile2.setFirm(firm2);
+        entraUser.getUserProfiles().add(userProfile1);
+        entraUser.getUserProfiles().add(userProfile2);
 
-        repository.saveAllAndFlush(Arrays.asList(laaUserProfile1, laaUserProfile2));
+        repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2));
 
-        LaaUserProfile result = repository.findById(laaUserProfile1.getId()).orElseThrow();
+        UserProfile result = repository.findById(userProfile1.getId()).orElseThrow();
 
         Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(laaUserProfile1.getId());
+        Assertions.assertThat(result.getId()).isEqualTo(userProfile1.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name6");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name6");
-        Assertions.assertThat(result.getEntraUser().getLaaUserProfiles()).isNotEmpty();
-        Assertions.assertThat(result.getEntraUser().getLaaUserProfiles()).containsExactlyInAnyOrder(laaUserProfile1, laaUserProfile2);
+        Assertions.assertThat(result.getEntraUser().getUserProfiles()).isNotEmpty();
+        Assertions.assertThat(result.getEntraUser().getUserProfiles()).containsExactlyInAnyOrder(userProfile1, userProfile2);
 
     }
 
@@ -96,17 +96,17 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test7@email.com", "First Name7", "Last Name7");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        laaUserProfile1.setFirm(firm1);
-        laaUserProfile2.setFirm(firm2);
-        laaUserProfile1.setDefaultProfile(true);
-        laaUserProfile2.setDefaultProfile(true);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile2);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile1.setFirm(firm1);
+        userProfile2.setFirm(firm2);
+        userProfile1.setDefaultProfile(true);
+        userProfile2.setDefaultProfile(true);
+        entraUser.getUserProfiles().add(userProfile1);
+        entraUser.getUserProfiles().add(userProfile2);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAllAndFlush(Arrays.asList(laaUserProfile1, laaUserProfile2)),
+                () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
         Assertions.assertThat(diEx.getCause().getMessage()).contains("one_default_profile_per_user");
@@ -121,15 +121,15 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test8@email.com", "First Name8", "Last Name8");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
-        laaUserProfile1.setFirm(firm1);
-        laaUserProfile2.setFirm(firm2);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile2);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
+        userProfile1.setFirm(firm1);
+        userProfile2.setFirm(firm2);
+        entraUser.getUserProfiles().add(userProfile1);
+        entraUser.getUserProfiles().add(userProfile2);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAllAndFlush(Arrays.asList(laaUserProfile1, laaUserProfile2)),
+                () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
         Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_non_multi_firm_user");
@@ -144,15 +144,15 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test9@email.com", "First Name9", "Last Name9");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        LaaUserProfile laaUserProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        laaUserProfile1.setFirm(firm1);
-        laaUserProfile2.setFirm(firm1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile2);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile1.setFirm(firm1);
+        userProfile2.setFirm(firm1);
+        entraUser.getUserProfiles().add(userProfile1);
+        entraUser.getUserProfiles().add(userProfile2);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAllAndFlush(Arrays.asList(laaUserProfile1, laaUserProfile2)),
+                () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
         Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_firm_for_multi_firm_user");
@@ -164,11 +164,11 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test10@email.com", "First Name10", "Last Name10");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
+        entraUser.getUserProfiles().add(userProfile1);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(laaUserProfile1),
+                () -> repository.saveAndFlush(userProfile1),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
         Assertions.assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
@@ -183,12 +183,12 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test11@email.com", "First Name11", "Last Name11");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.INTERNAL);
-        laaUserProfile1.setFirm(firm1);
-        entraUser.getLaaUserProfiles().add(laaUserProfile1);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        userProfile1.setFirm(firm1);
+        entraUser.getUserProfiles().add(userProfile1);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(laaUserProfile1),
+                () -> repository.saveAndFlush(userProfile1),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
         Assertions.assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
@@ -201,15 +201,15 @@ public class LaaUserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test12@email.com", "First Name12", "Last Name12");
         entraUserRepository.save(entraUser);
 
-        LaaUserProfile laaUserProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
-        entraUser.getLaaUserProfiles().add(laaUserProfile);
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        entraUser.getUserProfiles().add(userProfile);
 
-        repository.saveAndFlush(laaUserProfile);
+        repository.saveAndFlush(userProfile);
 
-        LaaUserProfile result = repository.findById(laaUserProfile.getId()).orElseThrow();
+        UserProfile result = repository.findById(userProfile.getId()).orElseThrow();
 
         Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(laaUserProfile.getId());
+        Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
         Assertions.assertThat(result.getFirm()).isNull();
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());

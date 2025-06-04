@@ -33,7 +33,7 @@ import java.util.Set;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaAppRole extends BaseEntity {
+public class AppRole extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
     @NotBlank(message = "Application role name must be provided")
@@ -44,7 +44,7 @@ public class LaaAppRole extends BaseEntity {
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude
     @JsonIgnore
-    private LaaApp laaApp;
+    private App app;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -57,6 +57,6 @@ public class LaaAppRole extends BaseEntity {
     @ToString.Exclude
     @JsonIgnore
     @Builder.Default
-    private Set<LaaUserProfile> userProfiles = new HashSet<>();
+    private Set<UserProfile> userProfiles = new HashSet<>();
 
 }

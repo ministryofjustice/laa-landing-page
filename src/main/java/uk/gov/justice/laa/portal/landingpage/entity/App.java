@@ -3,9 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -20,30 +21,31 @@ import lombok.experimental.SuperBuilder;
 import java.util.Set;
 
 @Entity
-@Table(name = "app_registration", indexes = {
-    @Index(name = "AppRegistrationNameIdx", columnList = "name")
-    }
-)
+@Table(name = "app", indexes = {
+    @Index(name = "AppNameIdx", columnList = "name"),
+})
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class EntraAppRegistration extends BaseEntity {
+public class App extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "App registration name must be provided")
-    @Size(min = 1, max = 255, message = "App registration name must be between 1 and 255 characters")
+    @NotBlank(message = "Application name must be provided")
+    @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
-    @ManyToMany(mappedBy = "userAppRegistrations", fetch = FetchType.LAZY)
+    @OneToOne
+    @JoinColumn(name = "app_registration_id", nullable = false,
+            foreignKey = @ForeignKey(name = "FK_app_app_registration_id"))
     @ToString.Exclude
     @JsonIgnore
-    private Set<EntraUser> entraUsers;
+    private AppRegistration appRegistration;
 
-    @OneToOne(mappedBy = "entraAppRegistration")
+    @OneToMany(mappedBy = "app")
     @ToString.Exclude
     @JsonIgnore
-    private LaaApp laaApp;
+    private Set<AppRole> appRoles;
 
 }

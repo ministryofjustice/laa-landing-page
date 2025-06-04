@@ -32,8 +32,8 @@ public class BaseEntityTest {
         return Office.builder().name("TestOffice").address("Address").phone("123456").build();
     }
 
-    protected EntraAppRegistration buildTestEntraAppRegistration() {
-        return EntraAppRegistration.builder().name("Test Entra app reg").build();
+    protected AppRegistration buildTestEntraAppRegistration() {
+        return AppRegistration.builder().name("Test app reg").build();
     }
 
     protected EntraUser buildTestEntraUser() {
@@ -43,16 +43,16 @@ public class BaseEntityTest {
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }
 
-    protected LaaApp buildTestLaaApp() {
-        return LaaApp.builder().name("Test Laa App").build();
+    protected App buildTestLaaApp() {
+        return App.builder().name("Test App").build();
     }
 
-    protected LaaAppRole buildTestLaaAppRole() {
-        return LaaAppRole.builder().name("Test Laa App Role").build();
+    protected AppRole buildTestLaaAppRole() {
+        return AppRole.builder().name("Test App Role").build();
     }
 
-    protected LaaUserProfile buildTestLaaUserProfile() {
-        return LaaUserProfile.builder().entraUser(buildTestEntraUser())
+    protected UserProfile buildTestLaaUserProfile() {
+        return UserProfile.builder().entraUser(buildTestEntraUser())
                 .userType(UserType.INTERNAL)
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }

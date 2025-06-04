@@ -90,11 +90,11 @@ public class EntraUser extends AuditableEntity {
     )
     @ToString.Exclude
     @JsonIgnore
-    private Set<EntraAppRegistration> userAppRegistrations;
+    private Set<AppRegistration> userAppRegistrations;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaUserProfile> laaUserProfiles;
+    private Set<UserProfile> userProfiles;
 
 }

@@ -5,13 +5,13 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.LaaApp;
-import uk.gov.justice.laa.portal.landingpage.entity.LaaAppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.LaaUserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -37,14 +37,14 @@ public class BaseRepositoryTest {
     protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
         return EntraUser.builder().email(email).userName(email)
                 .userAppRegistrations(HashSet.newHashSet(11))
-                .laaUserProfiles(HashSet.newHashSet(11))
+                .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
-    protected EntraAppRegistration buildEntraAppRegistration(String name) {
-        return EntraAppRegistration.builder().name(name)
+    protected AppRegistration buildEntraAppRegistration(String name) {
+        return AppRegistration.builder().name(name)
                 .entraUsers(HashSet.newHashSet(1)).build();
     }
 
@@ -57,17 +57,17 @@ public class BaseRepositoryTest {
         return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
     }
 
-    protected LaaApp buildLaaApp(EntraAppRegistration entraAppRegistration, String name) {
-        return LaaApp.builder().name(name).entraAppRegistration(entraAppRegistration)
+    protected App buildLaaApp(AppRegistration appRegistration, String name) {
+        return App.builder().name(name).appRegistration(appRegistration)
                 .appRoles(HashSet.newHashSet(1)).build();
     }
 
-    protected LaaAppRole buildLaaAppRole(LaaApp laaApp, String name) {
-        return LaaAppRole.builder().name(name).laaApp(laaApp).build();
+    protected AppRole buildLaaAppRole(App app, String name) {
+        return AppRole.builder().name(name).app(app).build();
     }
 
-    protected LaaUserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
-        return LaaUserProfile.builder().entraUser(entraUser)
+    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
+        return UserProfile.builder().entraUser(entraUser)
                 .userType(userType)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }

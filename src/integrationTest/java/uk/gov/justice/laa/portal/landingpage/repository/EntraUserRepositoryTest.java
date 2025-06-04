@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 
 import java.time.LocalDateTime;
@@ -22,12 +22,12 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private EntraAppRegistrationRepository entraAppRegistrationRepository;
+    private AppRegistrationRepository appRegistrationRepository;
 
     @BeforeEach
     public void beforeEach() {
         repository.deleteAll();
-        entraAppRegistrationRepository.deleteAll();
+        appRegistrationRepository.deleteAll();
     }
 
     @Test
@@ -53,10 +53,10 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
         repository.saveAndFlush(entraUser);
 
-        EntraAppRegistration entraAppRegistration = buildEntraAppRegistration("Entra App");
-        entraUser.getUserAppRegistrations().add(entraAppRegistration);
-        entraAppRegistration.getEntraUsers().add(entraUser);
-        entraAppRegistrationRepository.save(entraAppRegistration);
+        AppRegistration appRegistration = buildEntraAppRegistration("Entra App");
+        entraUser.getUserAppRegistrations().add(appRegistration);
+        appRegistration.getEntraUsers().add(entraUser);
+        appRegistrationRepository.save(appRegistration);
 
         EntraUser result = repository.findById(entraUser.getId()).orElseThrow();
 
@@ -64,11 +64,11 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(entraUser.getId());
         Assertions.assertThat(result.getUserAppRegistrations()).isNotEmpty();
 
-        EntraAppRegistration resultEntraAppRegistration = result.getUserAppRegistrations().stream().findFirst().orElseThrow();
-        Assertions.assertThat(resultEntraAppRegistration.getId()).isEqualTo(entraAppRegistration.getId());
-        Assertions.assertThat(resultEntraAppRegistration.getName()).isEqualTo("Entra App");
-        Assertions.assertThat(resultEntraAppRegistration.getEntraUsers()).isNotEmpty();
-        Assertions.assertThat(resultEntraAppRegistration.getEntraUsers().stream().findFirst().orElseThrow()).isEqualTo(result);
+        AppRegistration resultAppRegistration = result.getUserAppRegistrations().stream().findFirst().orElseThrow();
+        Assertions.assertThat(resultAppRegistration.getId()).isEqualTo(appRegistration.getId());
+        Assertions.assertThat(resultAppRegistration.getName()).isEqualTo("Entra App");
+        Assertions.assertThat(resultAppRegistration.getEntraUsers()).isNotEmpty();
+        Assertions.assertThat(resultAppRegistration.getEntraUsers().stream().findFirst().orElseThrow()).isEqualTo(result);
 
     }
 
