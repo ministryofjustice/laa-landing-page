@@ -40,11 +40,13 @@ const puppeteer = require('puppeteer');
     await page.waitForSelector('#email', { visible: true });
     await page.type('#email', username);
   
-    // Click "Sign in" (email submit)
+    // Test page is loading by dumping html (delete later)
     const html = await page.content();
     console.log(html);
-    await page.waitForSelector('input[type="submit"]', { visible: true });
-    await page.click('input[type="submit"]');
+    
+    // Click "Sign in" (email submit)
+    await page.waitForSelector('button[type="submit"]', { visible: true });
+    await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
     // Wait for password input and type password
@@ -52,10 +54,8 @@ const puppeteer = require('puppeteer');
     await page.type('input[type="password"]', password);
   
     // Click "Sign in" (password submit)
-    await page.waitForSelector('input[type="submit"]', { visible: true });
-    const frames = page.frames();
-    console.log('Frames on page:', frames.map(f => f.url()));
-    await page.click('input[type="submit"]');
+    await page.waitForSelector('button[type="submit"]', { visible: true });
+    await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
   
     // Handle "Stay signed in?" prompt if it appears
