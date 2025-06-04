@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.LaaApp;
 import uk.gov.justice.laa.portal.landingpage.entity.LaaAppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.LaaUserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.time.LocalDateTime;
@@ -38,7 +39,7 @@ public class BaseRepositoryTest {
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .laaUserProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
-                .active(true).startDate(LocalDateTime.now())
+                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 

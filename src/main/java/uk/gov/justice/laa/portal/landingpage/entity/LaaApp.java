@@ -21,8 +21,8 @@ import lombok.experimental.SuperBuilder;
 import java.util.Set;
 
 @Entity
-@Table(name = "laa_app", indexes = {
-    @Index(name = "LaaAppNameIdx", columnList = "name"),
+@Table(name = "app", indexes = {
+    @Index(name = "AppNameIdx", columnList = "name"),
 })
 @Getter
 @Setter
@@ -32,13 +32,13 @@ import java.util.Set;
 public class LaaApp extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "LAA application name must be provided")
-    @Size(min = 1, max = 255, message = "LAA application name must be between 1 and 255 characters")
+    @NotBlank(message = "Application name must be provided")
+    @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
     @OneToOne
-    @JoinColumn(name = "entra_app_registration_id", nullable = false,
-            foreignKey = @ForeignKey(name = "FK_laa_app_entra_app_registration_id"))
+    @JoinColumn(name = "app_registration_id", nullable = false,
+            foreignKey = @ForeignKey(name = "FK_app_app_registration_id"))
     @ToString.Exclude
     @JsonIgnore
     private EntraAppRegistration entraAppRegistration;

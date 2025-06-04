@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EntraUserTest extends BaseEntityTest {
 
@@ -20,7 +21,7 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
-        assertThat(entraUser.isActive()).isTrue();
+        assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(entraUser.getStartDate()).isNotNull();
         assertThat(entraUser.getEndDate()).isNotNull();
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
@@ -37,7 +38,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra username must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Username must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
     }
 
@@ -51,8 +52,8 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(java.util.stream.Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Entra username must be provided",
-                "Entra username must be between 1 and 255 characters"));
+        assertThat(messages).hasSameElementsAs(Set.of("Username must be provided",
+                "Username must be between 1 and 255 characters"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
     }
 
@@ -65,7 +66,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra username must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Username must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userName");
     }
 
@@ -78,7 +79,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user email must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User email must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("email");
     }
 
@@ -91,7 +92,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user email must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User email must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("email");
     }
 
@@ -104,7 +105,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user email must be a valid email address");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User email must be a valid email address");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("email");
     }
 
@@ -117,7 +118,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user email must be a valid email address");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User email must be a valid email address");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("email");
     }
 
@@ -130,7 +131,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user first name must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User first name must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("firstName");
     }
 
@@ -144,8 +145,8 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(java.util.stream.Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Entra user first name must be provided",
-                "Entra user first name must be between 1 and 255 characters"));
+        assertThat(messages).hasSameElementsAs(Set.of("User first name must be provided",
+                "User first name must be between 1 and 255 characters"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("firstName");
     }
 
@@ -158,7 +159,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user first name must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User first name must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("firstName");
     }
 
@@ -171,7 +172,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user last name must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User last name must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastName");
     }
 
@@ -185,7 +186,7 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(java.util.stream.Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Entra user last name must be provided", "Entra user last name must be between 1 and 255 characters"));
+        assertThat(messages).hasSameElementsAs(Set.of("User last name must be provided", "User last name must be between 1 and 255 characters"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastName");
     }
 
@@ -198,7 +199,7 @@ public class EntraUserTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra user last name must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User last name must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastName");
     }
 
@@ -231,6 +232,45 @@ public class EntraUserTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).isEqualTo("End date must be after start date");
+    }
+
+    @Test
+    public void testEntraUserFalseInvitationAccepted() {
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, eu -> eu.setUserStatus(UserStatus.AWAITING_USER_APPROVAL));
+
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isEmpty();
+        assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
+        assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
+        assertThat(entraUser.getLastName()).isEqualTo("LastName");
+        assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.AWAITING_USER_APPROVAL);
+        assertThat(entraUser.getStartDate()).isNotNull();
+        assertThat(entraUser.getEndDate()).isNotNull();
+        assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
+        assertThat(entraUser.getCreatedBy()).isEqualTo("test");
+        assertThat(entraUser.getCreatedDate()).isNotNull();
+    }
+
+    @Test
+    public void testEntraUserNullUserStatus() {
+        EntraUser entraUser = buildTestEntraUser();
+        update(entraUser, eu -> eu.setUserStatus(null));
+
+        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("User status must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userStatus");
+    }
+
+    @Test
+    public void testEntraUserInvalidUserStatus() {
+        assertThrows(IllegalArgumentException.class, () -> EntraUser.builder()
+                .userStatus(UserStatus.valueOf("INVALID"))
+                .createdDate(LocalDateTime.now()).createdBy("test").build());
     }
 
 }

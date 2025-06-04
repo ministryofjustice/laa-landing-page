@@ -37,8 +37,8 @@ public class BaseEntityTest {
     }
 
     protected EntraUser buildTestEntraUser() {
-        return EntraUser.builder().firstName("FirstName").lastName("LastName")
-                .active(true).startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
+        return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
+                .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
                 .userName("firstname.lastname").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }

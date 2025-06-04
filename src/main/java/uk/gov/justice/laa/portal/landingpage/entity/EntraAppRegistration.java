@@ -20,8 +20,8 @@ import lombok.experimental.SuperBuilder;
 import java.util.Set;
 
 @Entity
-@Table(name = "entra_app_registration", indexes = {
-    @Index(name = "EntraAppRegistrationNameIdx", columnList = "name")
+@Table(name = "app_registration", indexes = {
+    @Index(name = "AppRegistrationNameIdx", columnList = "name")
     }
 )
 @Getter
@@ -32,8 +32,8 @@ import java.util.Set;
 public class EntraAppRegistration extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Entra app registration name must be provided")
-    @Size(min = 1, max = 255, message = "Entra app registration name must be between 1 and 255 characters")
+    @NotBlank(message = "App registration name must be provided")
+    @Size(min = 1, max = 255, message = "App registration name must be between 1 and 255 characters")
     private String name;
 
     @ManyToMany(mappedBy = "userAppRegistrations", fetch = FetchType.LAZY)

@@ -32,7 +32,7 @@ public class LaaAppTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("LAA application name must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application name must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
     }
 
@@ -46,7 +46,7 @@ public class LaaAppTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("LAA application name must be provided", "LAA application name must be between 1 and 255 characters"));
+        assertThat(messages).hasSameElementsAs(Set.of("Application name must be provided", "Application name must be between 1 and 255 characters"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
     }
 
@@ -59,7 +59,7 @@ public class LaaAppTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("LAA application name must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application name must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
 
     }

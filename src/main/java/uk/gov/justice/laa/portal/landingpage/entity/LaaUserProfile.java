@@ -20,21 +20,24 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
 
 import java.util.Set;
 
 @Entity
-@Table(name = "laa_user_profile", indexes = {
-    @Index(name = "LaaUserProfileCreatedByIdx", columnList = "created_by"),
-    @Index(name = "LaaUserProfileCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "LaaUserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "LaaUserProfileLastModifiedByIdx", columnList = "last_modified_by"),
+@Table(name = "user_profile", indexes = {
+    @Index(name = "UserProfileCreatedByIdx", columnList = "created_by"),
+    @Index(name = "UserProfileCreatedDateIdx", columnList = "created_date"),
+    @Index(name = "UserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
+    @Index(name = "UserProfileLastModifiedByIdx", columnList = "last_modified_by"),
 })
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
+@Check(name = "firm_not_null_for_non_internal_users_only",
+        constraints = "(firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')")
 public class LaaUserProfile extends AuditableEntity {
 
     @Column(name = "default_profile", nullable = false)
@@ -42,31 +45,31 @@ public class LaaUserProfile extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false, length = 255)
-    @NotNull(message = "Entra user type must be provided")
+    @NotNull(message = "User type must be provided")
     private UserType userType;
 
     @Column(name = "cwa_user_id", nullable = true, length = 255)
     private UserType cwaUserId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_laa_user_profile_entra_user_id"))
+    @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_user_profile_user_id"))
     @ToString.Exclude
     @JsonIgnore
     private EntraUser entraUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "firm_id", foreignKey = @ForeignKey(name = "FK_laa_user_profile_firm_id"))
+    @JoinColumn(name = "firm_id", foreignKey = @ForeignKey(name = "FK_user_profile_firm_id"))
     @ToString.Exclude
     @JsonIgnore
     private Firm firm;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "laa_user_profile_office",
-            joinColumns = @JoinColumn(name = "laa_user_profile_id"),
-            foreignKey = @ForeignKey(name = "FK_laa_user_profile_office_user_profile_id"),
+        name = "user_profile_office",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            foreignKey = @ForeignKey(name = "FK_user_profile_office_user_profile_id"),
             inverseJoinColumns = @JoinColumn(name = "office_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_laa_user_profile_office_office_id")
+            inverseForeignKey = @ForeignKey(name = "FK_user_profile_office_office_id")
     )
     @ToString.Exclude
     @JsonIgnore

@@ -33,7 +33,7 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra app registration name must be provided");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("App registration name must be provided");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
     }
 
@@ -47,8 +47,8 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Entra app registration name must be provided",
-                "Entra app registration name must be between 1 and 255 characters"));
+        assertThat(messages).hasSameElementsAs(Set.of("App registration name must be provided",
+                "App registration name must be between 1 and 255 characters"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
     }
 
@@ -61,7 +61,7 @@ public class EntraAppRegistrationTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra app registration name must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("App registration name must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
 
     }

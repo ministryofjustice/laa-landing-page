@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraAppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
@@ -74,8 +76,20 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     public void testSaveEntraUserWithInvalidEmail() {
         EntraUser entraUser = buildEntraUser("testemail.com", "FirstName", "LastName");
 
-        assertThrows(ConstraintViolationException.class,
+        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
                 () -> repository.saveAndFlush(entraUser), "Exception expected");
+        Assertions.assertThat(ex.getMessage()).contains("User email must be a valid email address");
+    }
+
+    @Test
+    public void testSaveEntraUserStartDateAfterEndDate() {
+        EntraUser entraUser = buildEntraUser("test@email.com", "FirstName", "LastName");
+        entraUser.setStartDate(LocalDateTime.now());
+        entraUser.setEndDate(LocalDateTime.now().minusMinutes(1));
+
+        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+                () -> repository.saveAndFlush(entraUser), "Exception expected");
+        Assertions.assertThat(ex.getMessage()).contains("End date must be after start date");
     }
 
 
