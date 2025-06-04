@@ -17,28 +17,23 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "entra_app_registration", indexes = {
-    @Index(name = "EntraAppRegistrationCreatedByIdx", columnList = "created_by"),
-    @Index(name = "EntraAppRegistrationCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "EntraAppRegistrationLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "EntraAppRegistrationLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "EntraAppRegistrationNameIdx", columnList = "name")
+@Table(name = "app_registration", indexes = {
+    @Index(name = "AppRegistrationNameIdx", columnList = "name")
     }
 )
 @Getter
 @Setter
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class EntraAppRegistration extends BaseEntity {
+public class AppRegistration extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Entra app registration name must be provided")
-    @Size(min = 1, max = 255, message = "Entra app registration name must be between 1 and 255 characters")
+    @NotBlank(message = "App registration name must be provided")
+    @Size(min = 1, max = 255, message = "App registration name must be between 1 and 255 characters")
     private String name;
 
     @ManyToMany(mappedBy = "userAppRegistrations", fetch = FetchType.LAZY)
@@ -46,9 +41,9 @@ public class EntraAppRegistration extends BaseEntity {
     @JsonIgnore
     private Set<EntraUser> entraUsers;
 
-    @OneToOne(mappedBy = "entraAppRegistration")
+    @OneToOne(mappedBy = "appRegistration")
     @ToString.Exclude
     @JsonIgnore
-    private LaaApp laaApp;
+    private App app;
 
 }
