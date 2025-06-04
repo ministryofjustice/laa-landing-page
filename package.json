@@ -3,10 +3,6 @@
     "version": "1.0.0",
     "scripts": {
       "test:accessibility": "node pa11y-auth-test.js"
-    },
-    "dependencies": {
-      "pa11y": "^7.0.0",
-      "puppeteer": "22.8.2"
     }
   }
   

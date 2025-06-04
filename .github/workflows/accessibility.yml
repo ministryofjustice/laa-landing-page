@@ -27,8 +27,10 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Pa11y and Puppeteer
+        run: |
+          npm install -g pa11y
+          npm install puppeteer@latest
 
       - name: Run Pa11y with Puppeteer
         run: npm run test:accessibility
