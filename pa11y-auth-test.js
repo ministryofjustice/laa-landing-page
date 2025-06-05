@@ -53,7 +53,19 @@ const puppeteer = require('puppeteer');
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
-    // === OPTIONAL SECOND LOGIN ===
+    // === "STAY SIGNED IN?" SCREEN ===
+    try {
+        console.log('Step 7: Checking for "Stay signed in?" prompt...');
+        await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
+  
+        console.log('"Stay signed in?" prompt detected. Clicking "No"...');
+        await page.click('#idBtn_Back');
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+      } catch (staySignedInSkip) {
+        console.log('No "Stay signed in?" prompt appeared.');
+      }
+
+    // === SECOND LOGIN ===
     try {
       console.log('Step 6: Checking for second login screen...');
       await page.waitForSelector('#email', { visible: true, timeout: 5000 });
@@ -71,7 +83,7 @@ const puppeteer = require('puppeteer');
       console.log('No second login screen detected. Continuing...');
     }
 
-    // === OPTIONAL "STAY SIGNED IN?" SCREEN ===
+    // === "STAY SIGNED IN?" SCREEN ===
     try {
       console.log('Step 7: Checking for "Stay signed in?" prompt...');
       await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
@@ -83,7 +95,7 @@ const puppeteer = require('puppeteer');
       console.log('No "Stay signed in?" prompt appeared.');
     }
 
-    console.log('🎉 Login flow completed successfully');
+    console.log('Login flow completed successfully');
 
     // === OPTIONAL: Run Pa11y Accessibility Test ===
     const results = await pa11y(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, {
@@ -91,7 +103,7 @@ const puppeteer = require('puppeteer');
       page,
     });
 
-    console.log('📊 Accessibility results:');
+    console.log('Accessibility results:');
     console.log(results);
 
   
