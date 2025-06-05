@@ -46,11 +46,11 @@ public class DemoData {
 
     private Office buildOffice(Firm firm, String name, String address, String phone) {
         return Office.builder().name(name).address(address).phone(phone)
-                .createdBy("Test").createdDate(LocalDateTime.now()).firm(firm).build();
+                .firm(firm).build();
     }
 
     private Firm buildFirm(String name) {
-        return Firm.builder().name(name).createdBy("Test").offices(HashSet.newHashSet(11))
-                .createdDate(LocalDateTime.now()).type(FirmType.INDIVIDUAL).build();
+        return Firm.builder().name(name).offices(HashSet.newHashSet(11))
+                .type(FirmType.INDIVIDUAL).build();
     }
 }
