@@ -49,7 +49,7 @@ data:
           },
           "id": 65,
           "panels": [],
-          "title": "API Request Rates",
+          "title": "HTTP Request Rates",
           "type": "row"
         },
         {
@@ -337,7 +337,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Successful Requests Per Api Endpoints",
+          "title": "Successful Requests per Endpoint",
           "type": "timeseries"
         },
         {
@@ -350,7 +350,7 @@ data:
           },
           "id": 64,
           "panels": [],
-          "title": "API Error Rates",
+          "title": "HTTP Error Rates",
           "type": "row"
         },
         {
@@ -555,7 +555,7 @@ data:
           },
           "id": 63,
           "panels": [],
-          "title": "API Response Time",
+          "title": "Application Server Response Time",
           "type": "row"
         },
         {
@@ -652,7 +652,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Average Response Time Per Uri",
+          "title": "Average Response Time Per URI",
           "type": "timeseries"
         },
         {
@@ -749,7 +749,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Max Response Time Per Uri",
+          "title": "Max Response Time Per URI",
           "type": "timeseries"
         },
         {
@@ -762,7 +762,7 @@ data:
           },
           "id": 62,
           "panels": [],
-          "title": "Pods overview metrics",
+          "title": "Pods",
           "type": "row"
         },
         {
@@ -864,7 +864,7 @@ data:
               "refId": "D"
             }
           ],
-          "title": "Pods Info",
+          "title": "Pod Info",
           "type": "gauge"
         },
         {
@@ -977,7 +977,7 @@ data:
               "useBackend": false
             }
           ],
-          "title": "Network",
+          "title": "Network traffic",
           "type": "timeseries"
         },
         {
@@ -1189,7 +1189,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "sum(aws_ecr_repository_image_count{repository_name=~'${NAMESPACE}/.*'}) by (repository_name)",
+              "expr": "sum(aws_ecr_repository_image_count{repository_name=~'laa-portal-stabilisation-tech/${NAMESPACE}'}) by (repository_name)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "ECR Image Count",
@@ -1198,7 +1198,7 @@ data:
               "useBackend": false
             }
           ],
-          "title": "ECR Images count",
+          "title": "ECR Image count",
           "type": "timeseries"
         },
         {
@@ -1308,7 +1308,7 @@ data:
               "useBackend": false
             }
           ],
-          "title": "Percentage of container memory request",
+          "title": "Percentage of container memory requested",
           "type": "timeseries"
         },
         {
@@ -1396,7 +1396,7 @@ data:
             {
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!=\"\", namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_requests{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\",resource=\"memory\"} > 0) by (container, pod)\n)",
+              "expr": "round(\n  100 *\n    sum(container_memory_working_set_bytes{image!=\"\", namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\"}) by (container, pod)\n      /\n    sum(kube_pod_container_resource_limits{namespace='${NAMESPACE}', container_name!=\"laa-landing-page.*\",resource=\"memory\"} > 0) by (container, pod)\n)",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "legendFormat": "{{pod}}",
@@ -2028,7 +2028,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Survivor Space'} / 1000000",
+              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='Survivor Space'} / 1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
@@ -2124,7 +2124,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Survivor Space'}/1000000",
+              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='Survivor Space'}/1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
@@ -2186,7 +2186,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Eden Space'}/1000000",
+              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='Eden Space'}/1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
@@ -2282,7 +2282,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Eden Space'}/1000000",
+              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='Eden Space'}/1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
@@ -2344,7 +2344,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Old Gen'} /1000000",
+              "expr": "jvm_memory_max_bytes{namespace='${NAMESPACE}',area='heap',id='Tenured Gen'} /1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
@@ -2440,7 +2440,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='G1 Old Gen'} /1000000",
+              "expr": "jvm_memory_used_bytes{namespace='${NAMESPACE}',area='heap',id='Tenured Gen'} /1000000",
               "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
