@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration test to exercise loading of applications metadata.
  */
-public class LaaAppDetailsStoreTest extends BaseIntegrationTest {
+public class AppDetailsStoreTest extends BaseIntegrationTest {
 
     @MockitoBean
     private GraphServiceClient graphServiceClient;

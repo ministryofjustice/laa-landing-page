@@ -21,35 +21,31 @@ import lombok.experimental.SuperBuilder;
 import java.util.Set;
 
 @Entity
-@Table(name = "laa_app", indexes = {
-    @Index(name = "LaaAppCreatedByIdx", columnList = "created_by"),
-    @Index(name = "LaaAppCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "LaaAppLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "LaaAppLastModifiedByIdx", columnList = "last_modified_by"),
-    @Index(name = "LaaAppNameIdx", columnList = "name"),
+@Table(name = "app", indexes = {
+    @Index(name = "AppNameIdx", columnList = "name"),
 })
 @Getter
 @Setter
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-public class LaaApp extends BaseEntity {
+public class App extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "LAA application name must be provided")
-    @Size(min = 1, max = 255, message = "LAA application name must be between 1 and 255 characters")
+    @NotBlank(message = "Application name must be provided")
+    @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
     @OneToOne
-    @JoinColumn(name = "entra_app_registration_id", nullable = false,
-            foreignKey = @ForeignKey(name = "FK_laa_app_entra_app_registration_id"))
+    @JoinColumn(name = "app_registration_id", nullable = false,
+            foreignKey = @ForeignKey(name = "FK_app_app_registration_id"))
     @ToString.Exclude
     @JsonIgnore
-    private EntraAppRegistration entraAppRegistration;
+    private AppRegistration appRegistration;
 
-    @OneToMany(mappedBy = "laaApp")
+    @OneToMany(mappedBy = "app")
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaAppRole> appRoles;
+    private Set<AppRole> appRoles;
 
 }

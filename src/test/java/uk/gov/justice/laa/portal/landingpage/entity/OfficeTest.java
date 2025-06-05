@@ -23,8 +23,6 @@ public class OfficeTest extends BaseEntityTest {
         assertEquals("TestOffice", office.getName());
         assertThat("Address").isEqualTo(office.getAddress());
         assertThat("123456").isEqualTo(office.getPhone());
-        assertThat("test").isEqualTo(office.getCreatedBy());
-        assertThat(office.getCreatedDate()).isNotNull();
 
     }
 
