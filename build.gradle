@@ -67,7 +67,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.postgresql:postgresql'
     testImplementation('org.testcontainers:postgresql')
     testImplementation('org.testcontainers:junit-jupiter')
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
