@@ -1,40 +1,21 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
-
-import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.AppRoleAssignmentCollectionResponse;
-import com.microsoft.graph.models.Invitation;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
+import com.microsoft.graph.invitations.InvitationsRequestBuilder;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
+import com.microsoft.graph.models.AppRoleAssignmentCollectionResponse;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
-import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
-import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
@@ -50,20 +31,35 @@ import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
 
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Stack;
+import java.util.List;
+import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -324,6 +320,18 @@ class UserServiceTest {
     }
 
     @Test
+    void getServicePrincipalsIsEmpty() {
+        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
+        servicePrincipals.setValue(null);
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        List<ServicePrincipal> result = userService.getServicePrincipals();
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void getAllAvailableRolesForApps() {
         ServicePrincipal servicePrincipal = new ServicePrincipal();
         servicePrincipal.setId("sId");
@@ -358,6 +366,40 @@ class UserServiceTest {
         when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
         userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
+    }
+
+    @Test
+    void assignAppRolesToUser() {
+        User user = new User();
+        user.setId(UUID.randomUUID().toString());
+        ServicePrincipal servicePrincipal = new ServicePrincipal();
+        servicePrincipal.setId(UUID.randomUUID().toString());
+        servicePrincipal.setAppId("appId");
+        servicePrincipal.setDisplayName("appDisplayName");
+        UUID appRoleId = UUID.randomUUID();
+        AppRole appRole = new AppRole();
+        appRole.setId(appRoleId);
+        appRole.setDisplayName("appRoleDisplayName");
+        servicePrincipal.setAppRoles(List.of(appRole));
+        List<ServicePrincipal> value = new ArrayList<>();
+        value.add(servicePrincipal);
+        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
+        servicePrincipals.setValue(value);
+        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
+        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
+        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
+        List<String> roles = List.of(appRoleId.toString());
+
+        userService.assignAppRoleToUser(user, roles);
+
+        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
+
     }
 
     @Test
@@ -524,6 +566,19 @@ class UserServiceTest {
 
         // Act
         List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+
+        // Assert
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getUserAppRolesByUserId_returnsEmptyList_whenException() {
+        // Arrange
+        String userId = "user-123";
+        when(mockGraphServiceClient.users()).thenThrow(new ApiException());
+
+        // Act
+        List<AppRoleAssignment> result = userService.getUserAppRoleAssignmentByUserId(userId);
 
         // Assert
         assertThat(result).isEmpty();
@@ -789,7 +844,7 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(3);
             assertThat(result.getTotalPages(1)).isEqualTo(3);
             assertThat(result.getUsers().size()).isEqualTo(1);
-            assertThat(result.getUsers().get(0).getFullName()).isEqualTo("SecondPageUser1");
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("SecondPageUser1");
         }
 
         @Test

@@ -449,7 +449,7 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void assignAppRoleToUser(User user, List<String> roles) {
+    protected void assignAppRoleToUser(User user, List<String> roles) {
         ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
         String resourceId;
         UUID roleId;
