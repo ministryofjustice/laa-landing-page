@@ -17,6 +17,9 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
@@ -25,6 +28,8 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,7 +51,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
-    @InjectMocks
     private UserController userController;
 
     @Mock
@@ -59,6 +63,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
+        userController = new UserController(userService, createUserNotificationService, new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
@@ -233,7 +238,7 @@ class UserControllerTest {
         mockUser.setId(userId);
         mockUser.setDisplayName("Managed User");
         String lastLoggedIn = "2024-06-01T12:00:00Z";
-        List<UserRole> appRoles = List.of(new UserRole());
+        List<AppRoleDto> appRoles = List.of(new AppRoleDto());
 
         when(userService.getUserById(userId)).thenReturn(mockUser);
         when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
@@ -321,17 +326,17 @@ class UserControllerTest {
 
     @Test
     void selectUserAppsGet() {
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setAppId("1");
-        when(userService.getServicePrincipals()).thenReturn(List.of(servicePrincipal));
+        AppDto app = new AppDto();
+        app.setId("1");
+        when(userService.getApps()).thenReturn(List.of(app));
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
         String view = userController.selectUserApps(model, session);
         assertThat(view).isEqualTo("add-user-apps");
         assertThat(model.getAttribute("apps")).isNotNull();
-        List<ServicePrincipalModel> modeApps = (List<ServicePrincipalModel>) model.getAttribute("apps");
-        assertThat(modeApps.get(0).getServicePrincipal().getAppId()).isEqualTo("1");
+        List<AppViewModel> modeApps = (List<AppViewModel>) model.getAttribute("apps");
+        assertThat(modeApps.get(0).getId()).isEqualTo("1");
         assertThat(modeApps.get(0).isSelected()).isTrue();
     }
 
@@ -350,11 +355,11 @@ class UserControllerTest {
         selectedApps.add("app1");
         List<String> selectedRoles = new ArrayList<>();
         selectedRoles.add("dev");
-        List<UserRole> roles = new ArrayList<>();
-        UserRole userRole = new UserRole();
-        userRole.setAppRoleId("tester");
-        UserRole userRole2 = new UserRole();
-        userRole2.setAppRoleId("dev");
+        List<AppRoleDto> roles = new ArrayList<>();
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("tester");
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("dev");
         roles.add(userRole);
         roles.add(userRole2);
         when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(roles);
@@ -364,7 +369,7 @@ class UserControllerTest {
         String view = userController.getSelectedRoles(model, session);
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
-        List<UserRole> sessionRoles = (List<UserRole>) model.getAttribute("roles");
+        List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
         assertThat(sessionRoles.get(0).isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
     }
@@ -402,12 +407,14 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
-        UserRole userRole = new UserRole();
-        userRole.setAppRoleId("app1-tester");
-        userRole.setAppId("app1");
-        UserRole userRole2 = new UserRole();
-        userRole2.setAppRoleId("app1-dev");
-        userRole2.setAppId("app1");
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("app1-tester");
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        userRole.setApp(app1);
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("app1-dev");
+        userRole2.setApp(app1);
         when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
@@ -416,9 +423,9 @@ class UserControllerTest {
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<UserRole>> cyaRoles = (Map<String, List<UserRole>>) model.getAttribute("roles");
+        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
 
-        assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
+        assertThat(cyaRoles.get("app1").get(0).getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
     }
@@ -505,18 +512,18 @@ class UserControllerTest {
         User testUser = new User();
         when(userService.getUserById(userId)).thenReturn(testUser);
         // Setup test user roles
-        UserRole testUserRole = new UserRole();
-        testUserRole.setAppRoleId("testUserAppRoleId");
-        List<UserRole> testUserRoles = List.of(testUserRole);
+        AppRoleDto testUserRole = new AppRoleDto();
+        testUserRole.setId("testUserAppRoleId");
+        List<AppRoleDto> testUserRoles = List.of(testUserRole);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
-        UserRole testRole1 = new UserRole();
-        testRole1.setAppRoleId("testAppRoleId1");
-        UserRole testRole2 = new UserRole();
-        testRole2.setAppRoleId("testAppRoleId2");
-        UserRole testRole3 = new UserRole();
-        testRole3.setAppRoleId("testAppRoleId3");
-        List<UserRole> allRoles = List.of(testRole1, testRole2, testRole3);
+        AppRoleDto testRole1 = new AppRoleDto();
+        testRole1.setId("testAppRoleId1");
+        AppRoleDto testRole2 = new AppRoleDto();
+        testRole2.setId("testAppRoleId2");
+        AppRoleDto testRole3 = new AppRoleDto();
+        testRole3.setId("testAppRoleId3");
+        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
         when(userService.getAllAvailableRoles()).thenReturn(allRoles);
 
         // When
@@ -530,7 +537,7 @@ class UserControllerTest {
         Assertions.assertNotNull(userAssignedRoles);
         Assertions.assertTrue(userAssignedRoles.stream().findFirst().isPresent());
         String returnedAssignedAppRoleId = (String) userAssignedRoles.stream().findFirst().get();
-        Assertions.assertEquals(testUserRole.getAppRoleId(), returnedAssignedAppRoleId);
+        Assertions.assertEquals(testUserRole.getId(), returnedAssignedAppRoleId);
     }
 
     @Test
