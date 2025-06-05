@@ -29,7 +29,7 @@
                 <a class="govuk-breadcrumbs__link" href="/home">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/users" th:text="${user.displayName}"></a>
+                <a class="govuk-breadcrumbs__link" href="/users" th:text="${user.displayName}" aria-label="Users"></a>
             </li>
         </ol>
     </nav>
@@ -38,7 +38,7 @@
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
-                        <h1 class="govuk-heading-xl" th:text="${user.displayName}"></h1>
+                        <p class="govuk-heading-xl" th:text="${user.displayName}"></p>
                     </div>
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
