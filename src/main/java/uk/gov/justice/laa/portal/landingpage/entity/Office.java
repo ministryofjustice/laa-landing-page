@@ -23,10 +23,6 @@ import java.util.Set;
 
 @Entity
 @Table(name = "office", indexes = {
-    @Index(name = "OfficeCreatedByIdx", columnList = "created_by"),
-    @Index(name = "OfficeCreatedDateIdx", columnList = "created_date"),
-    @Index(name = "OfficeLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "OfficeLastModifiedByIdx", columnList = "last_modified_by"),
     @Index(name = "OfficeNameIdx", columnList = "name"),
 })
 @Getter
@@ -60,6 +56,6 @@ public class Office extends BaseEntity {
     @ManyToMany(mappedBy = "offices", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
-    private Set<LaaUserProfile> userProfiles;
+    private Set<UserProfile> userProfiles;
 
 }

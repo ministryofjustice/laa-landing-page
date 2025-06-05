@@ -57,27 +57,37 @@
 
                 <div class="govuk-grid-row">
                     <div class="govuk-grid-column-one-half">
-                        <div class="moj-search">
-                            <div class="govuk-form-group">
-                                <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
-                                    Search by name
-                                </label>
-                                <input class="govuk-input moj-search__input " id="search" name="search" type="search"
-                                    aria-describedby="search-hint">
+                        <form method="get" th:action="@{/users}" role="search">
+                            <div class="moj-search">
+                                <div class="govuk-form-group">
+                                    <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
+                                        Search users
+                                    </label>
+                                    <input  class="govuk-input moj-search__input"
+                                            id="search"
+                                            name="search"
+                                            type="search"
+                                            th:value="${param.search}"
+                                            autocomplete="off">
+                                </div>
+                                <button type="submit"
+                                        class="govuk-button moj-search__button"
+                                        data-module="govuk-button">
+                                    Search
+                                </button>
                             </div>
-                            <button type="submit" class="govuk-button moj-search__button " data-module="govuk-button"
-                                data-govuk-button-init="">
-                                Search
-                            </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
+
                 <br>
                 <form method="post" th:action="@{/users/disable}">
                     <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header"></th>
+                                <td scope="col" class="govuk-table__header">
+                                    <span class="govuk-visually-hidden">Select user</span>
+                                </td>
                                 <th scope="col" class="govuk-table__header" aria-sort="ascending"><button type="button"
                                         data-index="0">Name</button></th>
                                 <th scope="col" class="govuk-table__header" aria-sort="none"><button type="button"
@@ -118,28 +128,28 @@
                 </form>
                 <nav class="moj-pagination" aria-label="Pagination navigation">
                     <ul class="moj-pagination__list">
-                        <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${previousPageLink}">
+                        <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${page > 1}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${pageSize}, page=${page - 1}, previousPageLink=${previousPageLink})}">Previous<span
+                                th:href="@{/users(size=${requestedPageSize}, page=${page - 1})}">Previous<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
-                        <th:block th:each="i: ${#numbers.sequence(1, totalPages ?: 1)}">
+                        <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
                                 <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
-                                    aria-label="Page ${i} of 5" aria-current="page" th:text="${i}"></a>
+                                   th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
-                        <li class="moj-pagination__item  moj-pagination__item--next" th:if="${nextPageLink}">
+                        <li class="moj-pagination__item  moj-pagination__item--next" th:if="${page < totalPages}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${pageSize}, page=${page + 1}, nextPageLink=${nextPageLink})}">Next<span
+                                th:href="@{/users(size=${requestedPageSize}, page=${page + 1})}">Next<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b th:text="${(pageSize ?: 10) * ((page ?: 1) - 1)}"></b>
-                        to <b th:text="${(pageSize ?: 10)  * (page ?: 1) }"></b> of <b>
+                    <p class="moj-pagination__results">Showing <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
+                        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b> of <b>
                             <b th:text="${totalUsers}"></b>
                         </b> results</p>
                 </nav>
