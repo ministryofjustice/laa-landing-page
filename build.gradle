@@ -52,8 +52,9 @@ dependencies {
     implementation 'com.azure:azure-identity:1.16.0'
 
     implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.22.0'
-    implementation 'com.h2database:h2'
-//    implementation 'org.postgresql:postgresql'
+//    implementation 'com.h2database:h2'
+    implementation 'org.postgresql:postgresql'
+    implementation "org.liquibase:liquibase-core"
     // UK Gov Notify dependency for email notifications
     implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
     // Needed for the @Validated annotation, used when injecting properties.
@@ -67,7 +68,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.postgresql:postgresql'
+//    testImplementation 'org.postgresql:postgresql'
     testImplementation('org.testcontainers:postgresql')
     testImplementation('org.testcontainers:junit-jupiter')
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
