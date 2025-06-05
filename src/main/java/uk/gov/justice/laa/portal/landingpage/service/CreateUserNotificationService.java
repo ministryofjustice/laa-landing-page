@@ -21,16 +21,15 @@ public class CreateUserNotificationService {
     private final Map<String, String> customProps = new HashMap<>();
     private static final String REFERENCE_TEMPLATE_NEW_USER = "laa-portal-notice-of-new-user-%s";
     private static final String USER_NAME = "name";
-    private static final String PASSWORD = "password";
     private static final String PORTAL_URL = "portalURL";
 
-    public void notifyCreateUser(String username, String email, String password, String userId) {
+    public void notifyCreateUser(String username, String email, String userId) {
         log.info("Starting add new user notification for User ID: {}", userId);
         if (null != email) {
             notificationService.sendMail(
                     email,
                     notificationProperties.getAddNewUserEmailTemplate(),
-                    addProperties(username, password),
+                    addProperties(username),
                     String.format(
                             REFERENCE_TEMPLATE_NEW_USER,
                             userId
@@ -40,10 +39,9 @@ public class CreateUserNotificationService {
         }
     }
 
-    public Map<String, String> addProperties(String username, String password) {
+    public Map<String, String> addProperties(String username) {
 
         customProps.put(USER_NAME, username);
-        customProps.put(PASSWORD, password);
         customProps.put(PORTAL_URL, notificationProperties.getPortalUrl());
         return customProps;
     }

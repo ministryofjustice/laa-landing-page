@@ -40,13 +40,12 @@ public class CreateUserNotificationServiceTest {
         // Given
         String username = "testUser";
         String email = "test@test.com";
-        String password = "testPassword";
         String userId = "testUserId";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(CreateUserNotificationService.class);
 
         // When
-        createUserNotificationService.notifyCreateUser(username, email, password, userId);
+        createUserNotificationService.notifyCreateUser(username, email, userId);
 
         // Then
         // Check send mail was invoked and two info logs were generated.
@@ -60,13 +59,12 @@ public class CreateUserNotificationServiceTest {
         // Given
         String username = "testUser";
         String email = null;
-        String password = "testPassword";
         String userId = "testUserId";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(CreateUserNotificationService.class);
 
         // When
-        createUserNotificationService.notifyCreateUser(username, email, password, userId);
+        createUserNotificationService.notifyCreateUser(username, email, userId);
 
         // Then
         // Check send mail was not invoked and only one info log was generated.

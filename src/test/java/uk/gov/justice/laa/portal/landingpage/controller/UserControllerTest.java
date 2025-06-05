@@ -53,8 +53,7 @@ class UserControllerTest {
     private UserService userService;
     @Mock
     private HttpSession session;
-    @Mock
-    private CreateUserNotificationService createUserNotificationService;
+
     private Model model;
 
     @BeforeEach
@@ -331,8 +330,8 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-apps");
         assertThat(model.getAttribute("apps")).isNotNull();
         List<ServicePrincipalModel> modeApps = (List<ServicePrincipalModel>) model.getAttribute("apps");
-        assertThat(modeApps.get(0).getServicePrincipal().getAppId()).isEqualTo("1");
-        assertThat(modeApps.get(0).isSelected()).isTrue();
+        assertThat(modeApps.getFirst().getServicePrincipal().getAppId()).isEqualTo("1");
+        assertThat(modeApps.getFirst().isSelected()).isTrue();
     }
 
     @Test
@@ -365,7 +364,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
         List<UserRole> sessionRoles = (List<UserRole>) model.getAttribute("roles");
-        assertThat(sessionRoles.get(0).isSelected()).isFalse();
+        assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
     }
 
@@ -418,7 +417,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("roles")).isNotNull();
         Map<String, List<UserRole>> cyaRoles = (Map<String, List<UserRole>>) model.getAttribute("roles");
 
-        assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
+        assertThat(cyaRoles.get("app1").getFirst().getAppRoleId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
     }
@@ -450,7 +449,7 @@ class UserControllerTest {
         session.setAttribute("user", user);
         List<String> roles = List.of("app1");
         session.setAttribute("roles", roles);
-        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any())).thenReturn(user);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         RedirectView view = userController.addUserCheckAnswers(session);

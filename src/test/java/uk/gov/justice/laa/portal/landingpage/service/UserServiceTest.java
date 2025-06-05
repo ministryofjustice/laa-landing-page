@@ -7,7 +7,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import com.microsoft.graph.invitations.InvitationsRequestBuilder;
 import com.microsoft.graph.models.AppRoleAssignmentCollectionResponse;
+import com.microsoft.graph.models.Invitation;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -83,6 +85,8 @@ class UserServiceTest {
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
     private HttpSession session;
+    @Mock
+    private InvitationsRequestBuilder invitationsRequestBuilder;
 
     private static String LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID;
 
@@ -215,7 +219,7 @@ class UserServiceTest {
     void partitionBasedOnSize() {
         List<Character> characters = List.of('a', 'b', 'c');
         Collection<List<Character>> subsets = UserService.partitionBasedOnSize(characters, 2);
-        List<List<Character>> subList = new ArrayList(subsets);
+        List<List<Character>> subList = new ArrayList<>(subsets);
 
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
@@ -270,7 +274,7 @@ class UserServiceTest {
 
         String result = userService.getLastLoggedInByUserId(userId);
 
-        assertThat(result).isEqualTo("Test User has not logged in yet.");
+        assertThat(result).isEqualTo("User has not logged in yet.");
     }
 
     @Test
@@ -334,10 +338,10 @@ class UserServiceTest {
         when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
         List<UserRole> result = userService.getAllAvailableRolesForApps(List.of("appId"));
         assertThat(result).isNotNull();
-        assertThat(result.get(0).getAppId()).isEqualTo("sId");
-        assertThat(result.get(0).getAppName()).isEqualTo("appDisplayName");
-        assertThat(result.get(0).getAppRoleName()).isEqualTo("appRoleDisplayName");
-        assertThat(result.get(0).getRoleName()).isEqualTo("appRoleDisplayName");
+        assertThat(result.getFirst().getAppId()).isEqualTo("sId");
+        assertThat(result.getFirst().getAppName()).isEqualTo("appDisplayName");
+        assertThat(result.getFirst().getAppRoleName()).isEqualTo("appRoleDisplayName");
+        assertThat(result.getFirst().getRoleName()).isEqualTo("appRoleDisplayName");
     }
 
     @Test
@@ -383,12 +387,15 @@ class UserServiceTest {
         AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
         userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
+        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
+        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
 
         List<String> roles = new ArrayList<>();
         roles.add("role1");
         org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
 
-        userService.createUser(user, "pw", roles);
+        userService.createUser(user, roles);
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
         verify(mockUserModelRepository, times(1)).save(any());
     }
@@ -428,7 +435,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        UserRole roleInfo = result.get(0);
+        UserRole roleInfo = result.getFirst();
         assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
         assertThat(roleInfo.getAppName()).isEqualTo("Test App");
         assertThat(roleInfo.getRoleName()).isEqualTo("Test Role");
@@ -459,7 +466,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        UserRole roleInfo = result.get(0);
+        UserRole roleInfo = result.getFirst();
         assertThat(roleInfo.getAppId()).isNull();
         assertThat(roleInfo.getAppName()).isEqualTo("UNKNOWN");
         assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
@@ -499,7 +506,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        UserRole roleInfo = result.get(0);
+        UserRole roleInfo = result.getFirst();
         assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
         assertThat(roleInfo.getAppName()).isEqualTo("Test App");
         assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
@@ -530,7 +537,6 @@ class UserServiceTest {
         UUID appId = UUID.randomUUID();
         app.setId(appId.toString());
         app.setDisplayName("testApp");
-        app.setAppId(UserService.APPLICATION_ID);
 
         // Set test roles for app
         AppRole appRole1 = new AppRole();

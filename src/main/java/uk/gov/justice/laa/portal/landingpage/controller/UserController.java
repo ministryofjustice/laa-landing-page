@@ -19,7 +19,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
 
 import java.io.IOException;
 
@@ -226,13 +225,12 @@ public class UserController {
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session) {
-        String password = RandomPasswordGenerator.generateRandomPassword(8);
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            user = userService.createUser(user, password, selectedRoles);
-            createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
+            user = userService.createUser(user, selectedRoles);
+            createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), user.getId());
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
