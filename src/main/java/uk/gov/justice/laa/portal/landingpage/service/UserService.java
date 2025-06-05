@@ -51,15 +51,18 @@ public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
+    private final NotificationService notificationService;
+
     private static final int BATCH_SIZE = 20;
 
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
-
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+                       UserModelRepository userModelRepository, NotificationService notificationService) {
         this.graphClient = graphClient;
         this.userModelRepository = userModelRepository;
+        this.notificationService = notificationService;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -431,11 +434,15 @@ public class UserService {
         invitation.setInvitedUserEmailAddress(user.getMail());
         invitation.setInviteRedirectUrl(redirectUri);
         invitation.setInvitedUserType("Guest");
-        invitation.setSendInvitationMessage(true);
+        invitation.setSendInvitationMessage(false);
         invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
         Invitation result = graphClient.invitations().post(invitation);
 
+        //Send invitation email
         assert result != null;
+        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
+                result.getInviteRedeemUrl());
+
         return result.getInvitedUser();
     }
 

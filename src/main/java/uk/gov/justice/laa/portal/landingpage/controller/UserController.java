@@ -17,7 +17,6 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.io.IOException;
@@ -44,7 +43,6 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 public class UserController {
 
     private final UserService userService;
-    private final CreateUserNotificationService createUserNotificationService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -229,8 +227,7 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            user = userService.createUser(user, selectedRoles);
-            createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), user.getId());
+            userService.createUser(user, selectedRoles);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }

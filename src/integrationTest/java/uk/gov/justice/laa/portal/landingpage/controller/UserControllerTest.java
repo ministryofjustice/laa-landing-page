@@ -9,16 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailService;
 
 class UserControllerTest extends BaseIntegrationTest {
-
-    private static final String ADD_USER_API_ENDPOINT = "/register";
 
     @MockitoBean
     private GraphServiceClient graphServiceClient;
     @MockitoBean
-    private NotificationService notificationService;
+    private EmailService emailService;
 
     @Test
     void shouldRedirectAnonymousUser() throws Exception {

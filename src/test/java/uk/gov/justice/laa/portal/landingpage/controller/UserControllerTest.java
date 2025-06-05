@@ -22,7 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -55,7 +55,7 @@ class UserControllerTest {
     private HttpSession session;
 
     @Mock
-    private CreateUserNotificationService createUserNotificationService;
+    private NotificationService notificationService;
 
     private Model model;
 

@@ -82,6 +82,8 @@ class UserServiceTest {
     @Mock
     private UserModelRepository mockUserModelRepository;
     @Mock
+    private NotificationService mockNotificationService;
+    @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
     private HttpSession session;
@@ -94,7 +96,8 @@ class UserServiceTest {
     void setUp() {
         userService = new UserService(
                 mockGraphServiceClient,
-                mockUserModelRepository
+                mockUserModelRepository,
+                mockNotificationService
         );
     }
 
@@ -739,7 +742,7 @@ class UserServiceTest {
 
         private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
         private final UserService paginationSvc =
-                new UserService(mockGraph, mockUserModelRepository);
+                new UserService(mockGraph, mockUserModelRepository, mockNotificationService);
 
         private static User graphUser(String id, String name) {
             User testUser = new User();
