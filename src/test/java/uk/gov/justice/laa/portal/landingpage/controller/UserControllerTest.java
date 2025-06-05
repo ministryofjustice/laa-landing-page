@@ -46,7 +46,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
@@ -240,10 +239,12 @@ class UserControllerTest {
         mockUser.setDisplayName("Managed User");
         String lastLoggedIn = "2024-06-01T12:00:00Z";
         List<UserRole> appRoles = List.of(new UserRole());
+        List<Office> offices = List.of(Office.builder().build());
 
         when(userService.getUserById(userId)).thenReturn(mockUser);
         when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(appRoles);
+        when(officeService.getOffices()).thenReturn(offices);
 
         // Act
         String view = userController.manageUser(userId, model);
@@ -253,6 +254,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(appRoles);
+        assertThat(model.getAttribute("offices")).isEqualTo(offices);
         verify(userService).getUserById(userId);
         verify(userService).getLastLoggedInByUserId(userId);
     }
