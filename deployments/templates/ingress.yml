@@ -32,3 +32,4 @@ spec:
                 name: laa-landing-page # this should match the metadata.name in service.yml
                 port:
                   number: 8080
+
