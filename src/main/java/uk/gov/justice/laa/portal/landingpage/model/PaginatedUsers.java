@@ -11,5 +11,13 @@ public class PaginatedUsers {
     private String previousPageLink;
     private String nextPageLink;
     private int totalUsers;
-    private int totalPages;
+
+    public int getTotalPages(int size) {
+        int totalPages = (int) Math.ceil((double) this.totalUsers / size);
+        if (totalPages > 0) {
+            return totalPages;
+        } else {
+            return 1;
+        }
+    }
 }

@@ -50,22 +50,31 @@ public class UserController {
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String nextPageLink,
-            Model model, HttpSession session) {
+            @RequestParam(required = false) Integer page,
+            Model model,
+            HttpSession session) {
 
-        Stack<String> pageHistory = userService.getPageHistory(session);
+        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
+        if (page == null) {
+            page = 1;
+            session.setAttribute("cachedUsers", null);
+            session.setAttribute("lastResponse", null);
+            session.setAttribute("totalUsers", null);
+        }
 
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsersWithHistory(pageHistory, size, nextPageLink);
+        // Initialise cached user list if not already.
+        if (session.getAttribute("cachedUsers") == null) {
+            session.setAttribute("cachedUsers", new ArrayList<>());
+        }
+
+        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
-        model.addAttribute("nextPageLink", paginatedUsers.getNextPageLink());
-        model.addAttribute("previousPageLink", paginatedUsers.getPreviousPageLink());
-        model.addAttribute("pageSize", size);
-        model.addAttribute("pageHistory", pageHistory);
+        model.addAttribute("requestedPageSize", size);
+        model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
 
         return "users";
     }
