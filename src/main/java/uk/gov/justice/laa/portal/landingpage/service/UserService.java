@@ -367,7 +367,7 @@ public class UserService {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
             requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
         });
-        if(user != null) {
+        if (user != null) {
             SignInActivity signInActivity = user.getSignInActivity();
             OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
             if (lastSignInDateTime != null) {

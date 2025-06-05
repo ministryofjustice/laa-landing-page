@@ -54,6 +54,9 @@ class UserControllerTest {
     @Mock
     private HttpSession session;
 
+    @Mock
+    private CreateUserNotificationService createUserNotificationService;
+
     private Model model;
 
     @BeforeEach

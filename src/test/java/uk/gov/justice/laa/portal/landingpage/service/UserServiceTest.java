@@ -393,7 +393,6 @@ class UserServiceTest {
 
         List<String> roles = new ArrayList<>();
         roles.add("role1");
-        org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
 
         userService.createUser(user, roles);
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
