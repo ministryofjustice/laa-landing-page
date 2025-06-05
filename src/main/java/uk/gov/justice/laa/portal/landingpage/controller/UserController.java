@@ -114,9 +114,11 @@ public class UserController {
         User user = userService.getUserById(id);
         String lastLoggedIn = userService.getLastLoggedInByUserId(id);
         List<UserRole> userAppRoles = userService.getUserAppRolesByUserId(id);
+        List<Office> offices = officeService.getOffices();
         model.addAttribute("user", user);
         model.addAttribute("lastLoggedIn", lastLoggedIn);
         model.addAttribute("userAppRoles", userAppRoles);
+        model.addAttribute("offices", offices);
         return "manage-user";
     }
 
@@ -194,8 +196,8 @@ public class UserController {
         List<Office> offices = officeService.getOffices();
         List<OfficeModel> officeData = offices.stream()
                 .map(office -> new OfficeModel(office.getName(), office.getAddress(),
-                        office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
-                        && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
+                office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
+                && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
         return "user/offices";
@@ -307,7 +309,7 @@ public class UserController {
      */
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
-                                  @RequestParam(required = false) List<String> selectedRoles) {
+            @RequestParam(required = false) List<String> selectedRoles) {
         userService.updateUserRoles(id, selectedRoles);
         return new RedirectView("/users");
     }

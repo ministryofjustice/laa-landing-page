@@ -163,29 +163,9 @@
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                            Bristol Office
-                                        </dt>
-                                        <dd class="govuk-summary-list__value">
-                                            Palace House, 23 Chruchill Road, London, E5 7DE
-                                            Value
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                            London Office
-                                        </dt>
-                                        <dd class="govuk-summary-list__value">Clancey House, Floor 5, 45 Dunkirk Road,
-                                            London, NW5 7DE</dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                            Birmingham Office
-                                        </dt>
-                                        <dd class="govuk-summary-list__value">89 Dean street, Birmingham, West midlands,
-                                            B11
-                                            3BU</dd>
+                                    <div class="govuk-summary-list__row" th:each="office : ${offices}">
+                                        <dt class="govuk-summary-list__key" th:text="${office.name}"></dt>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address}"></dd>
                                     </div>
                                 </dl>
                             </div>
