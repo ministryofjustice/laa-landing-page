@@ -30,43 +30,70 @@ const puppeteer = require('puppeteer');
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   const page = await browser.newPage();
-
-  // Navigate to login page
-  await page.goto(urls[0], { waitUntil: 'networkidle2' });
-
-  // Simulate login - you MUST adjust selectors to match your login page
   try {
-    // Wait for email input and type username
+    console.log('Step 1: Navigating to login page...');
+    await page.goto(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, { waitUntil: 'networkidle2' });
+
+    // === FIRST LOGIN ATTEMPT ===
+    console.log('Step 2: Typing username...');
     await page.waitForSelector('#email', { visible: true });
     await page.type('#email', username);
-  
-    // Test page is loading by dumping html (delete later)
-    const html = await page.content();
-    console.log(html);
-    
-    // Click "Sign in" (email submit)
+
+    console.log('Step 3: Clicking email "Sign in"...');
     await page.waitForSelector('button[type="submit"]', { visible: true });
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
-  
-    // Wait for password input and type password
+
+    console.log('Step 4: Typing password...');
     await page.waitForSelector('input[type="password"]', { visible: true });
     await page.type('input[type="password"]', password);
-  
-    // Click "Sign in" (password submit)
+
+    console.log('Step 5: Clicking password "Sign in"...');
     await page.waitForSelector('button[type="submit"]', { visible: true });
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
-  
-    // Handle "Stay signed in?" prompt if it appears
-    const staySignedInButton = await page.$('#idBtn_Back'); // or idBtn_Foreground
-    if (staySignedInButton) {
-      console.log('Handling "Stay signed in?" screen...');
-      await staySignedInButton.click();
+
+    // === OPTIONAL SECOND LOGIN ===
+    try {
+      console.log('Step 6: Checking for second login screen...');
+      await page.waitForSelector('#email', { visible: true, timeout: 5000 });
+
+      console.log('Second login detected. Re-entering credentials...');
+      await page.type('#email', username);
+      await page.click('button[type="submit"]');
       await page.waitForNavigation({ waitUntil: 'networkidle2' });
+      await page.waitForSelector('input[type="password"]', { visible: true });
+      await page.type('input[type="password"]', password);
+      await page.click('button[type="submit"]');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+    } catch (secondLoginSkip) {
+      console.log('No second login screen detected. Continuing...');
     }
-  
-    console.log('Login successful');
+
+    // === OPTIONAL "STAY SIGNED IN?" SCREEN ===
+    try {
+      console.log('Step 7: Checking for "Stay signed in?" prompt...');
+      await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
+
+      console.log('"Stay signed in?" prompt detected. Clicking "No"...');
+      await page.click('#idBtn_Back');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    } catch (staySignedInSkip) {
+      console.log('No "Stay signed in?" prompt appeared.');
+    }
+
+    console.log('🎉 Login flow completed successfully');
+
+    // === OPTIONAL: Run Pa11y Accessibility Test ===
+    const results = await pa11y(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, {
+      browser,
+      page,
+    });
+
+    console.log('📊 Accessibility results:');
+    console.log(results);
+
   
   } catch (error) {
     console.error('Login automation failed:', error);
