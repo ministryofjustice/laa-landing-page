@@ -14,7 +14,6 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -60,9 +59,6 @@ public class UserService {
 
     /** The number of pages to load in advance when doing user pagination */
     private static final int PAGES_TO_PRELOAD = 5;
-
-    @Value("${entra.defaultDomain}")
-    private String defaultDomain;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
                        UserModelRepository userModelRepository, NotificationService notificationService) {
