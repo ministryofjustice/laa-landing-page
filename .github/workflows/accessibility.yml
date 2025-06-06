@@ -1,0 +1,39 @@
+name: Run Pa11y Accessibility Tests
+
+on:
+  workflow_run:
+    workflows: ["Deploy Dev"]
+    types:
+      - completed
+  pull_request:
+    types:
+      - edited
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+jobs:
+  pa11y:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}  # Only if deploy succeeds
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+      ENTRA_USERNAME: ${{ secrets.ENTRA_USERNAME }}
+      ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Pa11y and Puppeteer
+        run: npm install pa11y puppeteer@22.8.2
+
+      - name: Run Pa11y with Puppeteer
+        run: npm run test:accessibility
+        
