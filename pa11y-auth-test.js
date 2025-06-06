@@ -49,7 +49,7 @@ const puppeteer = require('puppeteer');
     await page.type('input[type="password"]', password);
 
     console.log('Step 5: Clicking password "Sign in"...');
-    await page.waitForSelector('button[type="submit"]', { visible: true });
+    await page.waitForSelector('input[type="submit"]', { visible: true });
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
