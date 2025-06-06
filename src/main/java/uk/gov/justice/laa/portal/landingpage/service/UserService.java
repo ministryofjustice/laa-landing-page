@@ -420,14 +420,14 @@ public class UserService {
         return roles;
     }
 
-    public User createUser(User user, List<String> roles) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
 
         User invitedUser = inviteUser(user);
 
         assert invitedUser != null;
         assignAppRoleToUser(invitedUser, roles);
 
-        persistNewUser(user);
+        persistNewUser(user, selectedOffices);
 
         return invitedUser;
     }
@@ -483,11 +483,12 @@ public class UserService {
         }
     }
 
-    private void persistNewUser(User newUser) {
+    private void persistNewUser(User newUser, List<String> selectedOffices) {
         UserModel userModel = new UserModel();
         userModel.setEmail(newUser.getDisplayName());
         userModel.setFullName(newUser.getDisplayName());
         userModel.setId(newUser.getId());
+        userModel.setOffices(selectedOffices);
         userModelRepository.save(userModel);
     }
 }

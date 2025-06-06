@@ -10,6 +10,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 @DataJpaTest
 public class OfficeRepositoryTest extends BaseRepositoryTest {
@@ -49,6 +51,17 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(office2.getId());
         Assertions.assertThat(result.getName()).isEqualTo("Office2");
         Assertions.assertThat(result.getFirm()).isNotNull();
+
+        List<UUID> officeIds = Arrays.asList(firm2.getId(), firm1.getId());
+        List<Office> offices = repository.findOfficeByFirm_IdIn(officeIds);
+        Assertions.assertThat(offices).hasSize(3);
+
+        List<UUID> f2OfficeId = Arrays.asList(firm2.getId());
+        List<Office> f2offices = repository.findOfficeByFirm_IdIn(f2OfficeId);
+        Assertions.assertThat(f2offices).hasSize(2);
+
+        List<Office> allOffices = repository.findAll();
+        Assertions.assertThat(allOffices).hasSize(3);
 
         Firm firm = result.getFirm();
         Assertions.assertThat(firm.getId()).isEqualTo(firm2.getId());

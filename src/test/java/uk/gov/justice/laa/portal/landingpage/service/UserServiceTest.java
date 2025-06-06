@@ -440,7 +440,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add("role1");
 
-        userService.createUser(user, roles);
+        userService.createUser(user, roles, new ArrayList<>());
         verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
         verify(mockUserModelRepository, times(1)).save(any());
     }

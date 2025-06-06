@@ -9,4 +9,5 @@ import java.util.List;
 @SuppressWarnings("checkstyle:MissingJavadocType")
 public class OfficeData {
     private List<String> selectedOffices;
+    private List<String> selectedOfficesDisplay;
 }
