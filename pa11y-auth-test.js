@@ -99,7 +99,7 @@ const puppeteer = require('puppeteer');
 
     // Test if we have logged in
     console.log('Step 8: Testing if we have logged in.');
-    await page.waitForSelector('nav[class="mod-sub-navigation"]',{ visible: true,  timeout: 5000});
+    await page.waitForSelector('nav[class="moj-sub-navigation"]',{ visible: true,  timeout: 5000});
 
     console.log('Login flow completed successfully');
 
