@@ -420,14 +420,14 @@ public class UserService {
         return roles;
     }
 
-    public User createUser(User user, List<String> roles) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
 
         User invitedUser = inviteUser(user);
 
         assert invitedUser != null;
         assignAppRoleToUser(invitedUser, roles);
 
-        persistNewUser(user);
+        persistNewUser(user, selectedOffices);
 
         return invitedUser;
     }

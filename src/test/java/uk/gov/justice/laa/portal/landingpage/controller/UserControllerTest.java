@@ -31,7 +31,6 @@ import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Stack;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +41,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,9 +56,6 @@ class UserControllerTest {
     private OfficeService officeService;
     @Mock
     private HttpSession session;
-
-    @Mock
-    private NotificationService notificationService;
 
     private Model model;
 
@@ -463,7 +458,7 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), any())).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
