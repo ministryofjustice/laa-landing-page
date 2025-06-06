@@ -345,7 +345,10 @@ public class UserService {
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.INTERNAL)
+                .createdDate(LocalDateTime.now())
+                .createdBy("Admin")
+                .entraUser(entraUser)
                 .build();
 
         entraUser.setUserProfiles(Set.of(userProfile));
