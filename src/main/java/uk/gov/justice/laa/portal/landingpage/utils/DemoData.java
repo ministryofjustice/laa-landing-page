@@ -32,9 +32,9 @@ public class DemoData {
         Firm firm2 = buildFirm("Firm2");
         firmRepository.saveAllAndFlush(Arrays.asList(firm1, firm2));
 
-        Office office1 = buildOffice(firm1, "Office1", "Addr 1", "12345");
-        Office office2 = buildOffice(firm2, "Office2", "Addr 2", "23456");
-        Office office3 = buildOffice(firm2, "Office3", "Addr 3", "34567");
+        Office office1 = buildOffice(firm1, "Office1 - TEST DATA", "Addr 1", "12345");
+        Office office2 = buildOffice(firm2, "Office2 - TEST DATA", "Addr 2", "23456");
+        Office office3 = buildOffice(firm2, "Office3 - TEST DATA", "Addr 3", "34567");
         firm1.getOffices().add(office1);
         firm2.getOffices().add(office2);
         firm2.getOffices().add(office3);
