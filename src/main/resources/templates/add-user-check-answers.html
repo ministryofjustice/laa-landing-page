@@ -80,18 +80,18 @@
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
-                                <div th:each="appRole : ${roles.values()}">
+                                <th:block th:each="appRole : ${roles.values()}">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             <span th:text="${appRole[0].appName}"></span>
                                         </dt>
                                         <dd class="govuk-summary-list__value">
-                                            <span th:each="role: ${appRole}">
+                                            <th:block th:each="role: ${appRole}">
                                                 <span th:text="${role.name}"></span><br />
-                                            </span>
+                                            </th:block>
                                         </dd>
                                     </div>
-                                </div>
+                                </th:block>
                             </dl>
                         </div>
                     </div>
@@ -108,15 +108,16 @@
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
-                                <div th:each="office : ${officeData.getSelectedOffices()}">
+                                <th:block th:each="office : ${officeData.getSelectedOffices()}">
                                     <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">
+                                        </dt>
                                         <dd class="govuk-summary-list__value">
-                                            <span th:each="role: ${office}">
-                                                <span th:text="${office}"></span><br />
-                                            </span>
+                                            <span th:text="${office}"></span>
                                         </dd>
+                                        
                                     </div>
-                                </div>
+                                </th:block>
                             </dl>
                         </div>
                     </div>
