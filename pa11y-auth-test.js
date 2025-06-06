@@ -50,7 +50,7 @@ const puppeteer = require('puppeteer');
 
     console.log('Step 5: Clicking password "Sign in"...');
     await page.waitForSelector('input[type="submit"]', { visible: true });
-    await page.click('button[type="submit"]');
+    await page.click('input[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
     // === "STAY SIGNED IN?" SCREEN ===
