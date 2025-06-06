@@ -24,6 +24,8 @@ const puppeteer = require('puppeteer');
   const urls = [
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/home`,
+    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/users`,
+    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/users/manage/4e4d12bb-e0f7-4951-955f-fefe5958a1f9`,
   ];
 
   const browser = await puppeteer.launch({
