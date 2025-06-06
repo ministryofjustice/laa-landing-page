@@ -4,14 +4,20 @@ import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
+import com.microsoft.graph.invitations.InvitationsRequestBuilder;
+import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.Invitation;
+import com.microsoft.graph.models.ServicePrincipal;
+import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
@@ -74,6 +80,8 @@ class UserServiceTest {
     @Mock
     private EntraUserRepository mockEntraUserRepository;
     @Mock
+    private NotificationService mockNotificationService;
+    @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
     private HttpSession session;
@@ -81,7 +89,8 @@ class UserServiceTest {
     private AppRepository mockAppRepository;
     @Mock
     private AppRoleRepository mockAppRoleRepository;
-
+    @Mock
+    private InvitationsRequestBuilder invitationsRequestBuilder;
 
     private static String LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID;
 
@@ -92,7 +101,8 @@ class UserServiceTest {
                 mockEntraUserRepository,
                 mockAppRepository,
                 mockAppRoleRepository,
-                new MapperConfig().modelMapper()
+                new MapperConfig().modelMapper(),
+                mockNotificationService
         );
     }
 
@@ -279,7 +289,7 @@ class UserServiceTest {
     void partitionBasedOnSize() {
         List<Character> characters = List.of('a', 'b', 'c');
         Collection<List<Character>> subsets = UserService.partitionBasedOnSize(characters, 2);
-        List<List<Character>> subList = new ArrayList(subsets);
+        List<List<Character>> subList = new ArrayList<>(subsets);
 
         assertThat(subList).hasSize(2);
         assertThat(subList.get(0)).hasSize(2);
@@ -334,7 +344,7 @@ class UserServiceTest {
 
         String result = userService.getLastLoggedInByUserId(userId);
 
-        assertThat(result).isEqualTo("Test User has not logged in yet.");
+        assertThat(result).isEqualTo("User has not logged in yet.");
     }
 
     @Test
@@ -395,9 +405,9 @@ class UserServiceTest {
 
         List<AppRoleDto> result = userService.getAllAvailableRolesForApps(selectedApps);
         assertThat(result).isNotNull();
-        assertThat(result.get(0).getApp().getId()).isEqualTo(appId.toString());
-        assertThat(result.get(0).getApp().getName()).isEqualTo("appDisplayName");
-        assertThat(result.get(0).getName()).isEqualTo("appRoleDisplayName");
+        assertThat(result.getFirst().getApp().getId()).isEqualTo(appId.toString());
+        assertThat(result.getFirst().getApp().getName()).isEqualTo("appDisplayName");
+        assertThat(result.getFirst().getName()).isEqualTo("appRoleDisplayName");
     }
 
     @Test
@@ -428,12 +438,14 @@ class UserServiceTest {
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
         userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
+        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
+        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
+        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-        org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
 
-        userService.createUser(user, "pw", roles);
+        userService.createUser(user, roles);
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -469,12 +481,14 @@ class UserServiceTest {
             savedUsers.add(invocation.getArgument(0));
             return invocation.getArgument(0);
         });
+        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
+        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
+        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-        org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
 
-        userService.createUser(user, "pw", roles);
+        userService.createUser(user, roles);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
@@ -534,7 +548,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        AppRoleDto roleInfo = result.get(0);
+        AppRoleDto roleInfo = result.getFirst();
         assertThat(roleInfo.getApp().getId()).isEqualTo(appId.toString());
         assertThat(roleInfo.getApp().getName()).isEqualTo("Test App");
         assertThat(roleInfo.getName()).isEqualTo("Test Role");
@@ -562,7 +576,7 @@ class UserServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        AppRoleDto roleInfo = result.get(0);
+        AppRoleDto roleInfo = result.getFirst();
         assertThat(roleInfo.getApp()).isNull();
     }
 
@@ -738,7 +752,8 @@ class UserServiceTest {
                 new UserService(mockGraph, mockEntraUserRepository,
                         mockAppRepository,
                         mockAppRoleRepository,
-                        new MapperConfig().modelMapper()
+                        new MapperConfig().modelMapper(),
+                        mockNotificationService
                 );
 
         private static User graphUser(String id, String name) {
@@ -798,7 +813,7 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(3);
             assertThat(result.getTotalPages(1)).isEqualTo(3);
             assertThat(result.getUsers().size()).isEqualTo(1);
-            assertThat(result.getUsers().get(0).getFullName()).isEqualTo("SecondPageUser1");
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("SecondPageUser1");
         }
 
         @Test

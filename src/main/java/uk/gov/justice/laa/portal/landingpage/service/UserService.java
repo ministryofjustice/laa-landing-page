@@ -1,10 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ObjectIdentity;
-import com.microsoft.graph.models.PasswordProfile;
+import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
@@ -39,14 +37,13 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -58,27 +55,31 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
+    private static final int BATCH_SIZE = 20;
+
+    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
+    private String redirectUri;
+
     private final GraphServiceClient graphClient;
     private final EntraUserRepository entraUserRepository;
-    private static final int BATCH_SIZE = 20;
-    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
+    private final NotificationService notificationService;
+
+
 
     /** The number of pages to load in advance when doing user pagination */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    @Value("${entra.defaultDomain}")
-    private String defaultDomain;
-
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper) {
+                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
+        this.notificationService = notificationService;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -267,7 +268,7 @@ public class UserService {
                 RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
                 batchRequestContent.addBatchRequestStep(patchMessage);
             }
-            BatchResponseContent responseContent = graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
+            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
         }
     }
 
@@ -283,12 +284,14 @@ public class UserService {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
             requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
         });
-        SignInActivity signInActivity = user.getSignInActivity();
-        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
-        if (lastSignInDateTime != null) {
-            return formatLastSignInDateTime(lastSignInDateTime);
+        if (user != null) {
+            SignInActivity signInActivity = user.getSignInActivity();
+            OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+            if (lastSignInDateTime != null) {
+                return formatLastSignInDateTime(lastSignInDateTime);
+            }
         }
-        return user.getDisplayName() + " has not logged in yet.";
+        return "User has not logged in yet.";
     }
 
     public List<AppDto> getApps() {
@@ -309,24 +312,28 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, String password, List<String> roles) {
-
-        user.setAccountEnabled(true);
-        ObjectIdentity objectIdentity = new ObjectIdentity();
-        objectIdentity.setSignInType("emailAddress");
-        objectIdentity.setIssuer(defaultDomain);
-        objectIdentity.setIssuerAssignedId(user.getMail());
-        LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
-        identities.add(objectIdentity);
-        user.setIdentities(identities);
-        PasswordProfile passwordProfile = new PasswordProfile();
-        passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
-        passwordProfile.setPassword(password);
-        user.setPasswordProfile(passwordProfile);
-        user = graphClient.users().post(user);
-
+    public User createUser(User user, List<String> roles) {
+        User invitedUser = inviteUser(user);
+        assert invitedUser != null;
         persistNewUser(user, roles);
-        return user;
+        return invitedUser;
+    }
+
+    private User inviteUser(User user) {
+        Invitation invitation = new Invitation();
+        invitation.setInvitedUserEmailAddress(user.getMail());
+        invitation.setInviteRedirectUrl(redirectUri);
+        invitation.setInvitedUserType("Guest");
+        invitation.setSendInvitationMessage(false);
+        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
+        Invitation result = graphClient.invitations().post(invitation);
+
+        //Send invitation email
+        assert result != null;
+        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
+                result.getInviteRedeemUrl());
+
+        return result.getInvitedUser();
     }
 
     private void persistNewUser(User newUser, List<String> roles) {
