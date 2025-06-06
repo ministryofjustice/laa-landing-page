@@ -24,7 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -58,8 +58,10 @@ class UserControllerTest {
     private OfficeService officeService;
     @Mock
     private HttpSession session;
+
     @Mock
-    private CreateUserNotificationService createUserNotificationService;
+    private NotificationService notificationService;
+
     private Model model;
 
     @BeforeEach
@@ -320,8 +322,8 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-apps");
         assertThat(model.getAttribute("apps")).isNotNull();
         List<ServicePrincipalModel> modeApps = (List<ServicePrincipalModel>) model.getAttribute("apps");
-        assertThat(modeApps.get(0).getServicePrincipal().getAppId()).isEqualTo("1");
-        assertThat(modeApps.get(0).isSelected()).isTrue();
+        assertThat(modeApps.getFirst().getServicePrincipal().getAppId()).isEqualTo("1");
+        assertThat(modeApps.getFirst().isSelected()).isTrue();
     }
 
     @Test
@@ -354,7 +356,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
         List<UserRole> sessionRoles = (List<UserRole>) model.getAttribute("roles");
-        assertThat(sessionRoles.get(0).isSelected()).isFalse();
+        assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
     }
 
@@ -426,7 +428,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("roles")).isNotNull();
         Map<String, List<UserRole>> cyaRoles = (Map<String, List<UserRole>>) model.getAttribute("roles");
 
-        assertThat(cyaRoles.get("app1").get(0).getAppRoleId()).isEqualTo("app1-dev");
+        assertThat(cyaRoles.get("app1").getFirst().getAppRoleId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
     }

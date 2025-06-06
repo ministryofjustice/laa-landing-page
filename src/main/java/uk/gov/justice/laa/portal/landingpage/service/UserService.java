@@ -1,11 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ObjectIdentity;
-import com.microsoft.graph.models.PasswordProfile;
+import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
@@ -16,7 +14,6 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -36,7 +33,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.List;
@@ -54,18 +50,21 @@ public class UserService {
 
     private final GraphServiceClient graphClient;
     private final UserModelRepository userModelRepository;
+    private final NotificationService notificationService;
+
     private static final int BATCH_SIZE = 20;
-    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
+
+    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
+    private String redirectUri;
 
     /** The number of pages to load in advance when doing user pagination */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    @Value("${entra.defaultDomain}")
-    private String defaultDomain;
-
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+                       UserModelRepository userModelRepository, NotificationService notificationService) {
         this.graphClient = graphClient;
         this.userModelRepository = userModelRepository;
+        this.notificationService = notificationService;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -184,25 +183,6 @@ public class UserService {
         }
     }
 
-    public void assignAppRoleToUser(String userId, String appId, String appRoleId) {
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setPrincipalId(UUID.fromString(userId));
-        appRoleAssignment.setResourceId(UUID.fromString(appId));
-        appRoleAssignment.setAppRoleId(UUID.fromString(appRoleId));
-
-        try {
-            graphClient
-                    .users()
-                    .byUserId(userId)
-                    .appRoleAssignments()
-                    .post(appRoleAssignment);
-
-            System.out.println("App role successfully assigned to user.");
-        } catch (Exception e) {
-            System.err.println("Failed to assign app role: " + e.getMessage());
-        }
-    }
-
     public void removeAppRoleFromUser(String userId, String appRoleAssignmentId) {
         try {
             graphClient
@@ -234,20 +214,18 @@ public class UserService {
         List<UserRole> roles = new ArrayList<>();
         if (!ObjectUtils.isEmpty(servicePrincipals)) {
             for (ServicePrincipal sp : servicePrincipals) {
-                if (Objects.equals(sp.getAppId(), APPLICATION_ID)) {
-                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
-                        UserRole roleInfo = new UserRole(
-                                sp.getId(),
-                                sp.getDisplayName(),
-                                Objects.requireNonNull(role.getId()).toString(),
-                                role.getDisplayName(),
-                                null,
-                                role.getDisplayName(),
-                                null,
-                                false
-                        );
-                        roles.add(roleInfo);
-                    }
+                for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
+                    UserRole roleInfo = new UserRole(
+                            sp.getId(),
+                            sp.getDisplayName(),
+                            Objects.requireNonNull(role.getId()).toString(),
+                            role.getDisplayName(),
+                            null,
+                            role.getDisplayName(),
+                            null,
+                            false
+                    );
+                    roles.add(roleInfo);
                 }
             }
         }
@@ -379,7 +357,7 @@ public class UserService {
                 RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
                 batchRequestContent.addBatchRequestStep(patchMessage);
             }
-            BatchResponseContent responseContent = graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
+            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
         }
     }
 
@@ -395,12 +373,14 @@ public class UserService {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
             requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
         });
-        SignInActivity signInActivity = user.getSignInActivity();
-        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
-        if (lastSignInDateTime != null) {
-            return formatLastSignInDateTime(lastSignInDateTime);
+        if (user != null) {
+            SignInActivity signInActivity = user.getSignInActivity();
+            OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+            if (lastSignInDateTime != null) {
+                return formatLastSignInDateTime(lastSignInDateTime);
+            }
         }
-        return user.getDisplayName() + " has not logged in yet.";
+        return "User has not logged in yet.";
     }
 
     public List<ServicePrincipal> getServicePrincipals() {
@@ -440,25 +420,39 @@ public class UserService {
         return roles;
     }
 
-    public User createUser(User user, String password, List<String> roles, List<String> selectedOffices) {
+    public User createUser(User user, List<String> roles) {
 
-        user.setAccountEnabled(true);
-        ObjectIdentity objectIdentity = new ObjectIdentity();
-        objectIdentity.setSignInType("emailAddress");
-        objectIdentity.setIssuer(defaultDomain);
-        objectIdentity.setIssuerAssignedId(user.getMail());
-        LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
-        identities.add(objectIdentity);
-        user.setIdentities(identities);
-        PasswordProfile passwordProfile = new PasswordProfile();
-        passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
-        passwordProfile.setPassword(password);
-        user.setPasswordProfile(passwordProfile);
-        user = graphClient.users().post(user);
+        User invitedUser = inviteUser(user);
 
+        assert invitedUser != null;
+        assignAppRoleToUser(invitedUser, roles);
+
+        persistNewUser(user);
+
+        return invitedUser;
+    }
+
+    private User inviteUser(User user) {
+        Invitation invitation = new Invitation();
+        invitation.setInvitedUserEmailAddress(user.getMail());
+        invitation.setInviteRedirectUrl(redirectUri);
+        invitation.setInvitedUserType("Guest");
+        invitation.setSendInvitationMessage(false);
+        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
+        Invitation result = graphClient.invitations().post(invitation);
+
+        //Send invitation email
+        assert result != null;
+        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
+                result.getInviteRedeemUrl());
+
+        return result.getInvitedUser();
+    }
+
+    protected void assignAppRoleToUser(User user, List<String> roles) {
         ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
-        String resourceId = null;
-        UUID roleId = null;
+        String resourceId;
+        UUID roleId;
         for (ServicePrincipal servicePrincipal : principalCollection.getValue()) {
             for (AppRole appRole : servicePrincipal.getAppRoles()) {
                 if (roles.contains(appRole.getId().toString())) {
@@ -468,8 +462,25 @@ public class UserService {
                 }
             }
         }
-        persistNewUser(user, selectedOffices);
-        return user;
+    }
+
+    public void assignAppRoleToUser(String userId, String appId, String appRoleId) {
+        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
+        appRoleAssignment.setPrincipalId(UUID.fromString(userId));
+        appRoleAssignment.setResourceId(UUID.fromString(appId));
+        appRoleAssignment.setAppRoleId(UUID.fromString(appRoleId));
+
+        try {
+            graphClient
+                    .users()
+                    .byUserId(userId)
+                    .appRoleAssignments()
+                    .post(appRoleAssignment);
+
+            logger.info("App role assigned successfully to user {}.", userId);
+        } catch (Exception e) {
+            logger.error("Error assigning app role to user: {}, message: {}", userId, e.getMessage());
+        }
     }
 
     private void persistNewUser(User newUser, List<String> selectedOffices) {

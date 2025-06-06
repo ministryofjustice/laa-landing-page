@@ -35,6 +35,19 @@ import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationServi
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
+
+import java.io.IOException;
+
+import java.util.Objects;
+import java.util.List;
+import java.util.Stack;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
@@ -259,7 +272,6 @@ public class UserController {
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session) {
-        String password = RandomPasswordGenerator.generateRandomPassword(8);
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -271,8 +283,7 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            user = userService.createUser(user, password, selectedRoles, selectedOffices);
-            createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
+            user = userService.createUser(user, selectedRoles, selectedOffices);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
