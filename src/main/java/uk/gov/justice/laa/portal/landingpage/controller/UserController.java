@@ -208,11 +208,13 @@ public class UserController {
                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        model.addAttribute("user", user);
         return "user/offices";
     }
 
     @PostMapping("/user/create/offices")
-    public RedirectView postOffices(HttpSession session, @RequestParam(value = "office", required = false) List<String> selectedOffices) {
+    public RedirectView postOffices(HttpSession session, @RequestParam(value = "offices") List<String> selectedOffices) {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(selectedOffices);
         //if user has firms, use officeService.getOfficesByFirms();
