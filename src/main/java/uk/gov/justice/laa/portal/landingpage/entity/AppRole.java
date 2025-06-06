@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -40,20 +41,13 @@ public class AppRole extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude
     @JsonIgnore
     private App app;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "user_profile_app_role",
-            joinColumns = @JoinColumn(name = "app_role_id"),
-            foreignKey = @ForeignKey(name = "FK_app_role_app_role_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_profile_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_app_role_user_profile_id")
-    )
+    @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
     @JsonIgnore
     @Builder.Default

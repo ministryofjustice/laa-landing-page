@@ -45,11 +45,11 @@
                     </p>
                     <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                         <div class="govuk-checkboxes__item" th:each="role : ${availableRoles}">
-                            <input class="govuk-checkboxes__input" id="role-[[${role.appRoleId}]]" name="selectedRoles"
-                                th:checked="${userAssignedRoles.contains(role.appRoleId)}" th:value="${role.appRoleId}"
+                            <input class="govuk-checkboxes__input" id="role-[[${role.id}]]" name="selectedRoles"
+                                th:checked="${userAssignedRoles.contains(role)}" th:value="${role.id}"
                                 type="checkbox">
-                            <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.appRoleId}">
-                                <span th:text="${role.appName}"></span> - <span th:text="${role.roleName}"></span>
+                            <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
+                                <span th:text="${role.app.name}"></span> - <span th:text="${role.name}"></span>
                             </label>
                         </div>
                     </div>

@@ -5,9 +5,7 @@ import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.AppRoleAssignmentCollectionResponse;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
@@ -20,11 +18,8 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
-import com.microsoft.graph.serviceprincipals.item.ServicePrincipalItemRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
-import com.microsoft.graph.users.item.approleassignments.AppRoleAssignmentsRequestBuilder;
-import com.microsoft.graph.users.item.approleassignments.item.AppRoleAssignmentItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
@@ -32,7 +27,6 @@ import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -43,27 +37,34 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -77,13 +78,17 @@ class UserServiceTest {
     @Mock
     private GraphServiceClient mockGraphServiceClient;
     @Mock
-    private UserModelRepository mockUserModelRepository;
+    private EntraUserRepository mockEntraUserRepository;
     @Mock
     private NotificationService mockNotificationService;
     @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
     private HttpSession session;
+    @Mock
+    private AppRepository mockAppRepository;
+    @Mock
+    private AppRoleRepository mockAppRoleRepository;
     @Mock
     private InvitationsRequestBuilder invitationsRequestBuilder;
 
@@ -93,7 +98,10 @@ class UserServiceTest {
     void setUp() {
         userService = new UserService(
                 mockGraphServiceClient,
-                mockUserModelRepository,
+                mockEntraUserRepository,
+                mockAppRepository,
+                mockAppRoleRepository,
+                new MapperConfig().modelMapper(),
                 mockNotificationService
         );
     }
@@ -170,27 +178,89 @@ class UserServiceTest {
     @Test
     void getSavedUsers() {
         // Arrange
-        UserModel user1 = new UserModel();
-        user1.setFullName("alice");
-        user1.setEmail("alice@test.com");
-        user1.setUid(1);
+        UUID user1Id = UUID.randomUUID();
+        UUID user2Id = UUID.randomUUID();
+        EntraUser user1 = EntraUser.builder()
+                .firstName("alice")
+                .email("alice@test.com")
+                .id(user1Id)
+                .build();
 
-        UserModel user2 = new UserModel();
-        user2.setFullName("bob");
-        user2.setEmail("bob@test.com");
-        user2.setUid(2);
+        EntraUser user2 = EntraUser.builder()
+                .firstName("bob")
+                .email("bob@test.com")
+                .id(user2Id)
+                .build();
 
-        List<UserModel> mockUsers = List.of(user1, user2);
-        when(mockUserModelRepository.findAll()).thenReturn(mockUsers);
+        List<EntraUser> mockUsers = List.of(user1, user2);
+        when(mockEntraUserRepository.findAll()).thenReturn(mockUsers);
 
         // Act
-        List<UserModel> result = userService.getSavedUsers();
+        List<EntraUserDto> result = userService.getSavedUsers();
 
         // Assert
         assertThat(result).isNotNull();
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getFullName()).isEqualTo("alice");
         assertThat(result.get(1).getFullName()).isEqualTo("bob");
+    }
+
+    @Test
+    void getSavedUsersWhereFirstAndLastNameAreNull() {
+        // Arrange
+        UUID user1Id = UUID.randomUUID();
+        UUID user2Id = UUID.randomUUID();
+        EntraUser user1 = EntraUser.builder()
+                .email("alice@test.com")
+                .id(user1Id)
+                .build();
+
+        EntraUser user2 = EntraUser.builder()
+                .email("bob@test.com")
+                .id(user2Id)
+                .build();
+
+        List<EntraUser> mockUsers = List.of(user1, user2);
+        when(mockEntraUserRepository.findAll()).thenReturn(mockUsers);
+
+        // Act
+        List<EntraUserDto> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getFullName()).isNull();
+        assertThat(result.get(1).getFullName()).isNull();
+    }
+
+    @Test
+    void getSavedUsersWhereFirstNameIsNullButLastNameIsPopulated() {
+        // Arrange
+        UUID user1Id = UUID.randomUUID();
+        UUID user2Id = UUID.randomUUID();
+        EntraUser user1 = EntraUser.builder()
+                .lastName("alison")
+                .email("alice@test.com")
+                .id(user1Id)
+                .build();
+
+        EntraUser user2 = EntraUser.builder()
+                .lastName("robertson")
+                .email("bob@test.com")
+                .id(user2Id)
+                .build();
+
+        List<EntraUser> mockUsers = List.of(user1, user2);
+        when(mockEntraUserRepository.findAll()).thenReturn(mockUsers);
+
+        // Act
+        List<EntraUserDto> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getFullName()).isNull();
+        assertThat(result.get(1).getFullName()).isNull();
     }
 
     @Test
@@ -308,98 +378,36 @@ class UserServiceTest {
     }
 
     @Test
-    void getServicePrincipals() {
-        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
-        List<ServicePrincipal> value = new ArrayList<>();
-        servicePrincipals.setValue(value);
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        List<ServicePrincipal> result = userService.getServicePrincipals();
+    void getApps() {
+        when(mockAppRepository.findAll()).thenReturn(List.of(App.builder().build()));
+        List<AppDto> result = userService.getApps();
         assertThat(result).isNotNull();
-    }
-
-    @Test
-    void getServicePrincipalsIsEmpty() {
-        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
-        servicePrincipals.setValue(null);
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        List<ServicePrincipal> result = userService.getServicePrincipals();
-        assertThat(result).isNotNull();
-        assertThat(result).isEmpty();
     }
 
     @Test
     void getAllAvailableRolesForApps() {
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setId("sId");
-        servicePrincipal.setAppId("appId");
-        servicePrincipal.setDisplayName("appDisplayName");
-        AppRole appRole = new AppRole();
-        appRole.setId(UUID.randomUUID());
-        appRole.setDisplayName("appRoleDisplayName");
-        servicePrincipal.setAppRoles(List.of(appRole));
-        List<ServicePrincipal> value = new ArrayList<>();
-        value.add(servicePrincipal);
-        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
-        servicePrincipals.setValue(value);
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        List<UserRole> result = userService.getAllAvailableRolesForApps(List.of("appId"));
-        assertThat(result).isNotNull();
-        assertThat(result.getFirst().getAppId()).isEqualTo("sId");
-        assertThat(result.getFirst().getAppName()).isEqualTo("appDisplayName");
-        assertThat(result.getFirst().getAppRoleName()).isEqualTo("appRoleDisplayName");
-        assertThat(result.getFirst().getRoleName()).isEqualTo("appRoleDisplayName");
-    }
-
-    @Test
-    void assignAppRoleToUser() {
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
-        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
-        userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
-    }
-
-    @Test
-    void assignAppRolesToUser() {
-        User user = new User();
-        user.setId(UUID.randomUUID().toString());
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setId(UUID.randomUUID().toString());
-        servicePrincipal.setAppId("appId");
-        servicePrincipal.setDisplayName("appDisplayName");
+        UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
-        AppRole appRole = new AppRole();
-        appRole.setId(appRoleId);
-        appRole.setDisplayName("appRoleDisplayName");
-        servicePrincipal.setAppRoles(List.of(appRole));
-        List<ServicePrincipal> value = new ArrayList<>();
-        value.add(servicePrincipal);
-        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
-        servicePrincipals.setValue(value);
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
-        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
-        List<String> roles = List.of(appRoleId.toString());
+        App app = App.builder()
+                .id(appId)
+                .name("appDisplayName")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .build();
+        app.setAppRoles(Set.of(appRole));
+        appRole.setApp(app);
+        List<App> apps = new ArrayList<>();
+        apps.add(app);
+        List<String> selectedApps = List.of(appId.toString());
+        when(mockAppRepository.findAllById(selectedApps.stream().map(UUID::fromString).toList())).thenReturn(apps);
 
-        userService.assignAppRoleToUser(user, roles);
-
-        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
-
+        List<AppRoleDto> result = userService.getAllAvailableRolesForApps(selectedApps);
+        assertThat(result).isNotNull();
+        assertThat(result.getFirst().getApp().getId()).isEqualTo(appId.toString());
+        assertThat(result.getFirst().getApp().getName()).isEqualTo("appDisplayName");
+        assertThat(result.getFirst().getName()).isEqualTo("appRoleDisplayName");
     }
 
     @Test
@@ -410,281 +418,195 @@ class UserServiceTest {
         User user = new User();
         when(mockGraphServiceClient.users().post(any())).thenReturn(user);
         //get roles
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setId("sId");
-        servicePrincipal.setAppId("appId");
-        servicePrincipal.setDisplayName("appDisplayName");
-        AppRole appRole = new AppRole();
-        appRole.setId(UUID.randomUUID());
-        appRole.setDisplayName("appRoleDisplayName");
-        servicePrincipal.setAppRoles(List.of(appRole));
-        ServicePrincipalCollectionResponse servicePrincipals = new ServicePrincipalCollectionResponse();
-        List<ServicePrincipal> value = new ArrayList<>();
-        value.add(servicePrincipal);
-        servicePrincipals.setValue(value);
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipals);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("appDisplayName")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .app(app)
+                .build();
+        app.setAppRoles(Set.of(appRole));
         //assign role
-        UsersRequestBuilder usersRoleRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRoleRequestBuilder);
-        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
-        AppRoleAssignment appRoleAssignment = mock(AppRoleAssignment.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users().byUserId(any()).appRoleAssignments().post(any())).thenReturn(appRoleAssignment);
-        userService.assignAppRoleToUser(UUID.randomUUID().toString(), UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        UUID userId = UUID.randomUUID();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(entraUser);
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+        userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
         when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
         Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
         when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
 
         List<String> roles = new ArrayList<>();
-        roles.add("role1");
+        roles.add(UUID.randomUUID().toString());
 
         userService.createUser(user, roles);
-        verify(appRoleAssignmentsRequestBuilder, times(1)).post(any());
-        verify(mockUserModelRepository, times(1)).save(any());
+        verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+    }
+
+    @Test
+    void createUserWithPopulatedDisplayName() {
+        //post user
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        User user = new User();
+        user.setDisplayName("Test User");
+        when(mockGraphServiceClient.users().post(any())).thenReturn(user);
+        //get roles
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("appDisplayName")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .app(app)
+                .build();
+        app.setAppRoles(Set.of(appRole));
+        //assign role
+        UUID userId = UUID.randomUUID();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(entraUser);
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        List<EntraUser> savedUsers = new ArrayList<>();
+        when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
+            savedUsers.add(invocation.getArgument(0));
+            return invocation.getArgument(0);
+        });
+        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
+        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
+        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
+
+        List<String> roles = new ArrayList<>();
+        roles.add(UUID.randomUUID().toString());
+
+        userService.createUser(user, roles);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+        assertThat(savedUsers.size()).isEqualTo(1);
+        EntraUser savedUser = savedUsers.getFirst();
+        assertThat(savedUser.getFirstName()).isEqualTo("Test");
+        assertThat(savedUser.getLastName()).isEqualTo("User");
+    }
+
+    @Test
+    void testUpdateUserRolesDoesNotUpdateRolesWhenUserIsNotFound() {
+        UUID appRoleId = UUID.randomUUID();
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        UUID userId = UUID.randomUUID();
+        userService.updateUserRoles(userId.toString(), List.of(appRoleId.toString()));
+        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    void testUpdateUserRolesDoesNotUpdateRolesWhenUserProfileIsNotFound() {
+        UUID userId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(new HashSet<>()).build();
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
+        userService.updateUserRoles(userId.toString(), List.of(appRoleId.toString()));
+        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
     void getUserAppRolesByUserId_returnsRoleDetails_whenServicePrincipalAndRoleExist() {
         // Arrange
-        String userId = "user-123";
-        UUID resourceId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
 
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setResourceId(resourceId);
-        appRoleAssignment.setAppRoleId(appRoleId);
-
-        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
-
-        // Mock getUserAppRoleAssignmentByUserId to return our assignment
-        UserService spyUserService = org.mockito.Mockito.spy(userService);
-        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
-
         // Mock ServicePrincipal and AppRole
-        AppRole appRole = new AppRole();
-        appRole.setId(appRoleId);
-        appRole.setDisplayName("Test Role");
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("Test Role")
+                .build();
 
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setDisplayName("Test App");
-        servicePrincipal.setAppRoles(List.of(appRole));
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .appRoles(Set.of(appRole))
+                .build();
 
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
+        appRole.setApp(app);
+
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
 
         // Act
-        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<AppRoleDto> result = userService.getUserAppRolesByUserId(userId.toString());
 
         // Assert
         assertThat(result).hasSize(1);
-        UserRole roleInfo = result.getFirst();
-        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
-        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
-        assertThat(roleInfo.getRoleName()).isEqualTo("Test Role");
+        AppRoleDto roleInfo = result.getFirst();
+        assertThat(roleInfo.getApp().getId()).isEqualTo(appId.toString());
+        assertThat(roleInfo.getApp().getName()).isEqualTo("Test App");
+        assertThat(roleInfo.getName()).isEqualTo("Test Role");
     }
 
     @Test
     void getUserAppRolesByUserId_returnsUnknown_whenServicePrincipalIsNull() {
         // Arrange
-        String userId = "user-123";
-        UUID resourceId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
 
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setResourceId(resourceId);
-        appRoleAssignment.setAppRoleId(appRoleId);
+        // Mock ServicePrincipal and AppRole
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("Test Role")
+                .build();
 
-        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
 
-        UserService spyUserService = org.mockito.Mockito.spy(userService);
-        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
-
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(null);
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
 
         // Act
-        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<AppRoleDto> result = userService.getUserAppRolesByUserId(userId.toString());
 
         // Assert
         assertThat(result).hasSize(1);
-        UserRole roleInfo = result.getFirst();
-        assertThat(roleInfo.getAppId()).isNull();
-        assertThat(roleInfo.getAppName()).isEqualTo("UNKNOWN");
-        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
-    }
-
-    @Test
-    void getUserAppRolesByUserId_returnsUnknown_whenAppRoleNotFound() {
-        // Arrange
-        String userId = "user-123";
-        UUID resourceId = UUID.randomUUID();
-        UUID appRoleId = UUID.randomUUID();
-
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setResourceId(resourceId);
-        appRoleAssignment.setAppRoleId(appRoleId);
-
-        List<AppRoleAssignment> appRoleAssignments = List.of(appRoleAssignment);
-
-        UserService spyUserService = org.mockito.Mockito.spy(userService);
-        doReturn(appRoleAssignments).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
-
-        // ServicePrincipal with no matching AppRole
-        AppRole otherRole = new AppRole();
-        otherRole.setId(UUID.randomUUID());
-        otherRole.setDisplayName("Other Role");
-
-        ServicePrincipal servicePrincipal = new ServicePrincipal();
-        servicePrincipal.setDisplayName("Test App");
-        servicePrincipal.setAppRoles(List.of(otherRole));
-
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-        when(servicePrincipalsRequestBuilder.byServicePrincipalId(resourceId.toString()).get()).thenReturn(servicePrincipal);
-
-        // Act
-        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
-
-        // Assert
-        assertThat(result).hasSize(1);
-        UserRole roleInfo = result.getFirst();
-        assertThat(roleInfo.getAppId()).isEqualTo(resourceId.toString());
-        assertThat(roleInfo.getAppName()).isEqualTo("Test App");
-        assertThat(roleInfo.getRoleName()).isEqualTo("UNKNOWN");
+        AppRoleDto roleInfo = result.getFirst();
+        assertThat(roleInfo.getApp()).isNull();
     }
 
     @Test
     void getUserAppRolesByUserId_returnsEmptyList_whenNoAssignments() {
         // Arrange
-        String userId = "user-123";
-        UserService spyUserService = org.mockito.Mockito.spy(userService);
-        doReturn(List.of()).when(spyUserService).getUserAppRoleAssignmentByUserId(userId);
+        UUID userId = UUID.randomUUID();
+        UserProfile userProfile = UserProfile.builder().appRoles(new HashSet<>()).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
 
         // Act
-        List<UserRole> result = spyUserService.getUserAppRolesByUserId(userId);
+        List<AppRoleDto> result = userService.getUserAppRolesByUserId(userId.toString());
 
         // Assert
         assertThat(result).isEmpty();
     }
 
     @Test
-    void getUserAppRolesByUserId_returnsEmptyList_whenException() {
+    void getUserAppRolesByUserId_returnsEmptyList_whenNoUser() {
         // Arrange
-        String userId = "user-123";
-        when(mockGraphServiceClient.users()).thenThrow(new ApiException());
+        UUID userId = UUID.randomUUID();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
 
         // Act
-        List<AppRoleAssignment> result = userService.getUserAppRoleAssignmentByUserId(userId);
+        List<AppRoleDto> result = userService.getUserAppRolesByUserId(userId.toString());
 
         // Assert
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    public void testUpdateUserRolesByAddingAndRemovingRoles() {
-        // Given
-        // Setup user Id
-        final String userId = UUID.randomUUID().toString();
-
-        // Setup test App
-        ServicePrincipal app = new ServicePrincipal();
-        UUID appId = UUID.randomUUID();
-        app.setId(appId.toString());
-        app.setDisplayName("testApp");
-
-        // Set test roles for app
-        AppRole appRole1 = new AppRole();
-        UUID appRole1Id = UUID.randomUUID();
-        appRole1.setId(appRole1Id);
-        appRole1.setDisplayName("testRole1");
-
-        AppRole appRole2 = new AppRole();
-        UUID appRole2Id = UUID.randomUUID();
-        appRole2.setId(appRole2Id);
-        appRole2.setDisplayName("testRole2");
-
-        AppRole appRole3 = new AppRole();
-        UUID appRole3Id = UUID.randomUUID();
-        appRole3.setId(appRole3Id);
-        appRole3.setDisplayName("testRole3");
-
-        // Set roles on app
-        List<AppRole> roles = new ArrayList<>();
-        roles.add(appRole1);
-        roles.add(appRole2);
-        roles.add(appRole3);
-        app.setAppRoles(roles);
-
-        // Build role assignments and assign user to test role 1
-        String appRoleAssignmentId = UUID.randomUUID().toString();
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setResourceId(appId);
-        appRoleAssignment.setAppRoleId(appRole1Id);
-        appRoleAssignment.setId(appRoleAssignmentId);
-        List<AppRoleAssignment> testAppRoleAssignments = new ArrayList<>();
-        testAppRoleAssignments.add(appRoleAssignment);
-
-        // Mock response so the above app role assignments are associated with the user.
-        AppRoleAssignmentCollectionResponse appRoleAssignmentCollectionResponse = new AppRoleAssignmentCollectionResponse();
-        appRoleAssignmentCollectionResponse.getBackingStore().set("value", testAppRoleAssignments);
-        AppRoleAssignmentsRequestBuilder appRoleAssignmentsRequestBuilder = mock(AppRoleAssignmentsRequestBuilder.class);
-        when(appRoleAssignmentsRequestBuilder.get()).thenReturn(appRoleAssignmentCollectionResponse);
-        UserItemRequestBuilder userItemRequestBuilder = mock(UserItemRequestBuilder.class);
-        when(userItemRequestBuilder.appRoleAssignments()).thenReturn(appRoleAssignmentsRequestBuilder);
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class);
-        when(usersRequestBuilder.byUserId(userId)).thenReturn(userItemRequestBuilder);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-
-        // Setup service principal all response
-        ServicePrincipalCollectionResponse servicePrincipalCollectionResponse = new ServicePrincipalCollectionResponse();
-        servicePrincipalCollectionResponse.getBackingStore().set("value", List.of(app));
-        ServicePrincipalsRequestBuilder servicePrincipalsRequestBuilder = mock(ServicePrincipalsRequestBuilder.class);
-        when(servicePrincipalsRequestBuilder.get()).thenReturn(servicePrincipalCollectionResponse);
-
-        // Setup service by Id response
-        ServicePrincipalItemRequestBuilder servicePrincipalItemRequestBuilder = mock(ServicePrincipalItemRequestBuilder.class);
-        when(servicePrincipalItemRequestBuilder.get()).thenReturn(app);
-        when(servicePrincipalsRequestBuilder.byServicePrincipalId(appId.toString())).thenReturn(servicePrincipalItemRequestBuilder);
-        when(mockGraphServiceClient.servicePrincipals()).thenReturn(servicePrincipalsRequestBuilder);
-
-        // Added the new app role assignment to our list of app role assignment when we post using the mock graph client.
-        when(appRoleAssignmentsRequestBuilder.post(any(AppRoleAssignment.class))).then(invocation -> {
-            AppRoleAssignment newAppRoleAssignment = invocation.getArgument(0);
-            testAppRoleAssignments.add(newAppRoleAssignment);
-            return newAppRoleAssignment;
-        });
-
-
-        // Remember the last app role assignment we queried so we can use it for the delete behaviour later.
-        AppRoleAssignmentItemRequestBuilder appRoleAssignmentItemRequestBuilder = mock(AppRoleAssignmentItemRequestBuilder.class);
-        when(appRoleAssignmentsRequestBuilder.byAppRoleAssignmentId(anyString())).then(invocation -> {
-            LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID = invocation.getArgument(0);
-            return appRoleAssignmentItemRequestBuilder;
-        });
-
-        // Remove the given app role assignment from our list of app role assignment when we call delete on the mock graph client.
-        doAnswer(invocation -> {
-            AppRoleAssignment returnedAppRoleAssignment = null;
-            for (AppRoleAssignment assignment : testAppRoleAssignments) {
-                if (LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID.equals(assignment.getId())) {
-                    returnedAppRoleAssignment = assignment;
-                }
-            }
-            if (returnedAppRoleAssignment != null) {
-                testAppRoleAssignments.remove(returnedAppRoleAssignment);
-            }
-            return null;
-        }).when(appRoleAssignmentItemRequestBuilder).delete();
-
-        // When
-        // We add an extra ID for the user
-        userService.updateUserRoles(userId, List.of(appRole2.getId().toString()));
-        // Then
-        Assertions.assertEquals(1, testAppRoleAssignments.size());
     }
 
     @Test
@@ -780,12 +702,59 @@ class UserServiceTest {
         assertThat(roles.getFirst().getDisplayName()).isEqualTo("AdminRole");
     }
 
+    @Test
+    public void testGetAllAvailableRolesReturnsListOfRoles() {
+        // Given
+        UUID appId = UUID.randomUUID();
+        UUID role1Id = UUID.randomUUID();
+        UUID role2Id = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        AppRole role1 = AppRole.builder()
+                .app(app)
+                .name("Test Role 1")
+                .id(role1Id)
+                .build();
+        AppRole role2 = AppRole.builder()
+                .app(app)
+                .name("Test Role 2")
+                .id(role2Id)
+                .build();
+        app.setAppRoles(Set.of(role1, role2));
+        when(mockAppRoleRepository.findAll()).thenReturn(List.of(role1, role2));
+        // When
+        List<AppRoleDto> roles = userService.getAllAvailableRoles();
+
+        // Then
+        assertThat(roles).hasSize(2);
+        AppRoleDto returnedRole1 = roles.getFirst();
+        assertThat(returnedRole1.getId()).isEqualTo(role1Id.toString());
+        assertThat(returnedRole1.getName()).isEqualTo(role1.getName());
+        assertThat(returnedRole1.getApp()).isNotNull();
+        assertThat(returnedRole1.getApp().getName()).isEqualTo(app.getName());
+        assertThat(returnedRole1.getApp().getId()).isEqualTo(app.getId().toString());
+
+        AppRoleDto returnedRole2 = roles.getLast();
+        assertThat(returnedRole2.getId()).isEqualTo(role2Id.toString());
+        assertThat(returnedRole2.getName()).isEqualTo(role2.getName());
+        assertThat(returnedRole2.getApp()).isNotNull();
+        assertThat(returnedRole2.getApp().getName()).isEqualTo(app.getName());
+        assertThat(returnedRole2.getApp().getId()).isEqualTo(app.getId().toString());
+    }
+
     @Nested
     class PaginationTests {
 
         private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
         private final UserService paginationSvc =
-                new UserService(mockGraph, mockUserModelRepository, mockNotificationService);
+                new UserService(mockGraph, mockEntraUserRepository,
+                        mockAppRepository,
+                        mockAppRoleRepository,
+                        new MapperConfig().modelMapper(),
+                        mockNotificationService
+                );
 
         private static User graphUser(String id, String name) {
             User testUser = new User();
@@ -887,49 +856,6 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(0);
             assertThat(result.getTotalPages(10)).isEqualTo(1);
             assertThat(result.getUsers().size()).isEqualTo(0);
-        }
-    }
-
-    @Nested
-    class AssignAppRoleToUser {
-
-        @Test
-        void postsAssignmentToGraph() {
-            // Arrange
-            String userId = UUID.randomUUID().toString();
-            UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(users);
-            when(users.byUserId(userId).appRoleAssignments()).thenReturn(appRoles);
-
-            // Act
-            userService.assignAppRoleToUser(
-                    userId,
-                    "00000000-0000-0000-0000-000000000222",
-                    "00000000-0000-0000-0000-000000000333");
-
-            // Assert
-            verify(appRoles).post(any(AppRoleAssignment.class));
-        }
-
-        @Test
-        void swallowsGraphExceptions_gracefully() {
-            // Arrange
-            String userId = UUID.randomUUID().toString();
-            UsersRequestBuilder users = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            AppRoleAssignmentsRequestBuilder appRoles = mock(AppRoleAssignmentsRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(users);
-            when(users.byUserId(userId).appRoleAssignments()).thenReturn(appRoles);
-            doThrow(new RuntimeException("boom")).when(appRoles).post(any(AppRoleAssignment.class));
-
-            // Act
-            userService.assignAppRoleToUser(
-                    userId,
-                    "00000000-0000-0000-0000-000000000222",
-                    "00000000-0000-0000-0000-000000000333");
-
-            // Assert
-            verify(appRoles).post(any(AppRoleAssignment.class));
         }
     }
 
