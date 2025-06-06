@@ -17,9 +17,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.CreateUserNotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
 
 import java.io.IOException;
 
@@ -45,7 +43,6 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 public class UserController {
 
     private final UserService userService;
-    private final CreateUserNotificationService createUserNotificationService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -53,22 +50,31 @@ public class UserController {
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String nextPageLink,
-            Model model, HttpSession session) {
+            @RequestParam(required = false) Integer page,
+            Model model,
+            HttpSession session) {
 
-        Stack<String> pageHistory = userService.getPageHistory(session);
+        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
+        if (page == null) {
+            page = 1;
+            session.setAttribute("cachedUsers", null);
+            session.setAttribute("lastResponse", null);
+            session.setAttribute("totalUsers", null);
+        }
 
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsersWithHistory(pageHistory, size, nextPageLink);
+        // Initialise cached user list if not already.
+        if (session.getAttribute("cachedUsers") == null) {
+            session.setAttribute("cachedUsers", new ArrayList<>());
+        }
+
+        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
-        model.addAttribute("nextPageLink", paginatedUsers.getNextPageLink());
-        model.addAttribute("previousPageLink", paginatedUsers.getPreviousPageLink());
-        model.addAttribute("pageSize", size);
-        model.addAttribute("pageHistory", pageHistory);
+        model.addAttribute("requestedPageSize", size);
+        model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
 
         return "users";
     }
@@ -226,13 +232,11 @@ public class UserController {
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session) {
-        String password = RandomPasswordGenerator.generateRandomPassword(8);
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            user = userService.createUser(user, password, selectedRoles);
-            createUserNotificationService.notifyCreateUser(user.getDisplayName(), user.getMail(), password, user.getId());
+            userService.createUser(user, selectedRoles);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
