@@ -23,7 +23,7 @@ const puppeteer = require('puppeteer');
 
   const urls = [
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
-    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
+    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/home`,
   ];
 
   const browser = await puppeteer.launch({
@@ -94,6 +94,8 @@ const puppeteer = require('puppeteer');
     } catch (staySignedInSkip) {
       console.log('No "Stay signed in?" prompt appeared.');
     }
+
+    // 
 
     console.log('Login flow completed successfully');
 
