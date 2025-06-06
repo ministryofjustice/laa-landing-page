@@ -4,8 +4,6 @@ import com.microsoft.graph.models.User;
 import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.PropertyMap;
-import org.modelmapper.convention.MatchingStrategies;
-import org.modelmapper.spi.MappingContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -63,15 +61,6 @@ public class MapperConfig {
             // Other non-matching fields mapping
             map().setUserName(source.getDisplayName());
             map().setEmail(source.getMail());
-        }
-    };
-
-    private static final PropertyMap<EntraUser, EntraUserDto> entraUserToEntraUserDtoPropertyMap = new PropertyMap<>() {
-
-        @Override
-        protected void configure() {
-            String lastName = source.getLastName() != null ? source.getLastName() : "";
-            map().setFullName(source.getFirstName() + " " + lastName);
         }
     };
 

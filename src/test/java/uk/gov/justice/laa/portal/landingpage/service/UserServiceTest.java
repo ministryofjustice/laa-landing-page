@@ -196,6 +196,64 @@ class UserServiceTest {
     }
 
     @Test
+    void getSavedUsersWhereFirstAndLastNameAreNull() {
+        // Arrange
+        UUID user1Id = UUID.randomUUID();
+        UUID user2Id = UUID.randomUUID();
+        EntraUser user1 = EntraUser.builder()
+                .email("alice@test.com")
+                .id(user1Id)
+                .build();
+
+        EntraUser user2 = EntraUser.builder()
+                .email("bob@test.com")
+                .id(user2Id)
+                .build();
+
+        List<EntraUser> mockUsers = List.of(user1, user2);
+        when(mockEntraUserRepository.findAll()).thenReturn(mockUsers);
+
+        // Act
+        List<EntraUserDto> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getFullName()).isNull();
+        assertThat(result.get(1).getFullName()).isNull();
+    }
+
+    @Test
+    void getSavedUsersWhereFirstNameIsNullButLastNameIsPopulated() {
+        // Arrange
+        UUID user1Id = UUID.randomUUID();
+        UUID user2Id = UUID.randomUUID();
+        EntraUser user1 = EntraUser.builder()
+                .lastName("alison")
+                .email("alice@test.com")
+                .id(user1Id)
+                .build();
+
+        EntraUser user2 = EntraUser.builder()
+                .lastName("robertson")
+                .email("bob@test.com")
+                .id(user2Id)
+                .build();
+
+        List<EntraUser> mockUsers = List.of(user1, user2);
+        when(mockEntraUserRepository.findAll()).thenReturn(mockUsers);
+
+        // Act
+        List<EntraUserDto> result = userService.getSavedUsers();
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getFullName()).isNull();
+        assertThat(result.get(1).getFullName()).isNull();
+    }
+
+    @Test
     void disableUsers() throws IOException {
         BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
@@ -377,6 +435,51 @@ class UserServiceTest {
 
         userService.createUser(user, "pw", roles);
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+    }
+
+    @Test
+    void createUserWithPopulatedDisplayName() {
+        //post user
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        User user = new User();
+        user.setDisplayName("Test User");
+        when(mockGraphServiceClient.users().post(any())).thenReturn(user);
+        //get roles
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("appDisplayName")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .app(app)
+                .build();
+        app.setAppRoles(Set.of(appRole));
+        //assign role
+        UUID userId = UUID.randomUUID();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(entraUser);
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        List<EntraUser> savedUsers = new ArrayList<>();
+        when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
+            savedUsers.add(invocation.getArgument(0));
+            return invocation.getArgument(0);
+        });
+
+        List<String> roles = new ArrayList<>();
+        roles.add(UUID.randomUUID().toString());
+        org.springframework.test.util.ReflectionTestUtils.setField(userService, "defaultDomain", "testDomain");
+
+        userService.createUser(user, "pw", roles);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+        assertThat(savedUsers.size()).isEqualTo(1);
+        EntraUser savedUser = savedUsers.getFirst();
+        assertThat(savedUser.getFirstName()).isEqualTo("Test");
+        assertThat(savedUser.getLastName()).isEqualTo("User");
     }
 
     @Test
