@@ -1,8 +1,19 @@
 services:
-  app:
-    build:
-      context: .
-    image: laa-landing-page-dev:latest
-    container_name: laa-landing-page-container
+  laa-shared-database:
+    build: ./database
+    healthcheck:
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    environment:
+      DB_USERNAME: ${POSTGRES_USERNAME}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
     ports:
-      - "8089:8080"
+      - "5432:5432"
+    volumes:
+      - laa-docker-shared-database-data:/var/lib/postgresql/data
+
+volumes:
+  laa-docker-shared-database-data:

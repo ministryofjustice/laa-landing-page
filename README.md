@@ -67,6 +67,10 @@ For more detailed instructions, refer to the laa-ccms-spring-boot-common reposit
 
 More information on GDS can be found [here](https://gds-way.digital.cabinet-office.gov.uk/).
 
+#### Obtaining a Dockerhub account
+
+In order to run a database locally, you must have a licensed Docker account - please reach to the team to set this up.
+
 #### Obtaining a GOV.UK Notify API Key
 
 - You need a valid **GOV.UK Notify API Key** for GOV.UK Notify authentication.
@@ -91,7 +95,13 @@ Ensure that all environment variables from `.env` set
 
 `export $(grep -v '^#' .env | xargs)`
 
-Once the environment variables are set, you can run the application using Gradle:
+Once the environment variables are set, you can run must first start the database:
+
+#### Starting the Database
+
+1. Ensure Docker is installed, running & you are signed in with a **licensed** Docker account (see prerequisites above).
+2. Navigate to the root of the repository
+3. Using the Terminal, run `docker-compose up -d` - this will start the database container using Docker.
 
 - **IntelliJ IDEA:**
 
