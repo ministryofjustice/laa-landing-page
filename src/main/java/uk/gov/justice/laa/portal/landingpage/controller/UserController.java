@@ -6,13 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,9 +24,13 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -53,6 +51,7 @@ public class UserController {
     private final LoginService loginService;
     private final OfficeService officeService;
     private final ModelMapper mapper;
+    private final FirmService firmService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -157,25 +156,32 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
-        UserModel currentUser = loginService.getCurrentUser(authClient);
-        if (Objects.nonNull(currentUser.getFirmId())) {
+        EntraUser currentUser = loginService.getCurrentUser(authClient);
+        List<UUID> firmIds = currentUser.getUserProfiles().stream().filter(userProfile -> Objects.nonNull(userProfile.getFirm()))
+                .map(up -> up.getFirm().getId()).toList();
+        //external admin has only 1 firm
+        if (firmIds.size() == 1) {
             return new RedirectView("/user/create/services");
         } else {
             return new RedirectView("/user/create/firm");
         }
     }
 
-    @GetMapping("/user/create/services")
-    public String selectFirm(Model model, HttpSession session,
-                             @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
-        UserModel currentUser = loginService.getCurrentUser(authClient);
-        if (Objects.isNull(currentUser.getFirmId())) {
+    @GetMapping("/user/create/firm")
+    public String selectFirm(Model model,
+                             HttpSession session) {
+        List<Firm> firms = firmService.getFirms();
+        String selectedFirmId = (String) session.getAttribute("firm");
+        model.addAttribute("firms", firms);
+        model.addAttribute("selectedFirm", selectedFirmId);
+        return "user/firms";
+    }
 
-            model.addAttribute("firms", officeData);
-            return "user/firms";
-        } else {
-            return "redirect:/user/create/services";
-        }
+    @PostMapping("/user/create/firm")
+    public RedirectView setFirm(@RequestParam("firm") String firmId,
+                                HttpSession session) {
+        session.setAttribute("firm", firmId);
+        return new RedirectView("/user/create/services");
     }
 
     @GetMapping("/user/create/services")
@@ -278,6 +284,11 @@ public class UserController {
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
+
+        String selectedFirmId = (String) session.getAttribute("firm");
+        Firm firm = firmService.getFirm(selectedFirmId);
+        model.addAttribute("firm", firm);
+
         return "add-user-check-answers";
     }
 
@@ -295,13 +306,16 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            userService.createUser(user, selectedRoles, selectedOffices);
+            String selectedFirmId = (String) session.getAttribute("firm");
+            Firm firm = firmService.getFirm(selectedFirmId);
+            userService.createUser(user, selectedRoles, selectedOffices, firm);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
         session.removeAttribute("roles");
         session.removeAttribute("apps");
         session.removeAttribute("officeData");
+        session.removeAttribute("firm");
         return new RedirectView("/users");
     }
 

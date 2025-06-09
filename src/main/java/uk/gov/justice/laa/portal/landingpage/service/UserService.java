@@ -19,14 +19,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
@@ -316,12 +309,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, Firm firm) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices);
+        persistNewUser(user, roles, selectedOffices, firm);
 
         return invitedUser;
     }
@@ -343,7 +336,7 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, Firm firm) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -357,6 +350,7 @@ public class UserService {
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
                 .createdBy("Admin")
+                .firm(firm)
                 .entraUser(entraUser)
                 .build();
 
@@ -389,7 +383,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public UserModel getUserModel(String entraId) {
-        return userModelRepository.getUserModelById(entraId);
+    public EntraUser getEntraUser(String entraId) {
+        return entraUserRepository.findById(UUID.fromString(entraId)).orElse(null);
     }
 }
