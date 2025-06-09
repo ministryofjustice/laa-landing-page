@@ -35,13 +35,13 @@ jobs:
         run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt laa-landing-page:latest  || true
 
       - name: Secrets
-        run: trivy fs --scanners secret --format table --no-progress --output trivy-secrets.txt . || true
+        run: trivy fs --security-checks secret --format table --no-progress --output trivy-secrets.txt . || true
 
       - name: IaC
-        run: trivy config --scanners config --severity CRITICAL --format table --output trivy-iac.txt . || true
+        run: trivy config --severity CRITICAL --format table --output trivy-iac.txt . || true
 
       - name: Dependencies
-        run: trivy fs --severity CRITICAL --scanners vuln --format table --output trivy-deps.txt . || true
+        run: trivy fs --severity CRITICAL --security-checks vuln --format table --output trivy-deps.txt . || true
 
       - name: Dockerfile
         run: trivy dockerfile --format table --output trivy-dockerfile.txt ./Dockerfile || true
