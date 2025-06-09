@@ -3,23 +3,20 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.service.notify.NotificationClient;
-import uk.gov.service.notify.NotificationClientException;
+import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
-import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.getLogsByLevel;
 
 /**
  * Unit tests for the NotificationService class
@@ -27,55 +24,61 @@ import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.getLogsB
 @ExtendWith(MockitoExtension.class)
 public class NotificationServiceTest {
 
-    @InjectMocks
+    @Mock
+    private EmailService emailService;
+
     private NotificationService notificationService;
 
-    @Mock
-    private NotificationClient notificationClient;
+    @BeforeEach
+    public void setup() {
+        NotificationsProperties notificationsProperties = buildTestNotificationsProperties();
+        notificationService = new NotificationService(emailService, notificationsProperties);
+    }
 
     @Test
-    public void checkSendingEmailRunsWithoutErrors() throws NotificationClientException {
+    public void testUserIsNotifiedWhenEmailIsIncluded() {
         // Given
-        String targetEmail = "test@test.com";
-        String emailTemplate = "testTemplate";
-        Map<String, String> parameters = new HashMap<>();
-        String reference = "testReference";
+        String username = "testUser";
+        String email = "test@test.com";
+        String userId = "testUserId";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // When
-        notificationService.sendMail(targetEmail, emailTemplate, parameters, reference);
+        notificationService.notifyCreateUser(username, email, userId);
 
         // Then
-        // Assert mail is sent with no error logs
-        Mockito.verify(notificationClient, Mockito.times(1)).sendEmail(any(), any(), any(), any());
-        List<ILoggingEvent> errorLogs = getLogsByLevel(listAppender, Level.ERROR);
-        assertEquals(0, errorLogs.size());
+        // Check send mail was invoked and two info logs were generated.
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(2, infoLogs.size());
     }
 
     @Test
-    public void checkErrorIsLoggedWhenExceptionIsThrown() throws NotificationClientException {
+    public void testUserIsNotNotifiedWhenEmailIsNotIncluded() {
         // Given
-        String targetEmail = "test@test.com";
-        String emailTemplate = "testTemplate";
-        Map<String, String> parameters = new HashMap<>();
-        String reference = "testReference";
-        // Throw exception when trying to send an email
-        Mockito.when(notificationClient.sendEmail(any(), any(), any(), any())).thenThrow(NotificationClientException.class);
+        String username = "testUser";
+        String email = null;
+        String userId = "testUserId";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // When
-        notificationService.sendMail(targetEmail, emailTemplate, parameters, reference);
+        notificationService.notifyCreateUser(username, email, userId);
 
         // Then
-        // Assert mail is attempted to be sent but throws an error.
-        Mockito.verify(notificationClient, Mockito.times(1)).sendEmail(any(), any(), any(), any());
-        List<ILoggingEvent> errorLogs = getLogsByLevel(listAppender, Level.ERROR);
-        assertEquals(1, errorLogs.size());
+        // Check send mail was not invoked and only one info log was generated.
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
     }
 
-
-
+    private static NotificationsProperties buildTestNotificationsProperties() {
+        NotificationsProperties notificationsProperties = new NotificationsProperties();
+        notificationsProperties.setPortalUrl("testPortalUrl");
+        notificationsProperties.setGovNotifyApiKey("testGovNotifyApiKey");
+        notificationsProperties.setAddNewUserEmailTemplate("testAddNewUserEmailTemplate");
+        return notificationsProperties;
+    }
 
 }
