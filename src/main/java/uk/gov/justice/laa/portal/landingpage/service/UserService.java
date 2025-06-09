@@ -19,19 +19,14 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -56,6 +51,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private static final int BATCH_SIZE = 20;
+    private final OfficeRepository officeRepository;
 
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -73,13 +69,14 @@ public class UserService {
     private static final int PAGES_TO_PRELOAD = 5;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService) {
+                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
         this.notificationService = notificationService;
+        this.officeRepository = officeRepository;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -317,7 +314,7 @@ public class UserService {
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, selectedOffices);
+        persistNewUser(user, roles, selectedOffices);
 
         return invitedUser;
     }
@@ -343,13 +340,15 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
-
+        List<UUID> uStrings = selectedOffices.stream().map(UUID::fromString).toList();
+        Set<Office>offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(uStrings));
         UserProfile userProfile = UserProfile.builder()
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
                 .userType(UserType.INTERNAL)
                 .createdDate(LocalDateTime.now())
+                .offices(offices)
                 .createdBy("Admin")
                 .entraUser(entraUser)
                 .build();
@@ -361,7 +360,6 @@ public class UserService {
         Set<AppRegistration> appRegistrations = appRoles.stream()
                 .map(appRole -> appRole.getApp().getAppRegistration())
                 .collect(Collectors.toSet());
-        entraUser.setOffices(selectedOffices);
         entraUser.setUserAppRegistrations(appRegistrations);
         entraUserRepository.saveAndFlush(entraUser);
     }

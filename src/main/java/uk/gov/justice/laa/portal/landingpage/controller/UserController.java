@@ -130,7 +130,6 @@ public class UserController {
         User user = userService.getUserById(id);
         String lastLoggedIn = userService.getLastLoggedInByUserId(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
-        List<UserRole> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<Office> offices = officeService.getOffices();
         model.addAttribute("user", user);
         model.addAttribute("lastLoggedIn", lastLoggedIn);
