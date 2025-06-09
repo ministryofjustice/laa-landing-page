@@ -29,7 +29,7 @@ jobs:
           sudo apt-get install trivy
       # || true allows it to pass if vulns are found
       - name: Container Image
-        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt your-image-name || true
+        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt docker.io/library/amazoncorretto:21-alpine || true
 
       - name: Secrets
         run: trivy fs --security-checks secret --format table --no-progress --output trivy-secrets.txt . || true
