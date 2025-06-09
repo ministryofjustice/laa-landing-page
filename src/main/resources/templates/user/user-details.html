@@ -3,7 +3,8 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+      breadcrumbs=~{::#breadcrumbs},
+      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 
 <head>
     <title>User Details</title>
@@ -11,6 +12,17 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <div class="govuk-phase-banner" id="feedback">
+        <p class="govuk-phase-banner__content">
+            <strong class="govuk-tag govuk-phase-banner__content__tag">
+                Alpha
+            </strong>
+            <span class="govuk-phase-banner__text">
+                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
+                    email</a>.
+            </span>
+        </p>
+    </div>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
@@ -20,33 +32,63 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <h1 class="govuk-heading-m">User Details</h1>
-        <form th:action="@{/user/create/details}" th:method="post">
-            <div class="govuk-form-group">
-                <label class="govuk-label govuk-!-font-weight-bold" for="firstName">
-                    First Name
-                </label>
-                <input class="govuk-input govuk-input--width-10" name="firstName" type="text"
-                    th:value="*{user.givenName}" id="firstName" />
-            </div>
-            <div class="govuk-form-group">
-                <label class="govuk-label govuk-!-font-weight-bold" for="lastName">
-                    Last Name
-                </label>
-                <input class="govuk-input govuk-input--width-10" name="lastName" type="text" th:value="*{user.surname}"
-                    id="lastName" />
-            </div>
-            <div class="govuk-form-group">
-                <label class="govuk-label govuk-!-font-weight-bold" for="email">
-                    Email Address
-
-                </label>
-                <p class="govuk-body">This will be their username</p>
-                <input class="govuk-input govuk-input--width-10" name="email" type="email" th:value="*{user.mail}"
-                    id="email" />
-            </div>
-            <button type="submit" class="govuk-button">Continue</button>
-        </form>
+        <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                <h1 class="govuk-fieldset__heading">
+                    User details
+                </h1>
+            </legend>
+            <form th:action="@{/user/create/details}" th:method="post">
+                <div class="govuk-!-margin-bottom-3">
+                    <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for=" firmName">
+                            Firm Name
+                        </label>
+                        <select class="govuk-select" id="firmName" name="firmName">
+                            <option value="firmOne">Firm One</option>
+                            <option value="FirmTwo">Firm Two</option>
+                        </select>
+                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-2" data-module="govuk-checkboxes">
+                            <div class="govuk-checkboxes__item">
+                                <input class="govuk-checkboxes__input" id="firmAdmin" name="firmAdmin" type="checkbox"
+                                    value="hmrc">
+                                <label class="govuk-label govuk-checkboxes__label" for="firmAdmin">
+                                    Firm Admin
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="govuk-form-group">
+                    <label class="govuk-label govuk-label--m" for="email">
+                        Email Address
+                    </label>
+                    <p class="govuk-hint">
+                        Please ensure the email address you provide is accurate.
+                    </p>
+                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{user.mail}"
+                        id="email" />
+                </div>
+                <div class="govuk-form-group">
+                    <label class="govuk-label govuk-label--m" for="firstName">
+                        First Name
+                    </label>
+                    <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
+                        th:value="*{user.givenName}" id="firstName" />
+                </div>
+                <div class="govuk-form-group">
+                    <label class="govuk-label govuk-label--m" for="lastName">
+                        Last Name
+                    </label>
+                    <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
+                        th:value="*{user.surname}" id="lastName" />
+                </div>
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button">Continue</button>
+                    <a href="/home" class="govuk-link">Cancel</a>
+                </div>
+            </form>
+        </fieldset>
     </main>
 </body>
 
