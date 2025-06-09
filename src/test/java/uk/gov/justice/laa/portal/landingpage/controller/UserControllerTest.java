@@ -65,7 +65,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService, new MapperConfig().modelMapper());
+        userController = new UserController(userService, officeService, new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
