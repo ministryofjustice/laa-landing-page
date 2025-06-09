@@ -30,6 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -57,6 +58,7 @@ public class UserController {
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) String search,
             Model model,
             HttpSession session) {
 
@@ -75,12 +77,28 @@ public class UserController {
 
         PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
+        // Implementation of optional, case-sensitive search filter for the "search by user" box on users.html
+        if (search != null && !search.trim().isEmpty()) {
+            String term = search.trim().toLowerCase();
+            List<UserModel> filtered =
+                    paginatedUsers.getUsers()
+                            .stream()
+                            .filter(userModel ->
+                                    (userModel.getFullName() != null && userModel.getFullName().toLowerCase().contains(term)) ||
+                                            (userModel.getEmail() != null && userModel.getEmail().toLowerCase().contains(term)))
+                            .toList();
+            paginatedUsers.setUsers(filtered);
+            // This apparently keeps the pagination helpers accurate
+            paginatedUsers.setTotalUsers(filtered.size());
+        }
+
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
+        model.addAttribute("search", search);                    // keeps box pre-populated
 
         return "users";
     }
