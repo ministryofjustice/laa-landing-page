@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.AppRoleAssignment;
@@ -115,5 +116,25 @@ public class LoginService {
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
                 userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles);
+    }
+
+    /**
+     * Will fetch current logged-in user
+     *
+     * @param authorizedClient The authorized OAuth2 client providing the access token.
+     * @return A {@link UserModel} object containing the user data
+     */
+    public UserModel getCurrentUser(OAuth2AuthorizedClient authorizedClient) {
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+        if (accessToken == null) {
+            logger.info("Access token is null");
+            return null;
+        }
+
+        String tokenValue = accessToken.getTokenValue();
+
+        User user = graphApiService.getUserProfile(tokenValue);
+        String entraId = user.getId();
+        return userService.getUserModel(entraId);
     }
 }

@@ -490,4 +490,8 @@ public class UserService {
         userModel.setId(newUser.getId());
         userModelRepository.save(userModel);
     }
+
+    public UserModel getUserModel(String entraId) {
+        return userModelRepository.getUserModelById(entraId);
+    }
 }

@@ -5,6 +5,9 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,10 +16,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.model.*;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 public class UserController {
 
     private final UserService userService;
+    private final LoginService loginService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -136,6 +138,7 @@ public class UserController {
     public RedirectView postUser(@RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
+            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -146,7 +149,25 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
-        return new RedirectView("/user/create/services");
+        UserModel currentUser = loginService.getCurrentUser(authClient);
+        if (Objects.nonNull(currentUser.getFirmId())) {
+            return new RedirectView("/user/create/services");
+        } else {
+            return new RedirectView("/user/create/firm");
+        }
+    }
+
+    @GetMapping("/user/create/services")
+    public String selectFirm(Model model, HttpSession session,
+                             @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+        UserModel currentUser = loginService.getCurrentUser(authClient);
+        if (Objects.isNull(currentUser.getFirmId())) {
+
+            model.addAttribute("firms", officeData);
+            return "user/firms";
+        } else {
+            return "redirect:/user/create/services";
+        }
     }
 
     @GetMapping("/user/create/services")
