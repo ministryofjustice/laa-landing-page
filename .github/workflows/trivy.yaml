@@ -28,8 +28,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install trivy
       # || true allows it to pass if vulns are found
+      - name: Build Docker image for Trivy to check Docker images for vulnerabilities
+        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+
       - name: Container Image
-        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt docker.io/library/amazoncorretto:21-alpine || true
+        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt laa-landing-page:latest  || true
 
       - name: Secrets
         run: trivy fs --security-checks secret --format table --no-progress --output trivy-secrets.txt . || true
