@@ -44,7 +44,7 @@ jobs:
         run: trivy fs --severity CRITICAL --security-checks vuln --format table --output trivy-deps.txt . || true
 
       - name: Dockerfile
-        run: trivy dockerfile --format table --output trivy-dockerfile.txt ./Dockerfile || true
+        run: trivy dockerfile --format table ./Dockerfile > trivy-dockerfile.txt || true
 
       - name: Display all Trivy scan results
         run: |
