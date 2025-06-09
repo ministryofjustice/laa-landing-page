@@ -8,7 +8,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -36,12 +35,12 @@ import java.util.Set;
 @ToString(doNotUseGetters = true)
 public class AppRole extends BaseEntity {
 
-    @Column(name = "name", nullable = false, length = 255, unique = true)
+    @Column(name = "name", nullable = false, length = 255, unique = false)
     @NotBlank(message = "Application role name must be provided")
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
-    @ManyToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude
     @JsonIgnore
