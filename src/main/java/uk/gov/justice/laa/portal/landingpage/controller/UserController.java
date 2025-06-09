@@ -84,8 +84,8 @@ public class UserController {
                     paginatedUsers.getUsers()
                             .stream()
                             .filter(userModel ->
-                                    (userModel.getFullName() != null && userModel.getFullName().toLowerCase().contains(term)) ||
-                                            (userModel.getEmail() != null && userModel.getEmail().toLowerCase().contains(term)))
+                                    (userModel.getFullName() != null && userModel.getFullName().toLowerCase().contains(term))
+                                            || (userModel.getEmail() != null && userModel.getEmail().toLowerCase().contains(term)))
                             .toList();
             paginatedUsers.setUsers(filtered);
             // This apparently keeps the pagination helpers accurate

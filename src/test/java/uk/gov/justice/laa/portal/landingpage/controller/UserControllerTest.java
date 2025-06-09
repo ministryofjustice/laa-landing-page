@@ -80,7 +80,7 @@ class UserControllerTest {
 
         when(userService.getPaginatedUsers(anyInt(), anyInt(), any(HttpSession.class))).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, model, session);
+        String view = userController.displayAllUsers(10, 1, null, model, session);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -114,7 +114,7 @@ class UserControllerTest {
         when(userService.getPaginatedUsers(eq(1), eq(10), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -134,7 +134,7 @@ class UserControllerTest {
         when(userService.getPaginatedUsers(anyInt(), anyInt(), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -151,7 +151,7 @@ class UserControllerTest {
         when(userService.getPaginatedUsers(eq(1), eq(10), any(HttpSession.class))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, null, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
