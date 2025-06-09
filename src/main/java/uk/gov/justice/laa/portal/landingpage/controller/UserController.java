@@ -1,5 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import com.microsoft.graph.models.User;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +23,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 
 import com.microsoft.graph.models.User;
 
@@ -33,6 +41,9 @@ import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.RandomPasswordGenerator;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
@@ -47,6 +58,7 @@ public class UserController {
 
     private final UserService userService;
     private final OfficeService officeService;
+    private final ModelMapper mapper;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -95,10 +107,8 @@ public class UserController {
      */
     @GetMapping("/userlist")
     public String displaySavedUsers(Model model) {
-
-        List<UserModel> users = userService.getSavedUsers();
+        List<EntraUserDto> users = userService.getSavedUsers();
         model.addAttribute("users", users);
-
         return "users";
     }
 
@@ -119,6 +129,7 @@ public class UserController {
     public String manageUser(@PathVariable String id, Model model) {
         User user = userService.getUserById(id);
         String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<UserRole> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<Office> offices = officeService.getOffices();
         model.addAttribute("user", user);
@@ -158,9 +169,12 @@ public class UserController {
     @GetMapping("/user/create/services")
     public String selectUserApps(Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-        List<ServicePrincipalModel> apps = userService.getServicePrincipals().stream()
-                .map(servicePrincipal -> new ServicePrincipalModel(servicePrincipal, selectedApps.contains(servicePrincipal.getAppId())))
-                .collect(Collectors.toList());
+        List<AppViewModel> apps = userService.getApps().stream()
+                .map(appDto -> {
+                    AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
+                    appViewModel.setSelected(selectedApps.contains(appDto.getId()));
+                    return appViewModel;
+                }).toList();
         model.addAttribute("apps", apps);
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
@@ -177,14 +191,15 @@ public class UserController {
     @GetMapping("/user/create/roles")
     public String getSelectedRoles(Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-        List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
+        List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-        for (UserRole role : roles) {
-            if (selectedRoles.contains(role.getAppRoleId())) {
-                role.setSelected(true);
-            }
-        }
-        model.addAttribute("roles", roles);
+        List<AppRoleViewModel> appRoleViewModels = roles.stream()
+                .map(appRoleDto -> {
+                    AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
+                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId().toString()));
+                    return viewModel;
+                }).toList();
+        model.addAttribute("roles", appRoleViewModels);
         return "add-user-roles";
     }
 
@@ -233,14 +248,14 @@ public class UserController {
     public String addUserCheckAnswers(Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         if (!selectedApps.isEmpty()) {
-            List<UserRole> roles = userService.getAllAvailableRolesForApps(selectedApps);
+            List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            Map<String, List<UserRole>> cyaRoles = new HashMap<>();
-            for (UserRole role : roles) {
-                if (selectedRoles.contains(role.getAppRoleId())) {
-                    List<UserRole> appRoles = cyaRoles.getOrDefault(role.getAppId(), new ArrayList<>());
-                    appRoles.add(role);
-                    cyaRoles.put(role.getAppId(), appRoles);
+            Map<String, List<AppRoleViewModel>> cyaRoles = new HashMap<>();
+            for (AppRoleDto role : roles) {
+                if (selectedRoles.contains(role.getId())) {
+                    List<AppRoleViewModel> appRoles = cyaRoles.getOrDefault(role.getApp().getId(), new ArrayList<>());
+                    appRoles.add(mapper.map(role, AppRoleViewModel.class));
+                    cyaRoles.put(role.getApp().getId(), appRoles);
                 }
             }
             model.addAttribute("roles", cyaRoles);
@@ -296,11 +311,11 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles")
     public String getUserRoles(@PathVariable String id, Model model) {
         User user = userService.getUserById(id);
-        List<UserRole> userRoles = userService.getUserAppRolesByUserId(id);
-        List<UserRole> availableRoles = userService.getAllAvailableRoles();
+        List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
+        List<AppRoleDto> availableRoles = userService.getAllAvailableRoles();
 
         Set<String> userAssignedRoleIds = userRoles.stream()
-                .map(UserRole::getAppRoleId)
+                .map(AppRoleDto::getId)
                 .collect(Collectors.toSet());
 
         model.addAttribute("user", user);
