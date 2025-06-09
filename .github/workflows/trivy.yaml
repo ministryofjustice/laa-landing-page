@@ -1,0 +1,67 @@
+name: Trivy Vulnerability Scan
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+      - closed
+
+jobs:
+  install_trivy:
+    runs-on: ubuntu-latest
+    env:
+      MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}
+      MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run:
+          name: Install Trivy
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+            echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+            sudo apt-get update
+            sudo apt-get install trivy
+      # || true allows it to pass if vulns are found
+      - name: Container Image
+        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt your-image-name || true
+
+      - name: Secrets
+        run: trivy fs --severity CRITICAL --security-checks secret --format table --no-progress --output trivy-secrets.txt . || true
+
+      - name: IaC
+        run: trivy config --severity CRITICAL --format table --output trivy-iac.txt . || true
+
+      - name: Dependencies
+        run: trivy fs --severity CRITICAL --security-checks vuln --format table --output trivy-deps.txt . || true
+
+      - name: Dockerfile
+        run: trivy dockerfile --severity CRITICAL --format table --output trivy-dockerfile.txt ./Dockerfile || true
+
+      - name: Display all Trivy scan results
+        run: |
+          echo "===== Container Image Scan ====="
+          cat trivy-image.txt || echo "No image scan results."
+
+          echo ""
+          echo "===== Secrets Scan ====="
+          cat trivy-secrets.txt || echo "No secrets scan results."
+
+          echo ""
+          echo "===== IaC Scan ====="
+          cat trivy-iac.txt || echo "No IaC scan results."
+
+          echo ""
+          echo "===== Dependency Scan ====="
+          cat trivy-deps.txt || echo "No dependency scan results."
+
+          echo ""
+          echo "===== Dockerfile Scan ====="
+          cat trivy-dockerfile.txt || echo "No Dockerfile scan results."
