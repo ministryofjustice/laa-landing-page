@@ -48,12 +48,24 @@ dependencies {
     // MSAL for authentication
     implementation 'com.microsoft.azure:msal4j:1.19.1'
 
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // OpenAPI / Swagger Documentation
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
+    // Microsoft Graph SDK with Azure Identity
+    implementation 'com.azure:azure-identity:1.16.0'
+    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
+    implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
+
     // Azure Identity SDK for OAuth2 and token management
     implementation 'com.azure:azure-identity:1.16.0'
 
     implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.22.0'
     implementation 'com.h2database:h2'
-//    implementation 'org.postgresql:postgresql'
+    //implementation 'org.postgresql:postgresql'
+
     // UK Gov Notify dependency for email notifications
     implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
     // Needed for the @Validated annotation, used when injecting properties.
