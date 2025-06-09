@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -76,7 +77,14 @@ public class UserProfile extends AuditableEntity {
     private Set<Office> offices;
 
 
-    @ManyToMany(mappedBy = "userProfiles", fetch = FetchType.LAZY)
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "user_profile_app_role",
+            joinColumns = @JoinColumn(name = "app_role_id"),
+            foreignKey = @ForeignKey(name = "FK_app_role_app_role_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_profile_id"),
+            inverseForeignKey = @ForeignKey(name = "FK_app_role_user_profile_id")
+    )
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;

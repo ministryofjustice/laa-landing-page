@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -41,7 +42,7 @@ public class AppRegistration extends BaseEntity {
     @JsonIgnore
     private Set<EntraUser> entraUsers;
 
-    @OneToOne(mappedBy = "appRegistration")
+    @OneToOne(mappedBy = "appRegistration", cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore
     private App app;
