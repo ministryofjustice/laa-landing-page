@@ -1,46 +1,51 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.ObjectIdentity;
-import com.microsoft.graph.models.PasswordProfile;
-import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
+import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
-import org.jetbrains.annotations.Nullable;
+import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.repository.UserModelRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -52,58 +57,36 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
-    private final GraphServiceClient graphClient;
-    private final UserModelRepository userModelRepository;
     private static final int BATCH_SIZE = 20;
-    protected static final String APPLICATION_ID = "0ca5b38b-6c4f-404e-b1d0-d0e8d4e0bfd5";
+    private final OfficeRepository officeRepository;
+
+    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
+    private String redirectUri;
+
+    private final GraphServiceClient graphClient;
+    private final EntraUserRepository entraUserRepository;
+    private final AppRepository appRepository;
+    private final AppRoleRepository appRoleRepository;
+    private final ModelMapper mapper;
+    private final NotificationService notificationService;
+
+
 
     /** The number of pages to load in advance when doing user pagination */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    @Value("${entra.defaultDomain}")
-    private String defaultDomain;
-
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, UserModelRepository userModelRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
+                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
         this.graphClient = graphClient;
-        this.userModelRepository = userModelRepository;
+        this.entraUserRepository = entraUserRepository;
+        this.appRepository = appRepository;
+        this.appRoleRepository = appRoleRepository;
+        this.mapper = mapper;
+        this.notificationService = notificationService;
+        this.officeRepository = officeRepository;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    public List<UserRole> getUserAppRolesByUserId(String userId) {
-        List<AppRoleAssignment> userAppRoles = getUserAppRoleAssignmentByUserId(userId);
-        List<UserRole> userRoles = new ArrayList<>();
-        UserRole userRole = new UserRole();
-
-        for (AppRoleAssignment appRole : userAppRoles) {
-            ServicePrincipal servicePrincipal = graphClient
-                    .servicePrincipals()
-                    .byServicePrincipalId(Objects.requireNonNull(appRole.getResourceId()).toString())
-                    .get();
-
-            if (servicePrincipal != null) {
-                userRole.setAppId(String.valueOf(appRole.getResourceId()));
-                userRole.setAppRoleId(String.valueOf(appRole.getAppRoleId()));
-                userRole.setAssignmentId(appRole.getId());
-                userRole.setAppName(servicePrincipal.getDisplayName());
-
-                String roleName = Objects.requireNonNull(servicePrincipal.getAppRoles()).stream()
-                        .filter(role -> Objects.equals(role.getId(), appRole.getAppRoleId()))
-                        .map(AppRole::getDisplayName)
-                        .findFirst()
-                        .orElse("UNKNOWN");
-
-                userRole.setRoleName(roleName);
-            } else {
-                userRole.setAppName("UNKNOWN");
-                userRole.setRoleName("UNKNOWN");
-            }
-
-            userRoles.add(userRole);
-        }
-
-        return userRoles;
-    }
 
     /**
      * Returns all Users from Entra
@@ -119,39 +102,28 @@ public class UserService {
     }
 
     public void updateUserRoles(String userId, List<String> selectedRoles) {
-        List<UserRole> existingRoles = getUserAppRolesByUserId(userId);
-
-        Set<String> currentRoleIds = existingRoles.stream()
-                .map(UserRole::getAppRoleId)
-                .collect(Collectors.toSet());
-
-        Set<String> selectedRoleIds = new HashSet<>(selectedRoles != null ? selectedRoles : List.of());
-
-        List<UserRole> availableRoles = getAllAvailableRoles();
-
-        for (String roleId : selectedRoleIds) {
-            if (!currentRoleIds.contains(roleId)) {
-                String appId = findAppIdForRole(roleId, availableRoles);
-                assignAppRoleToUser(userId, appId, roleId);
-            }
-        }
-
-        for (UserRole role : existingRoles) {
-            if (!selectedRoleIds.contains(role.getAppRoleId())) {
-                removeAppRoleFromUser(userId, role.getAssignmentId());
-            }
+        List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
+                .map(UUID::fromString)
+                .collect(Collectors.toList()));
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            updateUserProfileRoles(user, roles);
+        } else {
+            logger.warn("User with id {} not found. Could not update roles.", userId);
         }
     }
 
-    private String findAppIdForRole(String roleId, List<UserRole> existingRoles) throws IllegalArgumentException {
-        Optional<UserRole> userRole = existingRoles.stream()
-                .filter(role -> role.getAppRoleId().equals(roleId))
+    private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
+        Optional<UserProfile> userProfile = user.getUserProfiles().stream()
+                // Set to default profile for now, will need to receive a user profile from front end at some point.
+                .filter(UserProfile::isDefaultProfile)
                 .findFirst();
-
-        if (userRole.isPresent()) {
-            return userRole.get().getAppId();
+        if (userProfile.isPresent()) {
+            userProfile.get().setAppRoles(new HashSet<>(roles));
+            entraUserRepository.saveAndFlush(user);
         } else {
-            throw new IllegalArgumentException("App ID not found for role ID: " + roleId);
+            logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
         }
     }
 
@@ -164,94 +136,13 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Get App Role Assignments to User by User ID
-     *
-     * @param userId {@code String}
-     * @return {@code List<AppRoleAssignment}
-     */
-    public List<AppRoleAssignment> getUserAppRoleAssignmentByUserId(String userId) {
-        try {
-            return graphClient
-                    .users()
-                    .byUserId(userId)
-                    .appRoleAssignments()
-                    .get()
-                    .getValue();
-        } catch (ApiException e) {
-            logger.error("Error fetching roles: {}", e.getMessage());
-            return List.of();
-        }
-    }
-
-    public void assignAppRoleToUser(String userId, String appId, String appRoleId) {
-        AppRoleAssignment appRoleAssignment = new AppRoleAssignment();
-        appRoleAssignment.setPrincipalId(UUID.fromString(userId));
-        appRoleAssignment.setResourceId(UUID.fromString(appId));
-        appRoleAssignment.setAppRoleId(UUID.fromString(appRoleId));
-
-        try {
-            graphClient
-                    .users()
-                    .byUserId(userId)
-                    .appRoleAssignments()
-                    .post(appRoleAssignment);
-
-            System.out.println("App role successfully assigned to user.");
-        } catch (Exception e) {
-            System.err.println("Failed to assign app role: " + e.getMessage());
-        }
-    }
-
-    public void removeAppRoleFromUser(String userId, String appRoleAssignmentId) {
-        try {
-            graphClient
-                    .users()
-                    .byUserId(userId)
-                    .appRoleAssignments()
-                    .byAppRoleAssignmentId(appRoleAssignmentId)
-                    .delete();
-
-            System.out.println("App role successfully removed from user.");
-        } catch (Exception e) {
-            System.err.println("Failed to remove app role: " + e.getMessage());
-        }
-    }
-
     public User getUserById(String userId) {
-
         try {
             return graphClient.users().byUserId(userId).get();
         } catch (Exception e) {
             logger.error("Error fetching user with ID: {}", userId, e);
             return null;
         }
-    }
-
-    public List<UserRole> getAllAvailableRoles() {
-        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
-
-        List<UserRole> roles = new ArrayList<>();
-        if (!ObjectUtils.isEmpty(servicePrincipals)) {
-            for (ServicePrincipal sp : servicePrincipals) {
-                if (Objects.equals(sp.getAppId(), APPLICATION_ID)) {
-                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
-                        UserRole roleInfo = new UserRole(
-                                sp.getId(),
-                                sp.getDisplayName(),
-                                Objects.requireNonNull(role.getId()).toString(),
-                                role.getDisplayName(),
-                                null,
-                                role.getDisplayName(),
-                                null,
-                                false
-                        );
-                        roles.add(roleInfo);
-                    }
-                }
-            }
-        }
-        return roles;
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -364,8 +255,10 @@ public class UserService {
                 });
     }
 
-    public List<UserModel> getSavedUsers() {
-        return userModelRepository.findAll();
+    public List<EntraUserDto> getSavedUsers() {
+        return entraUserRepository.findAll().stream()
+                .map(user -> mapper.map(user, EntraUserDto.class))
+                .collect(Collectors.toList());
     }
 
     @Async
@@ -379,7 +272,7 @@ public class UserService {
                 RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
                 batchRequestContent.addBatchRequestStep(patchMessage);
             }
-            BatchResponseContent responseContent = graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
+            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
         }
     }
 
@@ -395,88 +288,104 @@ public class UserService {
         User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
             requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
         });
-        SignInActivity signInActivity = user.getSignInActivity();
-        OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
-        if (lastSignInDateTime != null) {
-            return formatLastSignInDateTime(lastSignInDateTime);
-        }
-        return user.getDisplayName() + " has not logged in yet.";
-    }
-
-    public List<ServicePrincipal> getServicePrincipals() {
-        ServicePrincipalCollectionResponse servicePrincipalsResponse = graphClient.servicePrincipals().get();
-        List<ServicePrincipal> servicePrincipals;
-        if (servicePrincipalsResponse != null  && (servicePrincipals = servicePrincipalsResponse.getValue()) != null) {
-            return servicePrincipals;
-        } else {
-            logger.warn("No service principals found or response was null");
-            return new ArrayList<>();
-        }
-    }
-
-    public List<UserRole> getAllAvailableRolesForApps(List<String> selectedApps) {
-        List<ServicePrincipal> servicePrincipals = getServicePrincipals();
-
-        List<UserRole> roles = new ArrayList<>();
-        if (!ObjectUtils.isEmpty(servicePrincipals)) {
-            for (ServicePrincipal sp : servicePrincipals) {
-                if (selectedApps.contains(sp.getAppId())) {
-                    for (AppRole role : Objects.requireNonNull(sp.getAppRoles())) {
-                        UserRole roleInfo = new UserRole(
-                                sp.getId(),
-                                sp.getDisplayName(),
-                                Objects.requireNonNull(role.getId()).toString(),
-                                role.getDisplayName(),
-                                null,
-                                role.getDisplayName(),
-                                null,
-                                false
-                        );
-                        roles.add(roleInfo);
-                    }
-                }
+        if (user != null) {
+            SignInActivity signInActivity = user.getSignInActivity();
+            OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
+            if (lastSignInDateTime != null) {
+                return formatLastSignInDateTime(lastSignInDateTime);
             }
         }
-        return roles;
+        return "User has not logged in yet.";
     }
 
-    public User createUser(User user, String password, List<String> roles) {
+    public List<AppDto> getApps() {
+        return appRepository.findAll().stream()
+                .map(app -> mapper.map(app, AppDto.class))
+                .collect(Collectors.toList());
+    }
 
-        user.setAccountEnabled(true);
-        ObjectIdentity objectIdentity = new ObjectIdentity();
-        objectIdentity.setSignInType("emailAddress");
-        objectIdentity.setIssuer(defaultDomain);
-        objectIdentity.setIssuerAssignedId(user.getMail());
-        LinkedList<ObjectIdentity> identities = new LinkedList<ObjectIdentity>();
-        identities.add(objectIdentity);
-        user.setIdentities(identities);
-        PasswordProfile passwordProfile = new PasswordProfile();
-        passwordProfile.setForceChangePasswordNextSignInWithMfa(true);
-        passwordProfile.setPassword(password);
-        user.setPasswordProfile(passwordProfile);
-        user = graphClient.users().post(user);
+    public List<AppRoleDto> getAllAvailableRolesForApps(List<String> selectedApps) {
+        // Fetch selected apps
+        List<App> apps = appRepository.findAllById(selectedApps.stream()
+                .map(UUID::fromString)
+                .collect(Collectors.toList()));
+        // Return roles
+        return apps.stream()
+                .flatMap(app -> app.getAppRoles().stream())
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .collect(Collectors.toList());
+    }
 
-        ServicePrincipalCollectionResponse principalCollection = graphClient.servicePrincipals().get();
-        String resourceId = null;
-        UUID roleId = null;
-        for (ServicePrincipal servicePrincipal : principalCollection.getValue()) {
-            for (AppRole appRole : servicePrincipal.getAppRoles()) {
-                if (roles.contains(appRole.getId().toString())) {
-                    resourceId = servicePrincipal.getId();
-                    roleId = appRole.getId();
-                    assignAppRoleToUser(user.getId(), resourceId, roleId.toString());
-                }
-            }
+    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
+
+        User invitedUser = inviteUser(user);
+        assert invitedUser != null;
+
+        persistNewUser(user, roles, selectedOffices);
+
+        return invitedUser;
+    }
+
+    private User inviteUser(User user) {
+        Invitation invitation = new Invitation();
+        invitation.setInvitedUserEmailAddress(user.getMail());
+        invitation.setInviteRedirectUrl(redirectUri);
+        invitation.setInvitedUserType("Guest");
+        invitation.setSendInvitationMessage(false);
+        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
+        Invitation result = graphClient.invitations().post(invitation);
+
+        //Send invitation email
+        assert result != null;
+        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
+                result.getInviteRedeemUrl());
+
+        return result.getInvitedUser();
+    }
+
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices) {
+        EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
+                .collect(Collectors.toList()));
+        List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
+        Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
+        UserProfile userProfile = UserProfile.builder()
+                .defaultProfile(true)
+                .appRoles(new HashSet<>(appRoles))
+                // TODO: Set this dynamically once we have usertype selection on the front end
+                .userType(UserType.INTERNAL)
+                .createdDate(LocalDateTime.now())
+                .offices(offices)
+                .createdBy("Admin")
+                .entraUser(entraUser)
+                .build();
+
+        entraUser.setUserProfiles(Set.of(userProfile));
+        entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setCreatedBy("Admin");
+        entraUser.setCreatedDate(LocalDateTime.now());
+        Set<AppRegistration> appRegistrations = appRoles.stream()
+                .map(appRole -> appRole.getApp().getAppRegistration())
+                .collect(Collectors.toSet());
+        entraUser.setUserAppRegistrations(appRegistrations);
+        entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .collect(Collectors.toList());
         }
-        persistNewUser(user);
-        return user;
+        return Collections.emptyList();
     }
 
-    private void persistNewUser(User newUser) {
-        UserModel userModel = new UserModel();
-        userModel.setEmail(newUser.getDisplayName());
-        userModel.setFullName(newUser.getDisplayName());
-        userModel.setId(newUser.getId());
-        userModelRepository.save(userModel);
+    public List<AppRoleDto> getAllAvailableRoles() {
+        return appRoleRepository.findAll().stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .collect(Collectors.toList());
     }
 }
