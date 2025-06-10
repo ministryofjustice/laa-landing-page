@@ -10,9 +10,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +21,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
@@ -145,7 +141,6 @@ public class UserController {
     public RedirectView postUser(@RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
-            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -156,15 +151,7 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
-        EntraUser currentUser = loginService.getCurrentUser(authClient);
-        List<UUID> firmIds = currentUser.getUserProfiles().stream().filter(userProfile -> Objects.nonNull(userProfile.getFirm()))
-                .map(up -> up.getFirm().getId()).toList();
-        //external admin has only 1 firm
-        if (firmIds.size() == 1) {
-            return new RedirectView("/user/create/services");
-        } else {
-            return new RedirectView("/user/create/firm");
-        }
+        return new RedirectView("/user/create/firm");
     }
 
     @GetMapping("/user/create/firm")

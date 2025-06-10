@@ -346,7 +346,7 @@ public class UserService {
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(UserType.INTERNAL)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
                 .createdBy("Admin")
@@ -381,9 +381,5 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
-    }
-
-    public EntraUser getEntraUser(String entraId) {
-        return entraUserRepository.findById(UUID.fromString(entraId)).orElse(null);
     }
 }
