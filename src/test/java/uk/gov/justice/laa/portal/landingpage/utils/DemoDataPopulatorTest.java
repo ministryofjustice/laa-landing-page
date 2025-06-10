@@ -47,13 +47,13 @@ class DemoDataPopulatorTest {
     private DemoDataPopulator demoDataPopulator;
 
     @Test
-    void appReady() {
+    void populateDummyDataDisabled() {
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(0);
     }
 
     @Test
-    void initialTestData() {
+    void populateDummyDataEnabled() {
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
