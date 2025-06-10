@@ -37,7 +37,7 @@ jobs:
 
       - name: Create SARIF directory and move SARIF files
         run: |
-          mkdir sarif_files &&
+          mkdir trivy_sarif_files &&
           mv trivy-results.sarif trivy_sarif_files/
 
       - name: Upload Trivy scan results to GitHub Security tab
