@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -269,6 +270,10 @@ class UserControllerTest {
     @Test
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
+        when(session.getAttribute("firm")).thenReturn(null);
+        Firm firm1 = Firm.builder().build();
+        Firm firm2 = Firm.builder().build();
+        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(view).isEqualTo("user/user-details");
@@ -279,22 +284,31 @@ class UserControllerTest {
         User mockUser = new User();
         mockUser.setDisplayName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
+        when(session.getAttribute("firm")).thenReturn("firmId");
+        Firm firm1 = Firm.builder().build();
+        Firm firm2 = Firm.builder().build();
+        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("firms")).isNotNull();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
+        String selectedFirmId = session.getAttribute("firm").toString();
+        assertThat(selectedFirmId).isEqualTo("firmId");
         assertThat(view).isEqualTo("user/user-details");
     }
 
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
-        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "firm", session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
+        String selectedFirm = session.getAttribute("firm").toString();
+        assertThat(selectedFirm).isEqualTo("firm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
     }
 
@@ -304,12 +318,15 @@ class UserControllerTest {
         mockUser.setDisplayName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
+        session.setAttribute("firm", "oldFirm");
         User sessionUser = (User) session.getAttribute("user");
-        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
+        String selectedFirm = session.getAttribute("firm").toString();
+        assertThat(selectedFirm).isEqualTo("newFirm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
     }
 

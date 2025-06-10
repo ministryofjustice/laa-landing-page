@@ -41,10 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -449,7 +446,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles, new ArrayList<>());
+        userService.createUser(user, roles, new ArrayList<>(), Firm.builder().build());
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -491,13 +488,14 @@ class UserServiceTest {
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-
-        userService.createUser(user, roles, new ArrayList<>());
+        Firm firm = Firm.builder().name("Firm").build();
+        userService.createUser(user, roles, new ArrayList<>(), firm);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
+        assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
     }
 
     @Test

@@ -6,7 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,7 +32,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -132,6 +137,10 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new User();
         }
+        List<Firm> firms = firmService.getFirms();
+        String selectedFirmId = (String) session.getAttribute("firm");
+        model.addAttribute("firms", firms);
+        model.addAttribute("selectedFirm", selectedFirmId);
         model.addAttribute("user", user);
         return "user/user-details";
     }
@@ -140,6 +149,7 @@ public class UserController {
     public RedirectView postUser(@RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
+            @RequestParam("firm") String firmId,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -150,22 +160,6 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
-        return new RedirectView("/user/create/firm");
-    }
-
-    @GetMapping("/user/create/firm")
-    public String selectFirm(Model model,
-                             HttpSession session) {
-        List<Firm> firms = firmService.getFirms();
-        String selectedFirmId = (String) session.getAttribute("firm");
-        model.addAttribute("firms", firms);
-        model.addAttribute("selectedFirm", selectedFirmId);
-        return "user/firms";
-    }
-
-    @PostMapping("/user/create/firm")
-    public RedirectView setFirm(@RequestParam("firm") String firmId,
-                                HttpSession session) {
         session.setAttribute("firm", firmId);
         return new RedirectView("/user/create/services");
     }
