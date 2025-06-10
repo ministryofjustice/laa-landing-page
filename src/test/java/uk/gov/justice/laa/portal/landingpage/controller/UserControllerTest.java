@@ -3,14 +3,12 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
@@ -25,11 +23,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -468,11 +464,14 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
+        session.setAttribute("firm", "firmId");
+        when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(model.getAttribute("firm")).isNotNull();
     }
 
     @Test
@@ -485,12 +484,15 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
+        session.setAttribute("firm", "firmId");
+        when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
         when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
-        assertThat(model.getAttribute("roles")).isNull();
-        assertThat(model.getAttribute("apps")).isNull();
-        assertThat(model.getAttribute("officeData")).isNull();
+        assertThat(session.getAttribute("roles")).isNull();
+        assertThat(session.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("officeData")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
     }
 
     @Test
