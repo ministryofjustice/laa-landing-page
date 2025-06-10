@@ -28,7 +28,7 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          image-ref: 'laa-landing-page:latest'
+          # image-ref: 'laa-landing-page:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
