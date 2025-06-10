@@ -26,6 +26,8 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
+          scan-type: 'fs'
+          scan-ref: '.'
           image-ref: 'laa-landing-page:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
