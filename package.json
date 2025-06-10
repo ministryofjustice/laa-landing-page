@@ -3,11 +3,6 @@
     "version": "1.0.0",
     "scripts": {
       "test:accessibility": "node pa11y-auth-test.js"
-    }, 
-    "dependencies": 
-      {"jquery":{ 
-        "version": "1.9.0"
-      }
     }
   }
   

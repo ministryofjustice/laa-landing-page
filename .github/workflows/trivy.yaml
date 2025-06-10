@@ -35,10 +35,15 @@ jobs:
           output: 'trivy-results.sarif'
           format: 'sarif'
 
+      - name: Create SARIF directory and move SARIF files
+        run: |
+          mkdir sarif_files &&
+          mv trivy-results.sarif trivy_sarif_files/
+
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy_sarif_files
       
       
       
