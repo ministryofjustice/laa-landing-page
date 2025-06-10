@@ -27,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -59,13 +60,15 @@ class UserControllerTest {
     @Mock
     private OfficeService officeService;
     @Mock
+    private FirmService firmService;
+    @Mock
     private HttpSession session;
 
     private Model model;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService, officeService, new MapperConfig().modelMapper());
+        userController = new UserController(userService, officeService, new MapperConfig().modelMapper(), firmService);
         model = new ExtendedModelMap();
     }
 
@@ -465,7 +468,7 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();

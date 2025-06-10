@@ -44,7 +44,6 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 public class UserController {
 
     private final UserService userService;
-    private final LoginService loginService;
     private final OfficeService officeService;
     private final ModelMapper mapper;
     private final FirmService firmService;
