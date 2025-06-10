@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -92,7 +93,7 @@ public class EntraUser extends AuditableEntity {
     @JsonIgnore
     private Set<AppRegistration> userAppRegistrations;
 
-    @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore
     private Set<UserProfile> userProfiles;
