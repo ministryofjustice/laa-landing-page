@@ -27,18 +27,15 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'laa-landing-page:latest'
-          # format: 'table'
           # exit-code: 1
           ignore-unfixed: true
           vuln-type: 'os,library'
-          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
           output: 'trivy-results.sarif'
           format: 'sarif'
-      
-      - name: Print SARIF file contents
-        run: cat trivy-results.sarif
 
-      - name: Run Trivy vulnerability scanner
+      # enable vulnerability and secret detection as well as misconfiguration detection
+      - name: Run Trivy Vulnerability Scanner in Repo Mode
         uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
         with:
           scan-type: 'fs'
@@ -47,9 +44,6 @@ jobs:
           format: 'sarif'
           output: 'fs-trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      
-      - name: Print SARIF file contents
-        run: cat fs-trivy-results.sarif
 
       - name: Create SARIF directory and move SARIF files
         run: |
@@ -60,162 +54,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy_sarif_files
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      # - name: Run Trivy vulnerability scanner
-      #   uses: aquasecurity/trivy-action@0.28.0
-      #   with:
-      #     # scan-type: 'fs'
-      #     # scan-ref: '.'
-      #     image-ref: 'laa-landing-page:latest'
-      #     format: 'sarif'
-      #     output: 'trivy-results.sarif'
-      #     severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      
-      # - name: Print SARIF file contents
-      #   run: cat trivy-results.sarif
-
-      # - name: Upload Trivy scan results to GitHub Security tab
-      #   uses: github/codeql-action/upload-sarif@v3
-      #   with:
-      #     sarif_file: 'trivy-results.sarif'
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      # - name: Run Trivy Vulnerability Scanner
-      #   uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 #v0.28.0
-      #   with:
-      #     scan-type: 'fs'
-      #     ignore-unfixed: true
-      #     format: 'sarif'
-      #     output: 'trivy-results.sarif'
-      #     severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      
-      # - name: Check SARIF file exists
-      #   run: ls -lh trivy-results.sarif
-
-      # - name: Print SARIF file contents
-      #   run: cat trivy-results.sarif
-
-      # - name: Upload Trivy scan results to GitHub Security tab
-      #   uses: github/codeql-action/upload-sarif@v3
-      #   with:
-      #     sarif_file: 'trivy-results.sarif'
-
-      # - name: CVE Description escaped extraction and print
-      #   run: |
-      #     SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy-results.sarif)
-      #     {
-      #       echo "CVE_CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
-      #       echo "CVE_HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
-      #       echo "CVE_MEDIUM=$(echo "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
-      #     } >> "$GITHUB_ENV"
-
-      #     echo "$SCAN_RESULTS"
-
-      # - name: Create an Issue for Detected Vulnerabilities
-      #   id: issue-creator
-      #   if: env.CVE_HIGH > 0 || env.CVE_CRITICAL > 0
-      #   uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 #v2.8.2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     update_existing: false
-      #     filename: .github/ISSUE_TEMPLATE/trivy-vulnerability-template.md
-
-      # - name: Fails if CVE HIGH or CRITICAL are detected
-      #   id: cve-threshold
-      #   if: env.CVE_HIGH > 0 || env.CVE_CRITICAL > 0
-      #   run: exit 1
-
-      # - name: Send notification to Slack
-      #   id: slack
-      #   if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.cve-threshold.outcome == 'failure'
-      #   uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
-      #   with:
-      #     payload: |
-      #       {
-      #         "blocks": [
-      #           {
-      #             "type": "header",
-      #             "text": {
-      #               "type": "plain_text",
-      #               "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
-      #             }
-      #           },
-      #           {
-      #             "type": "section",
-      #             "text": {
-      #               "type": "mrkdwn",
-      #               "text": "*Scan Summary:*"
-      #             }
-      #           },
-      #           {
-      #             "type": "section",
-      #             "text": {
-      #               "type": "mrkdwn",
-      #               "text": "*CRITICAL:* :rotating_light: ${{ env.CVE_CRITICAL }}"
-      #             }
-      #           },
-      #           {
-      #             "type": "section",
-      #             "text": {
-      #               "type": "mrkdwn",
-      #               "text": "*HIGH:* :warning: ${{ env.CVE_HIGH }}"
-      #             }
-      #           },
-      #           {
-      #             "type": "section",
-      #             "text": {
-      #               "type": "mrkdwn",
-      #               "text": "*MEDIUM:* :yellow_heart: ${{ env.CVE_MEDIUM }}"
-      #             }
-      #           },
-      #           {
-      #             "type": "section",
-      #             "text": {
-      #               "type": "mrkdwn",
-      #               "text": "Please review the detailed scan results and take necessary actions.\n\n<https://github.com/${{ github.repository }}/security/code-scanning|View Details on GitHub>\n\n<https://runbooks.operations-engineering.service.justice.gov.uk/documentation/internal/dependency-alerts.html|Runbook for Responding to Dependency Alerts>\n\n*Issue Created:* <${{ steps.issue-creator.outputs.url }}|View Issue>"
-      #             }
-      #           }
-      #         ]
-      #       }
-
-      #   env:
-      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
