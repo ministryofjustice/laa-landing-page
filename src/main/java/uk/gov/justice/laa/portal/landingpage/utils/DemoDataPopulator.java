@@ -1,6 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.microsoft.graph.models.Application;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -24,63 +27,101 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * The class to populate dummy data in the local db. Flag to decide whether to populate the dummy data or not and
- * what user details to user for creation can be configured in application.properties file
+ * what user details to user for creation can be configured in application.properties file.
+ * Some data is being populated from entra to keep names consistent with entra.
  */
 @Component
 public class DemoDataPopulator {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AppRegistrationRepository entraAppRegistrationRepository;
+    private final AppRegistrationRepository entraAppRegistrationRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private FirmRepository firmRepository;
+    private final FirmRepository firmRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private OfficeRepository officeRepository;
+    private final OfficeRepository officeRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private EntraUserRepository entraUserRepository;
+    private final EntraUserRepository entraUserRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AppRepository laaAppRepository;
+    private final AppRepository laaAppRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AppRoleRepository laaAppRoleRepository;
+    private final AppRoleRepository laaAppRoleRepository;
 
+    private final UserProfileRepository laaUserProfileRepository;
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private UserProfileRepository laaUserProfileRepository;
+    private final GraphServiceClient graphServiceClient;
 
-    @Value("${app.user.email}")
-    private String userEmail;
-    @Value("${app.user.first.name}")
-    private String userFirstName;
-    @Value("${app.user.last.name}")
-    private String userLastName;
+    @Value("app.user.userPrincipal")
+    private String userPrincipal;
+
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
 
-    protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
-        return EntraUser.builder().email(email).userName(email)
+    public DemoDataPopulator(AppRegistrationRepository entraAppRegistrationRepository, FirmRepository firmRepository, OfficeRepository officeRepository, EntraUserRepository entraUserRepository, AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository, UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
+        this.entraAppRegistrationRepository = entraAppRegistrationRepository;
+        this.firmRepository = firmRepository;
+        this.officeRepository = officeRepository;
+        this.entraUserRepository = entraUserRepository;
+        this.laaAppRepository = laaAppRepository;
+        this.laaAppRoleRepository = laaAppRoleRepository;
+        this.laaUserProfileRepository = laaUserProfileRepository;
+        this.graphServiceClient = graphServiceClient;
+    }
+
+    protected EntraUser buildEntraUser(User user) {
+        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user);
+        String firstName = getFirstName(user);
+        String lastName = getSurname(user);
+
+        return EntraUser.builder().email(email)
+                .userName(user.getUserPrincipalName())
                 .userAppRegistrations(HashSet.newHashSet(11))
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
+    }
+
+    protected String getSurname(User user) {
+        if (user.getSurname() != null) {
+            return user.getSurname();
+        } else if (user.getDisplayName() != null) {
+            String[] parts = user.getDisplayName().split(" ");
+            if (parts.length > 1) {
+                return parts[1];
+            }
+        }
+        return "Surname";
+    }
+
+    protected String getFirstName(User user) {
+        if (user.getGivenName() != null) {
+            return user.getGivenName();
+        } else if (user.getDisplayName() != null) {
+            String[] parts = user.getDisplayName().split(" ");
+            if (parts.length > 0) {
+                return parts[0];
+            }
+        }
+        return "Firstname";
+    }
+
+    protected String getEmailFromUserPrinciple(User user) {
+        String userPrincipalName = user.getUserPrincipalName();
+        if (userPrincipalName != null && userPrincipalName.contains("#")) {
+            String emailPart = userPrincipalName.split("#")[0];
+            int replacementPos = emailPart.lastIndexOf('_');
+            return emailPart.substring(0, replacementPos) + "@" + emailPart.substring(replacementPos + 1);
+        } else {
+            return userPrincipalName;
+        }
     }
 
     protected AppRegistration buildEntraAppRegistration(String name) {
@@ -134,40 +175,80 @@ public class DemoDataPopulator {
         firm2.getOffices().addAll(Set.of(office3, office4, office5));
         officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
 
-        AppRegistration entraAppRegistration1 = buildEntraAppRegistration("Entra App 1");
-        AppRegistration entraAppRegistration2 = buildEntraAppRegistration("Entra App 2");
-        AppRegistration entraAppRegistration3 = buildEntraAppRegistration("Entra App 3");
-        AppRegistration entraAppRegistration4 = buildEntraAppRegistration("Entra App 4");
-        AppRegistration entraAppRegistration5 = buildEntraAppRegistration("Entra App 5");
-        entraAppRegistrationRepository.saveAll(Arrays.asList(entraAppRegistration1, entraAppRegistration2,
-                entraAppRegistration3, entraAppRegistration4, entraAppRegistration5));
+        List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
+            assert requestConfig.queryParameters != null;
+            requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
+        })).getValue();
+        assert applications != null;
 
-        EntraUser entraUser = buildEntraUser(userEmail, userFirstName, userLastName);
-        entraUser.getUserAppRegistrations().addAll(Set.of(entraAppRegistration1, entraAppRegistration2,
-                entraAppRegistration3, entraAppRegistration4, entraAppRegistration5));
-        entraUserRepository.saveAll(List.of(entraUser));
+        Set<AppRegistration> appRegistrations = new HashSet<>();
+        Set<String> appNames = new HashSet<>();
+
+        for (Application app : applications) {
+            if (!appNames.contains(app.getDisplayName())) {
+                appNames.add(app.getDisplayName());
+                appRegistrations.add(buildEntraAppRegistration(app.getDisplayName()));
+            }
+        }
+
+        entraAppRegistrationRepository.saveAll(appRegistrations);
+
+        List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
+            assert requestConfig.queryParameters != null;
+            requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+            requestConfig.queryParameters.top = 10;
+        })).getValue();
+
+        List<EntraUser> entraUsers = new ArrayList<>();
+        assert users != null;
+        for (User user : users) {
+            EntraUser entraUser = buildEntraUser(user);
+            entraUser.setUserAppRegistrations(appRegistrations);
+            entraUsers.add(entraUser);
+        }
+
+        //Ensuring the user being running the app is added
+        boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
+
+        if (!userAlreadyAdded) {
+            UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
+            User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
+                assert requestConfig.queryParameters != null;
+                requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
+            });
+            assert me != null;
+            entraUsers.add(buildEntraUser(me));
+            users.add(me);
+        }
+
+        entraUserRepository.saveAll(entraUsers);
+
+        List<App> laaApps = new ArrayList<>();
+
+        for (AppRegistration appRegistration : appRegistrations) {
+            laaApps.add(buildLaaApp(appRegistration, appRegistration.getName()));
+        }
+
+        laaAppRepository.saveAll(laaApps);
+
+        List<AppRole> appRoles = new ArrayList<>();
+        for (App app : laaApps) {
+            appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
+        }
+
+        laaAppRoleRepository.saveAll(appRoles);
+
+        List<UserProfile> userProfiles = new ArrayList<>();
+
+        for (EntraUser entraUser : entraUsers) {
+            UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            userProfile.getAppRoles().addAll(appRoles);
+            userProfile.setFirm(firm1);
+            userProfiles.add(userProfile);
+        }
 
 
-        App laaApp1 = buildLaaApp(entraAppRegistration1, "LAA App1");
-        App laaApp2 = buildLaaApp(entraAppRegistration2, "LAA App2");
-        App laaApp3 = buildLaaApp(entraAppRegistration3, "LAA App3");
-        App laaApp4 = buildLaaApp(entraAppRegistration4, "LAA App4");
-        App laaApp5 = buildLaaApp(entraAppRegistration5, "LAA App5");
-        laaAppRepository.saveAll(Arrays.asList(laaApp1, laaApp2, laaApp3, laaApp4, laaApp5));
-
-        AppRole appRole1 = buildLaaAppRole(laaApp1, "EXTERNAL_LEEGAL_APPLY_RECORDS_VIEWER_INTERN");
-        AppRole appRole2 = buildLaaAppRole(laaApp2, "Dummy App Role 2");
-        AppRole appRole3 = buildLaaAppRole(laaApp3, "Dummy App Role 3");
-        AppRole appRole4 = buildLaaAppRole(laaApp4, "Dummy App Role 4");
-        AppRole appRole5 = buildLaaAppRole(laaApp5, "Dummy App Role 5");
-
-        laaAppRoleRepository.saveAll(Arrays.asList(appRole1, appRole2, appRole3, appRole4, appRole5));
-
-        UserProfile laaUserProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-        laaUserProfile1.getAppRoles().addAll(Set.of(appRole1, appRole2, appRole3, appRole4, appRole5));
-        laaUserProfile1.setFirm(firm1);
-
-        laaUserProfileRepository.saveAll(List.of(laaUserProfile1));
+        laaUserProfileRepository.saveAll(userProfiles);
 
         System.out.println("Dummy Data Populated!!");
 
