@@ -79,10 +79,10 @@ public class UserProfile extends AuditableEntity {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_profile_app_role",
-            joinColumns = @JoinColumn(name = "app_role_id"),
-            foreignKey = @ForeignKey(name = "FK_app_role_app_role_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_profile_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_app_role_user_profile_id")
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "app_role_id"),
+            inverseForeignKey = @ForeignKey(name = "FK_user_profile_app_role_app_role_id")
     )
     @ToString.Exclude
     @JsonIgnore
