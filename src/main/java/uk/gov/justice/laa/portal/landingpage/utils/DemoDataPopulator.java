@@ -64,7 +64,10 @@ public class DemoDataPopulator {
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
 
-    public DemoDataPopulator(AppRegistrationRepository entraAppRegistrationRepository, FirmRepository firmRepository, OfficeRepository officeRepository, EntraUserRepository entraUserRepository, AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository, UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
+    public DemoDataPopulator(AppRegistrationRepository entraAppRegistrationRepository, FirmRepository firmRepository,
+                             OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
+                             AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
+                             UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
         this.entraAppRegistrationRepository = entraAppRegistrationRepository;
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
