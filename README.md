@@ -103,6 +103,11 @@ Once the environment variables are set, you can run must first start the databas
 2. Navigate to the root of the repository
 3. Using the Terminal, run `docker-compose up -d` - this will start the database container using Docker.
 
+
+**The script `db-tool.sh` includes various functions to assist in local development**
+
+#### Starting the Application
+
 - **IntelliJ IDEA:**
 
   1. Open the project in IntelliJ.
