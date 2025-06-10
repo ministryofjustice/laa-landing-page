@@ -19,50 +19,99 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Trivy
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 #v0.28.0
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: CVE Description escaped extraction and print
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy
-      # || true allows it to pass if vulns are found
-      - name: Build Docker image for Trivy to check Docker images for vulnerabilities
-        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy-results.sarif)
+          {
+            echo "CVE_CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
+            echo "CVE_HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
+            echo "CVE_MEDIUM=$(echo "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+          } >> "$GITHUB_ENV"
 
-      - name: Container Image
-        run: trivy image --severity CRITICAL --format table --no-progress --output trivy-image.txt laa-landing-page:latest  || true
+          echo "$SCAN_RESULTS"
 
-      - name: Secrets
-        run: trivy fs --security-checks secret --format table --no-progress --output trivy-secrets.txt . || true
+      # - name: Create an Issue for Detected Vulnerabilities
+      #   id: issue-creator
+      #   if: env.CVE_HIGH > 0 || env.CVE_CRITICAL > 0
+      #   uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 #v2.8.2
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     update_existing: false
+      #     filename: .github/ISSUE_TEMPLATE/trivy-vulnerability-template.md
 
-      - name: IaC
-        run: trivy config --severity CRITICAL --format table --output trivy-iac.txt . || true
+      # - name: Fails if CVE HIGH or CRITICAL are detected
+      #   id: cve-threshold
+      #   if: env.CVE_HIGH > 0 || env.CVE_CRITICAL > 0
+      #   run: exit 1
 
-      - name: Dependencies
-        run: trivy fs --severity CRITICAL --security-checks vuln --format table --output trivy-deps.txt . || true
+      # - name: Send notification to Slack
+      #   id: slack
+      #   if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.cve-threshold.outcome == 'failure'
+      #   uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "blocks": [
+      #           {
+      #             "type": "header",
+      #             "text": {
+      #               "type": "plain_text",
+      #               "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Scan Summary:*"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*CRITICAL:* :rotating_light: ${{ env.CVE_CRITICAL }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*HIGH:* :warning: ${{ env.CVE_HIGH }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*MEDIUM:* :yellow_heart: ${{ env.CVE_MEDIUM }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "Please review the detailed scan results and take necessary actions.\n\n<https://github.com/${{ github.repository }}/security/code-scanning|View Details on GitHub>\n\n<https://runbooks.operations-engineering.service.justice.gov.uk/documentation/internal/dependency-alerts.html|Runbook for Responding to Dependency Alerts>\n\n*Issue Created:* <${{ steps.issue-creator.outputs.url }}|View Issue>"
+      #             }
+      #           }
+      #         ]
+      #       }
 
-      - name: Dockerfile
-        run: trivy dockerfile --format table Dockerfile-WorkFlow > trivy-dockerfile.txt || true
-
-      - name: Display all Trivy scan results
-        run: |
-          echo "===== Container Image Scan ====="
-          cat trivy-image.txt || echo "No image scan results."
-
-          echo ""
-          echo "===== Secrets Scan ====="
-          cat trivy-secrets.txt || echo "No secrets scan results."
-
-          echo ""
-          echo "===== IaC Scan ====="
-          cat trivy-iac.txt || echo "No IaC scan results."
-
-          echo ""
-          echo "===== Dependency Scan ====="
-          cat trivy-deps.txt || echo "No dependency scan results."
-
-          echo ""
-          echo "===== Dockerfile Scan ====="
-          cat trivy-dockerfile.txt || echo "No Dockerfile scan results."
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
