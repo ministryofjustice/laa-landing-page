@@ -155,11 +155,11 @@ public class DemoDataPopulator {
         App laaApp5 = buildLaaApp(entraAppRegistration5, "LAA App5");
         laaAppRepository.saveAll(Arrays.asList(laaApp1, laaApp2, laaApp3, laaApp4, laaApp5));
 
-        AppRole appRole1 = buildLaaAppRole(laaApp1, "Admin");
-        AppRole appRole2 = buildLaaAppRole(laaApp2, "Admin");
-        AppRole appRole3 = buildLaaAppRole(laaApp3, "Admin");
-        AppRole appRole4 = buildLaaAppRole(laaApp4, "Admin");
-        AppRole appRole5 = buildLaaAppRole(laaApp5, "Admin");
+        AppRole appRole1 = buildLaaAppRole(laaApp1, "EXTERNAL_LEEGAL_APPLY_RECORDS_VIEWER_INTERN");
+        AppRole appRole2 = buildLaaAppRole(laaApp2, "Dummy App Role 2");
+        AppRole appRole3 = buildLaaAppRole(laaApp3, "Dummy App Role 3");
+        AppRole appRole4 = buildLaaAppRole(laaApp4, "Dummy App Role 4");
+        AppRole appRole5 = buildLaaAppRole(laaApp5, "Dummy App Role 5");
 
         laaAppRoleRepository.saveAll(Arrays.asList(appRole1, appRole2, appRole3, appRole4, appRole5));
 

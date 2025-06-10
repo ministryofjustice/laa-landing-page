@@ -35,7 +35,7 @@ import java.util.Set;
 @ToString(doNotUseGetters = true)
 public class AppRole extends BaseEntity {
 
-    @Column(name = "name", nullable = false, length = 255, unique = false)
+    @Column(name = "name", nullable = false, length = 255, unique = true)
     @NotBlank(message = "Application role name must be provided")
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
