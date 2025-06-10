@@ -3,8 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs},
-      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 
 <head>
     <title>User Details</title>
@@ -12,17 +11,6 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <div class="govuk-phase-banner" id="feedback">
-        <p class="govuk-phase-banner__content">
-            <strong class="govuk-tag govuk-phase-banner__content__tag">
-                Alpha
-            </strong>
-            <span class="govuk-phase-banner__text">
-                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
-                    email</a>.
-            </span>
-        </p>
-    </div>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
@@ -48,10 +36,10 @@
                             <option value="firmOne">Firm One</option>
                             <option value="FirmTwo">Firm Two</option>
                         </select>
-                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-2" data-module="govuk-checkboxes">
+                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3" data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
                                 <input class="govuk-checkboxes__input" id="firmAdmin" name="firmAdmin" type="checkbox"
-                                    value="hmrc">
+                                    value="Firm Admin">
                                 <label class="govuk-label govuk-checkboxes__label" for="firmAdmin">
                                     Firm Admin
                                 </label>

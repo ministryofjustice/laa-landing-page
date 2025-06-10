@@ -21,8 +21,7 @@
                     Select the roles required within the
                 </p>
                 <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                    <div class="govuk-checkboxes__item" th:each="role : ${roles}"
-                        th:id="'role-' + ${role.id}">
+                    <div class="govuk-checkboxes__item" th:each="role : ${roles}" th:id="'role-' + ${role.id}">
                         <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
                             th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
                         <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
@@ -32,9 +31,10 @@
                 </div>
             </fieldset>
 
-            <button class="govuk-button govuk-!-margin-top-3" data-module="govuk-button" type="submit">
-                Continue
-            </button>
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/home" class="govuk-link">Cancel</a>
+            </div>
         </form>
 
     </div>
