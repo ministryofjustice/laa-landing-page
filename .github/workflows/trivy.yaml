@@ -19,47 +19,69 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 #v0.28.0
+      - name: Build an image from Dockerfile
+        run: |
+          docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          scan-type: 'fs'
-          ignore-unfixed: true
+          image-ref: 'laa-landing-page:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      
-      - name: Run Trivy Config Scan (IaC)
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 #v0.28.0
-        with:
-          scan-type: 'config'
-          format: 'sarif'
-          output: 'trivy-config-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-
-      - name: Check SARIF file exists
-        run: ls -lh trivy-config-results.sarif
-      
-      - name: Check SARIF file exists
-        run: ls -lh trivy-results.sarif
-
-      - name: Print SARIF file contents
-        run: cat trivy-results.sarif
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-config-results.sarif'
+          sarif_file: 'trivy-results.sarif'
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      # - name: Run Trivy Vulnerability Scanner
+      #   uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 #v0.28.0
+      #   with:
+      #     scan-type: 'fs'
+      #     ignore-unfixed: true
+      #     format: 'sarif'
+      #     output: 'trivy-results.sarif'
+      #     severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+      
+      # - name: Check SARIF file exists
+      #   run: ls -lh trivy-results.sarif
 
-      - name: CVE Description escaped extraction and print
-        run: |
-          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy-results.sarif)
-          {
-            echo "CVE_CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
-            echo "CVE_HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
-            echo "CVE_MEDIUM=$(echo "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
-          } >> "$GITHUB_ENV"
+      # - name: Print SARIF file contents
+      #   run: cat trivy-results.sarif
 
-          echo "$SCAN_RESULTS"
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: 'trivy-results.sarif'
+
+      # - name: CVE Description escaped extraction and print
+      #   run: |
+      #     SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy-results.sarif)
+      #     {
+      #       echo "CVE_CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
+      #       echo "CVE_HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
+      #       echo "CVE_MEDIUM=$(echo "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+      #     } >> "$GITHUB_ENV"
+
+      #     echo "$SCAN_RESULTS"
 
       # - name: Create an Issue for Detected Vulnerabilities
       #   id: issue-creator
