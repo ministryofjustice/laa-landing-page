@@ -26,6 +26,7 @@ class UserModelRepositoryTest extends BaseRepositoryTest {
         user.setId("123");
         user.setEmail("test@test.com");
         user.setFullName("John Smith");
+        user.setOffices(List.of("1", "2"));
         userModelRepository.save(user);
 
         //Verify
@@ -39,6 +40,7 @@ class UserModelRepositoryTest extends BaseRepositoryTest {
         user.setId("123");
         user.setEmail("test@test.com");
         user.setFullName("John Smith");
+        user.setOffices(List.of("1", "2"));
         userModelRepository.save(user);
         List<UserModel> users = userModelRepository.findAll();
         //Verify

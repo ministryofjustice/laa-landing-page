@@ -21,11 +21,14 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -33,20 +36,18 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Stack;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -56,16 +57,15 @@ class UserControllerTest {
     @Mock
     private UserService userService;
     @Mock
-    private HttpSession session;
-
+    private OfficeService officeService;
     @Mock
-    private NotificationService notificationService;
+    private HttpSession session;
 
     private Model model;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService, new MapperConfig().modelMapper());
+        userController = new UserController(userService, officeService, new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
@@ -222,10 +222,12 @@ class UserControllerTest {
         mockUser.setDisplayName("Managed User");
         String lastLoggedIn = "2024-06-01T12:00:00Z";
         List<AppRoleDto> appRoles = List.of(new AppRoleDto());
+        List<Office> offices = List.of(Office.builder().build());
 
         when(userService.getUserById(userId)).thenReturn(mockUser);
         when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(appRoles);
+        when(officeService.getOffices()).thenReturn(offices);
 
         // Act
         String view = userController.manageUser(userId, model);
@@ -235,6 +237,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(appRoles);
+        assertThat(model.getAttribute("offices")).isEqualTo(offices);
         verify(userService).getUserById(userId);
         verify(userService).getLastLoggedInByUserId(userId);
     }
@@ -369,20 +372,39 @@ class UserControllerTest {
     @Test
     void offices() {
         HttpSession session = new MockHttpSession();
+        UUID officeId = UUID.randomUUID();
         OfficeData officeData = new OfficeData();
+        officeData.setSelectedOffices(List.of(officeId.toString()));
         session.setAttribute("officeData", officeData);
+        Office office1 = Office.builder().id(officeId).build();
+        Office office2 = Office.builder().id(UUID.randomUUID()).build();
+        List<Office> dbOffices = List.of(office1, office2);
+        when(officeService.getOffices()).thenReturn(dbOffices);
         String view = userController.offices(session, model);
-        assertThat(model.getAttribute("officeData")).isNotNull();
+        List<OfficeModel> modelOfficeData = (List<OfficeModel>) model.getAttribute("officeData");
+        assertThat(modelOfficeData).isNotNull();
+        assertThat(modelOfficeData.get(0).isSelected()).isTrue();
+        assertThat(modelOfficeData.get(1).isSelected()).isFalse();
         assertThat(view).isEqualTo("user/offices");
     }
 
     @Test
     void postOffices() {
         HttpSession session = new MockHttpSession();
-        List<String> selectedOffices = List.of("1");
+        UUID officeId1 = UUID.randomUUID();
+        UUID officeId2 = UUID.randomUUID();
+        List<String> selectedOffices = List.of(officeId1.toString());
+        Office office1 = Office.builder().id(officeId1).name("of1").build();
+        Office office2 = Office.builder().id(officeId2).name("of2").build();
+        List<Office> dbOffices = List.of(office1, office2);
+        when(officeService.getOffices()).thenReturn(dbOffices);
         RedirectView view = userController.postOffices(session, selectedOffices);
         assertThat(view.getUrl()).isEqualTo("/user/create/check-answers");
-        assertThat(session.getAttribute("officeData")).isNotNull();
+        OfficeData modelOfficeData = (OfficeData) session.getAttribute("officeData");
+        assertThat(modelOfficeData.getSelectedOffices()).hasSize(1);
+        assertThat(modelOfficeData.getSelectedOfficesDisplay()).hasSize(1);
+        assertThat(modelOfficeData.getSelectedOffices().get(0)).isEqualTo(officeId1.toString());
+        assertThat(modelOfficeData.getSelectedOfficesDisplay().get(0)).isEqualTo("of1");
     }
 
     @Test
@@ -440,13 +462,15 @@ class UserControllerTest {
         session.setAttribute("user", user);
         List<String> roles = List.of("app1");
         session.setAttribute("roles", roles);
-        when(userService.createUser(any(), any())).thenReturn(user);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
+        session.setAttribute("officeData", new OfficeData());
+        when(userService.createUser(any(), any(), any())).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
+        assertThat(model.getAttribute("officeData")).isNull();
     }
 
     @Test

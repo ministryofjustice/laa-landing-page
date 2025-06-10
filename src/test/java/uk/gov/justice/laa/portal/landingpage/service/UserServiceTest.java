@@ -50,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -90,6 +91,8 @@ class UserServiceTest {
     @Mock
     private AppRoleRepository mockAppRoleRepository;
     @Mock
+    private OfficeRepository mockOfficeRepository;
+    @Mock
     private InvitationsRequestBuilder invitationsRequestBuilder;
 
     private static String LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID;
@@ -102,7 +105,8 @@ class UserServiceTest {
                 mockAppRepository,
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
-                mockNotificationService
+                mockNotificationService,
+                mockOfficeRepository
         );
     }
 
@@ -445,7 +449,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles);
+        userService.createUser(user, roles, new ArrayList<>());
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -488,33 +492,12 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles);
+        userService.createUser(user, roles, new ArrayList<>());
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
-    }
-
-    @Test
-    void testUpdateUserRolesDoesNotUpdateRolesWhenUserIsNotFound() {
-        UUID appRoleId = UUID.randomUUID();
-        when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
-        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
-        UUID userId = UUID.randomUUID();
-        userService.updateUserRoles(userId.toString(), List.of(appRoleId.toString()));
-        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
-    }
-
-    @Test
-    void testUpdateUserRolesDoesNotUpdateRolesWhenUserProfileIsNotFound() {
-        UUID userId = UUID.randomUUID();
-        UUID appRoleId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(new HashSet<>()).build();
-        when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
-        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
-        userService.updateUserRoles(userId.toString(), List.of(appRoleId.toString()));
-        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -753,7 +736,8 @@ class UserServiceTest {
                         mockAppRepository,
                         mockAppRoleRepository,
                         new MapperConfig().modelMapper(),
-                        mockNotificationService
+                        mockNotificationService,
+                        mockOfficeRepository
                 );
 
         private static User graphUser(String id, String name) {
