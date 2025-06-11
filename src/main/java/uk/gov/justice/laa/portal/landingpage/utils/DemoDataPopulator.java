@@ -165,109 +165,117 @@ public class DemoDataPopulator {
     }
 
     private void initialTestData() {
-        synchronized (this) {
-            Firm firm = firmRepository.findFirmByName("Firm One");
-            if (firm != null) {
-                System.out.println("Data population is already being done!!");
-                return;
-            }
-        }
-
-        Firm firm1 = buildFirm("Firm One");
-        Firm firm2 = buildFirm("Firm Two");
-        firmRepository.saveAll(Arrays.asList(firm1, firm2));
-
-        Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
-        Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
-        Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
-        Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
-        Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
-        firm1.getOffices().addAll(Set.of(office1, office2));
-        firm2.getOffices().addAll(Set.of(office3, office4, office5));
-        officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
-
-        List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
-            assert requestConfig.queryParameters != null;
-            requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
-        })).getValue();
-        assert applications != null;
-
-        Set<AppRegistration> appRegistrations = new HashSet<>();
-        Set<String> appNames = new HashSet<>();
-
-        for (Application app : applications) {
-            if (!appNames.contains(app.getDisplayName())) {
-                appNames.add(app.getDisplayName());
-                appRegistrations.add(buildEntraAppRegistration(app.getDisplayName()));
-            }
-        }
-
-        entraAppRegistrationRepository.saveAll(appRegistrations);
-
-        List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
-            assert requestConfig.queryParameters != null;
-            requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
-            requestConfig.queryParameters.top = 10;
-        })).getValue();
-
-        List<EntraUser> entraUsers = new ArrayList<>();
-        assert users != null;
-        for (User user : users) {
-            EntraUser entraUser = buildEntraUser(user);
-            entraUser.setUserAppRegistrations(appRegistrations);
-            entraUsers.add(entraUser);
-        }
-
-        //Ensuring the user being running the app is added
-        boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
 
         try {
-            if (!userAlreadyAdded) {
-                UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
-                User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
-                    assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
-                });
-                assert me != null;
-                entraUsers.add(buildEntraUser(me));
-                users.add(me);
+
+            synchronized (this) {
+                Firm firm = firmRepository.findFirmByName("Firm One");
+                if (firm != null) {
+                    System.out.println("Data population is already being done!!");
+                    return;
+                }
             }
-        } catch (Exception e) {
-            System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
-            System.err.println(e.getMessage());
-            System.err.println("Continuing with the list of users in the database");
+
+            Firm firm1 = buildFirm("Firm One");
+            Firm firm2 = buildFirm("Firm One");
+            firmRepository.saveAll(Arrays.asList(firm1, firm2));
+
+            Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
+            Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
+            Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
+            Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
+            Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
+            firm1.getOffices().addAll(Set.of(office1, office2));
+            firm2.getOffices().addAll(Set.of(office3, office4, office5));
+            officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
+
+            List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
+                assert requestConfig.queryParameters != null;
+                requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
+            })).getValue();
+            assert applications != null;
+
+            Set<AppRegistration> appRegistrations = new HashSet<>();
+            Set<String> appNames = new HashSet<>();
+
+            for (Application app : applications) {
+                if (!appNames.contains(app.getDisplayName())) {
+                    appNames.add(app.getDisplayName());
+                    appRegistrations.add(buildEntraAppRegistration(app.getDisplayName()));
+                }
+            }
+
+            entraAppRegistrationRepository.saveAll(appRegistrations);
+
+            List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
+                assert requestConfig.queryParameters != null;
+                requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+                requestConfig.queryParameters.top = 10;
+            })).getValue();
+
+            List<EntraUser> entraUsers = new ArrayList<>();
+            assert users != null;
+            for (User user : users) {
+                EntraUser entraUser = buildEntraUser(user);
+                entraUser.setUserAppRegistrations(appRegistrations);
+                entraUsers.add(entraUser);
+            }
+
+            //Ensuring the user being running the app is added
+            boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
+
+            try {
+                if (!userAlreadyAdded) {
+                    UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
+                    User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
+                        assert requestConfig.queryParameters != null;
+                        requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
+                    });
+                    assert me != null;
+                    entraUsers.add(buildEntraUser(me));
+                    users.add(me);
+                }
+            } catch (Exception e) {
+                System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
+                System.err.println(e.getMessage());
+                System.err.println("Continuing with the list of users in the database");
+            }
+
+            entraUserRepository.saveAll(entraUsers);
+
+            List<App> laaApps = new ArrayList<>();
+
+            for (AppRegistration appRegistration : appRegistrations) {
+                laaApps.add(buildLaaApp(appRegistration, appRegistration.getName()));
+            }
+
+            laaAppRepository.saveAll(laaApps);
+
+            List<AppRole> appRoles = new ArrayList<>();
+            for (App app : laaApps) {
+                appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
+            }
+
+            laaAppRoleRepository.saveAll(appRoles);
+
+            List<UserProfile> userProfiles = new ArrayList<>();
+
+            for (EntraUser entraUser : entraUsers) {
+                UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+                userProfile.getAppRoles().addAll(appRoles);
+                userProfile.setFirm(firm1);
+                userProfiles.add(userProfile);
+            }
+
+
+            laaUserProfileRepository.saveAll(userProfiles);
+
+            System.out.println("Dummy Data Populated!!");
+        } catch (Exception ex) {
+            System.err.println("Error populating dummy data!!");
+            System.err.println(ex.getMessage());
+            ex.printStackTrace();
         }
-
-        entraUserRepository.saveAll(entraUsers);
-
-        List<App> laaApps = new ArrayList<>();
-
-        for (AppRegistration appRegistration : appRegistrations) {
-            laaApps.add(buildLaaApp(appRegistration, appRegistration.getName()));
-        }
-
-        laaAppRepository.saveAll(laaApps);
-
-        List<AppRole> appRoles = new ArrayList<>();
-        for (App app : laaApps) {
-            appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
-        }
-
-        laaAppRoleRepository.saveAll(appRoles);
-
-        List<UserProfile> userProfiles = new ArrayList<>();
-
-        for (EntraUser entraUser : entraUsers) {
-            UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            userProfile.getAppRoles().addAll(appRoles);
-            userProfile.setFirm(firm1);
-            userProfiles.add(userProfile);
-        }
-
-
-        laaUserProfileRepository.saveAll(userProfiles);
-
-        System.out.println("Dummy Data Populated!!");
 
     }
 
