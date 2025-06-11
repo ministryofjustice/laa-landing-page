@@ -76,7 +76,14 @@ public class UserProfile extends AuditableEntity {
     private Set<Office> offices;
 
 
-    @ManyToMany(mappedBy = "userProfiles", fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_profile_app_role",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "app_role_id"),
+            inverseForeignKey = @ForeignKey(name = "FK_user_profile_app_role_app_role_id")
+    )
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;

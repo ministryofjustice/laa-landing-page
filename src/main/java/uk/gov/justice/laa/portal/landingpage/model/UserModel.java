@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.GeneratedValue;
@@ -8,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -30,4 +33,7 @@ public class UserModel {
 
     private String lastLoggedIn;
 
+    @Column(name = "offices")
+    @ElementCollection(targetClass = String.class)
+    private List<String> offices;
 }

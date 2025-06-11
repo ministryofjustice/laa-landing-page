@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy the JAR from the build output to the container
 RUN find / -name 'laa-landing-page.jar' -exec cp "{}" /app/application.jar  \;
-#COPY build/libs/laa-landing-page.jar /app/application.jar
 
 # Set the user to run the application
 RUN chown -R appuser:appgroup /app
