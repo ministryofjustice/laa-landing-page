@@ -99,3 +99,77 @@ spec:
           for: 1m
           labels:
             severity: ${ALERT_SEVERITY}
+
+    - name: database-rules
+      rules:
+        - alert: RDSHighCPU
+          expr: aws_rds_cpuutilization_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 75
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: CPU usage for the RDS instance in {{ $labels.namespace }} over 75%
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSLowStorage
+          expr: aws_rds_free_storage_space_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} < 1024*1024*1024
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Free storage space for the RDS instance in {{ $labels.namespace }} is less than 1GB
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSHighReadLatency
+          expr: aws_rds_read_latency_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 0.5
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Read latency for the RDS instance in {{ $labels.namespace }} is over 0.5 seconds
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSHighWriteLatency
+          expr: aws_rds_write_latency_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 0.5
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Write latency for the RDS instance in {{ $labels.namespace }} is over 0.5 seconds
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSLowFreeableMemory
+          expr: aws_rds_freeable_memory_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} < 500*1024*1024
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Freeable memory for the RDS instance in {{ $labels.namespace }} is less than 500MB
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSHighWriteIOPS
+          expr: aws_rds_write_iops_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 300
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Write operations for the RDS instance in {{ $labels.namespace }} are over 300 per second
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSHighReadIOPS
+          expr: aws_rds_read_iops_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 900
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Read operations for the RDS instance in {{ $labels.namespace }} are over 900 per second
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+
+        - alert: RDSHighDatabaseConnections
+          expr: aws_rds_database_connections_average{dbinstance_identifier="$RDS_DB_IDENTIFIER"} > 65
+          for: 5m
+          labels:
+            severity: ${ALERT_SEVERITY}
+          annotations:
+            message: Database connection count for the RDS instance in {{ $labels.namespace }} is over 65
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
