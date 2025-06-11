@@ -92,7 +92,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
+                    "text": "Trivy Vulnerability Scan Report: ${{ github.event.repository.name }}"
                   }
                 },
                 {

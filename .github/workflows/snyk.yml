@@ -8,8 +8,7 @@ on:
       - synchronize
       - closed
   schedule:
-    # Runs every Monday at 9AM 
-    - cron: '0 9 * * 1'
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
 jobs:
   vulnerability-scan:
     runs-on: ubuntu-latest
@@ -76,3 +75,90 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sarif_files
+
+      # post vulns to slack
+      - name: Vulnerability Description Extraction and Print (Multiple Files)
+        run: |
+          # Extract and concatenate vulnerability descriptions from both SARIF files
+          SCAN_RESULTS_1=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/snyk_test.sarif)
+          SCAN_RESULTS_2=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/snyk_code_test.sarif)
+          SCAN_RESULTS_3=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/snyk_iac_test.sarif)
+          SCAN_RESULTS_4=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/snyk_docker_test.sarif)
+
+          # Combine both into a single variable
+          SCAN_RESULTS="$SCAN_RESULTS_1\n$SCAN_RESULTS_2\n$SCAN_RESULTS_3\n$SCAN_RESULTS_4"
+
+          # Export severity counts to GitHub environment
+          {
+            echo "CRITICAL=$(echo -e "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
+            echo "HIGH=$(echo -e "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
+            echo "MEDIUM=$(echo -e "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+            echo "LOW=$(echo -e "$SCAN_RESULTS" | grep -o LOW | wc -l)"
+          } >> "$GITHUB_ENV"
+
+          # Print results for visibility in workflow logs
+          echo -e "$SCAN_RESULTS"
+
+      - name: Send notification to Slack
+        id: slack
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "SNYK Vulnerability Scan Report: ${{ github.event.repository.name }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Scan Summary:*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
+                  }
+                }
+              ]
+            }
+
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
