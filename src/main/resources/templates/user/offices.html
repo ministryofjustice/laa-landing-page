@@ -46,9 +46,9 @@
                         <div class="govuk-checkboxes__divider">or</div>
                         <div th:each="office : ${officeData}">
                             <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="office-{office.id}" name="offices"
-                                    type="checkbox" th:value="${office.name}" th:checked="${office.selected}">
-                                <label class="govuk-label govuk-checkboxes__label" for="office-{office.id}"
+                                <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
+                                    type="checkbox" th:value="${office.id}" th:checked="${office.selected}">
+                                <label class="govuk-label govuk-checkboxes__label"
                                     th:text="${office.name}">
                                 </label>
                             </div>
