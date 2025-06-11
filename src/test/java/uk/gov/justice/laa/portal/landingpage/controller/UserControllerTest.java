@@ -455,6 +455,36 @@ class UserControllerTest {
     }
 
     @Test
+    void addUserCheckAnswersGetFirmAdmin() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("app1-tester");
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        userRole.setApp(app1);
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("app1-dev");
+        userRole2.setApp(app1);
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        List<String> selectedRoles = List.of("app1-dev");
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
+        session.setAttribute("officeData", new OfficeData());
+        session.setAttribute("firmAdmin", true);
+        String view = userController.addUserCheckAnswers(model, session);
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
+
+        assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(Boolean.parseBoolean(model.getAttribute("firmAdmin").toString())).isTrue();
+    }
+
+    @Test
     void addUserCheckAnswersGet_NoAppsProvided() {
         UserRole userRole = new UserRole();
         userRole.setAppRoleId("app1-tester");
