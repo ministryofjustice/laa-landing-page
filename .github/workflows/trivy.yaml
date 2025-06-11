@@ -48,7 +48,6 @@ jobs:
           format: 'sarif'
           output: 'fs-trivy-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          ignore-policy: '.trivyignore'
 
       - name: Create SARIF directory and move SARIF files
         run: |
