@@ -1,9 +1,0 @@
-databaseChangeLog:
-  - include:
-      file: db/changelog/changeset/05062025-ddl-example-person-table-create.sql
-  - include:
-      file: db/changelog/changeset/05062025-dml-example-person-insert.sql
-  - include:
-      file: db/changelog/changeset/05062025-ddl-example-person-table-alter.sql
-  - include:
-      file: db/changelog/changeset/05062025-ddl-example-person-table-drop.sql
