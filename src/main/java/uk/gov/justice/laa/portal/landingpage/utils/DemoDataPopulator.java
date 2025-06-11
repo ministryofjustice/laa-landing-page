@@ -177,7 +177,7 @@ public class DemoDataPopulator {
             }
 
             Firm firm1 = buildFirm("Firm One");
-            Firm firm2 = buildFirm("Firm One");
+            Firm firm2 = buildFirm("Firm Two");
             firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
             Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
