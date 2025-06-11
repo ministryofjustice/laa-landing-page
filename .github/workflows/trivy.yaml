@@ -1,0 +1,60 @@
+name: Trivy Vulnerability Scan
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+      - closed
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  install_trivy:
+    runs-on: ubuntu-latest
+    env:
+      MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}
+      MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        run: |
+          docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+
+      # scan image for vulns
+      - name: Scan Docker Image with Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'laa-landing-page:latest'
+          # exit-code: 1
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          output: 'trivy-results.sarif'
+          format: 'sarif'
+
+      # enable vulnerability and secret detection as well as misconfiguration detection
+      - name: Run Trivy Vulnerability Scanner in Repo Mode
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        with:
+          scan-type: 'fs'
+          scanners: misconfig,vuln,secret
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'fs-trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+
+      - name: Create SARIF directory and move SARIF files
+        run: |
+          mkdir trivy_sarif_files &&
+          mv trivy-results.sarif fs-trivy-results.sarif trivy_sarif_files/
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy_sarif_files

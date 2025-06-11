@@ -15,13 +15,16 @@ spec:
         app: laa-landing-page # this should match the selector in service.yml
     spec:
       securityContext:
+        runAsUser: 1000
         runAsNonRoot: true
       containers:
         - name: laa-landing-page
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           imagePullPolicy: IfNotPresent
           securityContext:
+            runAsUser: 1000
             runAsNonRoot: true
+            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -29,7 +32,16 @@ spec:
               type: RuntimeDefault
           ports:
             - containerPort: 8080
+          resources:
+            requests:
+              memory: "600Mi"
+              cpu: "100m"
+            limits:
+              memory: "1200Mi"
+              cpu: "300m"
           env:
+            - name: POPULATE_DUMMY_DATA
+              value: "${POPULATE_DUMMY_DATA}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
