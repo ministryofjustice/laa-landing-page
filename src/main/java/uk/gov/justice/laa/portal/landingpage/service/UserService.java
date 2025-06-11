@@ -317,12 +317,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices, Firm firm) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, Firm firm, boolean isFirmAdmin) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices, firm);
+        persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin);
 
         return invitedUser;
     }
@@ -344,7 +344,7 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, Firm firm) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, Firm firm, boolean isFirmAdmin) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -354,7 +354,7 @@ public class UserService {
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
                 .createdBy("Admin")

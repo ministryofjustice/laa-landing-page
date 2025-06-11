@@ -150,6 +150,7 @@ public class UserController {
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
             @RequestParam("firm") String firmId,
+            @RequestParam("firmAdmin") Boolean firmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -161,6 +162,9 @@ public class UserController {
         user.setMail(email);
         session.setAttribute("user", user);
         session.setAttribute("firm", firmId);
+        if (Objects.nonNull(firmAdmin) && firmAdmin) {
+            session.setAttribute("firmAdmin", true);
+        }
         return new RedirectView("/user/create/services");
     }
 
@@ -268,7 +272,12 @@ public class UserController {
         String selectedFirmId = (String) session.getAttribute("firm");
         Firm firm = firmService.getFirm(selectedFirmId);
         model.addAttribute("firm", firm);
-
+        Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
+        if (Objects.nonNull(firmAdmin) && firmAdmin) {
+            model.addAttribute("firmAdmin", true);
+        } else {
+            model.addAttribute("firmAdmin", false);
+        }
         return "add-user-check-answers";
     }
 
@@ -288,7 +297,9 @@ public class UserController {
             }
             String selectedFirmId = (String) session.getAttribute("firm");
             Firm firm = firmService.getFirm(selectedFirmId);
-            userService.createUser(user, selectedRoles, selectedOffices, firm);
+            Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
+            boolean isFirmAdmin = firmAdmin != null && firmAdmin;
+            userService.createUser(user, selectedRoles, selectedOffices, firm, isFirmAdmin);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }

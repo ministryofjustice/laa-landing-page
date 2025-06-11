@@ -297,7 +297,7 @@ class UserControllerTest {
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
-        RedirectView view = userController.postUser("firstName", "lastName", "email", "firm", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "firm", false, session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
@@ -316,7 +316,7 @@ class UserControllerTest {
         session.setAttribute("user", mockUser);
         session.setAttribute("firm", "oldFirm");
         User sessionUser = (User) session.getAttribute("user");
-        RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", false, session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
@@ -486,7 +486,7 @@ class UserControllerTest {
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", "firmId");
         when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), any(), any(), any())).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(session.getAttribute("roles")).isNull();
