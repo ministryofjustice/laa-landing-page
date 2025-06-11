@@ -7,6 +7,9 @@ on:
       - edited
       - synchronize
       - closed
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   install_trivy:
@@ -23,6 +26,7 @@ jobs:
         run: |
           docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
 
+      # scan image for vulns
       - name: Scan Docker Image with Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
