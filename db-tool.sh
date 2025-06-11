@@ -34,6 +34,9 @@ show_help() {
   echo "  clear database                  Deletes all rows from all tables in the public schema."
   echo "                                  (This is a destructive action and will ask for confirmation)."
   echo
+  echo "  drop all-tables                 Deletes all tables from the public schema."
+  echo "                                  (This is a DANGEROUS and destructive action)."
+  echo
 }
 
 # --- Pre-flight Checks ---
@@ -138,6 +141,27 @@ case "$COMMAND" in
       fi
     else
         echo "Error: Unknown 'clear' command. Did you mean 'clear database'?" >&2
+        exit 1
+    fi
+    ;;
+
+  drop)
+    if [ "$1" == "all-tables" ]; then
+      echo "DANGER: This will permanently delete all tables and their data from the public schema of '$POSTGRES_DB_NAME'."
+      read -p "Are you absolutely sure? This cannot be undone. [y/N] " -n 1 -r
+      echo # move to a new line
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Dropping all tables..."
+        # This command generates and executes a DROP TABLE statement for each table.
+        # CASCADE drops dependent objects (like views or foreign keys) as well.
+        docker-compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" "$DOCKER_SERVICE_NAME" \
+          psql -U "$POSTGRES_USERNAME" -d "$POSTGRES_DB_NAME" -c "DO \$\$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'DROP TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END \$\$;"
+        echo "All tables dropped."
+      else
+        echo "Operation cancelled."
+      fi
+    else
+        echo "Error: Unknown 'drop' command. Did you mean 'drop all-tables'?" >&2
         exit 1
     fi
     ;;
