@@ -15,6 +15,7 @@ spec:
         app: laa-landing-page # this should match the selector in service.yml
     spec:
       securityContext:
+        runAsUser: 1000
         runAsNonRoot: true
       containers:
         - name: laa-landing-page
@@ -30,6 +31,13 @@ spec:
               type: RuntimeDefault
           ports:
             - containerPort: 8080
+          resources:
+            requests:
+              memory: "600Mi"
+              cpu: "100m"
+            limits:
+              memory: "1200Mi"
+              cpu: "300m"
           env:
             - name: AZURE_CLIENT_ID
               valueFrom:
