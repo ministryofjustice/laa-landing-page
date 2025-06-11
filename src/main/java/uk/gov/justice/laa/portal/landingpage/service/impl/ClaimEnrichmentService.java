@@ -14,7 +14,6 @@ import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentInterface;
 import uk.gov.justice.laa.portal.landingpage.service.EntraIdService;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Service implementation for enriching user claims with additional permissions from Entra ID.
@@ -30,18 +29,18 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
     public ClaimEnrichmentResponse enrichClaims(ClaimEnrichmentRequest request) {
         log.info("Processing claim enrichment for user: {}", request.getUserId());
 
-        // 1. Validate the token
+        // Validate the token
         if (!entraIdService.validateToken(request.getToken())) {
             throw new ClaimEnrichmentException("Invalid or expired token");
         }
 
-        // 2. Get authenticated user details
+        // Get authenticated context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ClaimEnrichmentException("User not authenticated");
         }
 
-        // 3. Extract user info from JWT
+        // Extract user info from JWT
         Jwt jwt = (Jwt) authentication.getPrincipal();
         String userPrincipalName = jwt.getClaim("preferred_username");
 
@@ -50,18 +49,17 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
         }
 
         try {
-            // 4. Get user details from Entra ID
-            CompletableFuture<User> userFuture = entraIdService.getUserByPrincipalName(userPrincipalName);
-            User user = userFuture.join();
+            // Get user details from Entra ID using the access token from the request
+            User user = entraIdService.getUserByPrincipalName(request.getToken());
 
             if (user == null) {
                 throw new ClaimEnrichmentException("User not found in Entra ID");
             }
 
-            // 5. Get user's group memberships (permissions)
-            List<String> userGroups = entraIdService.getUserGroupMemberships(user.getId()).join();
+            // Get user's group memberships (permissions)
+            List<String> userGroups = entraIdService.getUserGroupMemberships(request.getToken());
 
-            // 6. Map groups to application permissions (simplified example)
+            // Map groups to application permissions (simplified example)
             List<String> permissions = mapGroupsToPermissions(userGroups);
 
             log.info("Successfully enriched claims for user: {}", userPrincipalName);
@@ -78,11 +76,6 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
         }
     }
 
-    /**
-     * Map Entra ID groups to application permissions.
-     * This is a simplified example - in a real application, you would likely
-     * have a more sophisticated mapping, possibly stored in a database.
-     */
     private List<String> mapGroupsToPermissions(List<String> groupIds) {
         // This is a simplified example - in a real application, you would
         // map group IDs to application-specific permissions, possibly using a database

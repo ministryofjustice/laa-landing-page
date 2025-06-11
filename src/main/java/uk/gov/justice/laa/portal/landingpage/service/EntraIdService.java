@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.azure.identity.ClientSecretCredential;
+import com.microsoft.graph.models.AppRole;
 import com.microsoft.graph.models.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,29 +22,27 @@ import java.util.stream.Collectors;
 public class EntraIdService {
 
     private final GraphApiService graphApiService;
-    private final ClientSecretCredential clientSecretCredential;
 
     /**
-     * Get user details from Entra ID by user principal name (email).
-     * @param userPrincipalName The user's principal name (email)
-     * @return User details if found
+     * Get user details from Entra ID using the provided access token.
+     * @param accessToken The access token for authentication
+     * @return User details if found, null otherwise
      */
-    public CompletableFuture<User> getUserByPrincipalName(String userPrincipalName) {
-        return CompletableFuture.completedFuture(graphApiService.getUserProfile(""));
+    public User getUserByPrincipalName(String accessToken) {
+        return graphApiService.getUserProfile(accessToken);
     }
 
     /**
      * Get user's group memberships from Entra ID.
-     * @param userId The user's ID in Entra ID
-     * @return List of group IDs the user is a member of
+     * @param accessToken The access token for authentication
+     * @return List of group display names the user has access to
      */
-    public CompletableFuture<List<String>> getUserGroupMemberships(String userId) {
-        return CompletableFuture.completedFuture(
-            graphApiService.getUserAssignedApps("").stream()
-                .map(role -> role.getDisplayName()) // This is a public field in the SDK
+    public List<String> getUserGroupMemberships(String accessToken) {
+        return graphApiService.getUserAssignedApps(accessToken)
+                .stream()
+                .map(AppRole::getDisplayName)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList())
-        );
+                .collect(Collectors.toList());
     }
 
     /**
