@@ -493,29 +493,12 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "ALTER TABLE entra_user ADD CONSTRAINT end_date_after_start_date CHECK (end_date > start_date)"
-        - createIndex:
-            tableName: user_profile
-            indexName: one_default_profile_per_user
-            unique: true
-            columns:
-              - column:
-                  name: entra_user_id
-            where: default_profile = true
-        - createIndex:
-            tableName: user_profile
-            indexName: one_profile_per_non_multi_firm_user
-            unique: true
-            columns:
-              - column:
-                  name: entra_user_id
-            where: "user_type != 'EXTERNAL_MULTI_FIRM'"
-        - createIndex:
-            tableName: user_profile
-            indexName: one_profile_per_firm_for_multi_firm_user
-            unique: true
-            columns:
-              - column:
-                  name: entra_user_id
-              - column:
-                  name: firm_id
-            where: "user_type = 'EXTERNAL_MULTI_FIRM'"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_default_profile_per_user ON user_profile(entra_user_id) WHERE default_profile = true"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_non_multi_firm_user ON user_profile(entra_user_id) WHERE user_type != 'EXTERNAL_MULTI_FIRM'"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
