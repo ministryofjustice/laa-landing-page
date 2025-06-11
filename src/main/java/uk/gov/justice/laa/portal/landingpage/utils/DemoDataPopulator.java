@@ -165,6 +165,14 @@ public class DemoDataPopulator {
     }
 
     private void initialTestData() {
+        synchronized (this) {
+            Firm firm = firmRepository.findFirmByName("Firm One");
+            if (firm != null) {
+                System.out.println("Data population is already being done!!");
+                return;
+            }
+        }
+
         Firm firm1 = buildFirm("Firm One");
         Firm firm2 = buildFirm("Firm Two");
         firmRepository.saveAll(Arrays.asList(firm1, firm2));
