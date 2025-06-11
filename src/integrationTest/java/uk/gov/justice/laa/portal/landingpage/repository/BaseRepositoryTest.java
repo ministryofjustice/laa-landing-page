@@ -68,7 +68,7 @@ public class BaseRepositoryTest {
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser)
-                .userType(userType)
+                .userType(userType).appRoles(HashSet.newHashSet(1))
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
