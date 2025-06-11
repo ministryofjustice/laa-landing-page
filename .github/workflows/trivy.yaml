@@ -74,6 +74,7 @@ jobs:
             echo "CRITICAL=$(echo -e "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
             echo "HIGH=$(echo -e "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
             echo "MEDIUM=$(echo -e "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+            echo "LOW=$(echo -e "$SCAN_RESULTS" | grep -o LOW | wc -l)"
           } >> "$GITHUB_ENV"
 
           # Print results for visibility in workflow logs
@@ -105,28 +106,35 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*CRITICAL:* :rotating_light: ${{ env.CRITICAL }}"
+                    "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
                   }
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*HIGH:* :warning: ${{ env.HIGH }}"
+                    "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
                   }
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*MEDIUM:* :yellow_heart: ${{ env.MEDIUM }}"
+                    "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
                   }
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Please review the detailed scan results and take necessary actions.>"
+                    "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please review the detailed scan results and take necessary actions."
                   }
                 }
               ]
