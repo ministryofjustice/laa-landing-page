@@ -62,7 +62,7 @@ jobs:
       # post vulns to slack
       - name: CVE Description escaped extraction and print
         run: |
-          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' fs-trivy-results.sarif)
+          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/fs-trivy-results.sarif)
           {
             echo "CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
             echo "HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
