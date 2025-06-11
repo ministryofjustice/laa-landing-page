@@ -32,16 +32,16 @@
                         <label class="govuk-label govuk-label--m govuk-!-width-one-third" for=" firmName">
                             Firm Name
                         </label>
-                        <select class="govuk-select" id="firmName" name="firmName">
+                        <select class="govuk-select" id="firm" name="firm">
                             <div th:each="firm : ${firms}">
-                                <option th:value="${firm.name}" th:text="${firm.name}"></option>
+                                <option th:value="${firm.id}" th:text="${firm.name}"></option>
                             </div>
                         </select>
                         <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
                             data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
                                 <input class="govuk-checkboxes__input" id="firmAdmin" name="firmAdmin" type="checkbox"
-                                    value="Firm Admin">
+                                    value="true" />
                                 <label class="govuk-label govuk-checkboxes__label" for="firmAdmin">
                                     Firm Admin
                                 </label>

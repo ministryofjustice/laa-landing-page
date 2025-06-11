@@ -1,10 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,9 +19,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+
+import com.microsoft.graph.models.User;
+
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -34,11 +35,10 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 /**
  * User Controller
@@ -150,7 +150,7 @@ public class UserController {
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
             @RequestParam("firm") String firmId,
-            @RequestParam("firmAdmin") Boolean firmAdmin,
+            @RequestParam(value = "firmAdmin", required = false) String firmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -162,7 +162,7 @@ public class UserController {
         user.setMail(email);
         session.setAttribute("user", user);
         session.setAttribute("firm", firmId);
-        if (Objects.nonNull(firmAdmin) && firmAdmin) {
+        if (Objects.nonNull(firmAdmin) && Boolean.parseBoolean(firmAdmin)) {
             session.setAttribute("firmAdmin", true);
         }
         return new RedirectView("/user/create/services");
