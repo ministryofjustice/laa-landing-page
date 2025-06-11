@@ -39,6 +39,18 @@ spec:
             limits:
               memory: "1200Mi"
               cpu: "300m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
           env:
             - name: POPULATE_DUMMY_DATA
               value: "${POPULATE_DUMMY_DATA}"

@@ -5,6 +5,7 @@
 # Ignore misconfiguration rules
 KSV021
 KSV020
+DS026
 
 # Ignore a Kubernetes misconfiguration about hostPath usage
 KSV0125
