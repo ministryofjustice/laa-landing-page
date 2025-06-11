@@ -58,3 +58,72 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy_sarif_files
+
+      # post vulns to slack
+      - name: CVE Description escaped extraction and print
+        run: |
+          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' fs-trivy-results.sarif)
+          {
+            echo "CRITICAL=$(echo "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
+            echo "HIGH=$(echo "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
+            echo "MEDIUM=$(echo "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+          } >> "$GITHUB_ENV"
+
+          echo "$SCAN_RESULTS"
+
+      # - name: Send notification to Slack
+      #   id: slack
+      #   if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.cve-threshold.outcome == 'failure'
+      #   uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "blocks": [
+      #           {
+      #             "type": "header",
+      #             "text": {
+      #               "type": "plain_text",
+      #               "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Scan Summary:*"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*CRITICAL:* :rotating_light: ${{ env.CRITICAL }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*HIGH:* :warning: ${{ env.HIGH }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*MEDIUM:* :yellow_heart: ${{ env.MEDIUM }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "Please review the detailed scan results and take necessary actions.>"
+      #             }
+      #           }
+      #         ]
+      #       }
+
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
+      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
