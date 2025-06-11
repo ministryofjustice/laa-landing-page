@@ -70,6 +70,7 @@ jobs:
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
           ENV_NAME: ${{ vars.ENV_NAME }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
 
       - name: Deploy to Cloud Platform
         run: |

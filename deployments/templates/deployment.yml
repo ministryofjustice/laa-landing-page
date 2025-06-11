@@ -22,6 +22,7 @@ spec:
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           imagePullPolicy: IfNotPresent
           securityContext:
+            runAsUser: 1000
             runAsNonRoot: true
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
@@ -39,6 +40,8 @@ spec:
               memory: "1200Mi"
               cpu: "300m"
           env:
+            - name: POPULATE_DUMMY_DATA
+              value: "${POPULATE_DUMMY_DATA}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
