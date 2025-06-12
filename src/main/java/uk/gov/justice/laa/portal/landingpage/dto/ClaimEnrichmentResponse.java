@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -13,7 +14,8 @@ import java.util.List;
 @AllArgsConstructor
 public class ClaimEnrichmentResponse {
     private boolean success;
-    private List<String> permissions;
     private String message;
+    private String appName;
+    private Set<String> roles;
     // Add other necessary fields
 }

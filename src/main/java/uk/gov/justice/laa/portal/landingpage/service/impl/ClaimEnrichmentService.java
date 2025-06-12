@@ -3,19 +3,24 @@ package uk.gov.justice.laa.portal.landingpage.service.impl;
 import com.microsoft.graph.models.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentInterface;
 import uk.gov.justice.laa.portal.landingpage.service.EntraIdService;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -27,109 +32,84 @@ import java.util.stream.Collectors;
 public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
 
     private final EntraIdService entraIdService;
+    private final EntraUserRepository entraUserRepository;
+    private final AppRepository appRepository;
 
     @Override
     public ClaimEnrichmentResponse enrichClaims(ClaimEnrichmentRequest request) {
         log.info("Processing claim enrichment for user: {}", request.getUserId());
 
-        // Validate the token
-        if (!entraIdService.validateToken(request.getToken())) {
-            throw new ClaimEnrichmentException("Invalid or expired token");
-        }
-
-        // Get authenticated context
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ClaimEnrichmentException("User not authenticated");
-        }
-
-        // Extract user info from JWT
-        Jwt jwt = (Jwt) authentication.getPrincipal();
-        String userPrincipalName = jwt.getClaim("preferred_username");
-
-        if (userPrincipalName == null || userPrincipalName.isBlank()) {
-            throw new ClaimEnrichmentException("User principal name not found in token");
-        }
-
         try {
-            // Get user details from Entra ID using the access token from the request
+            // 1. Get user details from Entra ID using the token
             User user = entraIdService.getUserByPrincipalName(request.getToken());
-
             if (user == null) {
                 throw new ClaimEnrichmentException("User not found in Entra ID");
             }
 
-            // Get user's group memberships (permissions)
-            // Map groups to application permissions for the target app
-            Map<String, Object> accessInfo = mapGroupsToPermissions(
-                    request.getTargetAppId(),
-                    entraIdService.getUserGroupMemberships(request.getToken())
-            );
-            log.info("Successfully enriched claims for user: {}", userPrincipalName);
+            // 2. Get the EntraUser from database
+            EntraUser entraUser = entraUserRepository.findByEmail(user.getUserPrincipalName())
+                .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
+
+            // 3. Get user's group memberships (permissions)
+            List<String> userGroups = entraIdService.getUserGroupMemberships(request.getToken());
+
+            // 4. Get app by ID from request
+            App app = appRepository.findByAppRegistrationId(UUID.fromString(request.getTargetAppId()))
+                .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
+
+            // 5. Check if user has access to this app
+            boolean hasAccess = entraUser.getUserAppRegistrations().stream()
+                .anyMatch(reg -> reg.getId().equals(app.getAppRegistration().getId()));
+
+            if (!hasAccess) {
+                throw new ClaimEnrichmentException("User does not have access to this application");
+            }
+
+            // 6. Get all roles and permissions for this user and app
+            Map<String, Object> accessInfo = mapGroupsToPermissions(request.getTargetAppId(), userGroups);
+
+            log.info("Successfully processed claim enrichment for user: {}", user.getUserPrincipalName());
 
             return ClaimEnrichmentResponse.builder()
-                    .success(true)
-                    .permissions((List<String>) accessInfo.get("permissions"))
-                    .message("Access granted to " + accessInfo.get("appName"))
-                    .build();
+                .success(true)
+                .roles((Set<String>) accessInfo.get("roles"))
+                .appName((String) accessInfo.get("appName"))
+                .message("Access granted to " + accessInfo.get("appName"))
+                .build();
 
+        } catch (ClaimEnrichmentException e) {
+            log.error("Claim enrichment failed: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Error enriching claims for user {}: {}", userPrincipalName, e.getMessage(), e);
-            throw new ClaimEnrichmentException("Failed to enrich claims: " + e.getMessage(), e);
+            log.error("Unexpected error during claim enrichment", e);
+            throw new ClaimEnrichmentException("Failed to process claim enrichment", e);
         }
     }
 
     private Map<String, Object> mapGroupsToPermissions(String targetAppId, List<String> groupIds) {
-    // Dummy data: Map of app IDs to their configuration
-    Map<String, Map<String, Object>> dummyApps = Map.of(
-        "app1", Map.of(
-            "name", "Test App 1",
-            "requiredRoles", Set.of("case_manager", "admin"),
-            "permissions", List.of("cases:read", "cases:write", "reports:view")
-        ),
-        "app2", Map.of(
-            "name", "Some App",
-            "requiredRoles", Set.of("billing", "admin"),
-            "permissions", List.of("invoices:view", "payments:process"))
-    );
+        // Get the app from database
+        App app = appRepository.findByAppRegistrationId(UUID.fromString(targetAppId))
+                .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
-    // Dummy data: Map of group IDs to their roles
-    Map<String, Set<String>> groupRoles = Map.of(
-        "grp_case_managers", Set.of("case_manager"),
-        "grp_billing_team", Set.of("billing"),
-        "grp_analysts", Set.of("analyst"),
-        "grp_admins", Set.of("admin", "case_manager", "billing", "analyst")
-    );
+        // Get all roles for this app
+        Set<AppRole> appRoles = app.getAppRoles();
 
-    // 1. Collect all roles from user's groups
-    Set<String> userRoles = groupIds.stream()
-        .flatMap(groupId -> groupRoles.getOrDefault(groupId, Set.of()).stream())
-        .collect(Collectors.toSet());
+        // Map group IDs to role names
+        Set<String> userRoles = appRoles.stream()
+                .filter(role -> groupIds.contains(role.getName()))
+                .map(AppRole::getName)
+                .collect(Collectors.toSet());
 
-    // 2. Check if target app exists
-    if (!dummyApps.containsKey(targetAppId)) {
-        throw new ClaimEnrichmentException("Application not found: " + targetAppId);
+        // In this simplified model, permissions are the same as roles
+        // You can add more granular permission logic here if needed later
+        Set<String> permissions = new HashSet<>(userRoles);
+
+        return Map.of(
+                "appId", targetAppId,
+                "appName", app.getName(),
+                "roles", userRoles,
+                "permissions", new ArrayList<>(permissions),
+                "hasAccess", !userRoles.isEmpty()
+        );
     }
-
-    Map<String, Object> appConfig = dummyApps.get(targetAppId);
-    Set<String> requiredRoles = (Set<String>) appConfig.get("requiredRoles");
-    List<String> appPermissions = (List<String>) appConfig.get("permissions");
-
-    // 3. Check if user has any of the required roles
-    boolean hasAccess = userRoles.stream()
-        .anyMatch(requiredRoles::contains);
-
-    if (!hasAccess) {
-        throw new ClaimEnrichmentException("Insufficient permissions for application: " + targetAppId);
-    }
-
-    // 4. Return user's access details for the app
-    return Map.of(
-        "appId", targetAppId,
-        "appName", appConfig.get("name"),
-        "roles", userRoles,
-        "permissions", appPermissions,
-        "hasAccess", true
-    );
-}
 }
