@@ -77,42 +77,54 @@ jobs:
           sarif_file: sarif_files
 
       # post vulns to slack
-      - name: Vulnerability Description Extraction and Severity Count
+      - name: Count vulnerabilities from SARIF files
+        shell: bash
         run: |
           extract_severities() {
-            FILE=$1
+            local file=$1
             jq -r '
               (
-                .runs[0].tool.driver.rules[] | 
+                .runs[0].tool.driver.rules[]? |
                 { (.id): .properties.problem.severity }
               ) as $severityMap
               |
-              .runs[0].results[] |
+              .runs[0].results[]? |
               $severityMap[.ruleId] // empty
-            ' "$FILE"
+            ' "$file"
           }
 
-          # Extract severity values across all SARIF files
-          ALL_SEVERITIES=$( 
-            extract_severities sarif_files/snyk_test.sarif
-            extract_severities sarif_files/snyk_code_test.sarif
-            extract_severities sarif_files/snyk_iac_test.sarif
-            extract_severities sarif_files/snyk_docker_test.sarif
-          )
+          # Initialize variable
+          ALL_SEVERITIES=""
 
-          # Normalize and count severities
+          # Loop over SARIF files and accumulate severities
+          for FILE in sarif_files/*.sarif; do
+            if [[ -f "$FILE" ]]; then
+              echo "Processing $FILE"
+              SEVERITIES=$(extract_severities "$FILE")
+              ALL_SEVERITIES+="$SEVERITIES"$'\n'
+            fi
+          done
+
+          # Count normalized severity values
           CRITICAL=$(echo "$ALL_SEVERITIES" | grep -i -c 'critical')
           HIGH=$(echo "$ALL_SEVERITIES" | grep -i -c 'high')
           MEDIUM=$(echo "$ALL_SEVERITIES" | grep -i -c 'medium')
           LOW=$(echo "$ALL_SEVERITIES" | grep -i -c 'low')
 
-          # Export to GitHub environment
+          # Export to GitHub Actions environment
           {
             echo "CRITICAL=$CRITICAL"
             echo "HIGH=$HIGH"
             echo "MEDIUM=$MEDIUM"
             echo "LOW=$LOW"
           } >> "$GITHUB_ENV"
+
+          # Optional: print values for debugging
+          echo "CRITICAL=$CRITICAL"
+          echo "HIGH=$HIGH"
+          echo "MEDIUM=$MEDIUM"
+          echo "LOW=$LOW"
+
 
       - name: Send notification to Slack
         id: slack
