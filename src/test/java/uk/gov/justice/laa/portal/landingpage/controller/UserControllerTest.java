@@ -297,6 +297,7 @@ class UserControllerTest {
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
+        when(firmService.getFirm(anyString())).thenReturn(Firm.builder().name("Test Firm").build());
         RedirectView view = userController.postUser("firstName", "lastName", "email", "firm", "false", session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
@@ -305,8 +306,10 @@ class UserControllerTest {
         assertThat(sessionUser.getMail()).isEqualTo("email");
         String selectedFirm = session.getAttribute("firm").toString();
         assertThat(selectedFirm).isEqualTo("firm");
+        String selectedFirmName = session.getAttribute("firmName").toString();
+        assertThat(selectedFirmName).isEqualTo("Test Firm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
-        assertThat(session.getAttribute("firmAdmin")).isNull();
+        assertThat((Boolean) session.getAttribute("firmAdmin")).isFalse();
     }
 
     @Test
@@ -316,6 +319,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
         session.setAttribute("firm", "oldFirm");
+        when(firmService.getFirm(eq("newFirm"))).thenReturn(Firm.builder().name("Test Firm").build());
         User sessionUser = (User) session.getAttribute("user");
         RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", "true", session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
@@ -327,6 +331,8 @@ class UserControllerTest {
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
         boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
         assertThat(firmAdmin).isTrue();
+        String selectedFirmName = session.getAttribute("firmName").toString();
+        assertThat(selectedFirmName).isEqualTo("Test Firm");
     }
 
     @Test
