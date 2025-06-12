@@ -571,4 +571,69 @@ class UserControllerTest {
         Assertions.assertEquals("/users", view.getUrl());
     }
 
+    @Test
+    public void testEditUserAppsReturnsCorrectViewAndAttributes() {
+        // Given
+        final UUID userId = UUID.randomUUID();
+        EntraUserDto testUser = new EntraUserDto();
+        testUser.setId(userId.toString());
+        testUser.setFullName("Test User");
+
+        UUID appId = UUID.randomUUID();
+        AppDto testApp = new AppDto();
+        testApp.setId(appId.toString());
+        testApp.setName("Test App");
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(testUser));
+        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp));
+        when(userService.getApps()).thenReturn(List.of(testApp));
+
+        // When
+        String view = userController.editUserApps(userId.toString(), model);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-apps");
+        assertThat(model.getAttribute("user")).isNotNull();
+        EntraUserDto returnedUser = (EntraUserDto) model.getAttribute("user");
+        Assertions.assertEquals(testUser.getId(), returnedUser.getId());
+        Assertions.assertEquals(testUser.getFullName(), returnedUser.getFullName());
+        assertThat(model.getAttribute("userAssignedApps")).isNotNull();
+        Set<AppDto> assignedApps = (Set<AppDto>) model.getAttribute("userAssignedApps");
+        assertThat(assignedApps).hasSize(1);
+        assertThat(model.getAttribute("availableApps")).isNotNull();
+        List<AppDto> availableApps = (List<AppDto>) model.getAttribute("availableApps");
+        assertThat(availableApps).hasSize(1);
+    }
+
+    @Test
+    public void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        List<String> apps = List.of(appId.toString());
+        HttpSession session = new MockHttpSession();
+
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
+
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/users/edit/%s/roles", userId));
+        assertThat(session.getAttribute("selectedApps")).isNotNull();
+        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(returnedApps).hasSize(1);
+        assertThat(returnedApps.getFirst()).isEqualTo(appId.toString());
+    }
+
+    @Test
+    public void testSetSelectedAppsEditThrowsExceptionWhenIdIsNotValidUuid() {
+        // Given
+        String userId = "testUserId";
+        HttpSession session = new MockHttpSession();
+
+        // When
+        assertThrows(IllegalArgumentException.class, () -> userController.setSelectedAppsEdit(userId, List.of(), session));
+
+
+    }
+
 }

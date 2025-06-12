@@ -69,6 +69,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
         entraUserRepository.deleteAll();
         appRoleRepository.deleteAll();
         appRepository.deleteAll();
+        appRegistrationRepository.deleteAll();
     }
 
     @Test

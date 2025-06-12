@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -347,6 +348,8 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("selectedApps") List<String> apps,
                                          HttpSession session) {
         session.setAttribute("selectedApps", apps);
-        return new RedirectView(String.format("/users/edit/%s/roles", id));
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
+        return new RedirectView(String.format("/users/edit/%s/roles", uuid));
     }
 }
