@@ -123,10 +123,20 @@
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
-                                <th:block th:each="office : ${officeData.getSelectedOfficesDisplay()}">
+                                <th:block th:each="office : ${officeData.getSelectedOfficesDisplay()}"
+                                    th:if="${officeData.getSelectedOfficesDisplay().size() > 0}">
                                     <div class="govuk-summary-list__row">
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${office}"></span>
+                                        </dd>
+                                        <dt class="govuk-summary-list__key govuk-visually-hidden">
+                                        </dt>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${officeData.getSelectedOfficesDisplay().size() == 0}">
+                                    <div class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">
+                                            <span>Access to all offices</span>
                                         </dd>
                                         <dt class="govuk-summary-list__key govuk-visually-hidden">
                                         </dt>
