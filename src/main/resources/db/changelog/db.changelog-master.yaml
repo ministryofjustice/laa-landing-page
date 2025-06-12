@@ -1,1 +1,504 @@
 databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: system
+      changes:
+        - createTable:
+            tableName: firm
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: office
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: address
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: firm_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_office_firm_id
+                    referencedTableName: firm
+                    referencedColumnNames: id
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: entra_user
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_name
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: end_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: app_registration
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: app
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  name: path
+                  type: VARCHAR(255)
+              - column:
+                  name: display_order
+                  type: INT
+              - column:
+                  name: is_enabled
+                  type: BOOLEAN
+              - column:
+                  name: app_registration_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_app_app_registration_id
+                    referencedTableName: app_registration
+                    referencedColumnNames: id
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: app_role
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: app_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_app_role_app_id
+                    referencedTableName: app
+                    referencedColumnNames: id
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: user_profile
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: default_profile
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cwa_user_id
+                  type: SMALLINT
+              - column:
+                  name: entra_user_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: FK_user_profile_user_id
+                    referencedTableName: entra_user
+                    referencedColumnNames: id
+              - column:
+                  name: firm_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: FK_user_profile_firm_id
+                    referencedTableName: firm
+                    referencedColumnNames: id
+              - column:
+                  name: created_by
+                  type: VARCHAR(255)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(255)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+
+        - createTable:
+            tableName: user_app_registration
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_app_registration_user_id
+                    referencedTableName: entra_user
+                    referencedColumnNames: id
+              - column:
+                  name: app_registration_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_app_registration_app_registration_id
+                    referencedTableName: app_registration
+                    referencedColumnNames: id
+        - addPrimaryKey:
+            tableName: user_app_registration
+            columnNames: user_id, app_registration_id
+            constraintName: pk_user_app_registration
+
+        - createTable:
+            tableName: user_profile_office
+            columns:
+              - column:
+                  name: user_profile_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_profile_office_user_profile_id
+                    referencedTableName: user_profile
+                    referencedColumnNames: id
+              - column:
+                  name: office_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_profile_office_office_id
+                    referencedTableName: office
+                    referencedColumnNames: id
+        - addPrimaryKey:
+            tableName: user_profile_office
+            columnNames: user_profile_id, office_id
+            constraintName: pk_user_profile_office
+
+        - createTable:
+            tableName: user_profile_app_role
+            columns:
+              - column:
+                  name: user_profile_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_profile_app_role_user_profile_id
+                    referencedTableName: user_profile
+                    referencedColumnNames: id
+              - column:
+                  name: app_role_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_profile_app_role_app_role_id
+                    referencedTableName: app_role
+                    referencedColumnNames: id
+        - addPrimaryKey:
+            tableName: user_profile_app_role
+            columnNames: user_profile_id, app_role_id
+            constraintName: pk_user_profile_app_role
+
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: uid
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: id
+                  type: VARCHAR(255)
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_logged_in
+                  type: VARCHAR(255)
+
+        - createTable:
+            tableName: user_model_offices
+            columns:
+              - column:
+                  name: user_model_uid
+                  type: INT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: FK_user_model_offices_user_model_uid
+                    referencedTableName: users
+                    referencedColumnNames: uid
+              - column:
+                  name: offices
+                  type: VARCHAR(255)
+
+        - createIndex:
+            tableName: user_profile
+            indexName: UserProfileCreatedByIdx
+            columns:
+              - column:
+                  name: created_by
+        - createIndex:
+            tableName: user_profile
+            indexName: UserProfileCreatedDateIdx
+            columns:
+              - column:
+                  name: created_date
+        - createIndex:
+            tableName: user_profile
+            indexName: UserProfileLastModifiedDateIdx
+            columns:
+              - column:
+                  name: last_modified_date
+        - createIndex:
+            tableName: user_profile
+            indexName: UserProfileLastModifiedByIdx
+            columns:
+              - column:
+                  name: last_modified_by
+        - createIndex:
+            tableName: entra_user
+            indexName: UserFirstNameIdx
+            columns:
+              - column:
+                  name: first_name
+        - createIndex:
+            tableName: entra_user
+            indexName: UserLastNameIdx
+            columns:
+              - column:
+                  name: last_name
+        - createIndex:
+            tableName: entra_user
+            indexName: UserEmailIdx
+            columns:
+              - column:
+                  name: email
+        - createIndex:
+            tableName: entra_user
+            indexName: UserNameIdx
+            columns:
+              - column:
+                  name: user_name
+        - createIndex:
+            tableName: entra_user
+            indexName: UserCreatedByIdx
+            columns:
+              - column:
+                  name: created_by
+        - createIndex:
+            tableName: entra_user
+            indexName: UserCreatedDateIdx
+            columns:
+              - column:
+                  name: created_date
+        - createIndex:
+            tableName: entra_user
+            indexName: UserLastModifiedDateIdx
+            columns:
+              - column:
+                  name: last_modified_date
+        - createIndex:
+            tableName: entra_user
+            indexName: UserLastModifiedByIdx
+            columns:
+              - column:
+                  name: last_modified_by
+        - createIndex:
+            tableName: office
+            indexName: OfficeNameIdx
+            columns:
+              - column:
+                  name: name
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_profile ADD CONSTRAINT firm_not_null_for_non_internal_users_only CHECK ((firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL'))"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user ADD CONSTRAINT end_date_after_start_date CHECK (end_date > start_date)"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_default_profile_per_user ON user_profile(entra_user_id) WHERE default_profile = true"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_non_multi_firm_user ON user_profile(entra_user_id) WHERE user_type != 'EXTERNAL_MULTI_FIRM'"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
