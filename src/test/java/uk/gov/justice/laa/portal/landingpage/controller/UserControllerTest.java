@@ -3,14 +3,12 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
@@ -20,14 +18,13 @@ import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -38,10 +35,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -512,12 +512,12 @@ class UserControllerTest {
     }
 
     @Test
-    public void testGetUserRolesOutputMatchesInput() {
+    public void testEditUserRolesOutputMatchesInput() {
         // Given
         final String userId = "12345";
         // Setup test user call
-        User testUser = new User();
-        when(userService.getUserById(userId)).thenReturn(testUser);
+        EntraUserDto testUser = new EntraUserDto();
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
@@ -530,11 +530,13 @@ class UserControllerTest {
         testRole2.setId("testAppRoleId2");
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
-        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
-        when(userService.getAllAvailableRoles()).thenReturn(allRoles);
+        AppRoleDto testRole4 = new AppRoleDto();
+        testRole3.setId("testUserAppRoleId");
+        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
+        when(userService.getAppRolesByAppIds(any())).thenReturn(allRoles);
 
         // When
-        String view = userController.getUserRoles(userId, model);
+        String view = userController.editUserRoles(userId, model, session);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
@@ -545,6 +547,15 @@ class UserControllerTest {
         Assertions.assertTrue(userAssignedRoles.stream().findFirst().isPresent());
         String returnedAssignedAppRoleId = (String) userAssignedRoles.stream().findFirst().get();
         Assertions.assertEquals(testUserRole.getId(), returnedAssignedAppRoleId);
+    }
+
+    @Test
+    public void testEditUserRolesThrowsExceptionWhenNoUserProvided() {
+        // Given
+        final String userId = "12345";
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
+        // When
+        assertThrows(NoSuchElementException.class, () -> userController.editUserRoles(userId, model, session));
     }
 
     @Test
