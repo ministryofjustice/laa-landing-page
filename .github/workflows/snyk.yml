@@ -78,10 +78,10 @@ jobs:
       
       - name: Debug - Show SARIF output
         run: |
-          echo "=== Contents of snyk_test.sarif ==="
-          cat sarif_files/snyk_test.sarif
-          cat sarif_files/snyk_code_test.sarif
-          cat sarif_files/snyk_iac_test.sarif
+          echo "=== Contents of snyk_test.sarif ===" \n
+          cat sarif_files/snyk_test.sarif \n
+          cat sarif_files/snyk_code_test.sarif \n
+          cat sarif_files/snyk_iac_test.sarif \n
           cat sarif_files/snyk_docker_test.sarif
 
       # post vulns to slack
