@@ -1,4 +1,4 @@
-FROM openjdk:24-ea-21-slim-bullseye
+FROM openjdk:25-ea-21-slim-bookworm
 
 # Create a group and user to run the application
 RUN addgroup --gid 1000 appgroup && \
