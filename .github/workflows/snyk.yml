@@ -75,34 +75,44 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sarif_files
-      
-      - name: Debug - Show SARIF output
-        run: |
-          echo "=== Contents of snyk_test.sarif ==="
-          cat sarif_files/snyk_docker_test.sarif
 
       # post vulns to slack
-      - name: Vulnerability Description Extraction and Print (Multiple Files)
+      - name: Vulnerability Description Extraction and Severity Count
         run: |
-          # Extract and concatenate vulnerability descriptions from both SARIF files
-          SCAN_RESULTS_1=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' sarif_files/snyk_test.sarif)
-          SCAN_RESULTS_2=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' sarif_files/snyk_code_test.sarif)
-          SCAN_RESULTS_3=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' sarif_files/snyk_iac_test.sarif)
-          SCAN_RESULTS_4=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' sarif_files/snyk_docker_test.sarif)
+          extract_severities() {
+            FILE=$1
+            jq -r '
+              (
+                .runs[0].tool.driver.rules[] | 
+                { (.id): .properties.problem.severity }
+              ) as $severityMap
+              |
+              .runs[0].results[] |
+              $severityMap[.ruleId] // empty
+            ' "$FILE"
+          }
 
-          # Combine both into a single variable
-          SCAN_RESULTS="$SCAN_RESULTS_1\n$SCAN_RESULTS_2\n$SCAN_RESULTS_3\n$SCAN_RESULTS_4"
+          # Extract severity values across all SARIF files
+          ALL_SEVERITIES=$( 
+            extract_severities sarif_files/snyk_test.sarif
+            extract_severities sarif_files/snyk_code_test.sarif
+            extract_severities sarif_files/snyk_iac_test.sarif
+            extract_severities sarif_files/snyk_docker_test.sarif
+          )
 
-          # Export severity counts to GitHub environment
+          # Normalize and count severities
+          CRITICAL=$(echo "$ALL_SEVERITIES" | grep -i -c 'critical')
+          HIGH=$(echo "$ALL_SEVERITIES" | grep -i -c 'high')
+          MEDIUM=$(echo "$ALL_SEVERITIES" | grep -i -c 'medium')
+          LOW=$(echo "$ALL_SEVERITIES" | grep -i -c 'low')
+
+          # Export to GitHub environment
           {
-            echo "CRITICAL=$(echo -e "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
-            echo "HIGH=$(echo -e "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
-            echo "MEDIUM=$(echo -e "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
-            echo "LOW=$(echo -e "$SCAN_RESULTS" | grep -o LOW | wc -l)"
+            echo "CRITICAL=$CRITICAL"
+            echo "HIGH=$HIGH"
+            echo "MEDIUM=$MEDIUM"
+            echo "LOW=$LOW"
           } >> "$GITHUB_ENV"
-
-          # Print results for visibility in workflow logs
-          echo -e "$SCAN_RESULTS"
 
       - name: Send notification to Slack
         id: slack
