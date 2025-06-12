@@ -1,20 +1,36 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.view.RedirectView;
+
+import com.microsoft.graph.models.User;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -31,21 +47,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -266,7 +267,7 @@ class UserControllerTest {
     @Test
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
-        when(session.getAttribute("firm")).thenReturn(null);
+        when(session.getAttribute("firmId")).thenReturn(null);
         Firm firm1 = Firm.builder().build();
         Firm firm2 = Firm.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
@@ -280,7 +281,7 @@ class UserControllerTest {
         User mockUser = new User();
         mockUser.setDisplayName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
-        when(session.getAttribute("firm")).thenReturn("firmId");
+        when(session.getAttribute("firmId")).thenReturn("firmId");
         Firm firm1 = Firm.builder().build();
         Firm firm2 = Firm.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
@@ -289,7 +290,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("firms")).isNotNull();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
-        String selectedFirmId = session.getAttribute("firm").toString();
+        String selectedFirmId = session.getAttribute("firmId").toString();
         assertThat(selectedFirmId).isEqualTo("firmId");
         assertThat(view).isEqualTo("user/user-details");
     }
@@ -298,14 +299,14 @@ class UserControllerTest {
     void postNewUser() {
         HttpSession session = new MockHttpSession();
         when(firmService.getFirm(anyString())).thenReturn(Firm.builder().name("Test Firm").build());
-        RedirectView view = userController.postUser("firstName", "lastName", "email", "firm", "false", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "firmId", "false", session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        String selectedFirm = session.getAttribute("firm").toString();
-        assertThat(selectedFirm).isEqualTo("firm");
+        String selectedFirm = session.getAttribute("firmId").toString();
+        assertThat(selectedFirm).isEqualTo("firmId");
         String selectedFirmName = session.getAttribute("firmName").toString();
         assertThat(selectedFirmName).isEqualTo("Test Firm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
@@ -318,7 +319,7 @@ class UserControllerTest {
         mockUser.setDisplayName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
-        session.setAttribute("firm", "oldFirm");
+        session.setAttribute("firmId", "oldFirm");
         when(firmService.getFirm(eq("newFirm"))).thenReturn(Firm.builder().name("Test Firm").build());
         User sessionUser = (User) session.getAttribute("user");
         RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", "true", session);
@@ -326,7 +327,7 @@ class UserControllerTest {
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        String selectedFirm = session.getAttribute("firm").toString();
+        String selectedFirm = session.getAttribute("firmId").toString();
         assertThat(selectedFirm).isEqualTo("newFirm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
         boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
@@ -503,7 +504,7 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firm", "firmId");
+        session.setAttribute("firmId", "firmId");
         when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
@@ -523,7 +524,7 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firm", "firmId");
+        session.setAttribute("firmId", "firmId");
         when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
         when(userService.createUser(any(), any(), any(), any(), eq(false))).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
@@ -531,7 +532,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
-        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("firmId")).isNull();
     }
 
     @Test

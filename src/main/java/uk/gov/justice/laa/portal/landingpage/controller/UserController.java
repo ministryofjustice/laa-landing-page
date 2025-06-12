@@ -138,11 +138,11 @@ public class UserController {
             user = new User();
         }
         List<Firm> firms = firmService.getFirms();
-        String selectedFirmId = (String) session.getAttribute("firm");
+        String selectedFirmId = (String) session.getAttribute("firmId");
         String selectedFirmName = (String) session.getAttribute("firmName");
         Boolean isFirmAdmin = (Boolean) session.getAttribute("firmAdmin");
         model.addAttribute("firms", firms);
-        model.addAttribute("selectedFirm", selectedFirmId);
+        model.addAttribute("selectedFirmId", selectedFirmId);
         model.addAttribute("selectedFirmName", selectedFirmName);
         model.addAttribute("isFirmAdmin", isFirmAdmin);
         model.addAttribute("user", user);
@@ -150,11 +150,11 @@ public class UserController {
     }
 
     @PostMapping("/user/create/details")
-    public RedirectView postUser(@RequestParam("firstName") String firstName,
-            @RequestParam("lastName") String lastName,
-            @RequestParam("email") String email,
-            @RequestParam("firmId") String firmId,
-            @RequestParam(value = "firmAdmin", required = false) String firmAdmin,
+    public RedirectView postUser(@RequestParam String firstName,
+            @RequestParam String lastName,
+            @RequestParam String email,
+            @RequestParam String firmId,
+            @RequestParam(required = false) String firmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -167,7 +167,7 @@ public class UserController {
 
         Firm firm = firmService.getFirm(firmId);
         session.setAttribute("user", user);
-        session.setAttribute("firm", firmId);
+        session.setAttribute("firmId", firmId);
         session.setAttribute("firmName", firm.getName());
         session.setAttribute("firmAdmin", Boolean.parseBoolean(firmAdmin));
         return new RedirectView("/user/create/services");
@@ -189,7 +189,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public RedirectView setSelectedApps(@RequestParam("apps") List<String> apps,
+    public RedirectView setSelectedApps(@RequestParam List<String> apps,
             HttpSession session) {
         session.setAttribute("apps", apps);
         return new RedirectView("/user/create/roles");
@@ -274,7 +274,7 @@ public class UserController {
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
 
-        String selectedFirmId = (String) session.getAttribute("firm");
+        String selectedFirmId = (String) session.getAttribute("firmId");
         Firm firm = firmService.getFirm(selectedFirmId);
         model.addAttribute("firm", firm);
         
@@ -297,7 +297,7 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            String selectedFirmId = (String) session.getAttribute("firm");
+            String selectedFirmId = (String) session.getAttribute("firmId");
             Firm firm = firmService.getFirm(selectedFirmId);
             Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
             boolean isFirmAdmin = firmAdmin != null && firmAdmin;
@@ -307,6 +307,7 @@ public class UserController {
         }
         session.removeAttribute("user");
         session.removeAttribute("firm");
+        session.removeAttribute("firmId");
         session.removeAttribute("firmAdmin");
         session.removeAttribute("firmName");
         session.removeAttribute("apps");
