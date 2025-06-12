@@ -153,7 +153,7 @@ public class UserController {
     public RedirectView postUser(@RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("email") String email,
-            @RequestParam("firm") String firmId,
+            @RequestParam("firmId") String firmId,
             @RequestParam(value = "firmAdmin", required = false) String firmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
@@ -169,11 +169,7 @@ public class UserController {
         session.setAttribute("user", user);
         session.setAttribute("firm", firmId);
         session.setAttribute("firmName", firm.getName());
-        if (Objects.nonNull(firmAdmin) && Boolean.parseBoolean(firmAdmin)) {
-            session.setAttribute("firmAdmin", true);
-        } else {
-            session.setAttribute("firmAdmin", false);
-        }
+        session.setAttribute("firmAdmin", Boolean.parseBoolean(firmAdmin));
         return new RedirectView("/user/create/services");
     }
 
