@@ -15,5 +15,8 @@ public class ClaimEnrichmentRequest {
     @NotBlank(message = "Authentication token is required")
     private String token;
 
+    @NotBlank(message = "Target App is required")
+    private String targetAppId;
+
     // Additional fields can be added here as needed
 }
