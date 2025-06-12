@@ -1,4 +1,4 @@
-FROM openjdk:25-ea-21-slim-bookworm
+FROM amazoncorretto:21-alpine
 
 # Create a group and user to run the application
 RUN addgroup --gid 1000 appgroup && \
