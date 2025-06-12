@@ -1,4 +1,4 @@
-name: Lint for accessibility issues
+name: Axe-Linter for Accessibility Issues
 
 on:
   pull_request:

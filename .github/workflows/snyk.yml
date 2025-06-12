@@ -1,4 +1,4 @@
-name: workflow for Gradle using Snyk security scan
+name: Snyk Security Scan
 on:
   pull_request:
     types:
