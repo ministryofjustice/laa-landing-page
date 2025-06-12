@@ -139,8 +139,12 @@ public class UserController {
         }
         List<Firm> firms = firmService.getFirms();
         String selectedFirmId = (String) session.getAttribute("firm");
+        String selectedFirmName = (String) session.getAttribute("firmName");
+        Boolean isFirmAdmin = (Boolean) session.getAttribute("firmAdmin");
         model.addAttribute("firms", firms);
         model.addAttribute("selectedFirm", selectedFirmId);
+        model.addAttribute("selectedFirmName", selectedFirmName);
+        model.addAttribute("isFirmAdmin", isFirmAdmin);
         model.addAttribute("user", user);
         return "user/user-details";
     }
@@ -160,10 +164,15 @@ public class UserController {
         user.setSurname(lastName);
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
+
+        Firm firm = firmService.getFirm(firmId);
         session.setAttribute("user", user);
         session.setAttribute("firm", firmId);
+        session.setAttribute("firmName", firm.getName());
         if (Objects.nonNull(firmAdmin) && Boolean.parseBoolean(firmAdmin)) {
             session.setAttribute("firmAdmin", true);
+        } else {
+            session.setAttribute("firmAdmin", false);
         }
         return new RedirectView("/user/create/services");
     }
@@ -303,10 +312,13 @@ public class UserController {
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
-        session.removeAttribute("roles");
-        session.removeAttribute("apps");
-        session.removeAttribute("officeData");
+        session.removeAttribute("user");
         session.removeAttribute("firm");
+        session.removeAttribute("firmAdmin");
+        session.removeAttribute("firmName");
+        session.removeAttribute("apps");
+        session.removeAttribute("roles");
+        session.removeAttribute("officeData");
         return new RedirectView("/users");
     }
 

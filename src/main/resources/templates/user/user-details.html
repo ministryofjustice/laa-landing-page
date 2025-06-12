@@ -29,19 +29,20 @@
             <form th:action="@{/user/create/details}" th:method="post">
                 <div class="govuk-!-margin-bottom-3">
                     <div class="govuk-form-group">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for=" firmName">
+                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
                             Firm Name
                         </label>
                         <select class="govuk-select" id="firm" name="firm">
                             <div th:each="firm : ${firms}">
-                                <option th:value="${firm.id}" th:text="${firm.name}"></option>
+                                <option th:value="${firm.id}" th:text="${firm.name}"
+                                    th:selected="${firm.name == selectedFirmName}"></option>
                             </div>
                         </select>
                         <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
                             data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
                                 <input class="govuk-checkboxes__input" id="firmAdmin" name="firmAdmin" type="checkbox"
-                                    value="true" />
+                                    value="true" th:checked="*{isFirmAdmin}" />
                                 <label class="govuk-label govuk-checkboxes__label" for="firmAdmin">
                                     Firm Admin
                                 </label>
