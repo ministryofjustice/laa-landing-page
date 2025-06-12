@@ -14,6 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -34,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -69,14 +74,19 @@ public class UserService {
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
     private final NotificationService notificationService;
-
-
+    private final UserProfileRepository userProfileRepository;
 
     /** The number of pages to load in advance when doing user pagination */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+                       EntraUserRepository entraUserRepository,
+                       AppRepository appRepository,
+                       AppRoleRepository appRoleRepository,
+                       ModelMapper mapper,
+                       NotificationService notificationService,
+                       OfficeRepository officeRepository,
+                       UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -84,6 +94,7 @@ public class UserService {
         this.mapper = mapper;
         this.notificationService = notificationService;
         this.officeRepository = officeRepository;
+        this.userProfileRepository = userProfileRepository;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -387,5 +398,55 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    // ---------------------------------------------------------------------
+    // Helper: map a UserProfile entity to the lightweight UserModel expected by UI
+    // ---------------------------------------------------------------------
+    private UserModel mapProfileToModel(UserProfile profile) {
+        EntraUser entra = profile.getEntraUser();
+        UserModel model = new UserModel();
+        if (entra != null) {
+            model.setId(entra.getId().toString());
+            model.setEmail(entra.getEmail());
+            model.setFullName(entra.getFirstName() + " " + entra.getLastName());
+        }
+        // lastLoggedIn currently not available in DB schema; set blank for now
+        model.setLastLoggedIn("NA");
+        if (profile.getOffices() != null) {
+            List<String> officeNames = profile.getOffices().stream()
+                    .map(Office::getName)
+                    .toList();
+            model.setOffices(officeNames);
+        }
+        return model;
+    }
+
+    // ---------------------------------------------------------------------
+    //  NEW: database-backed listing with pagination (STB-1887)
+    // ---------------------------------------------------------------------
+    public PaginatedUsers listUsers(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("entraUser.lastName").ascending());
+        Page<UserProfile> result = userProfileRepository.findAll(pageable);
+        PaginatedUsers paginated = new PaginatedUsers();
+        paginated.setTotalUsers((int) result.getTotalElements());
+        paginated.setUsers(result.getContent().stream()
+                .map(this::mapProfileToModel)
+                .toList());
+        return paginated;
+    }
+
+    // ---------------------------------------------------------------------
+    //  NEW: search by name or email (STB-1778)
+    // ---------------------------------------------------------------------
+    public PaginatedUsers searchUsers(int page, int size, String term) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("entraUser.lastName").ascending());
+        Page<UserProfile> result = userProfileRepository.searchProfiles(term, pageable);
+        PaginatedUsers paginated = new PaginatedUsers();
+        paginated.setTotalUsers((int) result.getTotalElements());
+        paginated.setUsers(result.getContent().stream()
+                .map(this::mapProfileToModel)
+                .toList());
+        return paginated;
     }
 }
