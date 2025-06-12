@@ -64,6 +64,21 @@
 
                                     </dd>
                                 </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        Firm Name
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firm.name}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        User Type
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firmAdmin} ? 'Firm Admin' : 'Firm User'"></span>
+                                    </dd>
                             </dl>
                         </div>
                     </div>
@@ -110,12 +125,11 @@
                             <dl class="govuk-summary-list">
                                 <th:block th:each="office : ${officeData.getSelectedOfficesDisplay()}">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                        </dt>
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${office}"></span>
                                         </dd>
-                                        
+                                        <dt class="govuk-summary-list__key govuk-visually-hidden">
+                                        </dt>
                                     </div>
                                 </th:block>
                             </dl>

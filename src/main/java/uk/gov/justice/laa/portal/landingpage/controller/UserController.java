@@ -281,12 +281,9 @@ public class UserController {
         String selectedFirmId = (String) session.getAttribute("firm");
         Firm firm = firmService.getFirm(selectedFirmId);
         model.addAttribute("firm", firm);
+        
         Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
-        if (Objects.nonNull(firmAdmin) && firmAdmin) {
-            model.addAttribute("firmAdmin", true);
-        } else {
-            model.addAttribute("firmAdmin", false);
-        }
+        model.addAttribute("firmAdmin", firmAdmin);
         return "add-user-check-answers";
     }
 
