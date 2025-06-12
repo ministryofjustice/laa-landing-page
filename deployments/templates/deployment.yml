@@ -34,11 +34,23 @@ spec:
             - containerPort: 8080
           resources:
             requests:
-              memory: "600Mi"
-              cpu: "100m"
-            limits:
               memory: "1200Mi"
               cpu: "300m"
+            limits:
+              memory: "3000Mi"
+              cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
           env:
             - name: POPULATE_DUMMY_DATA
               value: "${POPULATE_DUMMY_DATA}"
