@@ -76,116 +76,73 @@ jobs:
         with:
           sarif_file: sarif_files
 
-      # post vulns to slack
-      - name: Count vulnerabilities from SARIF files
-        shell: bash
-        run: |
-          extract_severities() {
-            local file=$1
-            jq -r '
-              (
-                .runs[0].tool.driver.rules[]? |
-                { (.id): .properties.problem.severity }
-              ) as $severityMap
-              |
-              .runs[0].results[]? |
-              $severityMap[.ruleId] // empty
-            ' "$file"
-          }
-
-          # Initialize variable
-          ALL_SEVERITIES=""
-
-          # Loop over SARIF files and accumulate severities
-          for FILE in sarif_files/*.sarif; do
-            if [[ -f "$FILE" ]]; then
-              echo "Processing $FILE"
-              SEVERITIES=$(extract_severities "$FILE")
-              ALL_SEVERITIES+="$SEVERITIES"$'\n'
-            fi
-          done
-
-          # Count normalized severity values
-          CRITICAL=$(echo "$ALL_SEVERITIES" | grep -i -c 'critical')
-          HIGH=$(echo "$ALL_SEVERITIES" | grep -i -c 'high')
-          MEDIUM=$(echo "$ALL_SEVERITIES" | grep -i -c 'medium')
-          LOW=$(echo "$ALL_SEVERITIES" | grep -i -c 'low')
-
-          # Export to GitHub Actions environment
-          {
-            echo "CRITICAL=$CRITICAL"
-            echo "HIGH=$HIGH"
-            echo "MEDIUM=$MEDIUM"
-            echo "LOW=$LOW"
-          } >> "$GITHUB_ENV"
-
-          # Optional: print values for debugging
-          echo "CRITICAL=$CRITICAL"
-          echo "HIGH=$HIGH"
-          echo "MEDIUM=$MEDIUM"
-          echo "LOW=$LOW"
+      # # post vulns to slack
+      # - name: Count vulnerabilities from SARIF files
+      #   shell: bash
+      #   run: |
 
 
-      - name: Send notification to Slack
-        id: slack
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
-        with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "SNYK Vulnerability Scan Report: ${{ github.event.repository.name }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Scan Summary:*"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
-                  }
-                }
-              ]
-            }
 
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      # - name: Send notification to Slack
+      #   id: slack
+      #   if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      #   uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+      #   with:
+      #     payload: |
+      #       {
+      #         "blocks": [
+      #           {
+      #             "type": "header",
+      #             "text": {
+      #               "type": "plain_text",
+      #               "text": "SNYK Vulnerability Scan Report: ${{ github.event.repository.name }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*Scan Summary:*"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
+      #             }
+      #           },
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
+      #             }
+      #           }
+      #         ]
+      #       }
+
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
+      #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
