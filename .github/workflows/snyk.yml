@@ -80,8 +80,6 @@ jobs:
         run: |
           echo "=== Contents of snyk_test.sarif ==="
           cat sarif_files/snyk_iac_test.sarif
-          ==========================================
-          cat sarif_files/snyk_docker_test.sarif
 
       # post vulns to slack
       - name: Vulnerability Description Extraction and Print (Multiple Files)
