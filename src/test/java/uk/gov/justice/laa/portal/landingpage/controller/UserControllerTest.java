@@ -34,6 +34,7 @@ import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -268,8 +269,8 @@ class UserControllerTest {
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
         when(session.getAttribute("firmId")).thenReturn(null);
-        Firm firm1 = Firm.builder().build();
-        Firm firm2 = Firm.builder().build();
+        FirmDto firm1 = FirmDto.builder().build();
+        FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();
@@ -282,8 +283,8 @@ class UserControllerTest {
         mockUser.setDisplayName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
         when(session.getAttribute("firmId")).thenReturn("firmId");
-        Firm firm1 = Firm.builder().build();
-        Firm firm2 = Firm.builder().build();
+        FirmDto firm1 = FirmDto.builder().build();
+        FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();

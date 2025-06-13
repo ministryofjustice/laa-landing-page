@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
@@ -28,7 +29,7 @@ class FirmServiceTest {
         Firm firm2 = Firm.builder().build();
         List<Firm> dbFirms = List.of(firm1, firm2);
         when(firmRepository.findAll()).thenReturn(dbFirms);
-        List<Firm> firms = firmService.getFirms();
+        List<FirmDto> firms = firmService.getFirms();
         assertThat(firms).hasSize(2);
     }
 

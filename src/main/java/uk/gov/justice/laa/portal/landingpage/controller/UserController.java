@@ -164,9 +164,7 @@ public class UserController {
         session.setAttribute("user", user);
 
         Firm firm = firmService.getFirm(firmId);
-        FirmDto firmUserDto = new FirmDto();
-        firmUserDto.setId(firm.getId());
-        firmUserDto.setName(firm.getName());
+        FirmDto firmUserDto = FirmDto.builder().id(firm.getId()).name(firm.getName()).build();
         session.setAttribute("firm", firmUserDto);
         session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
 
