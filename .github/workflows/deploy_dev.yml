@@ -44,6 +44,17 @@ jobs:
       - uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
 
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CERT }}" > ca.crt
+          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
+          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
+          kubectl config use-context ${KUBE_CLUSTER}
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+
       - name: Build and Push Docker Image to the container repository
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
@@ -59,28 +70,44 @@ jobs:
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
-          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY' > deployments/prometheus.yml
-          cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME'> deployments/grafanadashboard.yml
         env:
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
-          ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
-          ENV_NAME: ${{ vars.ENV_NAME }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
           POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
 
-
       - name: Deploy to Cloud Platform
         run: |
-          echo "${{ secrets.KUBE_CERT }}" > ca.crt
-          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
-          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
-          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
-          kubectl config use-context ${KUBE_CLUSTER}
           kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
-          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
-          SECURITY_OAUTH2_CLIENT_REGISTRATION_AZURE_REDIRECT_URI: ${{ secrets.AZURE_REDIRECT_URI }}
+
+      # Get DB identifier to use for Prometheus alerts & Grafana configuration
+      - name: Get DB identifier
+        run: |
+          #!/bin/bash
+          RDS_DB_IDENTIFIER=$(kubectl get secret rds-postgresql-instance-output -o jsonpath='{.data.rds_instance_endpoint}' | base64 -d | cut -d. -f1 | xargs printf "%s")
+          echo "RDS_DB_IDENTIFIER=${RDS_DB_IDENTIFIER}" >> "$GITHUB_ENV"
+          
+      # Prometheus alerts & Grafana configuration - after application deployment to avoid chicken/egg scenarios
+      # Note: first rm command removes the previously generated files and doesn't remove the templates/ directory
+      - name: Generate Monitoring Deployment Files
+        run: |
+          rm deployments/* 2> /dev/null
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER' > deployments/prometheus.yml
+          cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
+        env:
+          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
+          RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
+      
+      # Prometheus alerts & Grafana deployment
+      - name: Deploy Monitoring to Cloud Platform
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
