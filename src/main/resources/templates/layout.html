@@ -11,8 +11,17 @@
     <th:block th:replace="~{partials/header :: header}"></th:block>
 
     <div class="govuk-width-container">
-        <div th:if="${feedback != null}">
-            <div th:replace="${feedback}"></div>
+        <div class="govuk-phase-banner" id="feedback">
+            <p class="govuk-phase-banner__content">
+                <strong class="govuk-tag govuk-phase-banner__content__tag">
+                    Alpha
+                </strong>
+                <span class="govuk-phase-banner__text">
+                    This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback
+                        by
+                        email</a>.
+                </span>
+            </p>
         </div>
         <nav th:if="${navigation != null}">
             <div th:replace="${navigation}"></div>

@@ -64,6 +64,21 @@
 
                                     </dd>
                                 </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        Firm Name
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firm.name}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">
+                                        User Type
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${isFirmAdmin} ? 'Firm Admin' : 'Firm User'"></span>
+                                    </dd>
                             </dl>
                         </div>
                     </div>
@@ -108,14 +123,23 @@
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
-                                <th:block th:each="office : ${officeData.getSelectedOffices()}">
+                                <th:block th:each="office : ${officeData.getSelectedOfficesDisplay()}"
+                                    th:if="${officeData.getSelectedOfficesDisplay().size() > 0}">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                        </dt>
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${office}"></span>
                                         </dd>
-                                        
+                                        <dt class="govuk-summary-list__key govuk-visually-hidden">
+                                        </dt>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${officeData.getSelectedOfficesDisplay().size() == 0}">
+                                    <div class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">
+                                            <span>Access to all offices</span>
+                                        </dd>
+                                        <dt class="govuk-summary-list__key govuk-visually-hidden">
+                                        </dt>
                                     </div>
                                 </th:block>
                             </dl>
