@@ -14,14 +14,14 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/users">
+                <a class="govuk-breadcrumbs__link" href="/admin/users">
                     < Back</a>
             </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <h1 class="govuk-heading-m">User Details</h1>
-        <form th:action="@{/user/create/details}" th:method="post">
+        <form th:action="@{/admin/user/create/details}" th:method="post">
             <div class="govuk-form-group">
                 <label class="govuk-label govuk-!-font-weight-bold" for="firstName">
                     First Name

@@ -21,6 +21,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -44,6 +45,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Slf4j
 @Controller
 @RequiredArgsConstructor
+@RequestMapping("/admin")
 public class UserController {
 
     private final UserService userService;
@@ -185,7 +187,7 @@ public class UserController {
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
-                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId().toString()));
+                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
         model.addAttribute("roles", appRoleViewModels);
