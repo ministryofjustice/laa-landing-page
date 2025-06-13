@@ -1,14 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * FirmService
@@ -16,10 +18,15 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class FirmService {
-    private final FirmRepository firmRepository;
 
-    public List<Firm> getFirms() {
-        return Optional.of(firmRepository.findAll()).orElse(Collections.emptyList());
+    private final FirmRepository firmRepository;
+    private final ModelMapper mapper;
+
+    public List<FirmDto> getFirms() {
+        return firmRepository.findAll()
+                .stream()
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .collect(Collectors.toList());
     }
 
     public Firm getFirm(String id) {

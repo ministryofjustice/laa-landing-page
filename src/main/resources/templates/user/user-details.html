@@ -35,15 +35,15 @@
                         <select class="govuk-select" id="firmId" name="firmId">
                             <div th:each="firm : ${firms}">
                                 <option th:value="${firm.id}" th:text="${firm.name}"
-                                    th:selected="${firm.name == selectedFirmName}"></option>
+                                    th:selected="${firm.name == selectedFirm?.name}"></option>
                             </div>
                         </select>
                         <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
                             data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="firmAdmin" name="firmAdmin" type="checkbox"
-                                    value="true" th:checked="*{isFirmAdmin}" />
-                                <label class="govuk-label govuk-checkboxes__label" for="firmAdmin">
+                                <input class="govuk-checkboxes__input" id="isFirmAdmin" name="isFirmAdmin"
+                                    type="checkbox" value="true" th:checked="*{isFirmAdmin}" />
+                                <label class="govuk-label govuk-checkboxes__label" for="isFirmAdmin">
                                     Firm Admin
                                 </label>
                             </div>

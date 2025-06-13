@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -137,14 +138,10 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new User();
         }
-        List<Firm> firms = firmService.getFirms();
-        String selectedFirmId = (String) session.getAttribute("firmId");
-        String selectedFirmName = (String) session.getAttribute("firmName");
-        Boolean isFirmAdmin = (Boolean) session.getAttribute("firmAdmin");
+        List<FirmDto> firms = firmService.getFirms();
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firms", firms);
-        model.addAttribute("selectedFirmId", selectedFirmId);
-        model.addAttribute("selectedFirmName", selectedFirmName);
-        model.addAttribute("isFirmAdmin", isFirmAdmin);
+        model.addAttribute("selectedFirm", selectedFirm);
         model.addAttribute("user", user);
         return "user/user-details";
     }
@@ -154,7 +151,7 @@ public class UserController {
             @RequestParam String lastName,
             @RequestParam String email,
             @RequestParam String firmId,
-            @RequestParam(required = false) String firmAdmin,
+            @RequestParam(required = false) String isFirmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -164,12 +161,15 @@ public class UserController {
         user.setSurname(lastName);
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
+        session.setAttribute("user", user);
 
         Firm firm = firmService.getFirm(firmId);
-        session.setAttribute("user", user);
-        session.setAttribute("firmId", firmId);
-        session.setAttribute("firmName", firm.getName());
-        session.setAttribute("firmAdmin", Boolean.parseBoolean(firmAdmin));
+        FirmDto firmUserDto = new FirmDto();
+        firmUserDto.setId(firm.getId());
+        firmUserDto.setName(firm.getName());
+        session.setAttribute("firm", firmUserDto);
+        session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
+
         return new RedirectView("/user/create/services");
     }
 
@@ -274,12 +274,11 @@ public class UserController {
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
 
-        String selectedFirmId = (String) session.getAttribute("firmId");
-        Firm firm = firmService.getFirm(selectedFirmId);
-        model.addAttribute("firm", firm);
+        FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+        model.addAttribute("firm", selectedFirm);
         
-        Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
-        model.addAttribute("firmAdmin", firmAdmin);
+        Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+        model.addAttribute("isFirmAdmin", isFirmAdmin);      
         return "add-user-check-answers";
     }
 
@@ -297,19 +296,16 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            String selectedFirmId = (String) session.getAttribute("firmId");
-            Firm firm = firmService.getFirm(selectedFirmId);
-            Boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
-            boolean isFirmAdmin = firmAdmin != null && firmAdmin;
+            FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+            Firm firm = firmService.getFirm(selectedFirm.getId().toString());
+            Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
             userService.createUser(user, selectedRoles, selectedOffices, firm, isFirmAdmin);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
         session.removeAttribute("user");
         session.removeAttribute("firm");
-        session.removeAttribute("firmId");
-        session.removeAttribute("firmAdmin");
-        session.removeAttribute("firmName");
+        session.removeAttribute("isFirmAmdin");
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
