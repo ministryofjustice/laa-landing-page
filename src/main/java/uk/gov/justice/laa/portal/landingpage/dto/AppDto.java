@@ -12,13 +12,13 @@ public class AppDto {
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof AppDto appDto) {
-            return Objects.equals(id, appDto.id);
+            return Objects.equals(id, appDto.id) && Objects.equals(name, appDto.name);
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getId());
+        return Objects.hash(id, name);
     }
 }

@@ -113,37 +113,15 @@ public class AppSelectionTest extends BaseIntegrationTest {
     }
 
     private EntraUser buildTestUser() {
-        AppRegistration appRegistration = AppRegistration.builder()
-                .name("Test App Registration")
-                .build();
+        AppRegistration appRegistration = buildEntraAppRegistration("Test App Registration");
         appRegistration = appRegistrationRepository.saveAndFlush(appRegistration);
-        App app = App.builder()
-                .name("Test App")
-                .appRegistration(appRegistration)
-                .build();
+        App app = buildLaaApp(appRegistration, "Test App");
         app = appRepository.saveAndFlush(app);
-        AppRole appRole = AppRole.builder()
-                .name("Test App Role")
-                .app(app)
-                .build();
+        AppRole appRole = buildLaaAppRole(app, "Test App Role");
         appRole = appRoleRepository.saveAndFlush(appRole);
-        EntraUser entraUser = EntraUser.builder()
-                .firstName("Test")
-                .lastName("User")
-                .userName("testUser")
-                .email("test@test.com")
-                .userStatus(UserStatus.ACTIVE)
-                .createdBy("Admin")
-                .createdDate(LocalDateTime.now())
-                .build();
-        UserProfile userProfile = UserProfile.builder()
-                .defaultProfile(true)
-                .appRoles(Set.of(appRole))
-                .userType(UserType.INTERNAL)
-                .createdDate(LocalDateTime.now())
-                .createdBy("Admin")
-                .entraUser(entraUser)
-                .build();
+        EntraUser entraUser = buildEntraUser("test@test.com", "Test", "User");
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        userProfile.setAppRoles(Set.of(appRole));
         entraUser.setUserProfiles(Set.of(userProfile));
         return entraUser;
     }
