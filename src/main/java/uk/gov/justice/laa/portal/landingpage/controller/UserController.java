@@ -164,8 +164,8 @@ public class UserController {
         session.setAttribute("user", user);
 
         FirmDto firm = firmService.getFirm(firmId);
-        FirmDto firmUserDto = FirmDto.builder().id(firm.getId()).name(firm.getName()).build();
-        session.setAttribute("firm", firmUserDto);
+
+        session.setAttribute("firm", firm);
         session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
 
         return new RedirectView("/user/create/services");
