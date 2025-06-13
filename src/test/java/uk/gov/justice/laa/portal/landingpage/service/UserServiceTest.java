@@ -5,19 +5,15 @@ import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
@@ -41,9 +37,11 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -449,7 +447,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles, new ArrayList<>());
+        userService.createUser(user, roles, new ArrayList<>(), FirmDto.builder().build(), false);
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -491,13 +489,14 @@ class UserServiceTest {
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-
-        userService.createUser(user, roles, new ArrayList<>());
+        FirmDto firm = FirmDto.builder().name("Firm").build();
+        userService.createUser(user, roles, new ArrayList<>(), firm, false);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
+        assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
     }
 
     @Test

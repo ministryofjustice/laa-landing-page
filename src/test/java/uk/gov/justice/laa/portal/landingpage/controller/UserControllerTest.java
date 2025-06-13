@@ -1,53 +1,53 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.ui.ExtendedModelMap;
-import org.springframework.ui.Model;
-import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.ui.Model;
+import org.springframework.web.servlet.view.RedirectView;
+
+import com.microsoft.graph.models.User;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -59,13 +59,15 @@ class UserControllerTest {
     @Mock
     private OfficeService officeService;
     @Mock
+    private FirmService firmService;
+    @Mock
     private HttpSession session;
 
     private Model model;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService, officeService, new MapperConfig().modelMapper());
+        userController = new UserController(userService, officeService, new MapperConfig().modelMapper(), firmService);
         model = new ExtendedModelMap();
     }
 
@@ -266,6 +268,10 @@ class UserControllerTest {
     @Test
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
+        when(session.getAttribute("firm")).thenReturn(null);
+        FirmDto firm1 = FirmDto.builder().build();
+        FirmDto firm2 = FirmDto.builder().build();
+        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(view).isEqualTo("user/user-details");
@@ -276,23 +282,34 @@ class UserControllerTest {
         User mockUser = new User();
         mockUser.setDisplayName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
+        when(session.getAttribute("firm")).thenReturn(FirmDto.builder().name("Test firm").build());
+        FirmDto firm1 = FirmDto.builder().build();
+        FirmDto firm2 = FirmDto.builder().build();
+        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
         String view = userController.createUser(session, model);
         assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("firms")).isNotNull();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        assertThat(selectedFirm.getName()).isEqualTo("Test firm");
         assertThat(view).isEqualTo("user/user-details");
     }
 
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
-        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().name("Test Firm").build());
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "firmId", "false", session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        assertThat((Boolean) session.getAttribute("isFirmAdmin")).isFalse();
     }
 
     @Test
@@ -301,13 +318,19 @@ class UserControllerTest {
         mockUser.setDisplayName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
+        session.setAttribute("firm", FirmDto.builder().name("oldFirm").build());
+        when(firmService.getFirm(eq("newFirm"))).thenReturn(FirmDto.builder().name("Test Firm").build());
         User sessionUser = (User) session.getAttribute("user");
-        RedirectView view = userController.postUser("firstName", "lastName", "email", session);
+        RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", "true", session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+        assertThat(firmAdmin).isTrue();
+        String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
+        assertThat(selectedFirmName).isEqualTo("Test Firm");
     }
 
     @Test
@@ -436,6 +459,36 @@ class UserControllerTest {
     }
 
     @Test
+    void addUserCheckAnswersGetFirmAdmin() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("app1-tester");
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        userRole.setApp(app1);
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("app1-dev");
+        userRole2.setApp(app1);
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        List<String> selectedRoles = List.of("app1-dev");
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
+        session.setAttribute("officeData", new OfficeData());
+        session.setAttribute("isFirmAdmin", true);
+        String view = userController.addUserCheckAnswers(model, session);
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
+
+        assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(Boolean.parseBoolean(model.getAttribute("isFirmAdmin").toString())).isTrue();
+    }
+
+    @Test
     void addUserCheckAnswersGet_NoAppsProvided() {
         UserRole userRole = new UserRole();
         userRole.setAppRoleId("app1-tester");
@@ -448,11 +501,13 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
+        session.setAttribute("firm", FirmDto.builder().build());
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(model.getAttribute("firm")).isNotNull();
     }
 
     @Test
@@ -465,12 +520,15 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        when(userService.createUser(any(), any(), any())).thenReturn(user);
+        session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
+        session.setAttribute("isFirmAdmin", false);
+        when(userService.createUser(any(), any(), any(), any(), eq(false))).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
-        assertThat(model.getAttribute("roles")).isNull();
-        assertThat(model.getAttribute("apps")).isNull();
-        assertThat(model.getAttribute("officeData")).isNull();
+        assertThat(session.getAttribute("roles")).isNull();
+        assertThat(session.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("officeData")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
     }
 
     @Test
