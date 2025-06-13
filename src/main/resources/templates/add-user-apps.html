@@ -13,14 +13,14 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/user/create/details">
+                <a class="govuk-breadcrumbs__link" href="/admin/user/create/details">
                     < Back</a>
             </li>
         </ol>
     </nav>
     <div id="main-content">
         <p class="govuk-body" th:if="${param.error}" style="color:red;">Invalid username or password</p>
-        <form method="post" th:action="@{/user/create/services}">
+        <form method="post" th:action="@{/admin/user/create/services}">
             <fieldset class="govuk-fieldset">
                 <h1 class="govuk-hint govuk-!-margin-bottom-3">
                     Select the applications required for <span th:text="${user.givenName}"></span> <span
