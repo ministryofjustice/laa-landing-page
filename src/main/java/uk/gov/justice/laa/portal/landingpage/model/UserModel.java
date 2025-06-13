@@ -28,9 +28,10 @@ public class UserModel {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(name = "last_logged_in")
     private String lastLoggedIn;
 
     @Column(name = "offices")

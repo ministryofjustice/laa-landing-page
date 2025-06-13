@@ -1,4 +1,4 @@
-name: Run Pa11y Accessibility Tests
+name: Pa11y Accessibility Tests
 
 on:
   workflow_run:

@@ -77,6 +77,7 @@ jobs:
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
 
       - name: Deploy to Cloud Platform
         run: |
