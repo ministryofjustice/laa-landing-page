@@ -146,3 +146,18 @@ jobs:
       #   env:
       #     SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
       #     SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Count vulnerabilities from SARIF files
+        id: vuln_count
+        run: |
+          total_vulns=$(grep -o '"level":' sarif_files/*.sarif | wc -l)
+          echo "Total vulnerabilities found: $total_vulns"
+          echo "total_vulns=$total_vulns" >> $GITHUB_ENV
+
+      - name: Fail pipeline if vulnerabilities found
+        if: env.total_vulns != '0'
+        run: |
+          echo "Vulnerabilities detected. Failing the job..."
+          exit 1
+
+

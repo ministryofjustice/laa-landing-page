@@ -134,7 +134,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning \n\n This scan was run from ${{ github.ref }}."
                   }
                 }
               ]
