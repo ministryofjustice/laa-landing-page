@@ -268,7 +268,7 @@ class UserControllerTest {
     @Test
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
-        when(session.getAttribute("firmId")).thenReturn(null);
+        when(session.getAttribute("firm")).thenReturn(null);
         FirmDto firm1 = FirmDto.builder().build();
         FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
@@ -282,7 +282,7 @@ class UserControllerTest {
         User mockUser = new User();
         mockUser.setDisplayName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
-        when(session.getAttribute("firmId")).thenReturn("firmId");
+        when(session.getAttribute("firm")).thenReturn(FirmDto.builder().name("Test firm").build());
         FirmDto firm1 = FirmDto.builder().build();
         FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
@@ -291,27 +291,25 @@ class UserControllerTest {
         assertThat(model.getAttribute("firms")).isNotNull();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
-        String selectedFirmId = session.getAttribute("firmId").toString();
-        assertThat(selectedFirmId).isEqualTo("firmId");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        assertThat(selectedFirm.getName()).isEqualTo("Test firm");
         assertThat(view).isEqualTo("user/user-details");
     }
 
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
-        when(firmService.getFirm(anyString())).thenReturn(Firm.builder().name("Test Firm").build());
+        when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().name("Test Firm").build());
         RedirectView view = userController.postUser("firstName", "lastName", "email", "firmId", "false", session);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        String selectedFirm = session.getAttribute("firmId").toString();
-        assertThat(selectedFirm).isEqualTo("firmId");
-        String selectedFirmName = session.getAttribute("firmName").toString();
-        assertThat(selectedFirmName).isEqualTo("Test Firm");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
-        assertThat((Boolean) session.getAttribute("firmAdmin")).isFalse();
+        assertThat((Boolean) session.getAttribute("isFirmAdmin")).isFalse();
     }
 
     @Test
@@ -320,20 +318,18 @@ class UserControllerTest {
         mockUser.setDisplayName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
-        session.setAttribute("firmId", "oldFirm");
-        when(firmService.getFirm(eq("newFirm"))).thenReturn(Firm.builder().name("Test Firm").build());
+        session.setAttribute("firm", FirmDto.builder().name("oldFirm").build());
+        when(firmService.getFirm(eq("newFirm"))).thenReturn(FirmDto.builder().name("Test Firm").build());
         User sessionUser = (User) session.getAttribute("user");
         RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", "true", session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        String selectedFirm = session.getAttribute("firmId").toString();
-        assertThat(selectedFirm).isEqualTo("newFirm");
         assertThat(view.getUrl()).isEqualTo("/user/create/services");
-        boolean firmAdmin = (Boolean) session.getAttribute("firmAdmin");
+        boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
         assertThat(firmAdmin).isTrue();
-        String selectedFirmName = session.getAttribute("firmName").toString();
+        String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
         assertThat(selectedFirmName).isEqualTo("Test Firm");
     }
 
@@ -480,7 +476,7 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firmAdmin", true);
+        session.setAttribute("isFirmAdmin", true);
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
@@ -489,7 +485,7 @@ class UserControllerTest {
         assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(Boolean.parseBoolean(model.getAttribute("firmAdmin").toString())).isTrue();
+        assertThat(Boolean.parseBoolean(model.getAttribute("isFirmAdmin").toString())).isTrue();
     }
 
     @Test
@@ -505,8 +501,7 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firmId", "firmId");
-        when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
+        session.setAttribute("firm", FirmDto.builder().build());
         String view = userController.addUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNull();
@@ -525,15 +520,15 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firmId", "firmId");
-        when(firmService.getFirm("firmId")).thenReturn(Firm.builder().name("test firm").build());
+        session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
+        session.setAttribute("isFirmAdmin", false);
         when(userService.createUser(any(), any(), any(), any(), eq(false))).thenReturn(user);
         RedirectView view = userController.addUserCheckAnswers(session);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
-        assertThat(session.getAttribute("firmId")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
     }
 
     @Test

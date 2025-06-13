@@ -29,7 +29,7 @@ public class FirmService {
                 .collect(Collectors.toList());
     }
 
-    public Firm getFirm(String id) {
-        return firmRepository.getReferenceById(UUID.fromString(id));
+    public FirmDto getFirm(String id) {
+        return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
     }
 }

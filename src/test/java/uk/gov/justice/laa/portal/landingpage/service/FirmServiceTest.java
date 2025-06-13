@@ -1,10 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -23,6 +25,14 @@ class FirmServiceTest {
     @Mock
     private FirmRepository firmRepository;
 
+    @BeforeEach
+    void setUp() {
+        firmService = new FirmService(
+            firmRepository,
+            new MapperConfig().modelMapper()
+        );
+    }
+
     @Test
     void getFirms() {
         Firm firm1 = Firm.builder().build();
@@ -38,7 +48,7 @@ class FirmServiceTest {
         UUID firmId = UUID.randomUUID();
         Firm dbFirm = Firm.builder().id(firmId).build();
         when(firmRepository.getReferenceById(firmId)).thenReturn(dbFirm);
-        Firm firm = firmService.getFirm(firmId.toString());
+        FirmDto firm = firmService.getFirm(firmId.toString());
         assertThat(firm.getId()).isEqualTo(firmId);
     }
 }

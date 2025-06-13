@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -317,7 +318,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices, Firm firm, boolean isFirmAdmin) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
@@ -344,8 +345,9 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, Firm firm, boolean isFirmAdmin) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();

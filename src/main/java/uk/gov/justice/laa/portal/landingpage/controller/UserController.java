@@ -163,7 +163,7 @@ public class UserController {
         user.setMail(email);
         session.setAttribute("user", user);
 
-        Firm firm = firmService.getFirm(firmId);
+        FirmDto firm = firmService.getFirm(firmId);
         FirmDto firmUserDto = FirmDto.builder().id(firm.getId()).name(firm.getName()).build();
         session.setAttribute("firm", firmUserDto);
         session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
@@ -295,9 +295,8 @@ public class UserController {
                 selectedOffices = new ArrayList<>();
             }
             FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
-            Firm firm = firmService.getFirm(selectedFirm.getId().toString());
             Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
-            userService.createUser(user, selectedRoles, selectedOffices, firm, isFirmAdmin);
+            userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
