@@ -76,6 +76,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
 
       - name: Deploy to Cloud Platform
         run: |
@@ -95,13 +96,14 @@ jobs:
       - name: Generate Monitoring Deployment Files
         run: |
           rm deployments/* 2> /dev/null
-          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/prometheus.yml
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
         env:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
           ENV_NAME: ${{ vars.ENV_NAME }}
-          INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
+          RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
       
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform
