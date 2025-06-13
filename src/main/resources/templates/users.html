@@ -3,8 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs},
-      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Users</title>
@@ -12,24 +11,13 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <div class="govuk-phase-banner" id="feedback">
-        <p class="govuk-phase-banner__content">
-            <strong class="govuk-tag govuk-phase-banner__content__tag">
-                Beta
-            </strong>
-            <span class="govuk-phase-banner__text">
-                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
-                    email</a>.
-            </span>
-        </p>
-    </div>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" href="/home">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/users">Users</a>
+                <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
             </li>
         </ol>
     </nav>
@@ -47,7 +35,7 @@
                             <div class="moj-button-group moj-button-group--inline">
                                 <button type="button" class="govuk-button govuk-button--secondary"
                                     data-module="govuk-button" data-govuk-button-init=""
-                                    onclick="location.href='/user/create/details';">
+                                    onclick="location.href='/admin/user/create/details';">
                                     Create a user
                                 </button>
                             </div>
@@ -57,7 +45,7 @@
 
                 <div class="govuk-grid-row">
                     <div class="govuk-grid-column-one-half">
-                        <form method="get" th:action="@{/users}" role="search">
+                        <form method="get" th:action="@{/admin/users}" role="search">
                             <div class="moj-search">
                                 <div class="govuk-form-group">
                                     <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
@@ -81,7 +69,7 @@
                 </div>
 
                 <br>
-                <form method="post" th:action="@{/users/disable}">
+                <form method="post" th:action="@{/admin/users/disable}">
                     <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
@@ -112,7 +100,7 @@
                                     </div>
                                 </td>
                                 <td class="govuk-table__cell">
-                                    <a class="govuk-link" th:href="@{/users/manage/{id}(id=${user.id})}"
+                                    <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
                                         th:text="${user.fullName}"></a>
                                 </td>
                                 <td class="govuk-table__cell" th:text="${user.email}"></td>
@@ -130,20 +118,20 @@
                     <ul class="moj-pagination__list">
                         <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${page > 1}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${requestedPageSize}, page=${page - 1})}">Previous<span
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1})}">Previous<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
                         <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
-                                <a class="moj-pagination__link" th:href="@{/users(size=${pageSize}, page=${i})}"
+                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${pageSize}, page=${i})}"
                                    th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
                         <li class="moj-pagination__item  moj-pagination__item--next" th:if="${page < totalPages}">
                             <a class="moj-pagination__link"
-                                th:href="@{/users(size=${requestedPageSize}, page=${page + 1})}">Next<span
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1})}">Next<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>

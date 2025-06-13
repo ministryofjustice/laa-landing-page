@@ -5,6 +5,29 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,27 +39,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
@@ -46,11 +48,13 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Slf4j
 @Controller
 @RequiredArgsConstructor
+@RequestMapping("/admin")
 public class UserController {
 
     private final UserService userService;
     private final OfficeService officeService;
     private final ModelMapper mapper;
+    private final FirmService firmService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -136,14 +140,20 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new User();
         }
+        List<FirmDto> firms = firmService.getFirms();
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        model.addAttribute("firms", firms);
+        model.addAttribute("selectedFirm", selectedFirm);
         model.addAttribute("user", user);
         return "user/user-details";
     }
 
     @PostMapping("/user/create/details")
-    public RedirectView postUser(@RequestParam("firstName") String firstName,
-            @RequestParam("lastName") String lastName,
-            @RequestParam("email") String email,
+    public RedirectView postUser(@RequestParam String firstName,
+            @RequestParam String lastName,
+            @RequestParam String email,
+            @RequestParam String firmId,
+            @RequestParam(required = false) String isFirmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -154,6 +164,12 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
+
+        FirmDto firm = firmService.getFirm(firmId);
+
+        session.setAttribute("firm", firm);
+        session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
+
         return new RedirectView("/user/create/services");
     }
 
@@ -173,7 +189,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public RedirectView setSelectedApps(@RequestParam("apps") List<String> apps,
+    public RedirectView setSelectedApps(@RequestParam List<String> apps,
             HttpSession session) {
         session.setAttribute("apps", apps);
         return new RedirectView("/user/create/roles");
@@ -187,7 +203,7 @@ public class UserController {
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
-                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId().toString()));
+                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
         model.addAttribute("roles", appRoleViewModels);
@@ -257,6 +273,12 @@ public class UserController {
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
+
+        FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+        model.addAttribute("firm", selectedFirm);
+
+        Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+        model.addAttribute("isFirmAdmin", isFirmAdmin);
         return "add-user-check-answers";
     }
 
@@ -274,12 +296,17 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            userService.createUser(user, selectedRoles, selectedOffices);
+            FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+            Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+            userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
-        session.removeAttribute("roles");
+        session.removeAttribute("user");
+        session.removeAttribute("firm");
+        session.removeAttribute("isFirmAmdin");
         session.removeAttribute("apps");
+        session.removeAttribute("roles");
         session.removeAttribute("officeData");
         return new RedirectView("/users");
     }

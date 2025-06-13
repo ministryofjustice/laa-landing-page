@@ -3,8 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'home'},
-      breadcrumbs=~{::#breadcrumbs},
-      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Homepage</title>
@@ -12,24 +11,13 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <div class="govuk-phase-banner" id="feedback">
-        <p class="govuk-phase-banner__content">
-            <strong class="govuk-tag govuk-phase-banner__content__tag">
-                Beta
-            </strong>
-            <span class="govuk-phase-banner__text">
-                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
-                    email</a>.
-            </span>
-        </p>
-    </div>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" href="/home">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/users" th:text="${user.displayName}" aria-label="Users"></a>
+                <a class="govuk-breadcrumbs__link" href="/admin/users" th:text="${user.displayName}" aria-label="Users"></a>
             </li>
         </ol>
     </nav>
@@ -157,7 +145,7 @@
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="#">Change</a>
+                                        <a class="govuk-link" href="#">Manage</a>
                                     </li>
                                 </ul>
                             </div>

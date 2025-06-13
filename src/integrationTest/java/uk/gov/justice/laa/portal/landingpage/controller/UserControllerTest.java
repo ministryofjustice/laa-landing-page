@@ -24,7 +24,7 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Happy Path Test: displaySavedUsers get")
     void displaySavedUsers() throws Exception {
-        this.mockMvc.perform(get("/userlist"))
+        this.mockMvc.perform(get("/admin/userlist"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users"));
     }

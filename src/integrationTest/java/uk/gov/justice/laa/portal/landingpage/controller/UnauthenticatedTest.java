@@ -10,7 +10,7 @@ public class UnauthenticatedTest extends BaseIntegrationTest {
     @Test
     void shouldRedirectAnonymousUser() throws Exception {
         this.mockMvc
-                .perform(get("/users"))
+                .perform(get("/admin/users"))
                 .andExpect(status().is3xxRedirection());
     }
 }

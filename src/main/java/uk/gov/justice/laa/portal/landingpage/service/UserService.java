@@ -19,10 +19,12 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -321,12 +323,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices);
+        persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin);
 
         return invitedUser;
     }
@@ -348,8 +350,9 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
@@ -358,10 +361,11 @@ public class UserService {
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(UserType.INTERNAL)
+                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
                 .createdBy("Admin")
+                .firm(firm)
                 .entraUser(entraUser)
                 .build();
 
