@@ -48,7 +48,7 @@ spec:
 
         - alert: KubeJobFailed
           annotations:
-            message: Failed Cron Job in {{ $labels.namespace }}/{{ $labels.job_name }} in ${ENV_NAME} 
+            message: Failed Cron Job in {{ $labels.namespace }}/{{ $labels.job_name }} in ${ENV_NAME}
             runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: kube_job_status_failed{job="kube-state-metrics", namespace="${NAMESPACE}"}  > 0
