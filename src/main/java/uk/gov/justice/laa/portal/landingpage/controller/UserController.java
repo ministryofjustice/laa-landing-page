@@ -51,29 +51,29 @@ public class UserController {
     private final ModelMapper mapper;
 
     /**
-     * Retrieves a list of users from Microsoft Graph API.
+     * Retrieves a list of users from database.
      */
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) String search,
             Model model,
-            HttpSession session) {
+            // HttpSession session is currently unused, but added back in as per instructions
+            @SuppressWarnings("unused") HttpSession session) {
 
-        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
-        if (page == null) {
+        // Default to first page when page not specified
+        if (page == null || page < 1) {
             page = 1;
-            session.setAttribute("cachedUsers", null);
-            session.setAttribute("lastResponse", null);
-            session.setAttribute("totalUsers", null);
         }
 
-        // Initialise cached user list if not already.
-        if (session.getAttribute("cachedUsers") == null) {
-            session.setAttribute("cachedUsers", new ArrayList<>());
+        // Decide whether to perform search or standard list
+        PaginatedUsers paginatedUsers;
+        if (search != null && !search.trim().isEmpty()) {
+            paginatedUsers = userService.searchUsers(page, size, search.trim());
+        } else {
+            paginatedUsers = userService.listUsers(page, size);
         }
-
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -81,6 +81,7 @@ public class UserController {
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
+        model.addAttribute("search", search); // keeps search box populated
 
         return "users";
     }
