@@ -76,7 +76,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
     public void testGetEditUserAppsForUserHasCorrectProperties() throws Exception {
         EntraUser entraUser = buildTestUser();
         entraUserRepository.saveAndFlush(entraUser);
-        this.mockMvc.perform(get(String.format("/users/edit/%s/apps", entraUser.getId())))
+        this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", entraUser.getId())))
                 .andExpect(status().isOk())
                 .andExpect(view().name("edit-user-apps"))
                 .andExpect(model().attributeExists("user"))
@@ -90,14 +90,14 @@ public class AppSelectionTest extends BaseIntegrationTest {
     @Test
     public void testGetEditUserAppsForUserThrowsExceptionWhenNoUserExists() throws Exception {
         UUID userId = UUID.randomUUID();
-        ServletException servletException = assertThrows(ServletException.class, () -> this.mockMvc.perform(get(String.format("/users/edit/%s/apps", userId))));
+        ServletException servletException = assertThrows(ServletException.class, () -> this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userId))));
         assertInstanceOf(NoSuchElementException.class, servletException.getCause());
     }
 
     @Test
     public void testSelectingAppsReturnsCorrectRedirectAndApps() throws Exception {
         UUID userId = UUID.randomUUID();
-        String path = String.format("/users/edit/%s/apps", userId);
+        String path = String.format("/admin/users/edit/%s/apps", userId);
         String[] selectedApps = { userId.toString() };
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post(path)
                 .param("selectedApps", selectedApps))
