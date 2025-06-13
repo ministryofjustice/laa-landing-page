@@ -95,7 +95,7 @@ jobs:
       # Note: first rm command removes the previously generated files and doesn't remove the templates/ directory
       - name: Generate Monitoring Deployment Files
         run: |
-          rm deployments/* 2> /dev/null
+          rm deployments/* 2> /dev/null || true
           cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
         env:
