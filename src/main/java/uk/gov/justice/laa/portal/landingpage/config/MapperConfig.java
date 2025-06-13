@@ -46,6 +46,8 @@ public class MapperConfig {
         @Override
         protected void configure() {
 
+            // Skip populating ID from graph user as this is auto-generated.
+            skip(destination.getId());
             // First name mapping
             using(converter -> {
                 String displayName = (String) converter.getSource();
@@ -59,7 +61,7 @@ public class MapperConfig {
             }).map(source.getDisplayName(), destination.getLastName());
 
             // Other non-matching fields mapping
-            map().setUserName(source.getDisplayName());
+            map().setUserName(source.getUserPrincipalName());
             map().setEmail(source.getMail());
         }
     };

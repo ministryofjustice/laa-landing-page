@@ -23,20 +23,20 @@
                 <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                Edit Roles for <span th:text="${user.displayName}"></span>
+                Edit Roles for <span th:text="${user.fullName}"></span>
             </li>
         </ol>
     </nav>
 
     <main class="govuk-main-wrapper" id="main-content">
         <div th:if="${#authentication.isAuthenticated()}">
-            <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users}">
+            <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
                 Back
             </a>
 
             <span class="govuk-caption-m govuk-!-margin-top-3">Permissions and roles</span>
 
-            <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.displayName}"></span></h1>
+            <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.fullName}"></span></h1>
 
             <form method="post" th:action="@{/admin/users/edit/{id}/roles(id=${user.id})}">
                 <fieldset class="govuk-fieldset">
@@ -46,7 +46,7 @@
                     <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                         <div class="govuk-checkboxes__item" th:each="role : ${availableRoles}">
                             <input class="govuk-checkboxes__input" id="role-[[${role.id}]]" name="selectedRoles"
-                                th:checked="${userAssignedRoles.contains(role)}" th:value="${role.id}"
+                                th:checked="${userAssignedRoles.contains(role.id)}" th:value="${role.id}"
                                 type="checkbox">
                             <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
                                 <span th:text="${role.app.name}"></span> - <span th:text="${role.name}"></span>
