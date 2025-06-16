@@ -31,6 +31,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
@@ -729,117 +733,72 @@ class UserServiceTest {
     @Nested
     class PaginationTests {
 
-        private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
-        private final UserService paginationSvc =
-                new UserService(mockGraph, mockEntraUserRepository,
-                        mockAppRepository,
-                        mockAppRoleRepository,
-                        new MapperConfig().modelMapper(),
-                        mockNotificationService,
-                        mockOfficeRepository
-                );
-
-        private static User graphUser(String id, String name) {
-            User testUser = new User();
-            testUser.setId(id);
-            testUser.setUserPrincipalName(id + "@test");
-            testUser.setDisplayName(name);
-            return testUser;
-        }
-
-        // Helpers
-        private UserCollectionResponse buildPage(List<User> users, String next) {
-            UserCollectionResponse testResponse = new UserCollectionResponse();
-            testResponse.setValue(users);
-            testResponse.setOdataNextLink(next);
-            return testResponse;
-        }
-
         @Test
         void zeroUsers_setsTotalPagesToOne() {
             // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(Collections.emptyList(), null));
-            when(mockGraph.users().count().get(any())).thenReturn(0);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-            when(mockGraph.users().count().get(any())).thenReturn(0);
+            Page<EntraUser> userPage = new PageImpl<>(List.of());
+            when(mockEntraUserRepository.findAll(any(Pageable.class))).thenReturn(userPage);
 
             // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 10, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isZero();
-            assertThat(result.getTotalPages(10)).isEqualTo(1);
-        }
-
-        @Test
-        void requestingPage2ReturnsSecondPageOfUsers() {
-            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
-            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            when(mockGraph.users().withUrl("secondPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, "thirdPageLink"));
-            when(mockGraph.users().withUrl("thirdPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, null));
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(2, 1, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(3);
-            assertThat(result.getTotalPages(1)).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(1);
-            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("SecondPageUser1");
-        }
-
-        @Test
-        void requestingPage5ReturnsNothingWhenOnly2PagesAreAvailable() {
-            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
-            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            when(mockGraph.users().withUrl("secondPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, null));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 1, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(3);
-            assertThat(result.getTotalPages(1)).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(0);
-        }
-
-        @Test
-        void requestingPageReturnsNothingWhenUserResponseIsNull() {
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(null);
-            when(mockGraph.users().count().get(any())).thenReturn(null);
-            when(mockGraph.users().count().get(any())).thenReturn(0);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(1, 10, session);
+            PaginatedUsers result = userService.getPageOfUsers(1, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
-            assertThat(result.getTotalPages(10)).isEqualTo(1);
-            assertThat(result.getUsers().size()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(1);
         }
+
+        @Test
+        void testRequestingPage2ReturnsThirdPageOfUsers() {
+            // Arrange
+            List<EntraUser> allUsers = new ArrayList<>();
+            for (int i = 0; i < 25; i++) {
+                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
+            }
+            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
+            when(mockEntraUserRepository.findAll(any(Pageable.class))).thenReturn(userPage);
+            // Arrange
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsers(2, 10);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(5);
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
+        }
+
+        @Test
+        void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
+            // Arrange
+            Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(0);
+        }
+
+        @Test
+        void testSearchThatReturnsOneUserSetsTotalPagesToOne() {
+            // Arrange
+            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
+            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
+            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+        }
+
     }
 
     @Nested

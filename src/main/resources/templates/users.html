@@ -118,20 +118,20 @@
                     <ul class="moj-pagination__list">
                         <li class="moj-pagination__item  moj-pagination__item--prev" th:if="${page > 1}">
                             <a class="moj-pagination__link"
-                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1})}">Previous<span
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search})}">Previous<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
                         <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
-                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${pageSize}, page=${i})}"
+                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${pageSize}, page=${i}, search=${search})}"
                                    th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
                         <li class="moj-pagination__item  moj-pagination__item--next" th:if="${page < totalPages}">
                             <a class="moj-pagination__link"
-                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1})}">Next<span
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search})}">Next<span
                                     class="govuk-visually-hidden">
                                     page</span></a>
                         </li>
