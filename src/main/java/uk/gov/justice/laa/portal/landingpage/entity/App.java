@@ -37,7 +37,7 @@ public class App extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
-    @OneToOne(orphanRemoval = true)
+    @OneToOne
     @JoinColumn(name = "app_registration_id", nullable = false,
             foreignKey = @ForeignKey(name = "FK_app_app_registration_id"))
     @ToString.Exclude
