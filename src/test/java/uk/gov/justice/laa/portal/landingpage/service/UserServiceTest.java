@@ -449,7 +449,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles, new ArrayList<>());
+        userService.createUser(user, roles, new ArrayList<>(), "admin");
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -492,7 +492,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles, new ArrayList<>());
+        userService.createUser(user, roles, new ArrayList<>(), "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();

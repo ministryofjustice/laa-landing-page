@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.view.RedirectView;
@@ -27,9 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ServicePrincipalModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
@@ -55,17 +54,23 @@ class UserControllerTest {
     private UserController userController;
 
     @Mock
+    private LoginService loginService;
+    @Mock
     private UserService userService;
     @Mock
     private OfficeService officeService;
     @Mock
+    private EventService eventService;
+    @Mock
     private HttpSession session;
+    @Mock
+    private Authentication authentication;
 
     private Model model;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService, officeService, new MapperConfig().modelMapper());
+        userController = new UserController(loginService, userService, officeService, eventService, new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
@@ -465,8 +470,8 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
-        when(userService.createUser(any(), any(), any())).thenReturn(user);
-        RedirectView view = userController.addUserCheckAnswers(session);
+        when(userService.createUser(any(), any(), any(),any())).thenReturn(user);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
@@ -482,7 +487,7 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        RedirectView view = userController.addUserCheckAnswers(session);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
@@ -554,7 +559,7 @@ class UserControllerTest {
         final List<String> selectedRoles = new ArrayList<>();
 
         // When
-        RedirectView view = userController.updateUserRoles(userId, selectedRoles);
+        RedirectView view = userController.updateUserRoles(userId, selectedRoles, authentication);
 
         // Then
         Assertions.assertEquals("/users", view.getUrl());

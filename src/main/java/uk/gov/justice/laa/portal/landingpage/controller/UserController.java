@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,10 +27,13 @@ import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -46,8 +50,10 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @RequiredArgsConstructor
 public class UserController {
 
+    private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
+    private final EventService eventService;
     private final ModelMapper mapper;
 
     /**
@@ -260,7 +266,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public RedirectView addUserCheckAnswers(HttpSession session) {
+    public RedirectView addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -272,7 +278,9 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            userService.createUser(user, selectedRoles, selectedOffices);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            user = userService.createUser(user, selectedRoles, selectedOffices, currentUserDto.getName());
+            eventService.auditUserCreate(currentUserDto, user, selectedRoles);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
@@ -319,8 +327,12 @@ public class UserController {
      */
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
-            @RequestParam(required = false) List<String> selectedRoles) {
+            @RequestParam(required = false) List<String> selectedRoles,
+            Authentication authentication) {
+        User user = userService.getUserById(id);
         userService.updateUserRoles(id, selectedRoles);
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
         return new RedirectView("/users");
     }
 }

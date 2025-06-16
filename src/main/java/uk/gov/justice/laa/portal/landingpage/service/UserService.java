@@ -316,12 +316,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, String createdBy) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices);
+        persistNewUser(user, roles, selectedOffices, createdBy);
 
         return invitedUser;
     }
@@ -343,7 +343,7 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -356,13 +356,13 @@ public class UserService {
                 .userType(UserType.INTERNAL)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
-                .createdBy("Admin")
+                .createdBy(createdBy)
                 .entraUser(entraUser)
                 .build();
 
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser.setCreatedBy("Admin");
+        entraUser.setCreatedBy(createdBy);
         entraUser.setCreatedDate(LocalDateTime.now());
         Set<AppRegistration> appRegistrations = appRoles.stream()
                 .map(appRole -> appRole.getApp().getAppRegistration())
