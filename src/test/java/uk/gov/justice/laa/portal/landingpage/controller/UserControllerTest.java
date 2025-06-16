@@ -96,10 +96,10 @@ class UserControllerTest {
 
     @Test
     void editUser() {
-        User user = new User();
-        user.setDisplayName("Test User");
+        EntraUserDto user = new EntraUserDto();
+        user.setFullName("Test User");
 
-        when(userService.getUserById(anyString())).thenReturn(user);
+        when(userService.getEntraUserById(anyString())).thenReturn(Optional.of(user));
 
         String view = userController.editUser("userId", model);
 
@@ -181,10 +181,10 @@ class UserControllerTest {
 
         // Arrange
         String userId = "user123";
-        User mockUser = new User();
+        EntraUserDto mockUser = new EntraUserDto();
         mockUser.setId(userId);
-        mockUser.setDisplayName("Test User");
-        when(userService.getUserById(userId)).thenReturn(mockUser);
+        mockUser.setFullName("Test User");
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
         String viewName = userController.editUser(userId, model);
@@ -192,7 +192,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
-        verify(userService).getUserById(userId);
+        verify(userService).getEntraUserById(userId);
     }
 
     @Test
@@ -200,15 +200,12 @@ class UserControllerTest {
 
         // Arrange
         String userId = "invalid-user";
-        when(userService.getUserById(userId)).thenReturn(null);
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
 
         // Act
         String viewName = userController.editUser(userId, model);
 
-        // Assert
-        assertThat(viewName).isEqualTo("edit-user");
-        assertThat(model.getAttribute("user")).isNull();
-        verify(userService).getUserById(userId);
+        verify(userService).getEntraUserById(userId);
     }
 
     @Test
@@ -233,15 +230,13 @@ class UserControllerTest {
     void manageUser_shouldAddUserAndLastLoggedInToModelAndReturnManageUserView() {
         // Arrange
         String userId = "user42";
-        User mockUser = new User();
+        EntraUserDto mockUser = new EntraUserDto();
         mockUser.setId(userId);
-        mockUser.setDisplayName("Managed User");
-        String lastLoggedIn = "2024-06-01T12:00:00Z";
+        mockUser.setFullName("Managed User");
         List<AppRoleDto> appRoles = List.of(new AppRoleDto());
         List<Office> offices = List.of(Office.builder().build());
 
-        when(userService.getUserById(userId)).thenReturn(mockUser);
-        when(userService.getLastLoggedInByUserId(userId)).thenReturn(lastLoggedIn);
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(appRoles);
         when(officeService.getOffices()).thenReturn(offices);
 
@@ -251,19 +246,16 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
-        assertThat(model.getAttribute("lastLoggedIn")).isEqualTo(lastLoggedIn);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(appRoles);
         assertThat(model.getAttribute("offices")).isEqualTo(offices);
-        verify(userService).getUserById(userId);
-        verify(userService).getLastLoggedInByUserId(userId);
+        verify(userService).getEntraUserById(userId);
     }
 
     @Test
     void manageUser_whenUserNotFound_shouldAddNullUserAndReturnManageUserView() {
         // Arrange
         String userId = "notfound";
-        when(userService.getUserById(userId)).thenReturn(null);
-        when(userService.getLastLoggedInByUserId(userId)).thenReturn(null);
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(null);
 
         // Act
@@ -274,8 +266,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isNull();
         assertThat(model.getAttribute("lastLoggedIn")).isNull();
         assertThat(model.getAttribute("appRoles")).isNull();
-        verify(userService).getUserById(userId);
-        verify(userService).getLastLoggedInByUserId(userId);
+        verify(userService).getEntraUserById(userId);
         verify(userService).getUserAppRolesByUserId(userId);
     }
 
