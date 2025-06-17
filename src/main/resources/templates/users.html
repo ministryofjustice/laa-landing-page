@@ -125,7 +125,7 @@
                         <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
-                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${pageSize}, page=${i}, search=${search})}"
+                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search})}"
                                    th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
