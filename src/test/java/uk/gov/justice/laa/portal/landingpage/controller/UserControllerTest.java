@@ -21,6 +21,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
@@ -471,11 +472,15 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         session.setAttribute("officeData", new OfficeData());
         when(userService.createUser(any(), any(), any(),any())).thenReturn(user);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         RedirectView view = userController.addUserCheckAnswers(session, authentication);
         assertThat(view.getUrl()).isEqualTo("/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
         assertThat(model.getAttribute("officeData")).isNull();
+        verify(eventService).auditUserCreate(currentUserDto, user, roles);
     }
 
     @Test
@@ -563,6 +568,8 @@ class UserControllerTest {
 
         // Then
         Assertions.assertEquals("/users", view.getUrl());
+        verify(eventService).auditUpdateRole(any(), any(), any());
+        verify(loginService).getCurrentUser(authentication);
     }
 
 }

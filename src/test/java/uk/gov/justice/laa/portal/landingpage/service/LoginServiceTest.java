@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -226,5 +228,25 @@ class LoginServiceTest {
         assertThat(userSessionData.getAccessToken()).isEqualTo(TEST_TOKEN_VALUE);
         assertThat(userSessionData.getLastLogin()).isEqualTo("N/A");
         verify(session).setAttribute("accessToken", TEST_TOKEN_VALUE);
+    }
+
+    @Test
+    void getCurrentUser_withRealPrincipal_populatesNameAndIdFromPrincipal() {
+
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+
+        // Act
+        CurrentUserDto userDto = loginService.getCurrentUser(realAuthToken);
+
+        // Assert
+        assertThat(userDto).isNotNull();
+        assertThat(userDto.getName()).isEqualTo("Alice");
+        assertThat(userDto.getUserId()).isEqualTo(userId);
     }
 }
