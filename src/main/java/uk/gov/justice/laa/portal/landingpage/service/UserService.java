@@ -142,15 +142,6 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User getUserById(String userId) {
-        try {
-            return graphClient.users().byUserId(userId).get();
-        } catch (Exception e) {
-            logger.error("Error fetching user with ID: {}", userId, e);
-            return null;
-        }
-    }
-
     public Optional<EntraUserDto> getEntraUserById(String userId) {
         return entraUserRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, EntraUserDto.class));
@@ -222,20 +213,6 @@ public class UserService {
             partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
         }
         return partitions;
-    }
-
-    public String getLastLoggedInByUserId(String userId) {
-        User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
-            requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
-        });
-        if (user != null) {
-            SignInActivity signInActivity = user.getSignInActivity();
-            OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
-            if (lastSignInDateTime != null) {
-                return formatLastSignInDateTime(lastSignInDateTime);
-            }
-        }
-        return "User has not logged in yet.";
     }
 
     public List<AppDto> getApps() {

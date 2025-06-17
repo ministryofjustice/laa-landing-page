@@ -32,21 +32,19 @@
                     <tr>
                         <th class="govuk-table__header">Name</th>
                         <th class="govuk-table__header">Email</th>
-                        <th class="govuk-table__header">Job Title</th>
                         <th class="govuk-table__header">Assigned Roles</th>
                         <th class="govuk-table__header"></th>
 
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="user : ${usersWithRoles}">
-                        <td class="govuk-table__cell" th:text="${user.displayName}"></td>
+                    <tr>
+                        <td class="govuk-table__cell" th:text="${user.fullName}"></td>
                         <td class="govuk-table__cell" th:text="${user.email}"></td>
-                        <td class="govuk-table__cell" th:text="${user.jobTitle}"></td>
                         <td class="govuk-table__cell">
-                            <div th:each="role : ${user.roles}">
-                                <span th:text="${role.appName}"></span> -
-                                <span th:text="${role.roleName}"></span>
+                            <div th:each="role : ${roles}">
+                                <span th:text="${role.app.name}"></span> -
+                                <span th:text="${role.name}"></span>
                             </div>
                         </td>
                         <td class="govuk-table__cell">

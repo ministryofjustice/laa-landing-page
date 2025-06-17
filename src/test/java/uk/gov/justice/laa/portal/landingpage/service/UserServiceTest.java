@@ -322,74 +322,6 @@ class UserServiceTest {
     }
 
     @Test
-    void getLastLoggedInByUserId_returnsFormattedDate() {
-        // Arrange
-        User user = new User();
-        SignInActivity signInActivity = new SignInActivity();
-        OffsetDateTime dateTime = OffsetDateTime.parse("2024-01-01T10:15:30+00:00");
-        signInActivity.setLastSignInDateTime(dateTime);
-        user.setSignInActivity(signInActivity);
-        user.setDisplayName("Test User");
-
-        String userId = "user-123";
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
-
-        // Act
-        String result = userService.getLastLoggedInByUserId(userId);
-
-        // Assert
-        assertThat(result).isEqualTo("1 January 2024, 10:15");
-    }
-
-    @Test
-    void getLastLoggedInByUserId_returnsMessageIfNeverLoggedIn() {
-        User user = new User();
-        user.setDisplayName("Test User");
-        user.setSignInActivity(null);
-
-        String userId = "user-123";
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(userId).get(any())).thenReturn(user);
-
-        String result = userService.getLastLoggedInByUserId(userId);
-
-        assertThat(result).isEqualTo("User has not logged in yet.");
-    }
-
-    @Test
-    void getUserById_returnsUser_whenUserExists() {
-        String userId = "user-123";
-        User mockUser = new User();
-        mockUser.setId(userId);
-        mockUser.setDisplayName("Test User");
-
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(userId).get()).thenReturn(mockUser);
-
-        User result = userService.getUserById(userId);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(userId);
-        assertThat(result.getDisplayName()).isEqualTo("Test User");
-    }
-
-    @Test
-    void getUserById_returnsNull_whenExceptionThrown() {
-        String userId = "user-123";
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(userId).get()).thenThrow(new RuntimeException("Not found"));
-
-        User result = userService.getUserById(userId);
-
-        assertThat(result).isNull();
-    }
-
-    @Test
     void getApps() {
         when(mockAppRepository.findAll()).thenReturn(List.of(App.builder().build()));
         List<AppDto> result = userService.getApps();
@@ -612,43 +544,6 @@ class UserServiceTest {
 
         // Assert
         assertThat(users).isNotNull().isEmpty();
-    }
-
-    @Test
-    void existingUserRetrievalById() {
-        // Arrange
-        String userId = "existing-user-id";
-        User expectedUser = new User();
-        expectedUser.setId(userId);
-
-        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
-        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
-        when(userItemRb.get()).thenReturn(expectedUser);
-
-        // Act
-        User actualUser = userService.getUserById(userId);
-
-        // Assert
-        assertThat(actualUser).isEqualTo(expectedUser);
-    }
-
-    @Test
-    void nonExistentUserRetrievalByIdReturnsNull() {
-        // Arrange
-        String userId = "non-existent-user-id";
-        UsersRequestBuilder usersRb = mock(UsersRequestBuilder.class);
-        UserItemRequestBuilder userItemRb = mock(UserItemRequestBuilder.class);
-        when(mockGraphServiceClient.users()).thenReturn(usersRb);
-        when(usersRb.byUserId(userId)).thenReturn(userItemRb);
-        when(userItemRb.get()).thenThrow(new ApiException("User not found"));
-
-        // Act
-        User actualUser = userService.getUserById(userId);
-
-        // Assert
-        assertThat(actualUser).isNull();
     }
 
     @Test
