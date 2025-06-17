@@ -47,7 +47,7 @@ class EntraIDServiceTest {
         when(graphApiService.getUserProfile(anyString())).thenReturn(expectedUser);
 
         // Act
-        User result = entraIDService.getUserByPrincipalName(userPrincipalName).join();
+        User result = entraIDService.getUserByPrincipalName(userPrincipalName);
 
         // Assert
         assertNotNull(result);
@@ -71,8 +71,7 @@ class EntraIDServiceTest {
             .thenReturn(List.of(role1, role2));
 
         // Act
-        List<String> result = entraIDService.getUserGroupMemberships(userId).join();
-
+        List<String> result = entraIDService.getUserGroupMemberships(userId);
         // Assert
         assertNotNull(result);
         assertEquals(2, result.size());

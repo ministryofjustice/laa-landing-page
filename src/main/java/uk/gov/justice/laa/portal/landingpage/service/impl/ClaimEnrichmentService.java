@@ -66,7 +66,7 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
             }
 
             // 6. Get all roles and permissions for this user and app
-            Map<String, Object> accessInfo = mapGroupsToPermissions(request.getTargetAppId(), userGroups);
+            Map<String, Object> accessInfo = mapGroupsToPermissions(app, userGroups);
 
             log.info("Successfully processed claim enrichment for user: {}", user.getUserPrincipalName());
 
@@ -86,10 +86,7 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
         }
     }
 
-    private Map<String, Object> mapGroupsToPermissions(String targetAppId, List<String> groupIds) {
-        // Get the app from database
-        App app = appRepository.findByAppRegistrationId(UUID.fromString(targetAppId))
-                .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
+    private Map<String, Object> mapGroupsToPermissions(App app, List<String> groupIds) {
 
         // Get all roles for this app
         Set<AppRole> appRoles = app.getAppRoles();
@@ -105,7 +102,7 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
         Set<String> permissions = new HashSet<>(userRoles);
 
         return Map.of(
-                "appId", targetAppId,
+                "appId", app.getAppRegistration().getId().toString(),
                 "appName", app.getName(),
                 "roles", userRoles,
                 "permissions", new ArrayList<>(permissions),
