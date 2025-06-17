@@ -3,7 +3,11 @@ package uk.gov.justice.laa.portal.landingpage.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpenApiConfigTest {
 
@@ -12,26 +16,26 @@ class OpenApiConfigTest {
     @Test
     void customOpenApi_Configuration() {
         // Act
-        OpenAPI openAPI = config.customOpenApi();
+        OpenAPI openApi = config.customOpenApi();
 
         // Assert
-        assertNotNull(openAPI);
-        assertNotNull(openAPI.getInfo());
-        assertEquals("Claim Enrichment API", openAPI.getInfo().getTitle());
-        assertEquals("1.0", openAPI.getInfo().getVersion());
+        assertNotNull(openApi);
+        assertNotNull(openApi.getInfo());
+        assertEquals("Claim Enrichment API", openApi.getInfo().getTitle());
+        assertEquals("1.0", openApi.getInfo().getVersion());
         
         // Verify security scheme
-        assertNotNull(openAPI.getComponents());
-        assertNotNull(openAPI.getComponents().getSecuritySchemes());
-        assertTrue(openAPI.getComponents().getSecuritySchemes().containsKey("bearerAuth"));
+        assertNotNull(openApi.getComponents());
+        assertNotNull(openApi.getComponents().getSecuritySchemes());
+        assertTrue(openApi.getComponents().getSecuritySchemes().containsKey("bearerAuth"));
         
-        SecurityScheme securityScheme = openAPI.getComponents().getSecuritySchemes().get("bearerAuth");
+        SecurityScheme securityScheme = openApi.getComponents().getSecuritySchemes().get("bearerAuth");
         assertEquals(SecurityScheme.Type.HTTP, securityScheme.getType());
         assertEquals("bearer", securityScheme.getScheme());
         assertEquals("JWT", securityScheme.getBearerFormat());
         
         // Verify security requirement
-        assertFalse(openAPI.getSecurity().isEmpty());
-        assertFalse(openAPI.getSecurity().get(0).isEmpty());
+        assertFalse(openApi.getSecurity().isEmpty());
+        assertFalse(openApi.getSecurity().get(0).isEmpty());
     }
 }

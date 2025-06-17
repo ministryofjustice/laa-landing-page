@@ -12,12 +12,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class EntraIDServiceTest {
+class EntraIdServiceTest {
 
     @Mock
     private GraphApiService graphApiService;
@@ -26,7 +31,7 @@ class EntraIDServiceTest {
     private ClientSecretCredential clientSecretCredential;
 
     @InjectMocks
-    private EntraIdService entraIDService;
+    private EntraIdService entraIdService;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +52,7 @@ class EntraIDServiceTest {
         when(graphApiService.getUserProfile(anyString())).thenReturn(expectedUser);
 
         // Act
-        User result = entraIDService.getUserByPrincipalName(userPrincipalName);
+        User result = entraIdService.getUserByPrincipalName(userPrincipalName);
 
         // Assert
         assertNotNull(result);
@@ -59,8 +64,6 @@ class EntraIDServiceTest {
 
     @Test
     void getUserGroupMemberships_WhenUserHasGroups_ReturnsGroupIds() {
-        // Arrange
-        String userId = "user-123";
         // Create test roles with proper setter methods
         AppRole role1 = new AppRole();
         role1.setDisplayName("Admin"); // This is a public field in the SDK
@@ -71,7 +74,8 @@ class EntraIDServiceTest {
             .thenReturn(List.of(role1, role2));
 
         // Act
-        List<String> result = entraIDService.getUserGroupMemberships(userId);
+        List<String> result = entraIdService.getUserGroupMemberships(anyString());
+
         // Assert
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -91,7 +95,7 @@ class EntraIDServiceTest {
         when(graphApiService.getUserProfile(validToken)).thenReturn(user);
 
         // Act
-        boolean result = entraIDService.validateToken(validToken);
+        boolean result = entraIdService.validateToken(validToken);
 
         // Assert
         assertTrue(result);
@@ -105,7 +109,7 @@ class EntraIDServiceTest {
         when(graphApiService.getUserProfile(invalidToken)).thenThrow(new RuntimeException("Invalid token"));
 
         // Act
-        boolean result = entraIDService.validateToken(invalidToken);
+        boolean result = entraIdService.validateToken(invalidToken);
 
         // Assert
         assertFalse(result);
