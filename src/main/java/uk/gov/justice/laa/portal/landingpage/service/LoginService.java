@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -134,7 +135,7 @@ public class LoginService {
         OAuth2User principal = oauthToken.getPrincipal();
 
         String name = principal.getAttribute("name");
-        UUID userId = UUID.fromString(principal.getAttribute("oid"));
+        UUID userId = UUID.fromString(Objects.requireNonNull(principal.getAttribute("oid")));
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName(name);
         currentUserDto.setUserId(userId);
