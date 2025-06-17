@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -10,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -27,9 +29,12 @@ class SecurityConfigTest {
     @Autowired
     MockMvc mvc;
 
+    @Mock
+    private AuthzOidcUserDetailsService authzOidcUserDetailsService;
+
     @Test
     void passwordEncoderBeanCreation() {
-        assertThat(new SecurityConfig().passwordEncoder())
+        assertThat(new SecurityConfig(authzOidcUserDetailsService).passwordEncoder())
                 .isInstanceOf(PasswordEncoder.class);
     }
 

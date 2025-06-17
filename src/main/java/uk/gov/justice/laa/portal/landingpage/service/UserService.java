@@ -192,6 +192,23 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserType> findUserTypeByUsername(String username) {
+        EntraUser user = entraUserRepository.findByUserName(username);
+
+        if (user == null) {
+            logger.error("User not found for the given user name: {}", username);
+            throw new RuntimeException(String.format("User not found for the given user name: %s", username));
+        }
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user name: {}", username);
+            throw new RuntimeException(String.format("User profile not found for the given user name: %s", username));
+        }
+
+        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+
+    }
+
     @Async
     public void disableUsers(List<String> ids) throws IOException {
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
@@ -307,6 +324,28 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
     }
+
+    /**
+     * The method loads the user type from DB and map it as user authorities
+     *
+     * @param userName the user principal
+     * @return the list of user types associated with entra user
+     */
+    public List<String> getUserAuthorities(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName);
+
+        List<String> grantedAuthorities = Collections.emptyList();
+
+        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+            grantedAuthorities = user.getUserProfiles().stream()
+                    .map(userProfile -> userProfile.getUserType().name())
+                    .toList();
+
+        }
+        return grantedAuthorities;
+    }
+
+
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
