@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,6 +17,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,21 +28,20 @@ import org.springframework.web.servlet.view.RedirectView;
 import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
@@ -127,9 +130,9 @@ public class UserController {
         model.addAttribute("offices", offices);
         return "manage-user";
     }
-
+    
     @GetMapping("/user/create/details")
-    public String createUser(HttpSession session, Model model) {
+    public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
@@ -143,28 +146,41 @@ public class UserController {
     }
 
     @PostMapping("/user/create/details")
-    public RedirectView postUser(@RequestParam String firstName,
-            @RequestParam String lastName,
-            @RequestParam String email,
-            @RequestParam String firmId,
+    public String postUser(
+            @Valid UserDetailsForm userDetailsForm, BindingResult result,
             @RequestParam(required = false) String isFirmAdmin,
-            HttpSession session) {
+            HttpSession session, Model model) {
+
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
         }
-        user.setGivenName(firstName);
-        user.setSurname(lastName);
-        user.setDisplayName(firstName + " " + lastName);
-        user.setMail(email);
+
+        // Set user details from the form
+        user.setGivenName(userDetailsForm.getFirstName());
+        user.setSurname(userDetailsForm.getLastName());
+        user.setDisplayName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setMail(userDetailsForm.getEmail());
         session.setAttribute("user", user);
 
-        FirmDto firm = firmService.getFirm(firmId);
+        if (result.hasErrors()) {
+            log.error("Validation errors occurred while creating user: {}", result.getAllErrors());
 
+            // If there are validation errors, return to the user details page with errors
+            List<FirmDto> firms = firmService.getFirms();
+            FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+            model.addAttribute("firms", firms);
+            model.addAttribute("selectedFirm", selectedFirm);
+            model.addAttribute("user", user);
+            return "user/user-details";
+        }
+
+        // Set firm and admin status
+        FirmDto firm = firmService.getFirm(userDetailsForm.getFirmId());
         session.setAttribute("firm", firm);
-        session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
+        session.setAttribute("isFirmAdmin", userDetailsForm.getIsFirmAdmin());
 
-        return new RedirectView("/user/create/services");
+        return "redirect:/user/create/services";
     }
 
     @GetMapping("/user/create/services")
@@ -268,11 +284,11 @@ public class UserController {
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
 
-        FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
-        
+
         Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
-        model.addAttribute("isFirmAdmin", isFirmAdmin);      
+        model.addAttribute("isFirmAdmin", isFirmAdmin);
         return "add-user-check-answers";
     }
 
@@ -290,7 +306,7 @@ public class UserController {
             } else {
                 selectedOffices = new ArrayList<>();
             }
-            FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+            FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
             Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
             userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
         } else {

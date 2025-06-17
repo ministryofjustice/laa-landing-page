@@ -26,7 +26,20 @@
                     User details
                 </h1>
             </legend>
-            <form th:action="@{/admin/user/create/details}" th:method="post">
+            <form th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
+                <div th:if="${#fields.hasErrors()}">
+                    <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                        aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                        <h2 class="govuk-error-summary__title" id="error-summary-title">
+                            There is a problem
+                        </h2>
+                        <div class="govuk-error-summary__body" id="error-summary-description">
+                            <ul class="govuk-list govuk-error-summary__list">
+                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 <div class="govuk-!-margin-bottom-3">
                     <div class="govuk-form-group">
                         <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
@@ -35,7 +48,7 @@
                         <select class="govuk-select" id="firmId" name="firmId">
                             <div th:each="firm : ${firms}">
                                 <option th:value="${firm.id}" th:text="${firm.name}"
-                                    th:selected="${firm.name == selectedFirm?.name}"></option>
+                                    th:selected="${firm.id == selectedFirm?.id}"></option>
                             </div>
                         </select>
                         <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
@@ -50,29 +63,43 @@
                         </div>
                     </div>
                 </div>
-                <div class="govuk-form-group">
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="email">
                         Email Address
                     </label>
                     <p class="govuk-hint">
                         Please ensure the email address you provide is accurate.
                     </p>
-                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{user.mail}"
-                        id="email" />
+                    <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('email')}" th:text="${err}"></span>
+                    </div>
+                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{email}"
+                        id="email" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
-                <div class="govuk-form-group">
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="firstName">
                         First Name
                     </label>
+                    <div th:if="${#fields.hasErrors('firstName')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></span>
+                    </div>
                     <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
-                        th:value="*{user.givenName}" id="firstName" />
+                        th:value="*{firstName}" id="firstName"
+                        th:aria-describedby="${#fields.hasErrors('firstName')} ? 'firstName-error' : null" />
                 </div>
-                <div class="govuk-form-group">
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('lastName')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="lastName">
                         Last Name
                     </label>
+                    <div th:if="${#fields.hasErrors('lastName')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></span>
+                    </div>
                     <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
-                        th:value="*{user.surname}" id="lastName" />
+                        th:value="*{lastName}" id="lastName"
+                        th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
