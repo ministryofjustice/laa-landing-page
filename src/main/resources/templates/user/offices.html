@@ -14,15 +14,15 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/user/create/roles">
+                <a class="govuk-breadcrumbs__link" href="/admin/user/create/roles">
                     < Back</a>
             </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form th:action="@{/user/create/offices}" th:method="post">
+        <form th:action="@{/admin/user/create/offices}" th:method="post">
             <div class="govuk-form-group">
-                <fieldset class="govuk-fieldset" aria-describedby="countries-hint">
+                <fieldset class="govuk-fieldset" aria-describedby="offices-hint">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                         <h1 class="govuk-fieldset__heading">
                             Which of these offices will <span th:text="${user.givenName}"></span> <span
@@ -35,7 +35,7 @@
                     <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                         <div class="govuk-checkboxes__item">
                             <input class="govuk-checkboxes__input" id="offices-all" name="offices" type="checkbox"
-                                value="Access to all offices" data-behaviour="exclusive">
+                                value="" data-behaviour="exclusive">
                             <label class="govuk-label govuk-checkboxes__label" for="offices-all">
                                 Access to all offices
                                 <div id="all-offices-hint" class="govuk-hint">
@@ -46,9 +46,9 @@
                         <div class="govuk-checkboxes__divider">or</div>
                         <div th:each="office : ${officeData}">
                             <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="office-{office.id}" name="offices"
-                                    type="checkbox" th:value="${office.name}" th:checked="${office.selected}">
-                                <label class="govuk-label govuk-checkboxes__label" for="office-{office.id}"
+                                <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
+                                    type="checkbox" th:value="${office.id}" th:checked="${office.selected}">
+                                <label class="govuk-label govuk-checkboxes__label"
                                     th:text="${office.name}">
                                 </label>
                             </div>
