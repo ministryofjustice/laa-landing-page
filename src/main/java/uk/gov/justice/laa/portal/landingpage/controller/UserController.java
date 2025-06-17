@@ -37,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -185,7 +186,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/services")
-    public String selectUserApps(ApplicationsForm applicationsForm, BindingResult result, Model model, HttpSession session) {
+    public String selectUserApps(ApplicationsForm applicationsForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<AppViewModel> apps = userService.getApps().stream()
                 .map(appDto -> {
@@ -200,29 +201,18 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public String setSelectedApps(@Valid ApplicationsForm applicationsForm, BindingResult result, Model model,
+    public String setSelectedApps(ApplicationsForm applicationsForm, Model model,
             HttpSession session
     ) {
-        if (result.hasErrors()) {
-            log.debug("Validation errors occurred while selecting user apps: {}", result.getAllErrors());
-            List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-            List<AppViewModel> apps = userService.getApps().stream()
-                    .map(appDto -> {
-                        AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
-                        appViewModel.setSelected(selectedApps.contains(appDto.getId()));
-                        return appViewModel;
-                    }).toList();
-            model.addAttribute("apps", apps);
-            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
-            model.addAttribute("user", user);
-            return "add-user-apps";
+        if (applicationsForm.getApps() == null || applicationsForm.getApps().isEmpty()) {
+            return "redirect:/admin/user/create/check-answers";
         }
         session.setAttribute("apps", applicationsForm.getApps());
         return "redirect:/admin/user/create/roles";
     }
 
     @GetMapping("/user/create/roles")
-    public String getSelectedRoles(Model model, HttpSession session) {
+    public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
@@ -239,9 +229,26 @@ public class UserController {
     }
 
     @PostMapping("/user/create/roles")
-    public String setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
-            HttpSession session) {
-        session.setAttribute("roles", roles);
+    public String setSelectedRoles(@Valid RolesForm rolesForm, BindingResult result,
+            Model model, HttpSession session) {
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
+
+            List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
+            List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
+            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
+            List<AppRoleViewModel> appRoleViewModels = roles.stream()
+                    .map(appRoleDto -> {
+                        AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
+                        viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
+                        return viewModel;
+                    }).toList();
+            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+            model.addAttribute("user", user);
+            model.addAttribute("roles", appRoleViewModels);
+            return "add-user-roles";
+        }
+        session.setAttribute("roles", rolesForm.getRoles());
         return "redirect:/admin/user/create/offices";
     }
 
