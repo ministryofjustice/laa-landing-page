@@ -82,7 +82,7 @@
                             </dl>
                         </div>
                     </div>
-                    <div class="govuk-summary-card">
+                    <div class="govuk-summary-card" th:if="${apps != null}">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
                                 Services
@@ -110,7 +110,7 @@
                             </dl>
                         </div>
                     </div>
-                    <div class="govuk-summary-card">
+                    <div class="govuk-summary-card" th:if="${officeData.getSelectedOfficesDisplay() != null}">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
                                 Offices
@@ -146,9 +146,10 @@
                         </div>
                     </div>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button" data-module="govuk-button" data-govuk-button-init="">
-                            Create user and send invite
-                        </button>
+                        <div class="govuk-button-group">
+                            <button type="submit" class="govuk-button">Create User</button>
+                            <a href="/home" class="govuk-link">Cancel</a>
+                        </div>
                     </div>
                 </form>
             </div>
