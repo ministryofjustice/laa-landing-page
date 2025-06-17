@@ -164,7 +164,7 @@ public class UserController {
         session.setAttribute("user", user);
 
         if (result.hasErrors()) {
-            log.error("Validation errors occurred while creating user: {}", result.getAllErrors());
+            log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
             // If there are validation errors, return to the user details page with errors
             List<FirmDto> firms = firmService.getFirms();
@@ -199,10 +199,10 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public RedirectView setSelectedApps(@RequestParam List<String> apps,
+    public String setSelectedApps(@RequestParam List<String> apps,
             HttpSession session) {
         session.setAttribute("apps", apps);
-        return new RedirectView("/user/create/roles");
+        return "redirect:/admin/user/create/roles";
     }
 
     @GetMapping("/user/create/roles")
@@ -216,15 +216,17 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
         return "add-user-roles";
     }
 
     @PostMapping("/user/create/roles")
-    public RedirectView setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
+    public String setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
             HttpSession session) {
         session.setAttribute("roles", roles);
-        return new RedirectView("/user/create/offices");
+        return "redirect:/admin/user/create/offices";
     }
 
     @GetMapping("/user/create/offices")
@@ -240,11 +242,11 @@ public class UserController {
         model.addAttribute("officeData", officeData);
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
-        return "user/offices";
+        return "add-user-offices";
     }
 
     @PostMapping("/user/create/offices")
-    public RedirectView postOffices(HttpSession session, @RequestParam(value = "offices") List<String> selectedOffices) {
+    public String postOffices(HttpSession session, @RequestParam(value = "offices") List<String> selectedOffices) {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(selectedOffices);
         //if user has firms, use officeService.getOfficesByFirms();
@@ -258,7 +260,7 @@ public class UserController {
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
-        return new RedirectView("/user/create/check-answers");
+        return "redirect:/admin/user/create/check-answers";
     }
 
     @GetMapping("/user/create/check-answers")

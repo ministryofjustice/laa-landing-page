@@ -18,31 +18,36 @@
             </li>
         </ol>
     </nav>
-    <div id="main-content">
-        <p class="govuk-body" th:if="${param.error}" style="color:red;">Invalid username or password</p>
+    <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/user/create/services}">
-            <fieldset class="govuk-fieldset">
-                <h1 class="govuk-hint govuk-!-margin-bottom-3">
-                    Select the applications required for <span th:text="${user.givenName}"></span> <span
-                        th:text="${user.surname}"></span>
-                </h1>
-                <p class="govuk-body">Select all that apply</p>
-                <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                    <div class="govuk-checkboxes__item" th:each="app : ${apps}">
-                        <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
-                            th:value="${app.id}" type="checkbox">
-                        <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
-                            <span th:text="${app.name}"></span>
-                        </label>
+            <div class="govuk-form-group">
+                <fieldset class="govuk-fieldset">
+                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                        <h1 class="govuk-fieldset__heading">
+                            Which services will <span th:text="${user.givenName}"></span> <span
+                                th:text="${user.surname}"></span> need access?
+                        </h1>
+                    </legend>
+                    <div id="offices-hint" class="govuk-hint">
+                        Select all that apply
                     </div>
-                </div>
-            </fieldset>
+                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
+                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
+                                th:value="${app.id}" type="checkbox">
+                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
+                                <span th:text="${app.name}"></span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
                 <a href="/home" class="govuk-link">Cancel</a>
             </div>
         </form>
-    </div>
+    </main>
 </body>
 
 </html>

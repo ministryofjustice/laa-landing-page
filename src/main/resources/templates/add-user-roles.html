@@ -14,30 +14,36 @@
             </li>
         </ol>
     </nav>
-    <div id="main-content">
+    <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/user/create/roles}">
-            <fieldset class="govuk-fieldset">
-                <p class="govuk-hint govuk-!-margin-bottom-3">
-                    Select the roles required within the
-                </p>
-                <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                    <div class="govuk-checkboxes__item" th:each="role : ${roles}" th:id="'role-' + ${role.id}">
-                        <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
-                            th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
-                        <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
-                            <span th:text="${role.appName}"></span> - <span th:text="${role.name}"></span>
-                        </label>
+            <div class="govuk-form-group">
+                <fieldset class="govuk-fieldset">
+                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                        <h1 class="govuk-fieldset__heading">
+                            Which roles will <span th:text="${user.givenName}"></span> <span
+                                th:text="${user.surname}"></span> for these services?
+                        </h1>
+                    </legend>
+                    <div id="offices-hint" class="govuk-hint">
+                        Select all that apply
                     </div>
-                </div>
-            </fieldset>
-
+                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                        <div class="govuk-checkboxes__item" th:each="role : ${roles}" th:id="'role-' + ${role.id}">
+                            <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
+                                th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
+                            <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
+                                <span th:text="${role.appName}"></span> - <span th:text="${role.name}"></span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
                 <a href="/home" class="govuk-link">Cancel</a>
             </div>
         </form>
-
-    </div>
+    </main>
 </body>
 
 </html>
