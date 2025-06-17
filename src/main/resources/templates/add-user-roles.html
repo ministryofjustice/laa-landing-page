@@ -9,20 +9,19 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/user/create/services">
+                <a class="govuk-breadcrumbs__link" href="/admin/user/create/services">
                     < Back</a>
             </li>
         </ol>
     </nav>
     <div id="main-content">
-        <form method="post" th:action="@{/user/create/roles}">
+        <form method="post" th:action="@{/admin/user/create/roles}">
             <fieldset class="govuk-fieldset">
                 <p class="govuk-hint govuk-!-margin-bottom-3">
                     Select the roles required within the
                 </p>
                 <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                    <div class="govuk-checkboxes__item" th:each="role : ${roles}"
-                        th:id="'role-' + ${role.id}">
+                    <div class="govuk-checkboxes__item" th:each="role : ${roles}" th:id="'role-' + ${role.id}">
                         <input class="govuk-checkboxes__input" id="selectedRoles" name="selectedRoles"
                             th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
                         <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
@@ -32,9 +31,10 @@
                 </div>
             </fieldset>
 
-            <button class="govuk-button govuk-!-margin-top-3" data-module="govuk-button" type="submit">
-                Continue
-            </button>
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/home" class="govuk-link">Cancel</a>
+            </div>
         </form>
 
     </div>

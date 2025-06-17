@@ -1,23 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.AppRoleAssignment;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.ServicePrincipal;
-import com.microsoft.graph.models.ServicePrincipalCollectionResponse;
 import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.serviceprincipals.ServicePrincipalsRequestBuilder;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
@@ -35,15 +34,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -51,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -58,10 +64,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -449,7 +457,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
 
-        userService.createUser(user, roles, new ArrayList<>());
+        userService.createUser(user, roles, new ArrayList<>(), FirmDto.builder().build(), false);
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -491,13 +499,14 @@ class UserServiceTest {
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-
-        userService.createUser(user, roles, new ArrayList<>());
+        FirmDto firm = FirmDto.builder().name("Firm").build();
+        userService.createUser(user, roles, new ArrayList<>(), firm, false);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
+        assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
     }
 
     @Test
@@ -730,117 +739,205 @@ class UserServiceTest {
     @Nested
     class PaginationTests {
 
-        private final GraphServiceClient mockGraph = mock(GraphServiceClient.class, RETURNS_DEEP_STUBS);
-        private final UserService paginationSvc =
-                new UserService(mockGraph, mockEntraUserRepository,
-                        mockAppRepository,
-                        mockAppRoleRepository,
-                        new MapperConfig().modelMapper(),
-                        mockNotificationService,
-                        mockOfficeRepository
-                );
-
-        private static User graphUser(String id, String name) {
-            User testUser = new User();
-            testUser.setId(id);
-            testUser.setUserPrincipalName(id + "@test");
-            testUser.setDisplayName(name);
-            return testUser;
-        }
-
-        // Helpers
-        private UserCollectionResponse buildPage(List<User> users, String next) {
-            UserCollectionResponse testResponse = new UserCollectionResponse();
-            testResponse.setValue(users);
-            testResponse.setOdataNextLink(next);
-            return testResponse;
-        }
-
         @Test
         void zeroUsers_setsTotalPagesToOne() {
             // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(Collections.emptyList(), null));
-            when(mockGraph.users().count().get(any())).thenReturn(0);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-            when(mockGraph.users().count().get(any())).thenReturn(0);
+            Page<EntraUser> userPage = new PageImpl<>(List.of());
+            when(mockEntraUserRepository.findAll(any(Pageable.class))).thenReturn(userPage);
 
             // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 10, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isZero();
-            assertThat(result.getTotalPages(10)).isEqualTo(1);
-        }
-
-        @Test
-        void requestingPage2ReturnsSecondPageOfUsers() {
-            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
-            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            when(mockGraph.users().withUrl("secondPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, "thirdPageLink"));
-            when(mockGraph.users().withUrl("thirdPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, null));
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(2, 1, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(3);
-            assertThat(result.getTotalPages(1)).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(1);
-            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("SecondPageUser1");
-        }
-
-        @Test
-        void requestingPage5ReturnsNothingWhenOnly2PagesAreAvailable() {
-            List<User> firstPageOfUsers = List.of(graphUser("first-page-user-1", "FirstPageUser1"));
-            List<User> secondPageOfUsers = List.of(graphUser("second-page-user-1", "SecondPageUser1"));
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(buildPage(firstPageOfUsers, "secondPageLink"));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            when(mockGraph.users().withUrl("secondPageLink").get())
-                    .thenReturn(buildPage(secondPageOfUsers, null));
-            when(mockGraph.users().count().get(any())).thenReturn(3);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(5, 1, session);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(3);
-            assertThat(result.getTotalPages(1)).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(0);
-        }
-
-        @Test
-        void requestingPageReturnsNothingWhenUserResponseIsNull() {
-            // Arrange
-            when(mockGraph.users().get(any()))
-                    .thenReturn(null);
-            when(mockGraph.users().count().get(any())).thenReturn(null);
-            when(mockGraph.users().count().get(any())).thenReturn(0);
-            HttpSession session = new MockHttpSession();
-            session.setAttribute("cachedUsers", new ArrayList<>());
-
-            // Act
-            PaginatedUsers result = paginationSvc.getPaginatedUsers(1, 10, session);
+            PaginatedUsers result = userService.getPageOfUsers(1, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
-            assertThat(result.getTotalPages(10)).isEqualTo(1);
-            assertThat(result.getUsers().size()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(1);
         }
+
+        @Test
+        void testRequestingPage2ReturnsThirdPageOfUsers() {
+            // Arrange
+            List<EntraUser> allUsers = new ArrayList<>();
+            for (int i = 0; i < 25; i++) {
+                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
+            }
+            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
+            when(mockEntraUserRepository.findAll(any(Pageable.class))).thenReturn(userPage);
+            // Arrange
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsers(2, 10);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(5);
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
+        }
+
+        @Test
+        void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
+            // Arrange
+            Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(0);
+        }
+
+        @Test
+        void testSearchThatReturnsOneUserSetsTotalPagesToOne() {
+            // Arrange
+            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
+            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
+            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+        }
+
+    }
+
+    @Test
+    public void testGetEntraUserByIdReturnsUserWhenOneIsPresent() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .build();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserById(userId.toString());
+        // Then
+        assertThat(optionalReturnedUser.isPresent()).isTrue();
+        EntraUserDto returnedUserDto = optionalReturnedUser.get();
+        assertThat(returnedUserDto.getFullName()).isEqualTo("Test User");
+        assertThat(returnedUserDto.getEmail()).isEqualTo("test@test.com");
+    }
+
+    @Test
+    public void testGetEntraUserByIdReturnsNothingWhenNoUserIsPresent() {
+        // Given
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserById(UUID.randomUUID().toString());
+        // Then
+        assertThat(optionalReturnedUser.isEmpty()).isTrue();
+    }
+
+    @Test
+    public void testGetUserAppsByUserIdReturnsAppsWhenUserHasAppsAssigned() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("Test App Role")
+                .app(app)
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .appRoles(Set.of(appRole))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .userProfiles(Set.of(userProfile))
+                .build();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        // When
+        Set<AppDto> returnedApps = userService.getUserAppsByUserId(userId.toString());
+
+        // Then
+        assertThat(returnedApps.size()).isEqualTo(1);
+        AppDto returnedAppDto = returnedApps.iterator().next();
+        assertThat(returnedAppDto.getId()).isEqualTo(appId.toString());
+        assertThat(returnedAppDto.getName()).isEqualTo("Test App");
+    }
+
+    @Test
+    public void testGetUserAppsByUserIdReturnsEmptySetWhenNoUserIsPresent() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Set<AppDto> returnedApps = userService.getUserAppsByUserId(UUID.randomUUID().toString());
+        // Then
+        assertThat(returnedApps.isEmpty()).isTrue();
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdsReturnsRolesWhenAppsArePresent() {
+        // Given
+        UUID appRoleId1 = UUID.randomUUID();
+        UUID appRoleId2 = UUID.randomUUID();
+        UUID appId1 = UUID.randomUUID();
+        UUID appId2 = UUID.randomUUID();
+        AppRole appRole1 = AppRole.builder()
+                .id(appRoleId1)
+                .name("Test App Role 1")
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(appRoleId2)
+                .name("Test App Role 2")
+                .build();
+        App app1 = App.builder()
+                .id(appId1)
+                .name("Test App 1")
+                .appRoles(Set.of(appRole1))
+                .build();
+        App app2 = App.builder()
+                .id(appId2)
+                .name("Test App 2")
+                .appRoles(Set.of(appRole2))
+                .build();
+
+        List<UUID> appIds = List.of(appId1, appId2);
+        when(mockAppRepository.findAllById(appIds)).thenReturn(List.of(app1, app2));
+
+        // When
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
+
+        // Then
+        assertThat(returnedAppRoles.size()).isEqualTo(2);
+        AppRoleDto returnedAppRole1 = returnedAppRoles.getFirst();
+        assertThat(returnedAppRole1.getId()).isEqualTo(appRoleId1.toString());
+        assertThat(returnedAppRole1.getName()).isEqualTo("Test App Role 1");
+        AppRoleDto returnedAppRole2 = returnedAppRoles.getLast();
+        assertThat(returnedAppRole2.getId()).isEqualTo(appRoleId2.toString());
+        assertThat(returnedAppRole2.getName()).isEqualTo("Test App Role 2");
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdsReturnsEmptyListWhenNoAppsArePresent() {
+        // Given
+        when(mockAppRepository.findAllById(any())).thenReturn(new ArrayList<>());
+
+        // When
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(List.of(UUID.randomUUID().toString()));
+
+        // Then
+        assertThat(returnedAppRoles.isEmpty()).isTrue();
     }
 
     @Nested

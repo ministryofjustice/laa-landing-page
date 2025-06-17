@@ -14,15 +14,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -49,6 +53,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -145,6 +151,11 @@ public class UserService {
         }
     }
 
+    public Optional<EntraUserDto> getEntraUserById(String userId) {
+        return entraUserRepository.findById(UUID.fromString(userId))
+                .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
         if (dateTime == null) {
             return "N/A";
@@ -166,93 +177,22 @@ public class UserService {
         }
     }
 
-    public PaginatedUsers getPaginatedUsers(int page, int size, HttpSession session) {
-        List<User> users = getPageOfUsers(page, size, session);
+    private PaginatedUsers getPageOfUsers(Supplier<Page<EntraUser>> pageSupplier) {
+        Page<EntraUser> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
-        Integer totalUsers = getTotalNumberOfUsers(session);
-        paginatedUsers.setTotalUsers(totalUsers == null ? 0 : totalUsers);
-        paginatedUsers.setUsers(mapGraphUsersToPagedUserModel(users));
+        paginatedUsers.setTotalUsers(userPage.getTotalElements());
+        paginatedUsers.setUsers(userPage.stream().map(user -> mapper.map(user, EntraUserDto.class)).toList());
+        paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
     }
 
-    private List<UserModel> mapGraphUsersToPagedUserModel(List<User> users) {
-        return users.stream().map(graphUser -> {
-            UserModel user = new UserModel();
-            user.setId(graphUser.getId());
-            user.setEmail(graphUser.getUserPrincipalName());
-            user.setFullName(graphUser.getDisplayName());
-            if (graphUser.getSignInActivity() != null) {
-                user.setLastLoggedIn(formatLastSignInDateTime(graphUser.getSignInActivity().getLastSignInDateTime()));
-            } else {
-                user.setLastLoggedIn("NA");
-            }
-            return user;
-        }).collect(Collectors.toList());
+    public PaginatedUsers getPageOfUsers(int page, int pageSize) {
+        return getPageOfUsers(() -> entraUserRepository.findAll(PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
-    public List<User> getPageOfUsers(int page, int pageSize, HttpSession session) {
-        List<User> cachedUsers = (List<User>) session.getAttribute("cachedUsers");
-        Integer totalUsers = getTotalNumberOfUsers(session);
-        // Calculate the bounds of the page we wish to display e.g. 0-9, 10-19
-        int startPageIndex = (page - 1) * pageSize;
-        int endPageIndex = Math.min(totalUsers, startPageIndex + (pageSize - 1));
-        if (cachedUsers.size() - 1 < endPageIndex) {
-            UserCollectionResponse response = (UserCollectionResponse) session.getAttribute("lastResponse");
-            // Calculate how many pages we've already loaded based on size of cached users.
-            int currentPage = (cachedUsers.size() / pageSize) + 1;
-            // Eager-load some pages in advance.
-            while (currentPage < page + PAGES_TO_PRELOAD) {
-                if (response == null) {
-                    // First run
-                    response = getFirstPageOfUsersResponse(pageSize);
-                } else if (response.getOdataNextLink() != null) {
-                    // Fetch next page
-                    response = graphClient.users().withUrl(response.getOdataNextLink()).get();
-                } else {
-                    // No more users, break.
-                    break;
-                }
-                if (response == null || response.getValue() == null) {
-                    // If response is still null after network call, then something has gone wrong, break.
-                    break;
-                }
-
-                session.setAttribute("lastResponse", response);
-                cachedUsers.addAll(response.getValue());
-                currentPage++;
-            }
-        }
-        if (startPageIndex < cachedUsers.size()) {
-            return cachedUsers.subList(startPageIndex, Math.min(endPageIndex + 1, cachedUsers.size()));
-        } else {
-            return Collections.emptyList();
-        }
-
-    }
-
-    private Integer getTotalNumberOfUsers(HttpSession session) {
-        Integer totalUsers;
-        if (session.getAttribute("totalUsers") == null) {
-            totalUsers = getTotalNumberOfUsers();
-            session.setAttribute("totalUsers", totalUsers);
-        } else {
-            totalUsers = (Integer) session.getAttribute("totalUsers");
-        }
-        return totalUsers;
-    }
-
-    private Integer getTotalNumberOfUsers() {
-        return graphClient.users().count().get(requestConfig -> requestConfig.headers.add("ConsistencyLevel", "eventual"));
-    }
-
-    public UserCollectionResponse getFirstPageOfUsersResponse(int pageSize) {
-        return graphClient.users()
-                .get(requestConfig -> {
-                    assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.top = pageSize;
-                    requestConfig.queryParameters.select = new String[]{"displayName", "userPrincipalName", "signInActivity"};
-                    requestConfig.queryParameters.count = true;
-                });
+    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
+        return getPageOfUsers(() -> entraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public List<EntraUserDto> getSavedUsers() {
@@ -316,12 +256,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices) {
+    public User createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices);
+        persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin);
 
         return invitedUser;
     }
@@ -343,8 +283,9 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices) {
+    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
@@ -353,10 +294,11 @@ public class UserService {
                 .defaultProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(UserType.INTERNAL)
+                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
                 .createdBy("Admin")
+                .firm(firm)
                 .entraUser(entraUser)
                 .build();
 
@@ -387,5 +329,28 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    public Set<AppDto> getUserAppsByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .map(AppRole::getApp)
+                    .map(app -> mapper.map(app, AppDto.class))
+                    .collect(Collectors.toSet());
+        } else {
+            logger.warn("No user found for user id {} when getting user apps", userId);
+            return Collections.emptySet();
+        }
+    }
+
+    public List<AppRoleDto> getAppRolesByAppIds(List<String> appIds) {
+        List<UUID> appUuids = appIds.stream().map(UUID::fromString).toList();
+        return appRepository.findAllById(appUuids).stream()
+                .flatMap(app -> app.getAppRoles().stream())
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .toList();
     }
 }
