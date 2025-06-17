@@ -153,8 +153,8 @@ jobs:
 
       - name: Fail Pipeline if Vulnerability Found
         run: |
-          # Read the counts from counts.txt
-          source counts.txt
+          # Read the counts from severity_counts.txt
+          source severity_counts.txt
 
           # Fail if any count > 0
           if (( CRITICAL > 0 || HIGH > 0 || MEDIUM > 0 || LOW > 0 )); then
