@@ -62,31 +62,25 @@ public class UserController {
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Integer page,
-            Model model,
-            HttpSession session) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String search,
+            Model model) {
 
-        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
-        if (page == null) {
-            page = 1;
-            session.setAttribute("cachedUsers", null);
-            session.setAttribute("lastResponse", null);
-            session.setAttribute("totalUsers", null);
+        PaginatedUsers paginatedUsers;
+        if (search != null && !search.isEmpty()) {
+            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search);
+        } else {
+            search = null;
+            paginatedUsers = userService.getPageOfUsers(page, size);
         }
-
-        // Initialise cached user list if not already.
-        if (session.getAttribute("cachedUsers") == null) {
-            session.setAttribute("cachedUsers", new ArrayList<>());
-        }
-
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("search", search);
 
         return "users";
     }
