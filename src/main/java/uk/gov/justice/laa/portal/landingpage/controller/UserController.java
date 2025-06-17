@@ -130,7 +130,7 @@ public class UserController {
         model.addAttribute("offices", offices);
         return "manage-user";
     }
-    
+
     @GetMapping("/user/create/details")
     public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
@@ -180,7 +180,7 @@ public class UserController {
         session.setAttribute("firm", firm);
         session.setAttribute("isFirmAdmin", userDetailsForm.getIsFirmAdmin());
 
-        return "redirect:/user/create/services";
+        return "redirect:/admin/user/create/services";
     }
 
     @GetMapping("/user/create/services")
