@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -53,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -60,10 +64,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -799,6 +805,139 @@ class UserServiceTest {
             assertThat(result.getTotalPages()).isEqualTo(1);
         }
 
+    }
+
+    @Test
+    public void testGetEntraUserByIdReturnsUserWhenOneIsPresent() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .build();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserById(userId.toString());
+        // Then
+        assertThat(optionalReturnedUser.isPresent()).isTrue();
+        EntraUserDto returnedUserDto = optionalReturnedUser.get();
+        assertThat(returnedUserDto.getFullName()).isEqualTo("Test User");
+        assertThat(returnedUserDto.getEmail()).isEqualTo("test@test.com");
+    }
+
+    @Test
+    public void testGetEntraUserByIdReturnsNothingWhenNoUserIsPresent() {
+        // Given
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserById(UUID.randomUUID().toString());
+        // Then
+        assertThat(optionalReturnedUser.isEmpty()).isTrue();
+    }
+
+    @Test
+    public void testGetUserAppsByUserIdReturnsAppsWhenUserHasAppsAssigned() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("Test App Role")
+                .app(app)
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .appRoles(Set.of(appRole))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .userProfiles(Set.of(userProfile))
+                .build();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        // When
+        Set<AppDto> returnedApps = userService.getUserAppsByUserId(userId.toString());
+
+        // Then
+        assertThat(returnedApps.size()).isEqualTo(1);
+        AppDto returnedAppDto = returnedApps.iterator().next();
+        assertThat(returnedAppDto.getId()).isEqualTo(appId.toString());
+        assertThat(returnedAppDto.getName()).isEqualTo("Test App");
+    }
+
+    @Test
+    public void testGetUserAppsByUserIdReturnsEmptySetWhenNoUserIsPresent() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Set<AppDto> returnedApps = userService.getUserAppsByUserId(UUID.randomUUID().toString());
+        // Then
+        assertThat(returnedApps.isEmpty()).isTrue();
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdsReturnsRolesWhenAppsArePresent() {
+        // Given
+        UUID appRoleId1 = UUID.randomUUID();
+        UUID appRoleId2 = UUID.randomUUID();
+        UUID appId1 = UUID.randomUUID();
+        UUID appId2 = UUID.randomUUID();
+        AppRole appRole1 = AppRole.builder()
+                .id(appRoleId1)
+                .name("Test App Role 1")
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(appRoleId2)
+                .name("Test App Role 2")
+                .build();
+        App app1 = App.builder()
+                .id(appId1)
+                .name("Test App 1")
+                .appRoles(Set.of(appRole1))
+                .build();
+        App app2 = App.builder()
+                .id(appId2)
+                .name("Test App 2")
+                .appRoles(Set.of(appRole2))
+                .build();
+
+        List<UUID> appIds = List.of(appId1, appId2);
+        when(mockAppRepository.findAllById(appIds)).thenReturn(List.of(app1, app2));
+
+        // When
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
+
+        // Then
+        assertThat(returnedAppRoles.size()).isEqualTo(2);
+        AppRoleDto returnedAppRole1 = returnedAppRoles.getFirst();
+        assertThat(returnedAppRole1.getId()).isEqualTo(appRoleId1.toString());
+        assertThat(returnedAppRole1.getName()).isEqualTo("Test App Role 1");
+        AppRoleDto returnedAppRole2 = returnedAppRoles.getLast();
+        assertThat(returnedAppRole2.getId()).isEqualTo(appRoleId2.toString());
+        assertThat(returnedAppRole2.getName()).isEqualTo("Test App Role 2");
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdsReturnsEmptyListWhenNoAppsArePresent() {
+        // Given
+        when(mockAppRepository.findAllById(any())).thenReturn(new ArrayList<>());
+
+        // When
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(List.of(UUID.randomUUID().toString()));
+
+        // Then
+        assertThat(returnedAppRoles.isEmpty()).isTrue();
     }
 
     @Nested

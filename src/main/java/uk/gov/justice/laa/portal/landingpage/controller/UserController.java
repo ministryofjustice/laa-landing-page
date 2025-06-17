@@ -1,15 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import com.microsoft.graph.models.User;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -20,27 +14,33 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
-
-import com.microsoft.graph.models.User;
-
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -270,9 +270,9 @@ public class UserController {
 
         FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
-        
+
         Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
-        model.addAttribute("isFirmAdmin", isFirmAdmin);      
+        model.addAttribute("isFirmAdmin", isFirmAdmin);
         return "add-user-check-answers";
     }
 
@@ -321,12 +321,14 @@ public class UserController {
      * Retrieves available user roles for user
      */
     @GetMapping("/users/edit/{id}/roles")
-    public String getUserRoles(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
+    public String editUserRoles(@PathVariable String id, Model model, HttpSession session) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class).orElseGet(ArrayList::new);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-        List<AppRoleDto> availableRoles = userService.getAllAvailableRoles();
+        List<AppRoleDto> availableRoles = userService.getAppRolesByAppIds(selectedApps);
 
         Set<String> userAssignedRoleIds = userRoles.stream()
+                .filter(availableRoles::contains)
                 .map(AppRoleDto::getId)
                 .collect(Collectors.toSet());
 
@@ -345,5 +347,30 @@ public class UserController {
             @RequestParam(required = false) List<String> selectedRoles) {
         userService.updateUserRoles(id, selectedRoles);
         return new RedirectView("/users");
+    }
+
+    /**
+     * Retrieves available apps for user and their currently assigned apps.
+     */
+    @GetMapping("/users/edit/{id}/apps")
+    public String editUserApps(@PathVariable String id, Model model) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
+        List<AppDto> availableApps = userService.getApps();
+
+        model.addAttribute("user", user);
+        model.addAttribute("userAssignedApps", userAssignedApps);
+        model.addAttribute("availableApps", availableApps);
+
+        return "edit-user-apps";
+    }
+
+    @PostMapping("/users/edit/{id}/apps")
+    public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("selectedApps") List<String> apps,
+                                         HttpSession session) {
+        session.setAttribute("selectedApps", apps);
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
+        return new RedirectView(String.format("/users/edit/%s/roles", uuid));
     }
 }

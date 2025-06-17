@@ -151,6 +151,11 @@ public class UserService {
         }
     }
 
+    public Optional<EntraUserDto> getEntraUserById(String userId) {
+        return entraUserRepository.findById(UUID.fromString(userId))
+                .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
         if (dateTime == null) {
             return "N/A";
@@ -324,5 +329,28 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    public Set<AppDto> getUserAppsByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .map(AppRole::getApp)
+                    .map(app -> mapper.map(app, AppDto.class))
+                    .collect(Collectors.toSet());
+        } else {
+            logger.warn("No user found for user id {} when getting user apps", userId);
+            return Collections.emptySet();
+        }
+    }
+
+    public List<AppRoleDto> getAppRolesByAppIds(List<String> appIds) {
+        List<UUID> appUuids = appIds.stream().map(UUID::fromString).toList();
+        return appRepository.findAllById(appUuids).stream()
+                .flatMap(app -> app.getAppRoles().stream())
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .toList();
     }
 }

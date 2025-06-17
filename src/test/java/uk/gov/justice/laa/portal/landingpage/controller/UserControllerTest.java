@@ -1,43 +1,26 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.microsoft.graph.models.User;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.view.RedirectView;
-
-import com.microsoft.graph.models.User;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -49,6 +32,24 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -583,12 +584,12 @@ class UserControllerTest {
     }
 
     @Test
-    public void testGetUserRolesOutputMatchesInput() {
+    public void testEditUserRolesOutputMatchesInput() {
         // Given
         final String userId = "12345";
         // Setup test user call
-        User testUser = new User();
-        when(userService.getUserById(userId)).thenReturn(testUser);
+        EntraUserDto testUser = new EntraUserDto();
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
@@ -601,11 +602,13 @@ class UserControllerTest {
         testRole2.setId("testAppRoleId2");
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
-        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
-        when(userService.getAllAvailableRoles()).thenReturn(allRoles);
+        AppRoleDto testRole4 = new AppRoleDto();
+        testRole3.setId("testUserAppRoleId");
+        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
+        when(userService.getAppRolesByAppIds(any())).thenReturn(allRoles);
 
         // When
-        String view = userController.getUserRoles(userId, model);
+        String view = userController.editUserRoles(userId, model, session);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
@@ -619,6 +622,15 @@ class UserControllerTest {
     }
 
     @Test
+    public void testEditUserRolesThrowsExceptionWhenNoUserProvided() {
+        // Given
+        final String userId = "12345";
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
+        // When
+        assertThrows(NoSuchElementException.class, () -> userController.editUserRoles(userId, model, session));
+    }
+
+    @Test
     public void testUpdateUserRolesReturnsCorrectView() {
         // Given
         final String userId = "12345";
@@ -629,6 +641,71 @@ class UserControllerTest {
 
         // Then
         Assertions.assertEquals("/users", view.getUrl());
+    }
+
+    @Test
+    public void testEditUserAppsReturnsCorrectViewAndAttributes() {
+        // Given
+        final UUID userId = UUID.randomUUID();
+        EntraUserDto testUser = new EntraUserDto();
+        testUser.setId(userId.toString());
+        testUser.setFullName("Test User");
+
+        UUID appId = UUID.randomUUID();
+        AppDto testApp = new AppDto();
+        testApp.setId(appId.toString());
+        testApp.setName("Test App");
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(testUser));
+        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp));
+        when(userService.getApps()).thenReturn(List.of(testApp));
+
+        // When
+        String view = userController.editUserApps(userId.toString(), model);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-apps");
+        assertThat(model.getAttribute("user")).isNotNull();
+        EntraUserDto returnedUser = (EntraUserDto) model.getAttribute("user");
+        Assertions.assertEquals(testUser.getId(), returnedUser.getId());
+        Assertions.assertEquals(testUser.getFullName(), returnedUser.getFullName());
+        assertThat(model.getAttribute("userAssignedApps")).isNotNull();
+        Set<AppDto> assignedApps = (Set<AppDto>) model.getAttribute("userAssignedApps");
+        assertThat(assignedApps).hasSize(1);
+        assertThat(model.getAttribute("availableApps")).isNotNull();
+        List<AppDto> availableApps = (List<AppDto>) model.getAttribute("availableApps");
+        assertThat(availableApps).hasSize(1);
+    }
+
+    @Test
+    public void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        List<String> apps = List.of(appId.toString());
+        HttpSession session = new MockHttpSession();
+
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
+
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/users/edit/%s/roles", userId));
+        assertThat(session.getAttribute("selectedApps")).isNotNull();
+        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(returnedApps).hasSize(1);
+        assertThat(returnedApps.getFirst()).isEqualTo(appId.toString());
+    }
+
+    @Test
+    public void testSetSelectedAppsEditThrowsExceptionWhenIdIsNotValidUuid() {
+        // Given
+        String userId = "testUserId";
+        HttpSession session = new MockHttpSession();
+
+        // When
+        assertThrows(IllegalArgumentException.class, () -> userController.setSelectedAppsEdit(userId, List.of(), session));
+
+
     }
 
 }
