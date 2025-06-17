@@ -87,8 +87,13 @@ public class UserController {
 
     @GetMapping("/users/edit/{id}")
     public String editUser(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
-        model.addAttribute("user", user);
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
+        if (optionalUser.isPresent()) {
+            EntraUserDto user = optionalUser.get();
+            List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId());
+            model.addAttribute("user", user);
+            model.addAttribute("roles", roles);
+        }
         return "edit-user";
     }
 
@@ -117,12 +122,10 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     public String manageUser(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
-        String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<Office> offices = officeService.getOffices();
-        model.addAttribute("user", user);
-        model.addAttribute("lastLoggedIn", lastLoggedIn);
+        optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("offices", offices);
         return "manage-user";
