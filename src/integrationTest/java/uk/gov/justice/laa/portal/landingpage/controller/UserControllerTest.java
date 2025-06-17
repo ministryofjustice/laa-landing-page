@@ -26,10 +26,22 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Happy Path Test: displaySavedUsers get")
-    void displaySavedUsers() throws Exception {
+    void shouldRedirectAnonymousUserList() throws Exception {
         this.mockMvc.perform(get("/admin/userlist"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void shouldRedirectAnonymousHome() throws Exception {
+        this.mockMvc.perform(get("/home"))
+                .andExpect(status().is3xxRedirection());;
+    }
+
+    @Test
+    @DisplayName("Happy Path Test: display index get")
+    void displayIndexPage() throws Exception {
+        this.mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("users"));
+                .andExpect(view().name("index"));
     }
 }

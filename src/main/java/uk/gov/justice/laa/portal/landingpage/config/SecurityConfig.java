@@ -8,10 +8,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
+
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService) {
+        this.authzOidcUserDetailsService = authzOidcUserDetailsService;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -21,10 +29,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/admin/userlist", "/actuator/**")
+                .requestMatchers("/admin/**").hasAnyAuthority(UserType.ADMIN_TYPES)
+                .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**")
                 .permitAll()
                 .anyRequest().authenticated()
         ).oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(oauth2n -> oauth2n.oidcUserService(authzOidcUserDetailsService))
                 .loginPage("/oauth2/authorization/azure")
                 .defaultSuccessUrl("/home", true)
                 .permitAll()
