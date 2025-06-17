@@ -153,13 +153,6 @@ jobs:
 
       - name: Fail Pipeline if Vulnerability Found
         run: |
-          source severity_counts.txt
-
-          echo "CRITICAL=$CRITICAL"
-          echo "HIGH=$HIGH"
-          echo "MEDIUM=$MEDIUM"
-          echo "LOW=$LOW"
-
           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
             echo "Vulnerabilities detected — failing the job"
             exit 1
