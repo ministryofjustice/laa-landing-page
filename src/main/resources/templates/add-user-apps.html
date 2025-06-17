@@ -19,7 +19,21 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form method="post" th:action="@{/admin/user/create/services}">
+        <form method="post" th:action="@{/admin/user/create/services}" th:object="${applicationsForm}"
+            class="govuk-form" novalidate>
+            <div th:if="${#fields.hasErrors()}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                    aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="govuk-form-group">
                 <fieldset class="govuk-fieldset">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
@@ -31,13 +45,20 @@
                     <div id="offices-hint" class="govuk-hint">
                         Select all that apply
                     </div>
-                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
-                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
-                                th:value="${app.id}" type="checkbox">
-                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
-                                <span th:text="${app.name}"></span>
-                            </label>
+                    <div class="govuk-form-group"
+                        th:classappend="${#fields.hasErrors('apps')} ? 'govuk-form-group--error'">
+                        <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                            <div th:if="${#fields.hasErrors('apps')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:each="err : ${#fields.errors('apps')}" th:text="${err}"></span>
+                            </div>
+                            <div class="govuk-checkboxes__item" th:each="app : ${apps}">
+                                <input class="govuk-checkboxes__input" th:id="'apps-' + ${app.id}" name="apps"
+                                    th:checked="${app.selected}" th:value="${app.id}" type="checkbox">
+                                <label class="govuk-label govuk-checkboxes__label" th:for="'apps-' + ${app.id}">
+                                    <span th:text="${app.name}"></span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </fieldset>

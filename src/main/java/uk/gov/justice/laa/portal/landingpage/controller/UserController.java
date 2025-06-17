@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -142,7 +143,7 @@ public class UserController {
         model.addAttribute("firms", firms);
         model.addAttribute("selectedFirm", selectedFirm);
         model.addAttribute("user", user);
-        return "user/user-details";
+        return "add-user-details";
     }
 
     @PostMapping("/user/create/details")
@@ -172,7 +173,7 @@ public class UserController {
             model.addAttribute("firms", firms);
             model.addAttribute("selectedFirm", selectedFirm);
             model.addAttribute("user", user);
-            return "user/user-details";
+            return "add-user-details";
         }
 
         // Set firm and admin status
@@ -184,7 +185,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/services")
-    public String selectUserApps(Model model, HttpSession session) {
+    public String selectUserApps(ApplicationsForm applicationsForm, BindingResult result, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<AppViewModel> apps = userService.getApps().stream()
                 .map(appDto -> {
@@ -199,9 +200,24 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public String setSelectedApps(@RequestParam List<String> apps,
-            HttpSession session) {
-        session.setAttribute("apps", apps);
+    public String setSelectedApps(@Valid ApplicationsForm applicationsForm, BindingResult result, Model model,
+            HttpSession session
+    ) {
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while selecting user apps: {}", result.getAllErrors());
+            List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
+            List<AppViewModel> apps = userService.getApps().stream()
+                    .map(appDto -> {
+                        AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
+                        appViewModel.setSelected(selectedApps.contains(appDto.getId()));
+                        return appViewModel;
+                    }).toList();
+            model.addAttribute("apps", apps);
+            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+            model.addAttribute("user", user);
+            return "add-user-apps";
+        }
+        session.setAttribute("apps", applicationsForm.getApps());
         return "redirect:/admin/user/create/roles";
     }
 

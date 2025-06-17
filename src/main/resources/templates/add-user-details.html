@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>User Details</title>
+</head>
+
+<body>
+    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/users">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                <h1 class="govuk-fieldset__heading">
+                    User details
+                </h1>
+            </legend>
+            <form th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
+                <div th:if="${#fields.hasErrors()}">
+                    <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                        aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                        <h2 class="govuk-error-summary__title" id="error-summary-title">
+                            There is a problem
+                        </h2>
+                        <div class="govuk-error-summary__body" id="error-summary-description">
+                            <ul class="govuk-list govuk-error-summary__list">
+                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="govuk-!-margin-bottom-3">
+                    <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
+                            Firm Name
+                        </label>
+                        <select class="govuk-select" id="firmId" name="firmId">
+                            <div th:each="firm : ${firms}">
+                                <option th:value="${firm.id}" th:text="${firm.name}"
+                                    th:selected="${firm.id == selectedFirm?.id}"></option>
+                            </div>
+                        </select>
+                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
+                            data-module="govuk-checkboxes">
+                            <div class="govuk-checkboxes__item">
+                                <input class="govuk-checkboxes__input" id="isFirmAdmin" name="isFirmAdmin"
+                                    type="checkbox" value="true" th:checked="*{isFirmAdmin}" />
+                                <label class="govuk-label govuk-checkboxes__label" for="isFirmAdmin">
+                                    Firm Admin
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
+                    <label class="govuk-label govuk-label--m" for="email">
+                        Email Address
+                    </label>
+                    <p class="govuk-hint">
+                        Please ensure the email address you provide is accurate.
+                    </p>
+                    <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('email')}" th:text="${err}"></span>
+                    </div>
+                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{email}"
+                        id="email" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+                </div>
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
+                    <label class="govuk-label govuk-label--m" for="firstName">
+                        First Name
+                    </label>
+                    <div th:if="${#fields.hasErrors('firstName')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></span>
+                    </div>
+                    <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
+                        th:value="*{firstName}" id="firstName"
+                        th:aria-describedby="${#fields.hasErrors('firstName')} ? 'firstName-error' : null" />
+                </div>
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('lastName')} ? 'govuk-form-group--error'">
+                    <label class="govuk-label govuk-label--m" for="lastName">
+                        Last Name
+                    </label>
+                    <div th:if="${#fields.hasErrors('lastName')}" class="govuk-error-message">
+                        <span th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></span>
+                    </div>
+                    <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
+                        th:value="*{lastName}" id="lastName"
+                        th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
+                </div>
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button">Continue</button>
+                    <a href="/home" class="govuk-link">Cancel</a>
+                </div>
+            </form>
+        </fieldset>
+    </main>
+</body>
+
+</html>
