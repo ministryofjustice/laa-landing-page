@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -78,6 +79,8 @@ public class LoginController {
                 model.addAttribute("lastLogin", userSessionData.getLastLogin());
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 model.addAttribute("userAppsAndRoles", userSessionData.getUserAppsAndRoles());
+                boolean isAdmin = userSessionData.getUserTypes().stream().anyMatch(UserType::isAdmin);
+                model.addAttribute("isAdminUser", isAdmin);
             } else {
                 logger.info("No access token found");
             }
