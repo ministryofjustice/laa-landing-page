@@ -50,8 +50,8 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
             EntraUser entraUser = entraUserRepository.findByEmail(user.getUserPrincipalName())
                 .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
-            // 3. Get user's group memberships (permissions)
-            List<String> userGroups = entraIdService.getUserGroupMemberships(request.getToken());
+            // 3. Get user's app roles in Entra
+            List<String> userAppRoles = entraIdService.getUserAssignedAppRoles(request.getToken());
 
             // 4. Get app by ID from request
             App app = appRepository.findByAppRegistrationId(UUID.fromString(request.getTargetAppId()))
@@ -66,7 +66,7 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
             }
 
             // 6. Get all roles and permissions for this user and app
-            Map<String, Object> accessInfo = mapGroupsToPermissions(app, userGroups);
+            Map<String, Object> accessInfo = mapGroupsToPermissions(app, userAppRoles);
 
             log.info("Successfully processed claim enrichment for user: {}", user.getUserPrincipalName());
 
@@ -86,26 +86,21 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
         }
     }
 
-    private Map<String, Object> mapGroupsToPermissions(App app, List<String> groupIds) {
+    private Map<String, Object> mapGroupsToPermissions(App app, List<String> userAppRoles) {
 
         // Get all roles for this app
         Set<AppRole> appRoles = app.getAppRoles();
 
         // Map group IDs to role names
         Set<String> userRoles = appRoles.stream()
-                .filter(role -> groupIds.contains(role.getName()))
+                .filter(role -> userAppRoles.contains(role.getName()))
                 .map(AppRole::getName)
                 .collect(Collectors.toSet());
-
-        // In this simplified model, permissions are the same as roles
-        // You can add more granular permission logic here if needed later
-        Set<String> permissions = new HashSet<>(userRoles);
 
         return Map.of(
                 "appId", app.getAppRegistration().getId().toString(),
                 "appName", app.getName(),
                 "roles", userRoles,
-                "permissions", new ArrayList<>(permissions),
                 "hasAccess", !userRoles.isEmpty()
         );
     }

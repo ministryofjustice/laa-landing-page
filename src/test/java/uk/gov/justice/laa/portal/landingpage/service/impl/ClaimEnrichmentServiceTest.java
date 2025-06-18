@@ -49,7 +49,6 @@ class ClaimEnrichmentServiceTest {
     private User mockUser;
     private EntraUser mockEntraUser;
     private App mockApp;
-    private AppRegistration mockAppRegistration;
 
     @BeforeEach
     void setUp() {
@@ -63,9 +62,9 @@ class ClaimEnrichmentServiceTest {
         mockUser = new User();
         mockUser.setUserPrincipalName("test@example.com");
 
-        mockAppRegistration = AppRegistration.builder()
-            .id(UUID.fromString(request.getTargetAppId()))
-            .build();
+        AppRegistration mockAppRegistration = AppRegistration.builder()
+                .id(UUID.fromString(request.getTargetAppId()))
+                .build();
 
         mockEntraUser = EntraUser.builder()
                 .email("test@example.com")
@@ -92,7 +91,7 @@ class ClaimEnrichmentServiceTest {
         // Arrange
         when(entraIdService.getUserByPrincipalName(request.getToken())).thenReturn(mockUser);
         when(entraUserRepository.findByEmail(mockUser.getUserPrincipalName())).thenReturn(Optional.of(mockEntraUser));
-        when(entraIdService.getUserGroupMemberships(request.getToken())).thenReturn(List.of("ROLE_USER"));
+        when(entraIdService.getUserAssignedAppRoles(request.getToken())).thenReturn(List.of("ROLE_USER"));
         when(appRepository.findByAppRegistrationId(any(UUID.class))).thenReturn(Optional.of(mockApp));
 
         // Act
@@ -107,7 +106,7 @@ class ClaimEnrichmentServiceTest {
 
         verify(entraIdService).getUserByPrincipalName(request.getToken());
         verify(entraUserRepository).findByEmail(mockUser.getUserPrincipalName());
-        verify(entraIdService).getUserGroupMemberships(request.getToken());
+        verify(entraIdService).getUserAssignedAppRoles(request.getToken());
         verify(appRepository).findByAppRegistrationId(any(UUID.class));
     }
 
@@ -143,7 +142,7 @@ class ClaimEnrichmentServiceTest {
         // Arrange
         when(entraIdService.getUserByPrincipalName(request.getToken())).thenReturn(mockUser);
         when(entraUserRepository.findByEmail(mockUser.getUserPrincipalName())).thenReturn(Optional.of(mockEntraUser));
-        when(entraIdService.getUserGroupMemberships(request.getToken())).thenReturn(List.of("ROLE_USER"));
+        when(entraIdService.getUserAssignedAppRoles(request.getToken())).thenReturn(List.of("ROLE_USER"));
         when(appRepository.findByAppRegistrationId(any(UUID.class))).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -160,7 +159,7 @@ class ClaimEnrichmentServiceTest {
         mockEntraUser.setUserAppRegistrations(new HashSet<>()); // Empty set = no access
         when(entraIdService.getUserByPrincipalName(request.getToken())).thenReturn(mockUser);
         when(entraUserRepository.findByEmail(mockUser.getUserPrincipalName())).thenReturn(Optional.of(mockEntraUser));
-        when(entraIdService.getUserGroupMemberships(request.getToken())).thenReturn(List.of("ROLE_USER"));
+        when(entraIdService.getUserAssignedAppRoles(request.getToken())).thenReturn(List.of("ROLE_USER"));
         when(appRepository.findByAppRegistrationId(any(UUID.class))).thenReturn(Optional.of(mockApp));
 
         // Act & Assert

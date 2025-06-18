@@ -74,7 +74,7 @@ class EntraIdServiceTest {
             .thenReturn(List.of(role1, role2));
 
         // Act
-        List<String> result = entraIdService.getUserGroupMemberships(anyString());
+        List<String> result = entraIdService.getUserAssignedAppRoles(anyString());
 
         // Assert
         assertNotNull(result);

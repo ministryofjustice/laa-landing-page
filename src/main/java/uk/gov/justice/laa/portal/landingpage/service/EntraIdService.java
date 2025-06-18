@@ -33,11 +33,11 @@ public class EntraIdService {
     }
 
     /**
-     * Get user's group memberships from Entra ID.
+     * Get user's assigned application roles from Entra ID.
      * @param accessToken The access token for authentication
-     * @return List of group display names the user has access to
+     * @return List of display names of the application roles assigned to the user
      */
-    public List<String> getUserGroupMemberships(String accessToken) {
+    public List<String> getUserAssignedAppRoles(String accessToken) {
         return graphApiService.getUserAssignedApps(accessToken)
                 .stream()
                 .map(AppRole::getDisplayName)
