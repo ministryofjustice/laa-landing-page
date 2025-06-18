@@ -1,8 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
@@ -44,6 +42,8 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
@@ -253,7 +253,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/offices")
-    public String offices(HttpSession session, Model model) {
+    public String offices(OfficesForm officesForm, HttpSession session, Model model) {
         OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         //if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
@@ -269,9 +269,29 @@ public class UserController {
     }
 
     @PostMapping("/user/create/offices")
-    public String postOffices(HttpSession session, @RequestParam(value = "offices") List<String> selectedOffices) {
+    public String postOffices(@Valid OfficesForm officesForm, BindingResult result, Model model, HttpSession session
+    ) {
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while selecting offices: {}", result.getAllErrors());
+            // If there are validation errors, return to the offices page with errors
+            OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
+            //if user has firms, use officeService.getOfficesByFirms();
+            List<Office> offices = officeService.getOffices();
+            List<OfficeModel> officeDataList = offices.stream()
+                    .map(office -> new OfficeModel(office.getName(), office.getAddress(),
+                    office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
+                    && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
+                    .collect(Collectors.toList());
+            model.addAttribute("officeData", officeDataList);
+            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+            model.addAttribute("user", user);
+            return "add-user-offices";
+        }
+
         OfficeData officeData = new OfficeData();
-        officeData.setSelectedOffices(selectedOffices);
+        List<String> selectedOffices = officesForm.getOffices();
+        officeData.setSelectedOffices(officesForm.getOffices());
         //if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
         List<String> selectedDisplayNames = new ArrayList<>();
