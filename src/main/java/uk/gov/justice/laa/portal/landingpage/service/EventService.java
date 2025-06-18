@@ -1,11 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.models.User;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.controller.LoginController;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.Event;
@@ -16,8 +14,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
-
-import static java.lang.String.format;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +34,7 @@ public class EventService {
     public void auditUserCreate(CurrentUserDto currentUserDto, EntraUser user, List<String> selectedRoles) {
         String userName = user.getUserName();
         String roles = String.join(", ", selectedRoles);
-        String description = String.format(CREATE_USER_TEMPLATE, user.getId(), userName, roles);
+        String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), roles);
         Event createEvent = auditEvent(currentUserDto.getUserId(), currentUserDto.getName(), EventType.CREATE_USER, description);
         logEvent(createEvent);
     }
@@ -46,7 +42,7 @@ public class EventService {
     public void auditUpdateRole(CurrentUserDto currentUserDto, EntraUserDto user, List<String> selectedRoles) {
         String userName = user.getFullName();
         String roles = String.join(", ", selectedRoles);
-        String description = String.format(UPDATE_USER_ROLE_TEMPLATE, user.getId(), userName, roles);
+        String description = String.format(UPDATE_USER_ROLE_TEMPLATE, userName, user.getId(), roles);
         Event createEvent = auditEvent(currentUserDto.getUserId(), currentUserDto.getName(), EventType.UPDATE_USER, description);
         logEvent(createEvent);
     }

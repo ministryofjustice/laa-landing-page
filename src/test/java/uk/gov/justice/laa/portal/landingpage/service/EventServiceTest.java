@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.Event;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -27,10 +30,40 @@ class EventServiceTest {
 
     @Test
     void auditUserCreate() {
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+        UUID adminUuid = UUID.randomUUID();
+        currentUserDto.setUserId(adminUuid);
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().userName("newUser").id(userId).build();
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+        List<String> selectedRoles = List.of("ROLE_ADMIN", "ROLE_USER");
+        eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles);
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User admin with user id " + adminUuid
+                + ", New user newUser created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER\n" +
+                "\n");
     }
 
     @Test
     void auditUpdateRole() {
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+        UUID adminUuid = UUID.randomUUID();
+        currentUserDto.setUserId(adminUuid);
+        UUID userId = UUID.randomUUID();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("oldUser");
+        entraUser.setId(userId.toString());
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+        List<String> selectedRoles = List.of("ROLE_ADMIN", "ROLE_USER");
+        eventService.auditUpdateRole(currentUserDto, entraUser, selectedRoles);
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User admin with user id " + adminUuid
+                + ", Existing user oldUser updated, user id " + userId + ", with new role ROLE_ADMIN, ROLE_USER\n" +
+                "\n");
     }
 
     @Test
