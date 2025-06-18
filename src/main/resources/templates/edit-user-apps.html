@@ -20,7 +20,7 @@
             <a class="govuk-breadcrumbs__link" href="/">Home</a>
         </li>
         <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="/users">Users</a>
+            <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
         </li>
         <li class="govuk-breadcrumbs__list-item">
             Edit Apps for <span th:text="${user.fullName}"></span>
@@ -30,7 +30,7 @@
 
 <main class="govuk-main-wrapper" id="main-content">
     <div th:if="${#authentication.isAuthenticated()}">
-        <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/users}">
+        <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users}">
             Back
         </a>
 
@@ -38,7 +38,7 @@
 
         <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.fullName}"></span></h1>
 
-        <form method="post" th:action="@{/users/edit/{id}/apps(id=${user.id})}">
+        <form method="post" th:action="@{/admin/users/edit/{id}/apps(id=${user.id})}">
             <fieldset class="govuk-fieldset">
                 <p class="govuk-hint govuk-!-margin-bottom-3">
                     Select all that apply. Roles will be displayed for the user based on what has been selected.
