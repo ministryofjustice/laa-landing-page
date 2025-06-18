@@ -30,4 +30,18 @@ class ClaimEnrichmentExceptionTest {
         assertEquals(errorMessage, exception.getMessage());
         assertEquals(cause, exception.getCause());
     }
+
+    @Test
+    void constructor_WithMessageAndArgs() {
+        // Arrange
+        String messageTemplate = "Test error message with args: %s, %s";
+        String arg1 = "first";
+        String arg2 = "second";
+
+        // Act
+        ClaimEnrichmentException exception = new ClaimEnrichmentException(messageTemplate, arg1, arg2);
+
+        // Assert
+        assertEquals(String.format(messageTemplate, arg1, arg2), exception.getMessage());
+    }
 }
