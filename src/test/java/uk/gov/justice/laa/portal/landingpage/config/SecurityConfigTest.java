@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
@@ -16,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -32,6 +34,9 @@ class SecurityConfigTest {
 
     @Autowired
     MockMvc mvc;
+
+    @MockitoBean
+    private AuthzOidcUserDetailsService authzOidcUserDetailsService;
 
     @Configuration
     static class TestConfig {
@@ -52,7 +57,7 @@ class SecurityConfigTest {
 
     @Test
     void passwordEncoderBeanCreation() {
-        assertThat(new SecurityConfig().passwordEncoder())
+        assertThat(new SecurityConfig(authzOidcUserDetailsService).passwordEncoder())
                 .isInstanceOf(PasswordEncoder.class);
     }
 
