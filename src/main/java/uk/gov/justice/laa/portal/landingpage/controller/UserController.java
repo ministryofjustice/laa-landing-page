@@ -343,7 +343,7 @@ public class UserController {
         userService.updateUserRoles(id, selectedRoles);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
-        return new RedirectView("/users");
+        return new RedirectView("/admin/users");
     }
 
     /**
@@ -368,6 +368,6 @@ public class UserController {
         session.setAttribute("selectedApps", apps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return new RedirectView(String.format("/users/edit/%s/roles", uuid));
+        return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
     }
 }
