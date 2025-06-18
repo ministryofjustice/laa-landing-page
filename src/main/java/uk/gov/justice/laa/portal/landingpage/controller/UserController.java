@@ -352,22 +352,22 @@ public class UserController {
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
+        Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
+        Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
+        Optional<Boolean> isFirmAdminOptional = Optional.ofNullable((Boolean) session.getAttribute("isFirmAdmin"));
+        Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
+
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
-            List<String> selectedOffices;
-            if (optionalSelectedOfficeData.isPresent()) {
-                selectedOffices = optionalSelectedOfficeData.get().getSelectedOffices();
-            } else {
-                selectedOffices = new ArrayList<>();
-            }
-            FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
-            Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+            List<String> selectedRoles = selectedRolesOptional.orElseGet(ArrayList::new);
+            FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
+            Boolean isFirmAdmin = isFirmAdminOptional.orElse(Boolean.FALSE);
+            List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
             userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
+
         session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("isFirmAmdin");
