@@ -249,4 +249,13 @@ class LoginServiceTest {
         assertThat(userDto.getName()).isEqualTo("Alice");
         assertThat(userDto.getUserId()).isEqualTo(userId);
     }
+
+    @Test
+    void getCurrentUser_withNullAuth() {
+        // Act
+        CurrentUserDto userDto = loginService.getCurrentUser(null);
+
+        // Assert
+        assertThat(userDto).isNull();
+    }
 }
