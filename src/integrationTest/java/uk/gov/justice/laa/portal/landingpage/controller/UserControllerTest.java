@@ -1,8 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
@@ -11,14 +9,10 @@ import uk.gov.justice.laa.portal.landingpage.service.EmailService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import uk.gov.justice.laa.portal.landingpage.config.TestSecurityConfig;
-import uk.gov.justice.laa.portal.landingpage.service.EmailService;
 
-@Import(TestSecurityConfig.class)
 class UserControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
@@ -42,15 +36,13 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     void shouldRedirectAnonymousHome() throws Exception {
         this.mockMvc.perform(get("/home"))
-                .andExpect(status().is3xxRedirection());;
+                .andExpect(status().is3xxRedirection());
     }
 
     @Test
-    @DisplayName("Happy Path Test: display index get")
-    void displayIndexPage() throws Exception {
+    void redirectToLoginPage() throws Exception {
         this.mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("index"));
+                .andExpect(status().is3xxRedirection());
     }
 
     @Test
