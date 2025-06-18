@@ -221,25 +221,27 @@ public class DemoDataPopulator {
                 entraUsers.add(entraUser);
             }
 
-            for(String userPrincipal : userPrincipals) {
-                //Ensuring the user being running the app is added
-                boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
+            if (userPrincipals != null && !userPrincipals.isEmpty()) {
+                for (String userPrincipal : userPrincipals) {
+                    //Ensuring the user being running the app is added
+                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
 
-                try {
-                    if (!userAlreadyAdded) {
-                        UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
-                        User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
-                            assert requestConfig.queryParameters != null;
-                            requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
-                        });
-                        assert me != null;
-                        entraUsers.add(buildEntraUser(me));
-                        users.add(me);
+                    try {
+                        if (!userAlreadyAdded) {
+                            UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
+                            User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
+                                assert requestConfig.queryParameters != null;
+                                requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
+                            });
+                            assert me != null;
+                            entraUsers.add(buildEntraUser(me));
+                            users.add(me);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
+                        System.err.println(e.getMessage());
+                        System.err.println("Continuing with the list of users in the database");
                     }
-                } catch (Exception e) {
-                    System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
-                    System.err.println(e.getMessage());
-                    System.err.println("Continuing with the list of users in the database");
                 }
             }
 

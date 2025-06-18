@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -96,6 +97,7 @@ class DemoDataPopulatorTest {
         when(graphServiceClient.usersWithUserPrincipalName(any())).thenReturn(usersWithUserPrincipalNameRequestBuilder);
 
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "userPrincipals", Set.of("test"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
     }
