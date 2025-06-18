@@ -3,12 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
-import jakarta.servlet.http.HttpSession;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -53,7 +50,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -142,13 +138,9 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User getUserById(String userId) {
-        try {
-            return graphClient.users().byUserId(userId).get();
-        } catch (Exception e) {
-            logger.error("Error fetching user with ID: {}", userId, e);
-            return null;
-        }
+    public Optional<EntraUserDto> getEntraUserById(String userId) {
+        return entraUserRepository.findById(UUID.fromString(userId))
+                .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -196,6 +188,22 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserType> findUserTypeByUsername(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user name: {}", userName);
+            throw new RuntimeException(String.format("User profile not found for the given user name: %s", userName));
+        }
+
+        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+
+    }
+
     @Async
     public void disableUsers(List<String> ids) throws IOException {
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
@@ -217,20 +225,6 @@ public class UserService {
             partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
         }
         return partitions;
-    }
-
-    public String getLastLoggedInByUserId(String userId) {
-        User user = graphClient.users().byUserId(userId).get(requestConfiguration -> {
-            requestConfiguration.queryParameters.select = new String[]{"signInActivity"};
-        });
-        if (user != null) {
-            SignInActivity signInActivity = user.getSignInActivity();
-            OffsetDateTime lastSignInDateTime = signInActivity != null ? signInActivity.getLastSignInDateTime() : null;
-            if (lastSignInDateTime != null) {
-                return formatLastSignInDateTime(lastSignInDateTime);
-            }
-        }
-        return "User has not logged in yet.";
     }
 
     public List<AppDto> getApps() {
@@ -324,5 +318,54 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * The method loads the user type from DB and map it as user authorities
+     *
+     * @param userName the user principal
+     * @return the list of user types associated with entra user
+     */
+    public List<String> getUserAuthorities(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
+
+        List<String> grantedAuthorities = Collections.emptyList();
+
+        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+            grantedAuthorities = user.getUserProfiles().stream()
+                    .map(userProfile -> userProfile.getUserType().name())
+                    .toList();
+
+        }
+        return grantedAuthorities;
+    }
+
+
+
+    public Set<AppDto> getUserAppsByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .map(AppRole::getApp)
+                    .map(app -> mapper.map(app, AppDto.class))
+                    .collect(Collectors.toSet());
+        } else {
+            logger.warn("No user found for user id {} when getting user apps", userId);
+            return Collections.emptySet();
+        }
+    }
+
+    public List<AppRoleDto> getAppRolesByAppIds(List<String> appIds) {
+        List<UUID> appUuids = appIds.stream().map(UUID::fromString).toList();
+        return appRepository.findAllById(appUuids).stream()
+                .flatMap(app -> app.getAppRoles().stream())
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .toList();
     }
 }

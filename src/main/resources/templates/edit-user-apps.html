@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Edit User Applications</title>
+</head>
+
+<body>
+<script>
+    document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');
+</script>
+
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" href="/">Home</a>
+        </li>
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
+        </li>
+        <li class="govuk-breadcrumbs__list-item">
+            Edit Apps for <span th:text="${user.fullName}"></span>
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div th:if="${#authentication.isAuthenticated()}">
+        <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users}">
+            Back
+        </a>
+
+        <span class="govuk-caption-m govuk-!-margin-top-3">User Applications</span>
+
+        <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.fullName}"></span></h1>
+
+        <form method="post" th:action="@{/admin/users/edit/{id}/apps(id=${user.id})}">
+            <fieldset class="govuk-fieldset">
+                <p class="govuk-hint govuk-!-margin-bottom-3">
+                    Select all that apply. Roles will be displayed for the user based on what has been selected.
+                </p>
+                <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                    <div class="govuk-checkboxes__item" th:each="app : ${availableApps}">
+                        <input class="govuk-checkboxes__input" id="app-[[${app.id}]]" name="selectedApps"
+                               th:checked="${userAssignedApps.contains(app)}" th:value="${app.id}"
+                               type="checkbox">
+                        <label class="govuk-label govuk-checkboxes__label" th:for="'app-' + ${app.id}">
+                            <span th:text="${app.name}"></span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <button class="govuk-button govuk-!-margin-top-3" data-module="govuk-button" type="submit">
+                Save and continue
+            </button>
+        </form>
+    </div>
+</main>
+</body>
+
+</html>
