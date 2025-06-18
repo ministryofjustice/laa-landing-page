@@ -38,11 +38,13 @@ class EventServiceTest {
         EntraUser entraUser = EntraUser.builder().userName("newUser").id(userId).build();
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
         List<String> selectedRoles = List.of("ROLE_ADMIN", "ROLE_USER");
-        eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles);
+        List<String> selectedOfficesDisplay = List.of("Office 1", "Office 2", "Office 3");
+        String selectedFirm = "Firm";
+        eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles, selectedOfficesDisplay, selectedFirm);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User admin with user id " + adminUuid
-                + ", New user newUser created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER\n" +
+                + ", New user newUser created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER, office Office 1, Office 2, Office 3, firm Firm\n" +
                 "\n");
     }
 

@@ -540,7 +540,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
-        verify(eventService).auditUserCreate(currentUserDto, entraUser, roles);
+        verify(eventService).auditUserCreate(currentUserDto, entraUser, roles, selectedApps, "test firm");
     }
 
     @Test

@@ -276,16 +276,19 @@ public class UserController {
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
             Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
             List<String> selectedOffices;
+            List<String> selectedOfficesDisplay;
             if (optionalSelectedOfficeData.isPresent()) {
                 selectedOffices = optionalSelectedOfficeData.get().getSelectedOffices();
+                selectedOfficesDisplay = optionalSelectedOfficeData.get().getSelectedOfficesDisplay();
             } else {
                 selectedOffices = new ArrayList<>();
+                selectedOfficesDisplay = new ArrayList<>();
             }
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
             Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
             EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
-            eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles);
+            eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles, selectedOfficesDisplay, selectedFirm.getName());
         } else {
             log.error("No user attribute was present in request. User not created.");
         }

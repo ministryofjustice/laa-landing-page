@@ -24,17 +24,19 @@ public class EventService {
             %s: Audit event %s, by User %s with user id %s, %s
             """;
     private static final String CREATE_USER_TEMPLATE = """
-            New user %s created, user id %s, with role %s
+            New user %s created, user id %s, with role %s, office %s, firm %s
             """;
     private static final String UPDATE_USER_ROLE_TEMPLATE = """
             Existing user %s updated, user id %s, with new role %s
             """;
     private static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
-    public void auditUserCreate(CurrentUserDto currentUserDto, EntraUser user, List<String> selectedRoles) {
+    public void auditUserCreate(CurrentUserDto currentUserDto, EntraUser user,
+                                List<String> selectedRoles, List<String> selectedOfficesDisplay, String selectedFirm) {
         String userName = user.getUserName();
         String roles = String.join(", ", selectedRoles);
-        String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), roles);
+        String offices = String.join(", ", selectedOfficesDisplay);
+        String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), roles, offices, selectedFirm);
         Event createEvent = auditEvent(currentUserDto.getUserId(), currentUserDto.getName(), EventType.CREATE_USER, description);
         logEvent(createEvent);
     }
