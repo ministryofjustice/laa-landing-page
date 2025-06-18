@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.microsoft.graph.models.User;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +25,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
@@ -635,7 +635,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserAppsReturnsCorrectViewAndAttributes() {
+    public void testEditUserAppsReturnsCorrectViewAndAttributes() throws ServletException {
         // Given
         final UUID userId = UUID.randomUUID();
         EntraUserDto testUser = new EntraUserDto();
