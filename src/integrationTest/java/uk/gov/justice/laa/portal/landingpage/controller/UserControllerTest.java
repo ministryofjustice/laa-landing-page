@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,8 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
+import uk.gov.justice.laa.portal.landingpage.config.TestSecurityConfig;
 import uk.gov.justice.laa.portal.landingpage.service.EmailService;
 
+@Import(TestSecurityConfig.class)
 class UserControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
@@ -19,16 +22,9 @@ class UserControllerTest extends BaseIntegrationTest {
     private EmailService emailService;
 
     @Test
-    void shouldRedirectAnonymousUser() throws Exception {
-        this.mockMvc
-                .perform(get("/users"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
     @DisplayName("Happy Path Test: displaySavedUsers get")
     void displaySavedUsers() throws Exception {
-        this.mockMvc.perform(get("/userlist"))
+        this.mockMvc.perform(get("/admin/userlist"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users"));
     }

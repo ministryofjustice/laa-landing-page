@@ -3,8 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'home'},
-      breadcrumbs=~{::#breadcrumbs},
-      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Homepage</title>
@@ -12,24 +11,13 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <div class="govuk-phase-banner" id="feedback">
-        <p class="govuk-phase-banner__content">
-            <strong class="govuk-tag govuk-phase-banner__content__tag">
-                Beta
-            </strong>
-            <span class="govuk-phase-banner__text">
-                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
-                    email</a>.
-            </span>
-        </p>
-    </div>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" href="/home">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/users" th:text="${user.displayName}" aria-label="Users"></a>
+                <a class="govuk-breadcrumbs__link" href="/admin/users" th:text="${user.fullName}" aria-label="Users"></a>
             </li>
         </ol>
     </nav>
@@ -38,7 +26,7 @@
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
-                        <p class="govuk-heading-xl" th:text="${user.displayName}"></p>
+                        <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
                     </div>
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
@@ -94,20 +82,20 @@
                                         <dt class="govuk-summary-list__key">
                                             Email
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.userPrincipalName}">
+                                        <dd class="govuk-summary-list__value" th:text="${user.email}">
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             First Name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.givenName}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.fullName.split(' ')[0]}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             Last Name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.surname}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.fullName.split(' ')[1]}"></dd>
                                     </div>
                                 </dl>
                             </div>
@@ -129,8 +117,8 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row" th:each="role : ${userAppRoles}">
-                                        <dt class="govuk-summary-list__key" th:text="${role.appName}"></dt>
-                                        <dd class="govuk-summary-list__value" th:text="${role.roleName}"></dd>
+                                        <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
+                                        <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                         <dd class="govuk-summary-list__actions">
                                             <ul class="govuk-summary-list__actions-list">
                                                 <li class="govuk-summary-list__actions-list-item">
@@ -157,7 +145,7 @@
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="#">Change</a>
+                                        <a class="govuk-link" href="#">Manage</a>
                                     </li>
                                 </ul>
                             </div>

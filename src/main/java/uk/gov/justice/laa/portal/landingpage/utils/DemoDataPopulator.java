@@ -58,7 +58,7 @@ public class DemoDataPopulator {
 
     private final GraphServiceClient graphServiceClient;
 
-    @Value("app.user.userPrincipal")
+    @Value("${app.user.userPrincipal}")
     private String userPrincipal;
 
     @Value("${app.populate.dummy-data}")

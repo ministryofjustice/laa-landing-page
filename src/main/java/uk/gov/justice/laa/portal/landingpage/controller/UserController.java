@@ -6,36 +6,22 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.*;
 
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
@@ -48,12 +34,14 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Slf4j
 @Controller
 @RequiredArgsConstructor
+@RequestMapping("/admin")
 public class UserController {
 
     private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
     private final EventService eventService;
+    private final FirmService firmService;
     private final ModelMapper mapper;
 
     /**
@@ -62,39 +50,38 @@ public class UserController {
     @GetMapping("/users")
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Integer page,
-            Model model,
-            HttpSession session) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String search,
+            Model model) {
 
-        // Allow the user to reset the cache by refreshing the page on the /users endpoint.
-        if (page == null) {
-            page = 1;
-            session.setAttribute("cachedUsers", null);
-            session.setAttribute("lastResponse", null);
-            session.setAttribute("totalUsers", null);
+        PaginatedUsers paginatedUsers;
+        if (search != null && !search.isEmpty()) {
+            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search);
+        } else {
+            search = null;
+            paginatedUsers = userService.getPageOfUsers(page, size);
         }
-
-        // Initialise cached user list if not already.
-        if (session.getAttribute("cachedUsers") == null) {
-            session.setAttribute("cachedUsers", new ArrayList<>());
-        }
-
-        PaginatedUsers paginatedUsers = userService.getPaginatedUsers(page, size, session);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
         model.addAttribute("page", page);
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages(size));
+        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("search", search);
 
         return "users";
     }
 
     @GetMapping("/users/edit/{id}")
     public String editUser(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
-        model.addAttribute("user", user);
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
+        if (optionalUser.isPresent()) {
+            EntraUserDto user = optionalUser.get();
+            List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId());
+            model.addAttribute("user", user);
+            model.addAttribute("roles", roles);
+        }
         return "edit-user";
     }
 
@@ -123,12 +110,10 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     public String manageUser(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
-        String lastLoggedIn = userService.getLastLoggedInByUserId(id);
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<Office> offices = officeService.getOffices();
-        model.addAttribute("user", user);
-        model.addAttribute("lastLoggedIn", lastLoggedIn);
+        optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("offices", offices);
         return "manage-user";
@@ -140,14 +125,20 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new User();
         }
+        List<FirmDto> firms = firmService.getFirms();
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        model.addAttribute("firms", firms);
+        model.addAttribute("selectedFirm", selectedFirm);
         model.addAttribute("user", user);
         return "user/user-details";
     }
 
     @PostMapping("/user/create/details")
-    public RedirectView postUser(@RequestParam("firstName") String firstName,
-            @RequestParam("lastName") String lastName,
-            @RequestParam("email") String email,
+    public RedirectView postUser(@RequestParam String firstName,
+            @RequestParam String lastName,
+            @RequestParam String email,
+            @RequestParam String firmId,
+            @RequestParam(required = false) String isFirmAdmin,
             HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -158,6 +149,12 @@ public class UserController {
         user.setDisplayName(firstName + " " + lastName);
         user.setMail(email);
         session.setAttribute("user", user);
+
+        FirmDto firm = firmService.getFirm(firmId);
+
+        session.setAttribute("firm", firm);
+        session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
+
         return new RedirectView("/user/create/services");
     }
 
@@ -177,7 +174,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public RedirectView setSelectedApps(@RequestParam("apps") List<String> apps,
+    public RedirectView setSelectedApps(@RequestParam List<String> apps,
             HttpSession session) {
         session.setAttribute("apps", apps);
         return new RedirectView("/user/create/roles");
@@ -191,7 +188,7 @@ public class UserController {
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
-                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId().toString()));
+                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
         model.addAttribute("roles", appRoleViewModels);
@@ -261,6 +258,12 @@ public class UserController {
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
+
+        FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+        model.addAttribute("firm", selectedFirm);
+
+        Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+        model.addAttribute("isFirmAdmin", isFirmAdmin);
         return "add-user-check-answers";
     }
 
@@ -279,13 +282,18 @@ public class UserController {
                 selectedOffices = new ArrayList<>();
             }
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            user = userService.createUser(user, selectedRoles, selectedOffices, currentUserDto.getName());
-            eventService.auditUserCreate(currentUserDto, user, selectedRoles);
+            FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+            Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
+            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
+            eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
-        session.removeAttribute("roles");
+        session.removeAttribute("user");
+        session.removeAttribute("firm");
+        session.removeAttribute("isFirmAmdin");
         session.removeAttribute("apps");
+        session.removeAttribute("roles");
         session.removeAttribute("officeData");
         return new RedirectView("/users");
     }
@@ -306,12 +314,14 @@ public class UserController {
      * Retrieves available user roles for user
      */
     @GetMapping("/users/edit/{id}/roles")
-    public String getUserRoles(@PathVariable String id, Model model) {
-        User user = userService.getUserById(id);
+    public String editUserRoles(@PathVariable String id, Model model, HttpSession session) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class).orElseGet(ArrayList::new);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-        List<AppRoleDto> availableRoles = userService.getAllAvailableRoles();
+        List<AppRoleDto> availableRoles = userService.getAppRolesByAppIds(selectedApps);
 
         Set<String> userAssignedRoleIds = userRoles.stream()
+                .filter(availableRoles::contains)
                 .map(AppRoleDto::getId)
                 .collect(Collectors.toSet());
 
@@ -329,10 +339,35 @@ public class UserController {
     public RedirectView updateUserRoles(@PathVariable String id,
             @RequestParam(required = false) List<String> selectedRoles,
             Authentication authentication) {
-        User user = userService.getUserById(id);
+        EntraUserDto user = userService.getEntraUserById(id).orElse(null);
         userService.updateUserRoles(id, selectedRoles);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
         return new RedirectView("/users");
+    }
+
+    /**
+     * Retrieves available apps for user and their currently assigned apps.
+     */
+    @GetMapping("/users/edit/{id}/apps")
+    public String editUserApps(@PathVariable String id, Model model) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
+        List<AppDto> availableApps = userService.getApps();
+
+        model.addAttribute("user", user);
+        model.addAttribute("userAssignedApps", userAssignedApps);
+        model.addAttribute("availableApps", availableApps);
+
+        return "edit-user-apps";
+    }
+
+    @PostMapping("/users/edit/{id}/apps")
+    public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("selectedApps") List<String> apps,
+                                         HttpSession session) {
+        session.setAttribute("selectedApps", apps);
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
+        return new RedirectView(String.format("/users/edit/%s/roles", uuid));
     }
 }

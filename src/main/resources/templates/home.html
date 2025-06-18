@@ -3,8 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'home'},
-      navigation=~{::#navigation},
-      feedback=~{::#feedback})}" xmlns:th="http://www.thymeleaf.org">
+      navigation=~{::#navigation})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Homepage</title>
@@ -12,18 +11,6 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <div class="govuk-phase-banner" id="feedback">
-        <p class="govuk-phase-banner__content">
-            <strong class="govuk-tag govuk-phase-banner__content__tag">
-                Alpha
-            </strong>
-            <span class="govuk-phase-banner__text">
-                This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback by
-                    email</a>.
-            </span>
-        </p>
-    </div>
-
     <nav class="moj-sub-navigation" aria-label="Sub navigation" id="navigation">
         <ul class="moj-sub-navigation__list">
             <li class="moj-sub-navigation__item">
@@ -53,7 +40,7 @@
                         <p class="govuk-body">New Matter Starts and manage your LAA Online Users and Contacts
                         </p>
                         <p class="govuk-body">
-                            <a href="/users" class="govuk-link" rel="noreferrer noopener" target="_blank">Access app
+                            <a href="/admin/users" class="govuk-link" rel="noreferrer noopener" target="_blank">Access app
                                 (opens
                                 in new tab)</a>
                         </p>
