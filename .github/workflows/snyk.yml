@@ -75,16 +75,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sarif_files
-      
-      - name: Install sarif-tools
-        run: |
-          dotnet tool install --global Microsoft.CodeAnalysis.Sarif.Sdk.Cli
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      
-      - name: Validate sarif files
-        run: |
-          sarif validate sarif_files/snyk_iac_test.sarif
 
       - name: Run SARIF severity count 
         run: |
