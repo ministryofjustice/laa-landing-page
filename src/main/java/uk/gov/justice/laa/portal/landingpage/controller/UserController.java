@@ -42,6 +42,8 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
+
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -143,6 +145,11 @@ public class UserController {
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firms", firms);
         model.addAttribute("selectedFirm", selectedFirm);
+        // If user is already in session, populate the form with existing user details
+        userDetailsForm = UserUtils.populateUserDetailsFormWithSession(userDetailsForm, user, session);
+        model.addAttribute("userDetailsForm", userDetailsForm);
+        model.addAttribute("user", user);
+        model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
         return "add-user-details";
     }

@@ -31,7 +31,7 @@
                     <div id="offices-hint" class="govuk-hint">
                         Select all that apply
                     </div>
-                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                    <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
                         <div class="govuk-checkboxes__item" th:each="app : ${apps}">
                             <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
                                 th:value="${app.id}" type="checkbox">
