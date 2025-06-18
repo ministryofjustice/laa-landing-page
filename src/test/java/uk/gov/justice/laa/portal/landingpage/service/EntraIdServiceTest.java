@@ -63,7 +63,7 @@ class EntraIdServiceTest {
     }
 
     @Test
-    void getUserGroupMemberships_WhenUserHasGroups_ReturnsGroupIds() {
+    void getUserAppAssignedRoles_WhenUserHasGroups_ReturnsAppRoles() {
         // Create test roles with proper setter methods
         AppRole role1 = new AppRole();
         role1.setDisplayName("Admin"); // This is a public field in the SDK
