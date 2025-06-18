@@ -631,7 +631,7 @@ class UserControllerTest {
         RedirectView view = userController.updateUserRoles(userId, selectedRoles);
 
         // Then
-        Assertions.assertEquals("/users", view.getUrl());
+        Assertions.assertEquals("/admin/users", view.getUrl());
     }
 
     @Test
@@ -680,7 +680,7 @@ class UserControllerTest {
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
 
         // Then
-        assertThat(redirectView.getUrl()).isEqualTo(String.format("/users/edit/%s/roles", userId));
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
         assertThat(session.getAttribute("selectedApps")).isNotNull();
         List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
         assertThat(returnedApps).hasSize(1);
