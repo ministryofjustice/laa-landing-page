@@ -192,17 +192,16 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserType> findUserTypeByUsername(String username) {
-        EntraUser user = entraUserRepository.findByUserName(username);
-
-        if (user == null) {
-            logger.error("User not found for the given user name: {}", username);
-            throw new RuntimeException(String.format("User not found for the given user name: %s", username));
-        }
+    public List<UserType> findUserTypeByUsername(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
-            logger.error("User profile not found for the given user name: {}", username);
-            throw new RuntimeException(String.format("User profile not found for the given user name: %s", username));
+            logger.error("User profile not found for the given user name: {}", userName);
+            throw new RuntimeException(String.format("User profile not found for the given user name: %s", userName));
         }
 
         return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
@@ -332,7 +331,11 @@ public class UserService {
      * @return the list of user types associated with entra user
      */
     public List<String> getUserAuthorities(String userName) {
-        EntraUser user = entraUserRepository.findByUserName(userName);
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
 
         List<String> grantedAuthorities = Collections.emptyList();
 

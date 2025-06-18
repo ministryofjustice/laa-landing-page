@@ -1,12 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,7 +29,7 @@ class SecurityConfigTest {
     @Autowired
     MockMvc mvc;
 
-    @Mock
+    @MockitoBean
     private AuthzOidcUserDetailsService authzOidcUserDetailsService;
 
     @Test
