@@ -3,6 +3,11 @@ plugins {
     id "io.sentry.jvm.gradle" version "5.5.0"
 }
 
+ext {
+    set('springWebMvcVersion', "6.1.13")
+    set('springDocVersion', "2.4.0")
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -52,7 +57,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // OpenAPI / Swagger Documentation
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
 
     // Microsoft Graph SDK with Azure Identity
     implementation 'com.azure:azure-identity:1.16.0'
