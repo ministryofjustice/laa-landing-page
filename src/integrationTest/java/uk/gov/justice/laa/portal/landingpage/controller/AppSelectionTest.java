@@ -106,7 +106,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
         assertNotNull(result.getResponse().getRedirectedUrl());
-        assertEquals(result.getResponse().getRedirectedUrl(), String.format("/users/edit/%s/roles", userId));
+        assertEquals(result.getResponse().getRedirectedUrl(), String.format("/admin/users/edit/%s/roles", userId));
         HttpSession session = result.getRequest().getSession();
         assertNotNull(session.getAttribute("selectedApps"));
         List<String> returnedSelectApps = (List<String>) session.getAttribute("selectedApps");
