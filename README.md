@@ -137,7 +137,6 @@ Once the application is running steadily, you can access the UI by navigating to
 http://localhost:8080
 ```
 
-
 ### Snyk & Trivy Integration
 
-If a pipeline is picking up a vulnerability that you wish to add to the ignore list, then make sure to add it to either `.trivyignore` or `.snyk` rather than resolving in the UI. 
+If a pipeline is picking up a vulnerability that you wish to add to the ignore list, then make sure to add it to either `.trivyignore` or `.snyk` rather than resolving in the UI.
