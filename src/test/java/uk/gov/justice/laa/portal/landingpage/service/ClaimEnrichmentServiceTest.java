@@ -145,7 +145,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_UserNoAppAccess() {
         // Arrange
-        entraUser.setUserAppRegistrations(Collections.emptySet()); // Remove app access
+        entraUser.setUserAppRegistrations(Collections.emptySet());
         when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 
@@ -160,7 +160,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_UserNoRoles() {
         // Arrange
-        entraUser.setUserProfiles(Collections.emptySet()); // Remove all roles
+        entraUser.setUserProfiles(Collections.emptySet());
         when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 

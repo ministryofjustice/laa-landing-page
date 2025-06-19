@@ -8,10 +8,15 @@ import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +31,7 @@ public class ClaimEnrichmentService {
 
     private final EntraUserRepository entraUserRepository;
     private final AppRepository appRepository;
+    private final OfficeRepository officeRepository;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         log.info("Processing claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
@@ -58,13 +64,26 @@ public class ClaimEnrichmentService {
                 throw new ClaimEnrichmentException("User has no roles assigned for this application");
             }
 
+            //5. Get Office IDs
+            String officeIds = entraUser.getUserProfiles().stream()
+                    .map(UserProfile::getFirm)  // Get firms from user profiles
+                    .filter(Objects::nonNull)
+                    .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())  // Get offices for each firm
+                    .map(Office::getId)
+                    .map(UUID::toString)
+                    .distinct()
+                    .collect(Collectors.joining(":"));
+
             log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
-                    .roles(userRoles)
-                    .appName(app.getName())
                     .message("Access granted to " + app.getName())
+                    .appName(app.getName())
+                    .roles(userRoles)
+                    .userId(entraUser.getId().toString())
+                    .email(entraUser.getEmail())
+                    .officeIds(officeIds)
                     .build();
 
         } catch (ClaimEnrichmentException e) {

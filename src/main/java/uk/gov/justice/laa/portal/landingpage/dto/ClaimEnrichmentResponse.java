@@ -16,6 +16,8 @@ public class ClaimEnrichmentResponse {
     private boolean success;
     private String message;
     private String appName;
+    private String userId;
+    private String email;
+    private String officeIds;
     private Set<String> roles;
-    // Add other necessary fields
 }
