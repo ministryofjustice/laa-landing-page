@@ -10,10 +10,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -22,6 +24,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserModel;
@@ -84,7 +90,7 @@ class UserControllerTest {
 
         when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, model);
+        String view = userController.displayAllUsers(10, 1, null, model, session);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -117,7 +123,7 @@ class UserControllerTest {
         when(userService.getPageOfUsers(eq(1), eq(10))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, model);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -136,7 +142,7 @@ class UserControllerTest {
         when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, model);
+        String viewName = userController.displayAllUsers(10, 1, null, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -152,7 +158,7 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmail(anyInt(), anyInt(), eq("Test"))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "Test", model);
+        String viewName = userController.displayAllUsers(10, 1, "Test", model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -168,7 +174,7 @@ class UserControllerTest {
         when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "", model);
+        String viewName = userController.displayAllUsers(10, 1, "", model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -277,9 +283,10 @@ class UserControllerTest {
         FirmDto firm1 = FirmDto.builder().build();
         FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
-        String view = userController.createUser(session, model);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(view).isEqualTo("user/user-details");
+        assertThat(view).isEqualTo("add-user-details");
     }
 
     @Test
@@ -291,21 +298,29 @@ class UserControllerTest {
         FirmDto firm1 = FirmDto.builder().build();
         FirmDto firm2 = FirmDto.builder().build();
         when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
-        String view = userController.createUser(session, model);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("firms")).isNotNull();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test firm");
-        assertThat(view).isEqualTo("user/user-details");
+        assertThat(view).isEqualTo("add-user-details");
     }
 
     @Test
     void postNewUser() {
         HttpSession session = new MockHttpSession();
         when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().name("Test Firm").build());
-        RedirectView view = userController.postUser("firstName", "lastName", "email", "firmId", "false", session);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("firstName");
+        userDetailsForm.setLastName("lastName");
+        userDetailsForm.setEmail("email");
+        userDetailsForm.setFirmId("firmId");
+        userDetailsForm.setIsFirmAdmin(false);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
@@ -313,7 +328,7 @@ class UserControllerTest {
         assertThat(sessionUser.getMail()).isEqualTo("email");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
-        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
         assertThat((Boolean) session.getAttribute("isFirmAdmin")).isFalse();
     }
 
@@ -325,13 +340,20 @@ class UserControllerTest {
         session.setAttribute("user", mockUser);
         session.setAttribute("firm", FirmDto.builder().name("oldFirm").build());
         when(firmService.getFirm(eq("newFirm"))).thenReturn(FirmDto.builder().name("Test Firm").build());
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("firstName");
+        userDetailsForm.setLastName("lastName");
+        userDetailsForm.setEmail("email");
+        userDetailsForm.setFirmId("newFirm");
+        userDetailsForm.setIsFirmAdmin(true);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "newFirm", session, model);
         User sessionUser = (User) session.getAttribute("user");
-        RedirectView view = userController.postUser("firstName", "lastName", "email", "newFirm", "true", session);
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
         boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
         assertThat(firmAdmin).isTrue();
         String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
@@ -346,7 +368,8 @@ class UserControllerTest {
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
-        String view = userController.selectUserApps(model, session);
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        String view = userController.selectUserApps(applicationsForm, model, session);
         assertThat(view).isEqualTo("add-user-apps");
         assertThat(model.getAttribute("apps")).isNotNull();
         List<AppViewModel> modeApps = (List<AppViewModel>) model.getAttribute("apps");
@@ -358,9 +381,12 @@ class UserControllerTest {
     void setSelectedAppsPost() {
         HttpSession session = new MockHttpSession();
         List<String> ids = List.of("1");
-        RedirectView view = userController.setSelectedApps(ids, session);
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(ids);
+        Model model = new ExtendedModelMap();
+        String redirectUrl = userController.setSelectedApps(applicationsForm, model, session);
         assertThat(session.getAttribute("apps")).isNotNull();
-        assertThat(view.getUrl()).isEqualTo("/user/create/roles");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/roles");
     }
 
     @Test
@@ -380,7 +406,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", selectedRoles);
-        String view = userController.getSelectedRoles(model, session);
+        String view = userController.getSelectedRoles(new RolesForm(), model, session);
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -392,9 +418,13 @@ class UserControllerTest {
     void setSelectedRolesPost() {
         HttpSession session = new MockHttpSession();
         List<String> roles = List.of("1");
-        RedirectView view = userController.setSelectedRoles(roles, session);
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(roles);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Model model = new ExtendedModelMap();
+        String redirectUrl = userController.setSelectedRoles(rolesForm, bindingResult, model, session);
         assertThat(session.getAttribute("roles")).isNotNull();
-        assertThat(view.getUrl()).isEqualTo("/user/create/offices");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/offices");
     }
 
     @Test
@@ -408,17 +438,17 @@ class UserControllerTest {
         Office office2 = Office.builder().id(UUID.randomUUID()).build();
         List<Office> dbOffices = List.of(office1, office2);
         when(officeService.getOffices()).thenReturn(dbOffices);
-        String view = userController.offices(session, model);
+        String view = userController.offices(new OfficesForm(), session, model);
         List<OfficeModel> modelOfficeData = (List<OfficeModel>) model.getAttribute("officeData");
         assertThat(modelOfficeData).isNotNull();
         assertThat(modelOfficeData.get(0).isSelected()).isTrue();
         assertThat(modelOfficeData.get(1).isSelected()).isFalse();
-        assertThat(view).isEqualTo("user/offices");
+        assertThat(view).isEqualTo("add-user-offices");
     }
 
     @Test
     void postOffices() {
-        HttpSession session = new MockHttpSession();
+        MockHttpSession mockSession = new MockHttpSession();
         UUID officeId1 = UUID.randomUUID();
         UUID officeId2 = UUID.randomUUID();
         List<String> selectedOffices = List.of(officeId1.toString());
@@ -426,9 +456,16 @@ class UserControllerTest {
         Office office2 = Office.builder().id(officeId2).name("of2").build();
         List<Office> dbOffices = List.of(office1, office2);
         when(officeService.getOffices()).thenReturn(dbOffices);
-        RedirectView view = userController.postOffices(session, selectedOffices);
-        assertThat(view.getUrl()).isEqualTo("/user/create/check-answers");
-        OfficeData modelOfficeData = (OfficeData) session.getAttribute("officeData");
+
+        // Prepare OfficesForm and BindingResult
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(selectedOffices);
+        BindingResult bindingResult = Mockito
+                .mock(BindingResult.class);
+
+        String redirectUrl = userController.postOffices(officesForm, bindingResult, model, mockSession);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
+        OfficeData modelOfficeData = (OfficeData) mockSession.getAttribute("officeData");
         assertThat(modelOfficeData.getSelectedOffices()).hasSize(1);
         assertThat(modelOfficeData.getSelectedOfficesDisplay()).hasSize(1);
         assertThat(modelOfficeData.getSelectedOffices().get(0)).isEqualTo(officeId1.toString());
@@ -448,19 +485,13 @@ class UserControllerTest {
         AppRoleDto userRole2 = new AppRoleDto();
         userRole2.setId("app1-dev");
         userRole2.setApp(app1);
-        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
         String view = userController.addUserCheckAnswers(model, session);
-        assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
-
-        assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
-        assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(view).isEqualTo("redirect:/admin/users");
     }
 
     @Test
@@ -476,21 +507,14 @@ class UserControllerTest {
         AppRoleDto userRole2 = new AppRoleDto();
         userRole2.setId("app1-dev");
         userRole2.setApp(app1);
-        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("isFirmAdmin", true);
         String view = userController.addUserCheckAnswers(model, session);
-        assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
-
-        assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
-        assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(Boolean.parseBoolean(model.getAttribute("isFirmAdmin").toString())).isTrue();
+        assertThat(view).isEqualTo("redirect:/admin/users");
     }
 
     @Test
@@ -508,11 +532,7 @@ class UserControllerTest {
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
         String view = userController.addUserCheckAnswers(model, session);
-        assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(model.getAttribute("firm")).isNotNull();
+        assertThat(view).isEqualTo("redirect:/admin/users");
     }
 
     @Test
@@ -528,8 +548,8 @@ class UserControllerTest {
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("isFirmAdmin", false);
         when(userService.createUser(any(), any(), any(), any(), eq(false))).thenReturn(user);
-        RedirectView view = userController.addUserCheckAnswers(session);
-        assertThat(view.getUrl()).isEqualTo("/users");
+        String redirectUrl = userController.addUserCheckAnswers(model, session);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/users");
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
@@ -545,8 +565,8 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        RedirectView view = userController.addUserCheckAnswers(session);
-        assertThat(view.getUrl()).isEqualTo("/users");
+        String redirectUrl = userController.addUserCheckAnswers(model, session);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
@@ -694,8 +714,8 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
 
         // When
-        assertThrows(IllegalArgumentException.class, () -> userController.setSelectedAppsEdit(userId, List.of(), session));
-
+        assertThrows(IllegalArgumentException.class,
+                () -> userController.setSelectedAppsEdit(userId, List.of(), session));
 
     }
 
