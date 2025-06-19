@@ -834,13 +834,13 @@ class UserControllerTest {
     void postUser_shouldHandleValidationErrors() {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
-        Model model = new ExtendedModelMap();
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("firms", List.of());
         sessionModel.addAttribute("selectedFirm", null);
         sessionModel.addAttribute("user", new User());
         Mockito.lenient().when(session.getAttribute("createUserDetailsModel")).thenReturn(sessionModel);
 
+        Model model = new ExtendedModelMap();
         UserDetailsForm form = new UserDetailsForm();
         String view = userController.postUser(form, result, null, session, model);
 
@@ -916,7 +916,7 @@ class UserControllerTest {
     void setSelectedRoles_shouldHandleValidationErrors() {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
-        Model model = new ExtendedModelMap();
+
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("roles", List.of());
         sessionModel.addAttribute("user", new User());
@@ -924,7 +924,7 @@ class UserControllerTest {
         session.setAttribute("userCreateRolesModel", sessionModel);
 
         RolesForm form = new RolesForm();
-
+        Model model = new ExtendedModelMap();
         String view = userController.setSelectedRoles(form, result, model, session);
 
         assertThat(view).isEqualTo("add-user-roles");
@@ -965,13 +965,13 @@ class UserControllerTest {
     void postOffices_shouldHandleValidationErrors() {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
-        Model model = new ExtendedModelMap();
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("user", new User());
         sessionModel.addAttribute("officeData", List.of());
         HttpSession session = new MockHttpSession();
         session.setAttribute("createUserOfficesModel", sessionModel);
 
+        Model model = new ExtendedModelMap();
         OfficesForm form = new OfficesForm();
 
         String view = userController.postOffices(form, result, model, session);
@@ -1002,12 +1002,12 @@ class UserControllerTest {
 
     @Test
     void getUserCheckAnswers_shouldAddAttributesToModel() {
-        List<String> selectedApps = List.of("app1");
         AppRoleDto role = new AppRoleDto();
         role.setId("role1");
         AppDto app = new AppDto();
         app.setId("app1");
         role.setApp(app);
+        List<String> selectedApps = List.of("app1");
         when(userService.getAllAvailableRolesForApps(selectedApps)).thenReturn(List.of(role));
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
