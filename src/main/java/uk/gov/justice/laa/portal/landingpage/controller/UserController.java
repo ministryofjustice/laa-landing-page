@@ -155,6 +155,9 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("createUserDetailsModel", model);
         return "add-user-details";
     }
 
@@ -179,12 +182,14 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
-            // If there are validation errors, return to the user details page with errors
-            List<FirmDto> firms = firmService.getFirms();
-            FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
-            model.addAttribute("firms", firms);
-            model.addAttribute("selectedFirm", selectedFirm);
-            model.addAttribute("user", user);
+            Model modelFromSession = (Model) session.getAttribute("createUserDetailsModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/details";
+            }
+
+            model.addAttribute("firms", modelFromSession.getAttribute("firms"));
+            model.addAttribute("selectedFirm", modelFromSession.getAttribute("selectedFirm"));
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-details";
         }
 
@@ -193,6 +198,8 @@ public class UserController {
         session.setAttribute("firm", firm);
         session.setAttribute("isFirmAdmin", userDetailsForm.getIsFirmAdmin());
 
+        // Clear the createUserDetailsModel from session to avoid stale data
+        session.removeAttribute("createUserDetailsModel");
         return "redirect:/admin/user/create/services";
     }
 
@@ -236,6 +243,9 @@ public class UserController {
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("userCreateRolesModel", model);
         return "add-user-roles";
     }
 
@@ -244,21 +254,20 @@ public class UserController {
             Model model, HttpSession session) {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
+            Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/roles";
+            }
 
-            List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-            List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
-            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
-            List<AppRoleViewModel> appRoleViewModels = roles.stream()
-                    .map(appRoleDto -> {
-                        AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
-                        viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
-                        return viewModel;
-                    }).toList();
-            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
-            model.addAttribute("user", user);
-            model.addAttribute("roles", appRoleViewModels);
+            // If there are validation errors, return to the roles page with errors
+            model.addAttribute("roles", modelFromSession.getAttribute("roles"));
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-roles";
         }
+        // Clear the userCreateRolesModel from session to avoid stale data
+        session.removeAttribute("userCreateRolesModel");
+
+        // Set selected roles in session
         session.setAttribute("roles", rolesForm.getRoles());
         return "redirect:/admin/user/create/offices";
     }
@@ -276,6 +285,9 @@ public class UserController {
         model.addAttribute("officeData", officeData);
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("createUserOfficesModel", model);
         return "add-user-offices";
     }
 
@@ -286,17 +298,13 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting offices: {}", result.getAllErrors());
             // If there are validation errors, return to the offices page with errors
-            OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
-            //if user has firms, use officeService.getOfficesByFirms();
-            List<Office> offices = officeService.getOffices();
-            List<OfficeModel> officeDataList = offices.stream()
-                    .map(office -> new OfficeModel(office.getName(), office.getAddress(),
-                    office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
-                    && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
-                    .collect(Collectors.toList());
-            model.addAttribute("officeData", officeDataList);
-            User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
-            model.addAttribute("user", user);
+            Model modelFromSession = (Model) session.getAttribute("createUserOfficesModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/offices";
+            }
+
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
             return "add-user-offices";
         }
 
@@ -314,6 +322,9 @@ public class UserController {
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
+
+        // Clear the createUserOfficesModel from session to avoid stale data
+        session.removeAttribute("createUserOfficesModel");
         return "redirect:/admin/user/create/check-answers";
     }
 
