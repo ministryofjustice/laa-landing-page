@@ -385,7 +385,7 @@ public class UserController {
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
-        return new RedirectView("/users");
+        return new RedirectView("/admin/users");
     }
 
     @GetMapping("/user/create/confirmation")
