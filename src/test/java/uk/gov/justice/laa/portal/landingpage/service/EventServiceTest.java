@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,8 +44,8 @@ class EventServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User admin with user id " + adminUuid
-                + ", New user newUser created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER, office Office 1, Office 2, Office 3, firm Firm\n" +
-                "\n");
+                + ", New user newUser created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER, office Office 1, Office 2, Office 3, firm Firm\n"
+                + "\n");
     }
 
     @Test
@@ -64,8 +64,8 @@ class EventServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User admin with user id " + adminUuid
-                + ", Existing user oldUser updated, user id " + userId + ", with new role ROLE_ADMIN, ROLE_USER\n" +
-                "\n");
+                + ", Existing user oldUser updated, user id " + userId + ", with new role ROLE_ADMIN, ROLE_USER\n"
+                + "\n");
     }
 
     @Test
