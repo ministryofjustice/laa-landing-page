@@ -92,7 +92,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
+                    "text": "Trivy Vulnerability Scan Report: ${{ github.event.repository.name }}"
                   }
                 },
                 {
@@ -134,7 +134,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning \n\n This scan was run from ${{ github.ref }}."
                   }
                 }
               ]
@@ -143,3 +143,12 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      
+      - name: Fail Pipeline if Vulnerability Found
+        run: |
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
+            echo "Vulnerabilities detected — failing the job"
+            exit 1
+          else
+            echo "No vulnerabilities found."
+          fi
