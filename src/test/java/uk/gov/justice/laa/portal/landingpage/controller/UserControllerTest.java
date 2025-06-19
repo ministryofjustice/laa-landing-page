@@ -319,8 +319,8 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(false);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
         HttpSession session = new MockHttpSession();
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
