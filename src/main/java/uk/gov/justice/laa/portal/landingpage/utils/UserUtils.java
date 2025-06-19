@@ -18,7 +18,7 @@ public class UserUtils {
             userDetailsForm.setEmail(user.getMail());
         }
 
-        userDetailsForm.setIsFirmAdmin(session.getAttribute("isFirmAdmin").equals(Boolean.TRUE));
+        userDetailsForm.setIsFirmAdmin(session.getAttribute("isFirmAdmin") == Boolean.TRUE);
 
         return userDetailsForm;
     }
