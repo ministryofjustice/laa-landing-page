@@ -16,8 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
-import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentInterface;
+import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentService;
 
 /**
  * Controller for handling claim enrichment requests.
@@ -33,7 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentInterface;
 @Tag(name = "Claim Enrichment", description = "APIs for claim enrichment")
 public class ClaimEnrichmentController {
 
-    private final ClaimEnrichmentInterface claimEnrichmentService;
+    private final ClaimEnrichmentService claimEnrichmentService;
 
     /**
      * Enriches the claims for a given user with additional permissions.
@@ -69,9 +70,9 @@ public class ClaimEnrichmentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ClaimEnrichmentResponse> enrichClaims(
             @Valid @RequestBody ClaimEnrichmentRequest request) {
-        log.info("Received claim enrichment request for user: {}", request.getUserId());
-        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaims(request);
-        log.info("Successfully processed claim enrichment for user: {}", request.getUserId());
+        log.info("Received claim enrichment request for user: {}", request.getData().getUser().getId());
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+        log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getId());
         return ResponseEntity.ok(response);
     }
 }

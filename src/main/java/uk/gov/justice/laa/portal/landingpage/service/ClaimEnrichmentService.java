@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.service.impl;
+package uk.gov.justice.laa.portal.landingpage.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class ClaimEnrichmentService {
     private final EntraUserRepository entraUserRepository;
     private final AppRepository appRepository;
 
-    public ClaimEnrichmentResponse enrichClaims(ClaimEnrichmentRequest request) {
+    public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         log.info("Processing claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
 
         try {

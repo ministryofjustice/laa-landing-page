@@ -10,6 +10,6 @@ public class ClaimEnrichmentException extends RuntimeException {
     }
 
     public ClaimEnrichmentException(String message, String... args) {
-        super(String.format(message, (Object) args));
+        super(String.format(message, (Object[]) args));
     }
 }
