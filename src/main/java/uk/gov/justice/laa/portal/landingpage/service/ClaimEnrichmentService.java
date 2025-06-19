@@ -8,7 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -16,7 +16,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -55,8 +54,9 @@ public class ClaimEnrichmentService {
 
             // 4. Get user roles for this app from the database
             Set<String> userRoles = entraUser.getUserProfiles().stream()
+                    .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .filter(role -> role.getApp().getId().equals(app.getId()))
+                    .filter(role -> role.getApp().equals(app))
                     .map(AppRole::getName)
                     .collect(Collectors.toSet());
 
@@ -66,13 +66,26 @@ public class ClaimEnrichmentService {
 
             //5. Get Office IDs
             String officeIds = entraUser.getUserProfiles().stream()
-                    .map(UserProfile::getFirm)  // Get firms from user profiles
-                    .filter(Objects::nonNull)
-                    .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())  // Get offices for each firm
-                    .map(Office::getId)
-                    .map(UUID::toString)
+                    .filter(profile -> profile.getFirm() != null)
+                    .map(UserProfile::getFirm)
+                    .map(Firm::getId)
+                    .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
+                    .map(office -> office.getId().toString())
                     .distinct()
                     .collect(Collectors.joining(":"));
+
+            boolean isInternalUser = userRoles.contains("INTERNAL");
+            boolean hasNoFirm = entraUser.getUserProfiles().stream()
+                    .noneMatch(profile -> profile.getFirm() != null);
+
+            if (!isInternalUser) {
+                if (hasNoFirm) {
+                    throw new ClaimEnrichmentException("User has no firm assigned");
+                }
+                if (officeIds.isEmpty()) {
+                    throw new ClaimEnrichmentException("User has no offices assigned for this firm");
+                }
+            }
 
             log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
 
