@@ -155,7 +155,7 @@ public class UserController {
         session.setAttribute("firm", firm);
         session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
 
-        return new RedirectView("/user/create/services");
+        return new RedirectView("/admin/user/create/services");
     }
 
     @GetMapping("/user/create/services")
@@ -177,7 +177,7 @@ public class UserController {
     public RedirectView setSelectedApps(@RequestParam List<String> apps,
             HttpSession session) {
         session.setAttribute("apps", apps);
-        return new RedirectView("/user/create/roles");
+        return new RedirectView("/admin/user/create/roles");
     }
 
     @GetMapping("/user/create/roles")
@@ -199,7 +199,7 @@ public class UserController {
     public RedirectView setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
             HttpSession session) {
         session.setAttribute("roles", roles);
-        return new RedirectView("/user/create/offices");
+        return new RedirectView("/admin/user/create/offices");
     }
 
     @GetMapping("/user/create/offices")
@@ -233,7 +233,7 @@ public class UserController {
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
-        return new RedirectView("/user/create/check-answers");
+        return new RedirectView("/admin/user/create/check-answers");
     }
 
     @GetMapping("/user/create/check-answers")
@@ -243,13 +243,16 @@ public class UserController {
             List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
             Map<String, List<AppRoleViewModel>> cyaRoles = new HashMap<>();
+            List<String> displayRoles = new ArrayList<>();
             for (AppRoleDto role : roles) {
                 if (selectedRoles.contains(role.getId())) {
                     List<AppRoleViewModel> appRoles = cyaRoles.getOrDefault(role.getApp().getId(), new ArrayList<>());
                     appRoles.add(mapper.map(role, AppRoleViewModel.class));
                     cyaRoles.put(role.getApp().getId(), appRoles);
+                    displayRoles.add(role.getName());
                 }
             }
+            session.setAttribute("displayRoles", String.join(", ", displayRoles));
             model.addAttribute("roles", cyaRoles);
         }
 
@@ -274,6 +277,8 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
+            Optional<String> displayRolesOption = getObjectFromHttpSession(session, "displayRoles", String.class);
+            String displayRoles = displayRolesOption.map(String::toString).orElse("");
             Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
             List<String> selectedOffices;
             List<String> selectedOfficesDisplay;
@@ -288,7 +293,7 @@ public class UserController {
             FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
             Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
             EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
-            eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles, selectedOfficesDisplay, selectedFirm.getName());
+            eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
@@ -298,7 +303,7 @@ public class UserController {
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
-        return new RedirectView("/users");
+        return new RedirectView("/admin/users");
     }
 
     @GetMapping("/user/create/confirmation")

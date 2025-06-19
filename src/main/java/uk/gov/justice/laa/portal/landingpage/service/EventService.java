@@ -32,11 +32,10 @@ public class EventService {
     private static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
     public void auditUserCreate(CurrentUserDto currentUserDto, EntraUser user,
-                                List<String> selectedRoles, List<String> selectedOfficesDisplay, String selectedFirm) {
+                                String displayRoles, List<String> selectedOfficesDisplay, String selectedFirm) {
         String userName = user.getUserName();
-        String roles = String.join(", ", selectedRoles);
         String offices = String.join(", ", selectedOfficesDisplay);
-        String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), roles, offices, selectedFirm);
+        String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), displayRoles, offices, selectedFirm);
         Event createEvent = auditEvent(currentUserDto.getUserId(), currentUserDto.getName(), EventType.CREATE_USER, description);
         logEvent(createEvent);
     }
