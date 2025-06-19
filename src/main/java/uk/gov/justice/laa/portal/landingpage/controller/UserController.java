@@ -420,7 +420,7 @@ public class UserController {
 
         session.removeAttribute("user");
         session.removeAttribute("firm");
-        session.removeAttribute("isFirmAmdin");
+        session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
