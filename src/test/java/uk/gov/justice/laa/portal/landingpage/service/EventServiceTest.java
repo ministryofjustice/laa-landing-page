@@ -37,7 +37,7 @@ class EventServiceTest {
         UUID userId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().userName("newUser").id(userId).build();
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
-        List<String> selectedRoles = List.of("ROLE_ADMIN", "ROLE_USER");
+        String selectedRoles = "ROLE_ADMIN, ROLE_USER";
         List<String> selectedOfficesDisplay = List.of("Office 1", "Office 2", "Office 3");
         String selectedFirm = "Firm";
         eventService.auditUserCreate(currentUserDto, entraUser, selectedRoles, selectedOfficesDisplay, selectedFirm);

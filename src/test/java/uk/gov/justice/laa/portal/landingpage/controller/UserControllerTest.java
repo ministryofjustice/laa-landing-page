@@ -315,7 +315,7 @@ class UserControllerTest {
         assertThat(sessionUser.getMail()).isEqualTo("email");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
-        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        assertThat(view.getUrl()).isEqualTo("/admin/user/create/services");
         assertThat((Boolean) session.getAttribute("isFirmAdmin")).isFalse();
     }
 
@@ -333,7 +333,7 @@ class UserControllerTest {
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
         assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getMail()).isEqualTo("email");
-        assertThat(view.getUrl()).isEqualTo("/user/create/services");
+        assertThat(view.getUrl()).isEqualTo("/admin/user/create/services");
         boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
         assertThat(firmAdmin).isTrue();
         String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
@@ -362,7 +362,7 @@ class UserControllerTest {
         List<String> ids = List.of("1");
         RedirectView view = userController.setSelectedApps(ids, session);
         assertThat(session.getAttribute("apps")).isNotNull();
-        assertThat(view.getUrl()).isEqualTo("/user/create/roles");
+        assertThat(view.getUrl()).isEqualTo("/admin/user/create/roles");
     }
 
     @Test
@@ -396,7 +396,7 @@ class UserControllerTest {
         List<String> roles = List.of("1");
         RedirectView view = userController.setSelectedRoles(roles, session);
         assertThat(session.getAttribute("roles")).isNotNull();
-        assertThat(view.getUrl()).isEqualTo("/user/create/offices");
+        assertThat(view.getUrl()).isEqualTo("/admin/user/create/offices");
     }
 
     @Test
@@ -429,7 +429,7 @@ class UserControllerTest {
         List<Office> dbOffices = List.of(office1, office2);
         when(officeService.getOffices()).thenReturn(dbOffices);
         RedirectView view = userController.postOffices(session, selectedOffices);
-        assertThat(view.getUrl()).isEqualTo("/user/create/check-answers");
+        assertThat(view.getUrl()).isEqualTo("/admin/user/create/check-answers");
         OfficeData modelOfficeData = (OfficeData) session.getAttribute("officeData");
         assertThat(modelOfficeData.getSelectedOffices()).hasSize(1);
         assertThat(modelOfficeData.getSelectedOfficesDisplay()).hasSize(1);
@@ -444,11 +444,13 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         AppRoleDto userRole = new AppRoleDto();
         userRole.setId("app1-tester");
+        userRole.setName("tester");
         AppDto app1 = new AppDto();
         app1.setId("app1");
         userRole.setApp(app1);
         AppRoleDto userRole2 = new AppRoleDto();
         userRole2.setId("app1-dev");
+        userRole2.setName("dev");
         userRole2.setApp(app1);
         when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
@@ -463,6 +465,32 @@ class UserControllerTest {
         assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
+        assertThat(session.getAttribute("displayRoles")).isNotNull();
+    }
+
+    @Test
+    void addUserCheckAnswersGet_multipleRoles() {
+        HttpSession session = new MockHttpSession();
+        List<String> selectedApps = List.of("app1");
+        session.setAttribute("apps", selectedApps);
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("app1-tester");
+        userRole.setName("tester");
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        userRole.setApp(app1);
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("app1-dev");
+        userRole2.setName("dev");
+        userRole2.setApp(app1);
+        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        List<String> selectedRoles = List.of("app1-dev", "app1-tester");
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
+        session.setAttribute("officeData", new OfficeData());
+        String view = userController.addUserCheckAnswers(model, session);
+
+        assertThat(session.getAttribute("displayRoles")).isNotNull();
     }
 
     @Test
@@ -522,11 +550,15 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         User user = new User();
         session.setAttribute("user", user);
-        List<String> roles = List.of("app1");
+        List<String> roles = List.of("dev", "tester");
         session.setAttribute("roles", roles);
+        session.setAttribute("displayRoles", "dev, tester");
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
-        session.setAttribute("officeData", new OfficeData());
+        OfficeData officeData = new OfficeData();
+        officeData.setSelectedOfficesDisplay(List.of("of1"));
+        officeData.setSelectedOffices(List.of("of1Id"));
+        session.setAttribute("officeData", officeData);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("isFirmAdmin", false);
         EntraUser entraUser = EntraUser.builder().build();
@@ -535,12 +567,12 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/users");
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
-        verify(eventService).auditUserCreate(currentUserDto, entraUser, roles, selectedApps, "test firm");
+        verify(eventService).auditUserCreate(currentUserDto, entraUser, "dev, tester", List.of("of1"), "test firm");
     }
 
     @Test
@@ -553,7 +585,7 @@ class UserControllerTest {
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/users");
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
