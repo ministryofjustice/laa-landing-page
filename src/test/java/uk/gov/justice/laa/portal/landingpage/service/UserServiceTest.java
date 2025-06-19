@@ -13,19 +13,17 @@ import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
-import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -38,7 +36,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -48,8 +45,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -62,9 +60,7 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -73,6 +69,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -629,6 +626,88 @@ class UserServiceTest {
         assertThat(returnedRole2.getApp()).isNotNull();
         assertThat(returnedRole2.getApp().getName()).isEqualTo(app.getName());
         assertThat(returnedRole2.getApp().getId()).isEqualTo(app.getId().toString());
+    }
+
+    @Test
+    void testFindUserTypeByUsernameUserNotFound() {
+        // Act
+        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.findUserTypeByUsername("non-existent-username"));
+        // Assert
+        assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user name: non-existent-username");
+    }
+
+    @Test
+    void testFindUserTypeByUsernameUserProfileNotFound() {
+        // Arrange
+        Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
+        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(entraUser);
+        // Act
+        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.findUserTypeByUsername("no-profile-username"));
+        // Assert
+        assertThat(rtEx.getMessage()).isEqualTo("User profile not found for the given user name: no-profile-username");
+    }
+
+    @Test
+    void testFindUserTypeByUsername() {
+        // Arrange
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        entraUser.setUserProfiles(Set.of(userProfile));
+        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        // Act
+        List<UserType> userTypeByUsername = userService.findUserTypeByUsername("no-profile-username");
+        // Assert
+        assertThat(userTypeByUsername).isNotNull();
+        assertThat(userTypeByUsername).hasSize(1);
+        assertThat(userTypeByUsername.getFirst()).isEqualTo(UserType.EXTERNAL_MULTI_FIRM);
+
+    }
+
+    @Test
+    void testFindUserTypeByUsernameMultiProfile() {
+        // Arrange
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
+        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        // Act
+        List<UserType> userTypeByUsername = userService.findUserTypeByUsername("no-profile-username");
+        // Assert
+        assertThat(userTypeByUsername).isNotNull();
+        assertThat(userTypeByUsername).hasSize(2);
+        assertThat(userTypeByUsername).contains(UserType.EXTERNAL_MULTI_FIRM, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+
+    }
+
+    @Test
+    void testGetUserAuthoritiesEmpty() {
+        // Arrange
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
+        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        // Act
+        List<String> result = userService.getUserAuthorities("test");
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void testGetUserAuthorities() {
+        // Arrange
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        entraUser.setUserProfiles(Set.of(userProfile));
+        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        // Act
+        List<String> result = userService.getUserAuthorities("test");
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result).isNotEmpty();
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst()).isEqualTo("EXTERNAL_MULTI_FIRM");
     }
 
     @Nested

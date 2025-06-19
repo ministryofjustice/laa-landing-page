@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
@@ -105,6 +106,8 @@ public class LoginService {
 
         User user = graphApiService.getUserProfile(tokenValue);
 
+        List<UserType> userTypes = userService.findUserTypeByUsername(user.getUserPrincipalName());
+
         LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
         String formattedLastLogin = "N/A";
 
@@ -117,7 +120,7 @@ public class LoginService {
         List<LaaApplication> userAppsAndRoles = graphApiService.getUserAppsAndRoles(tokenValue);
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles);
+                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles, userTypes);
     }
 
     /**

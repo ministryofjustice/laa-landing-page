@@ -6,6 +6,7 @@ import com.microsoft.graph.models.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 
@@ -24,4 +25,5 @@ public class UserSessionData {
     private String lastLogin;
     private List<LaaApplication> laaApplications;
     private List<LaaApplication> userAppsAndRoles;
+    List<UserType> userTypes;
 }

@@ -3,12 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.SignInActivity;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
-import jakarta.servlet.http.HttpSession;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -53,7 +50,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -192,6 +188,22 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserType> findUserTypeByUsername(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user name: {}", userName);
+            throw new RuntimeException(String.format("User profile not found for the given user name: %s", userName));
+        }
+
+        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+
+    }
+
     @Async
     public void disableUsers(List<String> ids) throws IOException {
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
@@ -305,6 +317,32 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
     }
+
+    /**
+     * The method loads the user type from DB and map it as user authorities
+     *
+     * @param userName the user principal
+     * @return the list of user types associated with entra user
+     */
+    public List<String> getUserAuthorities(String userName) {
+        EntraUser user = entraUserRepository.findByUserName(userName)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user name: {}", userName);
+                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                });
+
+        List<String> grantedAuthorities = Collections.emptyList();
+
+        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+            grantedAuthorities = user.getUserProfiles().stream()
+                    .map(userProfile -> userProfile.getUserType().name())
+                    .toList();
+
+        }
+        return grantedAuthorities;
+    }
+
+
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
