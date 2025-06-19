@@ -72,7 +72,7 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(required = false) String search,
-            Model model) {
+            Model model, HttpSession session) {
 
         PaginatedUsers paginatedUsers;
         if (search != null && !search.isEmpty()) {
@@ -80,6 +80,13 @@ public class UserController {
         } else {
             search = null;
             paginatedUsers = userService.getPageOfUsers(page, size);
+        }
+
+        String successMessage = (String) session.getAttribute("successMessage");
+        if (successMessage != null) {
+            model.addAttribute("successMessage", successMessage);
+            // Clear the success message from the session to avoid showing it again
+            session.removeAttribute("successMessage");
         }
 
         model.addAttribute("users", paginatedUsers.getUsers());
@@ -329,7 +336,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/check-answers")
-    public String addUserCheckAnswers(Model model, HttpSession session) {
+    public String getUserCheckAnswers(Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         if (!selectedApps.isEmpty()) {
             List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
@@ -361,7 +368,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public RedirectView addUserCheckAnswers(HttpSession session) {
+    public String addUserCheckAnswers(Model model, HttpSession session) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
@@ -375,6 +382,12 @@ public class UserController {
             Boolean isFirmAdmin = isFirmAdminOptional.orElse(Boolean.FALSE);
             List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
             userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
+
+            String successMessage = "" + user.getGivenName() + " "
+                    + user.getSurname()
+                    + " has been added to the system" + (isFirmAdmin ? " as a Firm Admin" : "")
+                    + ". An email invitation has been sent. They must accept the invitation to gain access.";
+            session.setAttribute("successMessage", successMessage);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
@@ -385,7 +398,7 @@ public class UserController {
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
-        return new RedirectView("/admin/users");
+        return "redirect:/admin/users";
     }
 
     @GetMapping("/user/create/confirmation")
