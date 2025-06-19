@@ -311,7 +311,6 @@ class UserControllerTest {
 
     @Test
     void postNewUser() {
-        HttpSession session = new MockHttpSession();
         when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().name("Test Firm").build());
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         userDetailsForm.setFirstName("firstName");
@@ -321,6 +320,7 @@ class UserControllerTest {
         userDetailsForm.setIsFirmAdmin(false);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
+        HttpSession session = new MockHttpSession();
         User sessionUser = (User) session.getAttribute("user");
         assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
         assertThat(sessionUser.getSurname()).isEqualTo("lastName");
@@ -485,7 +485,8 @@ class UserControllerTest {
         AppRoleDto userRole2 = new AppRoleDto();
         userRole2.setId("app1-dev");
         userRole2.setApp(app1);
-        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps)))
+                .thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
@@ -507,7 +508,8 @@ class UserControllerTest {
         AppRoleDto userRole2 = new AppRoleDto();
         userRole2.setId("app1-dev");
         userRole2.setApp(app1);
-        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
+        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps)))
+                .thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
