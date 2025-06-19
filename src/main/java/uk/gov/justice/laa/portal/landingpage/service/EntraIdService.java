@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -45,18 +44,4 @@ public class EntraIdService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Validate an access token with Entra ID.
-     * @param token The access token to validate
-     * @return true if the token is valid, false otherwise
-     */
-    public boolean validateToken(String token) {
-        try {
-            User user = graphApiService.getUserProfile(token);
-            return user != null && user.getId() != null && !user.getId().trim().isEmpty();
-        } catch (Exception ex) {
-            log.error("Error validating token: {}", ex.getMessage(), ex);
-            return false;
-        }
-    }
 }

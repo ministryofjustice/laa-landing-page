@@ -12,8 +12,6 @@ import java.util.UUID;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
-    Optional<EntraUser> findByEmail(String email);
-
     @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.userName = ?1")
     Optional<EntraUser> findByUserName(String userName);
 

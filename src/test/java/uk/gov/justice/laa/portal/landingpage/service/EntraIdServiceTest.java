@@ -26,10 +26,8 @@ class EntraIdServiceTest {
 
     @Mock
     private GraphApiService graphApiService;
-
     @Mock
     private ClientSecretCredential clientSecretCredential;
-
     @InjectMocks
     private EntraIdService entraIdService;
 
@@ -82,37 +80,5 @@ class EntraIdServiceTest {
         assertTrue(result.contains("Admin"));
         assertTrue(result.contains("User"));
         verify(graphApiService).getUserAssignedApps(anyString());
-    }
-
-    @Test
-    void validateToken_WithValidToken_ReturnsTrue() {
-        // Arrange
-        String validToken = "valid.token.here";
-        // Create test user with proper setter methods
-        User user = new User();
-        user.setId("12345"); // This is a public field in the SDK
-
-        when(graphApiService.getUserProfile(validToken)).thenReturn(user);
-
-        // Act
-        boolean result = entraIdService.validateToken(validToken);
-
-        // Assert
-        assertTrue(result);
-        verify(graphApiService).getUserProfile(validToken);
-    }
-
-    @Test
-    void validateToken_WithInvalidToken_ReturnsFalse() {
-        // Arrange
-        String invalidToken = "invalid.token.here";
-        when(graphApiService.getUserProfile(invalidToken)).thenThrow(new RuntimeException("Invalid token"));
-
-        // Act
-        boolean result = entraIdService.validateToken(invalidToken);
-
-        // Assert
-        assertFalse(result);
-        verify(graphApiService).getUserProfile(invalidToken);
     }
 }
