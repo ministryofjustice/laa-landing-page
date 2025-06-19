@@ -1,24 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.service.impl;
 
-import com.microsoft.graph.models.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
+import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentInterface;
-import uk.gov.justice.laa.portal.landingpage.service.EntraIdService;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,53 +22,50 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
+public class ClaimEnrichmentService {
 
-    private final EntraIdService entraIdService;
     private final EntraUserRepository entraUserRepository;
     private final AppRepository appRepository;
 
-    @Override
     public ClaimEnrichmentResponse enrichClaims(ClaimEnrichmentRequest request) {
-        log.info("Processing claim enrichment for user: {}", request.getUserId());
+        log.info("Processing claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
 
         try {
-            // 1. Get user details from Entra ID using the token
-            User user = entraIdService.getUserByPrincipalName(request.getToken());
-            if (user == null) {
-                throw new ClaimEnrichmentException("User not found in Entra ID");
-            }
+            // 1. Get the EntraUser from database
+            EntraUser entraUser = entraUserRepository.findByUserName(request.getData().getUser().getUserPrincipalName())
+                    .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
-            // 2. Get the EntraUser from database
-            EntraUser entraUser = entraUserRepository.findByEmail(user.getUserPrincipalName())
-                .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
+            // 2. Get app from DB using the ID from request
+            App app = appRepository.findByAppRegistrationId(UUID.fromString(request.getData().getApplication().getId()))
+                    .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
-            // 3. Get user's app roles in Entra
-            List<String> userAppRoles = entraIdService.getUserAssignedAppRoles(request.getToken());
-
-            // 4. Get app by ID from request
-            App app = appRepository.findByAppRegistrationId(UUID.fromString(request.getTargetAppId()))
-                .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
-
-            // 5. Check if user has access to this app
+            // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserAppRegistrations().stream()
-                .anyMatch(reg -> reg.getId().equals(app.getAppRegistration().getId()));
+                    .anyMatch(reg -> reg.getId().equals(app.getAppRegistration().getId()));
 
             if (!hasAccess) {
                 throw new ClaimEnrichmentException("User does not have access to this application");
             }
 
-            // 6. Get all roles and permissions for this user and app
-            Map<String, Object> accessInfo = mapGroupsToPermissions(app, userAppRoles);
+            // 4. Get user roles for this app from the database
+            Set<String> userRoles = entraUser.getUserProfiles().stream()
+                    .flatMap(profile -> profile.getAppRoles().stream())
+                    .filter(role -> role.getApp().getId().equals(app.getId()))
+                    .map(AppRole::getName)
+                    .collect(Collectors.toSet());
 
-            log.info("Successfully processed claim enrichment for user: {}", user.getUserPrincipalName());
+            if (userRoles.isEmpty()) {
+                throw new ClaimEnrichmentException("User has no roles assigned for this application");
+            }
+
+            log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
 
             return ClaimEnrichmentResponse.builder()
-                .success(true)
-                .roles((Set<String>) accessInfo.get("roles"))
-                .appName((String) accessInfo.get("appName"))
-                .message("Access granted to " + accessInfo.get("appName"))
-                .build();
+                    .success(true)
+                    .roles(userRoles)
+                    .appName(app.getName())
+                    .message("Access granted to " + app.getName())
+                    .build();
 
         } catch (ClaimEnrichmentException e) {
             log.error("Claim enrichment failed: {}", e.getMessage());
@@ -84,24 +74,5 @@ public class ClaimEnrichmentService implements ClaimEnrichmentInterface {
             log.error("Unexpected error during claim enrichment", e);
             throw new ClaimEnrichmentException("Failed to process claim enrichment", e);
         }
-    }
-
-    private Map<String, Object> mapGroupsToPermissions(App app, List<String> userAppRoles) {
-
-        // Get all roles for this app
-        Set<AppRole> appRoles = app.getAppRoles();
-
-        // Map group IDs to role names
-        Set<String> userRoles = appRoles.stream()
-                .filter(role -> userAppRoles.contains(role.getName()))
-                .map(AppRole::getName)
-                .collect(Collectors.toSet());
-
-        return Map.of(
-                "appId", app.getAppRegistration().getId().toString(),
-                "appName", app.getName(),
-                "roles", userRoles,
-                "hasAccess", !userRoles.isEmpty()
-        );
     }
 }
