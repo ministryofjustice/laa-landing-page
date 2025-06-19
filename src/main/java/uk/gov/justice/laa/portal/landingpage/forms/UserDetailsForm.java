@@ -11,15 +11,15 @@ public class UserDetailsForm {
     @NotEmpty(message = "Enter a first name")
     private String firstName;
 
-    @NotEmpty(message = "Enter a Last name")
+    @NotEmpty(message = "Enter a last name")
     private String lastName;
 
-    @NotEmpty(message = "Enter an Email Address")
+    @NotEmpty(message = "Enter an email address")
     @Email
     private String email;
 
-    @NotNull(message = "A Firm is required")
-    @NotEmpty(message = "A Firm is required")
+    @NotNull(message = "A firm is required")
+    @NotEmpty(message = "A firm is required")
     private String firmId;
 
     private Boolean isFirmAdmin;
