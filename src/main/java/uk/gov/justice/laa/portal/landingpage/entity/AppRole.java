@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
@@ -12,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -51,5 +54,10 @@ public class AppRole extends BaseEntity {
     @JsonIgnore
     @Builder.Default
     private Set<UserProfile> userProfiles = new HashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role_type", nullable = false, length = 255)
+    @NotNull(message = "App role type must be provided")
+    private RoleType roleType;
 
 }

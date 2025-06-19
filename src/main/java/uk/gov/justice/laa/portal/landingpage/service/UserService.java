@@ -21,7 +21,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -188,16 +187,16 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserType> findUserTypeByUsername(String userName) {
-        EntraUser user = entraUserRepository.findByUserName(userName)
+    public List<UserType> findUserTypeByUserEntraId(String entraId) {
+        EntraUser user = entraUserRepository.findByEntraId(entraId)
                 .orElseThrow(() -> {
-                    logger.error("User not found for the given user name: {}", userName);
-                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                    logger.error("User not found for the given user entra id: {}", entraId);
+                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
                 });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
-            logger.error("User profile not found for the given user name: {}", userName);
-            throw new RuntimeException(String.format("User profile not found for the given user name: %s", userName));
+            logger.error("User profile not found for the given entra id: {}", entraId);
+            throw new RuntimeException(String.format("User profile not found for the given entra id: %s", entraId));
         }
 
         return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
@@ -295,10 +294,6 @@ public class UserService {
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setCreatedBy("Admin");
         entraUser.setCreatedDate(LocalDateTime.now());
-        Set<AppRegistration> appRegistrations = appRoles.stream()
-                .map(appRole -> appRole.getApp().getAppRegistration())
-                .collect(Collectors.toSet());
-        entraUser.setUserAppRegistrations(appRegistrations);
         entraUserRepository.saveAndFlush(entraUser);
     }
 
@@ -323,14 +318,14 @@ public class UserService {
     /**
      * The method loads the user type from DB and map it as user authorities
      *
-     * @param userName the user principal
+     * @param entraId the user entra id
      * @return the list of user types associated with entra user
      */
-    public List<String> getUserAuthorities(String userName) {
-        EntraUser user = entraUserRepository.findByUserName(userName)
+    public List<String> getUserAuthorities(String entraId) {
+        EntraUser user = entraUserRepository.findByEntraId(entraId)
                 .orElseThrow(() -> {
-                    logger.error("User not found for the given user name: {}", userName);
-                    return new RuntimeException(String.format("User not found for the given user name: %s", userName));
+                    logger.error("User not found for the given entra id: {}", entraId);
+                    return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));
                 });
 
         List<String> grantedAuthorities = Collections.emptyList();

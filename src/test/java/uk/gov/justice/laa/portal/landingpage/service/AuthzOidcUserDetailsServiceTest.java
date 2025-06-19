@@ -39,7 +39,7 @@ class AuthzOidcUserDetailsServiceTest {
         String username = "username";
         List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
         List<SimpleGrantedAuthority> authorities = roles.stream().map(SimpleGrantedAuthority::new).toList();
-        OidcUserInfo userInfo = new OidcUserInfo(Map.of("preferred_username", username));
+        OidcUserInfo userInfo = new OidcUserInfo(Map.of("preferred_username", username, "oid", username));
         OidcIdToken oidcIdToken = new OidcIdToken("test", Instant.now(), Instant.now().plusSeconds(300), Map.of("sub", "test"));
         OidcUser oidcUser = new DefaultOidcUser(authorities, oidcIdToken, userInfo);
 
