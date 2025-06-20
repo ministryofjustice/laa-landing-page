@@ -6,6 +6,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
@@ -39,6 +40,7 @@ import java.util.Set;
  * Some data is being populated from entra to keep names consistent with entra.
  */
 @Component
+@Profile("!production")
 public class DemoDataPopulator {
 
     private final FirmRepository firmRepository;
@@ -55,8 +57,11 @@ public class DemoDataPopulator {
 
     private final GraphServiceClient graphServiceClient;
 
-    @Value("${app.user.userPrincipals}")
-    private Set<String> userPrincipals;
+    @Value("${app.test.admin.userPrincipals}")
+    private Set<String> adminUserPrincipals;
+
+    @Value("${app.test.nonadmin.userPrincipals}")
+    private Set<String> nonAdminUserPrincipals;
 
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
@@ -204,8 +209,19 @@ public class DemoDataPopulator {
                 entraUsers.add(entraUser);
             }
 
-            if (userPrincipals != null && !userPrincipals.isEmpty()) {
-                for (String userPrincipal : userPrincipals) {
+            Set<String> userPrinciples = new HashSet<>();
+            if (adminUserPrincipals != null) {
+                userPrinciples.addAll(adminUserPrincipals);
+            }
+
+            if (nonAdminUserPrincipals != null) {
+                userPrinciples.addAll(nonAdminUserPrincipals);
+            }
+
+            List<String> nonAdminUserIds = new ArrayList<>();
+
+            if (userPrinciples != null && !userPrinciples.isEmpty()) {
+                for (String userPrincipal : userPrinciples) {
                     //Ensuring the user being running the app is added
                     boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
 
@@ -214,11 +230,14 @@ public class DemoDataPopulator {
                             UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
                             User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
                                 assert requestConfig.queryParameters != null;
-                                requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
+                                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
                             });
                             assert me != null;
                             entraUsers.add(buildEntraUser(me));
                             users.add(me);
+                            if (nonAdminUserPrincipals.contains(userPrincipal)) {
+                                nonAdminUserIds.add(me.getId());
+                            }
                         }
                     } catch (Exception e) {
                         System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
@@ -249,7 +268,8 @@ public class DemoDataPopulator {
             List<UserProfile> userProfiles = new ArrayList<>();
 
             for (EntraUser entraUser : entraUsers) {
-                UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+                UserProfile userProfile = buildLaaUserProfile(entraUser,
+                        nonAdminUserIds.contains(entraUser.getEntraId()) ? UserType.EXTERNAL_SINGLE_FIRM : UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
                 userProfile.getAppRoles().addAll(appRoles);
                 userProfile.setFirm(firm1);
                 userProfiles.add(userProfile);
