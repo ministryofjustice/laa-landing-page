@@ -246,14 +246,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin) {
+    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin, String createdBy) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin);
-
-        return invitedUser;
+        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
     }
 
     private User inviteUser(User user) {
@@ -273,7 +271,7 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
+    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         entraUser.setEntraId(newUser.getMail());
@@ -289,16 +287,16 @@ public class UserService {
                 .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
-                .createdBy("Admin")
+                .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
                 .build();
 
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser.setCreatedBy("Admin");
+        entraUser.setCreatedBy(createdBy);
         entraUser.setCreatedDate(LocalDateTime.now());
-        entraUserRepository.saveAndFlush(entraUser);
+        return entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {

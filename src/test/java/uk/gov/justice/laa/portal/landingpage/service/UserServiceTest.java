@@ -385,8 +385,8 @@ class UserServiceTest {
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
-
-        userService.createUser(user, roles, new ArrayList<>(), FirmDto.builder().build(), false);
+        FirmDto firm = FirmDto.builder().name("Firm").build();
+        userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
     }
 
@@ -429,7 +429,7 @@ class UserServiceTest {
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(user, roles, new ArrayList<>(), firm, false);
+        userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
