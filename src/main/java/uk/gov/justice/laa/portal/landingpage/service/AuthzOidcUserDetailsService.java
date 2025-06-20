@@ -24,9 +24,9 @@ public class AuthzOidcUserDetailsService extends OidcUserService {
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
         OidcUser oidcUser = super.loadUser(userRequest);
-        String userName = oidcUser.getPreferredUsername();
+        String userId = oidcUser.getAttribute("oid");
 
-        List<String> userAuthorities = userService.getUserAuthorities(userName);
+        List<String> userAuthorities = userService.getUserAuthorities(userId);
         List<SimpleGrantedAuthority> grantedAuthorities =
                 userAuthorities.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 

@@ -632,21 +632,21 @@ class UserServiceTest {
     void testFindUserTypeByUsernameUserNotFound() {
         // Act
         RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
-                () -> userService.findUserTypeByUsername("non-existent-username"));
+                () -> userService.findUserTypeByUserEntraId("non-existent-username"));
         // Assert
-        assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user name: non-existent-username");
+        assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-username");
     }
 
     @Test
     void testFindUserTypeByUsernameUserProfileNotFound() {
         // Arrange
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
-        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(entraUser);
+        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(entraUser);
         // Act
         RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
-                () -> userService.findUserTypeByUsername("no-profile-username"));
+                () -> userService.findUserTypeByUserEntraId("no-profile-username"));
         // Assert
-        assertThat(rtEx.getMessage()).isEqualTo("User profile not found for the given user name: no-profile-username");
+        assertThat(rtEx.getMessage()).isEqualTo("User profile not found for the given entra id: no-profile-username");
     }
 
     @Test
@@ -655,9 +655,9 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
         UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
-        List<UserType> userTypeByUsername = userService.findUserTypeByUsername("no-profile-username");
+        List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
         assertThat(userTypeByUsername).isNotNull();
         assertThat(userTypeByUsername).hasSize(1);
@@ -672,9 +672,9 @@ class UserServiceTest {
         UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
         UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
-        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
-        List<UserType> userTypeByUsername = userService.findUserTypeByUsername("no-profile-username");
+        List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
         assertThat(userTypeByUsername).isNotNull();
         assertThat(userTypeByUsername).hasSize(2);
@@ -686,7 +686,7 @@ class UserServiceTest {
     void testGetUserAuthoritiesEmpty() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -700,7 +700,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
         UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByUserName(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
