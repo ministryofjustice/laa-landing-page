@@ -293,11 +293,10 @@ public class UserService {
                 .build();
 
         entraUser.setUserProfiles(Set.of(userProfile));
-        entraUser.setUserName(newUser.getDisplayName());
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setCreatedBy(createdBy);
         entraUser.setCreatedDate(LocalDateTime.now());
-        entraUserRepository.saveAndFlush(entraUser);
+        return entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {

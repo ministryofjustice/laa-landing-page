@@ -33,7 +33,7 @@ public class EventService {
 
     public void auditUserCreate(CurrentUserDto currentUserDto, EntraUser user,
                                 String displayRoles, List<String> selectedOfficesDisplay, String selectedFirm) {
-        String userName = user.getUserName();
+        String userName = user.getFirstName() + " " + user.getLastName();
         String offices = String.join(", ", selectedOfficesDisplay);
         String description = String.format(CREATE_USER_TEMPLATE, userName, user.getId(), displayRoles, offices, selectedFirm);
         Event createEvent = auditEvent(currentUserDto.getUserId(), currentUserDto.getName(), EventType.CREATE_USER, description);
