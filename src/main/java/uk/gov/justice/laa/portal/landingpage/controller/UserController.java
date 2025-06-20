@@ -12,7 +12,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -31,9 +33,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -41,9 +46,14 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -59,10 +69,12 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 @RequestMapping("/admin")
 public class UserController {
 
+    private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
-    private final ModelMapper mapper;
+    private final EventService eventService;
     private final FirmService firmService;
+    private final ModelMapper mapper;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -342,13 +354,16 @@ public class UserController {
             List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
             List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
             Map<String, List<AppRoleViewModel>> cyaRoles = new HashMap<>();
+            List<String> displayRoles = new ArrayList<>();
             for (AppRoleDto role : roles) {
                 if (selectedRoles.contains(role.getId())) {
                     List<AppRoleViewModel> appRoles = cyaRoles.getOrDefault(role.getApp().getId(), new ArrayList<>());
                     appRoles.add(mapper.map(role, AppRoleViewModel.class));
                     cyaRoles.put(role.getApp().getId(), appRoles);
+                    displayRoles.add(role.getName());
                 }
             }
+            session.setAttribute("displayRoles", String.join(", ", displayRoles));
             model.addAttribute("roles", cyaRoles);
         }
 
@@ -368,7 +383,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public String addUserCheckAnswers(Model model, HttpSession session) {
+    public RedirectView addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
@@ -378,10 +393,16 @@ public class UserController {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             List<String> selectedRoles = selectedRolesOptional.orElseGet(ArrayList::new);
+            Optional<String> displayRolesOption = getObjectFromHttpSession(session, "displayRoles", String.class);
+            String displayRoles = displayRolesOption.map(String::toString).orElse("");
+
             FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
             Boolean isFirmAdmin = isFirmAdminOptional.orElse(Boolean.FALSE);
             List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
-            userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
+            List<String> selectedOfficesDisplay = optionalSelectedOfficeData.map(OfficeData::getSelectedOfficesDisplay).orElseGet(ArrayList::new);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
+            eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
 
             String successMessage = "" + user.getGivenName() + " "
                     + user.getSurname()
@@ -398,7 +419,7 @@ public class UserController {
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
-        return "redirect:/admin/users";
+        return new RedirectView("/admin/users");
     }
 
     @GetMapping("/user/create/confirmation")
@@ -440,8 +461,12 @@ public class UserController {
      */
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
-            @RequestParam(required = false) List<String> selectedRoles) {
+            @RequestParam(required = false) List<String> selectedRoles,
+            Authentication authentication) {
+        EntraUserDto user = userService.getEntraUserById(id).orElse(null);
         userService.updateUserRoles(id, selectedRoles);
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
         return new RedirectView("/admin/users");
     }
 
