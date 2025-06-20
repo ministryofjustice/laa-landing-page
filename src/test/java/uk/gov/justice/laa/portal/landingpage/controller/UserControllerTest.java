@@ -1,5 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.microsoft.graph.models.User;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -721,7 +727,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserAppsReturnsCorrectViewAndAttributes() {
+    public void testEditUserAppsReturnsCorrectViewAndAttributes() throws ServletException {
         // Given
         final UUID userId = UUID.randomUUID();
         EntraUserDto testUser = new EntraUserDto();
