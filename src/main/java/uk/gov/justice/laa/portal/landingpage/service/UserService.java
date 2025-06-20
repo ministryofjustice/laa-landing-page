@@ -275,7 +275,8 @@ public class UserService {
 
     private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
-        entraUser.setUserName(newUser.getMail());
+        // TODO revisit to set the user entra ID
+        entraUser.setEntraId(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
