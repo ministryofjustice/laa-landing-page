@@ -1,12 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +26,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.Invitation;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -36,23 +55,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 /**
  * userService
  */
@@ -72,13 +74,13 @@ public class UserService {
     private final ModelMapper mapper;
     private final NotificationService notificationService;
 
-
-
-    /** The number of pages to load in advance when doing user pagination */
+    /**
+     * The number of pages to load in advance when doing user pagination
+     */
     private static final int PAGES_TO_PRELOAD = 5;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -272,6 +274,7 @@ public class UserService {
 
     private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        entraUser.setUserName(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -342,8 +345,6 @@ public class UserService {
         }
         return grantedAuthorities;
     }
-
-
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));

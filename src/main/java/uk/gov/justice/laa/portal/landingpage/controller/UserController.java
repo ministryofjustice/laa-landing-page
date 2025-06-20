@@ -1,9 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,12 +27,20 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+
+import com.microsoft.graph.models.User;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -35,6 +50,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -47,6 +66,9 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 /**
  * User Controller
@@ -72,7 +94,7 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(required = false) String search,
-            Model model) {
+            Model model, HttpSession session) {
 
         PaginatedUsers paginatedUsers;
         if (search != null && !search.isEmpty()) {
@@ -80,6 +102,13 @@ public class UserController {
         } else {
             search = null;
             paginatedUsers = userService.getPageOfUsers(page, size);
+        }
+
+        String successMessage = (String) session.getAttribute("successMessage");
+        if (successMessage != null) {
+            model.addAttribute("successMessage", successMessage);
+            // Clear the success message from the session to avoid showing it again
+            session.removeAttribute("successMessage");
         }
 
         model.addAttribute("users", paginatedUsers.getUsers());
@@ -140,7 +169,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/details")
-    public String createUser(HttpSession session, Model model) {
+    public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
@@ -149,37 +178,62 @@ public class UserController {
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firms", firms);
         model.addAttribute("selectedFirm", selectedFirm);
+        // If user is already in session, populate the form with existing user details
+        userDetailsForm = UserUtils.populateUserDetailsFormWithSession(userDetailsForm, user, session);
+        model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
-        return "user/user-details";
+        model.addAttribute("userDetailsForm", userDetailsForm);
+        model.addAttribute("user", user);
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("createUserDetailsModel", model);
+        return "add-user-details";
     }
 
     @PostMapping("/user/create/details")
-    public RedirectView postUser(@RequestParam String firstName,
-            @RequestParam String lastName,
-            @RequestParam String email,
-            @RequestParam String firmId,
+    public String postUser(
+            @Valid UserDetailsForm userDetailsForm, BindingResult result,
             @RequestParam(required = false) String isFirmAdmin,
-            HttpSession session) {
+            HttpSession session, Model model) {
+
         User user = (User) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new User();
         }
-        user.setGivenName(firstName);
-        user.setSurname(lastName);
-        user.setDisplayName(firstName + " " + lastName);
-        user.setMail(email);
+
+        // Set user details from the form
+        user.setGivenName(userDetailsForm.getFirstName());
+        user.setSurname(userDetailsForm.getLastName());
+        user.setDisplayName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setMail(userDetailsForm.getEmail());
         session.setAttribute("user", user);
 
-        FirmDto firm = firmService.getFirm(firmId);
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
+            Model modelFromSession = (Model) session.getAttribute("createUserDetailsModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/details";
+            }
+
+            model.addAttribute("firms", modelFromSession.getAttribute("firms"));
+            model.addAttribute("selectedFirm", modelFromSession.getAttribute("selectedFirm"));
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            return "add-user-details";
+        }
+
+        // Set firm and admin status
+        FirmDto firm = firmService.getFirm(userDetailsForm.getFirmId());
         session.setAttribute("firm", firm);
-        session.setAttribute("isFirmAdmin",  Boolean.parseBoolean(isFirmAdmin));
+        session.setAttribute("isFirmAdmin", userDetailsForm.getIsFirmAdmin());
 
-        return new RedirectView("/admin/user/create/services");
+        // Clear the createUserDetailsModel from session to avoid stale data
+        session.removeAttribute("createUserDetailsModel");
+        return "redirect:/admin/user/create/services";
     }
 
     @GetMapping("/user/create/services")
-    public String selectUserApps(Model model, HttpSession session) {
+    public String selectUserApps(ApplicationsForm applicationsForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<AppViewModel> apps = userService.getApps().stream()
                 .map(appDto -> {
@@ -194,14 +248,18 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
-    public RedirectView setSelectedApps(@RequestParam List<String> apps,
-            HttpSession session) {
-        session.setAttribute("apps", apps);
-        return new RedirectView("/admin/user/create/roles");
+    public String setSelectedApps(ApplicationsForm applicationsForm, Model model,
+            HttpSession session
+    ) {
+        if (applicationsForm.getApps() == null || applicationsForm.getApps().isEmpty()) {
+            return "redirect:/admin/user/create/check-answers";
+        }
+        session.setAttribute("apps", applicationsForm.getApps());
+        return "redirect:/admin/user/create/roles";
     }
 
     @GetMapping("/user/create/roles")
-    public String getSelectedRoles(Model model, HttpSession session) {
+    public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
@@ -211,19 +269,40 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("userCreateRolesModel", model);
         return "add-user-roles";
     }
 
     @PostMapping("/user/create/roles")
-    public RedirectView setSelectedRoles(@RequestParam("selectedRoles") List<String> roles,
-            HttpSession session) {
-        session.setAttribute("roles", roles);
-        return new RedirectView("/admin/user/create/offices");
+    public String setSelectedRoles(@Valid RolesForm rolesForm, BindingResult result,
+            Model model, HttpSession session) {
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
+            Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/roles";
+            }
+
+            // If there are validation errors, return to the roles page with errors
+            model.addAttribute("roles", modelFromSession.getAttribute("roles"));
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            return "add-user-roles";
+        }
+        // Clear the userCreateRolesModel from session to avoid stale data
+        session.removeAttribute("userCreateRolesModel");
+
+        // Set selected roles in session
+        session.setAttribute("roles", rolesForm.getRoles());
+        return "redirect:/admin/user/create/offices";
     }
 
     @GetMapping("/user/create/offices")
-    public String offices(HttpSession session, Model model) {
+    public String offices(OfficesForm officesForm, HttpSession session, Model model) {
         OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         //if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
@@ -235,13 +314,32 @@ public class UserController {
         model.addAttribute("officeData", officeData);
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
-        return "user/offices";
+
+        // Store the model in session to handle validation errors later
+        session.setAttribute("createUserOfficesModel", model);
+        return "add-user-offices";
     }
 
     @PostMapping("/user/create/offices")
-    public RedirectView postOffices(HttpSession session, @RequestParam(value = "offices") List<String> selectedOffices) {
+    public String postOffices(@Valid OfficesForm officesForm, BindingResult result, Model model, HttpSession session
+    ) {
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while selecting offices: {}", result.getAllErrors());
+            // If there are validation errors, return to the offices page with errors
+            Model modelFromSession = (Model) session.getAttribute("createUserOfficesModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/user/create/offices";
+            }
+
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            return "add-user-offices";
+        }
+
         OfficeData officeData = new OfficeData();
-        officeData.setSelectedOffices(selectedOffices);
+        List<String> selectedOffices = officesForm.getOffices();
+        officeData.setSelectedOffices(officesForm.getOffices());
         //if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
         List<String> selectedDisplayNames = new ArrayList<>();
@@ -253,11 +351,14 @@ public class UserController {
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
         session.setAttribute("officeData", officeData);
-        return new RedirectView("/admin/user/create/check-answers");
+
+        // Clear the createUserOfficesModel from session to avoid stale data
+        session.removeAttribute("createUserOfficesModel");
+        return "redirect:/admin/user/create/check-answers";
     }
 
     @GetMapping("/user/create/check-answers")
-    public String addUserCheckAnswers(Model model, HttpSession session) {
+    public String getUserCheckAnswers(Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         if (!selectedApps.isEmpty()) {
             List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
@@ -282,7 +383,7 @@ public class UserController {
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
 
-        FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
 
         Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
@@ -294,29 +395,34 @@ public class UserController {
     //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
+        Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
+        Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
+        Optional<Boolean> isFirmAdminOptional = Optional.ofNullable((Boolean) session.getAttribute("isFirmAdmin"));
+        Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
+
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
+            List<String> selectedRoles = selectedRolesOptional.orElseGet(ArrayList::new);
             Optional<String> displayRolesOption = getObjectFromHttpSession(session, "displayRoles", String.class);
             String displayRoles = displayRolesOption.map(String::toString).orElse("");
-            Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
-            List<String> selectedOffices;
-            List<String> selectedOfficesDisplay;
-            if (optionalSelectedOfficeData.isPresent()) {
-                selectedOffices = optionalSelectedOfficeData.get().getSelectedOffices();
-                selectedOfficesDisplay = optionalSelectedOfficeData.get().getSelectedOfficesDisplay();
-            } else {
-                selectedOffices = new ArrayList<>();
-                selectedOfficesDisplay = new ArrayList<>();
-            }
+
+            FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
+            Boolean isFirmAdmin = isFirmAdminOptional.orElse(Boolean.FALSE);
+            List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
+            List<String> selectedOfficesDisplay = optionalSelectedOfficeData.map(OfficeData::getSelectedOfficesDisplay).orElseGet(ArrayList::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            FirmDto selectedFirm =  (FirmDto) session.getAttribute("firm");
-            Boolean isFirmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
-            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
+            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
             eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
+
+            String successMessage = "" + user.getGivenName() + " "
+                    + user.getSurname()
+                    + " has been added to the system" + (isFirmAdmin ? " as a Firm Admin" : "")
+                    + ". An email invitation has been sent. They must accept the invitation to gain access.";
+            session.setAttribute("successMessage", successMessage);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
+
         session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("isFirmAmdin");
@@ -392,7 +498,7 @@ public class UserController {
 
     @PostMapping("/users/edit/{id}/apps")
     public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("selectedApps") List<String> apps,
-                                         HttpSession session) {
+            HttpSession session) {
         session.setAttribute("selectedApps", apps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
