@@ -10,7 +10,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  call-snyk:
+    uses: ./.github/workflows/snyk.yml
+    secrets:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
   ecr:
+    needs: call-snyk
     runs-on: ubuntu-latest
     environment: development
     permissions:
