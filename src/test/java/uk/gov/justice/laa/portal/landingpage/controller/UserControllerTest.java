@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -503,7 +504,7 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        String view = userController.addUserCheckAnswers(model, session);
+        String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
         Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
@@ -534,7 +535,9 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
-        String view = userController.addUserCheckAnswers(model, session);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        userController.getUserCheckAnswers(model, session);
 
         assertThat(session.getAttribute("displayRoles")).isNotNull();
     }
@@ -559,8 +562,11 @@ class UserControllerTest {
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("isFirmAdmin", true);
-        String view = userController.addUserCheckAnswers(model, session);
-        assertThat(view).isEqualTo("redirect:/admin/users");
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
     }
 
     @Test
@@ -577,8 +583,11 @@ class UserControllerTest {
         session.setAttribute("user", new User());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
-        String view = userController.addUserCheckAnswers(model, session);
-        assertThat(view).isEqualTo("redirect:/admin/users");
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
     }
 
     @Test
@@ -1092,11 +1101,14 @@ class UserControllerTest {
         session.setAttribute("firm", FirmDto.builder().build());
         session.setAttribute("isFirmAdmin", true);
         session.setAttribute("officeData", new OfficeData());
-        when(userService.createUser(any(), any(), any(), any(), eq(true))).thenReturn(user);
+        EntraUser entraUser = EntraUser.builder().build();
+        when(userService.createUser(any(), any(), any(), any(), eq(true), any())).thenReturn(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
 
-        String view = userController.addUserCheckAnswers(model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/users");
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
         assertThat(session.getAttribute("user")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
         assertThat(session.getAttribute("roles")).isNull();
@@ -1108,9 +1120,9 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
 
-        String view = userController.addUserCheckAnswers(model, session);
+        RedirectView view = userController.addUserCheckAnswers(session, authentication);
 
-        assertThat(view).isEqualTo("redirect:/admin/users");
+        assertThat(view.getUrl()).isEqualTo("/admin/users");
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(logEvents).hasSize(1);
         assertThat(logEvents.getFirst().getFormattedMessage()).contains("No user attribute was present in request");
@@ -1166,7 +1178,7 @@ class UserControllerTest {
         String id = "id1";
         List<String> roles = List.of("role1");
 
-        RedirectView view = userController.updateUserRoles(id, roles);
+        RedirectView view = userController.updateUserRoles(id, roles, authentication);
 
         assertThat(view.getUrl()).isEqualTo("/admin/users");
         verify(userService).updateUserRoles(id, roles);

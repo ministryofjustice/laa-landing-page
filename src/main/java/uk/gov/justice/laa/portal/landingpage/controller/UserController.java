@@ -12,16 +12,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -411,7 +401,7 @@ public class UserController {
             List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
             List<String> selectedOfficesDisplay = optionalSelectedOfficeData.map(OfficeData::getSelectedOfficesDisplay).orElseGet(ArrayList::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin);
+            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
             eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
 
             String successMessage = "" + user.getGivenName() + " "
