@@ -31,17 +31,4 @@ public class EntraIdService {
         return graphApiService.getUserProfile(accessToken);
     }
 
-    /**
-     * Get user's assigned application roles from Entra ID.
-     * @param accessToken The access token for authentication
-     * @return List of display names of the application roles assigned to the user
-     */
-    public List<String> getUserAssignedAppRoles(String accessToken) {
-        return graphApiService.getUserAssignedApps(accessToken)
-                .stream()
-                .map(AppRole::getDisplayName)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
-
 }

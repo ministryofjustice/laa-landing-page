@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -75,12 +76,14 @@ public class ClaimEnrichmentService {
                     .distinct()
                     .collect(Collectors.joining(":"));
 
-            boolean isInternalUser = userRoles.contains("INTERNAL");
-            boolean hasNoFirm = entraUser.getUserProfiles().stream()
-                    .noneMatch(profile -> profile.getFirm() != null);
-
+            boolean isInternalUser = entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+            
             if (!isInternalUser) {
-                if (hasNoFirm) {
+                boolean hasFirm = entraUser.getUserProfiles().stream()
+                        .anyMatch(profile -> profile.getFirm() != null);
+
+                if (!hasFirm) {
                     throw new ClaimEnrichmentException("User has no firm assigned");
                 }
                 if (officeIds.isEmpty()) {

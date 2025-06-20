@@ -59,26 +59,4 @@ class EntraIdServiceTest {
         assertEquals("12345", result.getId());
         verify(graphApiService).getUserProfile(anyString());
     }
-
-    @Test
-    void getUserAppAssignedRoles_WhenUserHasGroups_ReturnsAppRoles() {
-        // Create test roles with proper setter methods
-        AppRole role1 = new AppRole();
-        role1.setDisplayName("Admin"); // This is a public field in the SDK
-        AppRole role2 = new AppRole();
-        role2.setDisplayName("User"); // This is a public field in the SDK
-
-        when(graphApiService.getUserAssignedApps(anyString()))
-            .thenReturn(List.of(role1, role2));
-
-        // Act
-        List<String> result = entraIdService.getUserAssignedAppRoles(anyString());
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertTrue(result.contains("Admin"));
-        assertTrue(result.contains("User"));
-        verify(graphApiService).getUserAssignedApps(anyString());
-    }
 }

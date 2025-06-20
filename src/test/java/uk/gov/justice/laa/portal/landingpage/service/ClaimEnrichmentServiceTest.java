@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -210,6 +211,7 @@ class ClaimEnrichmentServiceTest {
         UserProfile userProfile = UserProfile.builder()
                 .appRoles(Set.of(internalRole))
                 .firm(null)
+                .userType(UserType.INTERNAL)
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
