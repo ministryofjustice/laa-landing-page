@@ -103,7 +103,7 @@ public class LoginService {
 
         User user = graphApiService.getUserProfile(tokenValue);
 
-        List<UserType> userTypes = userService.findUserTypeByUsername(user.getUserPrincipalName());
+        List<UserType> userTypes = userService.findUserTypeByUserEntraId(user.getId());
 
         LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
         String formattedLastLogin = "N/A";
