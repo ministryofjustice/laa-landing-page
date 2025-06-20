@@ -22,13 +22,30 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+            aria-label="success: User added successfully" data-module="moj-alert">
+            <div>
+                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 30 30" height="30" width="30">
+                    <path
+                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                        fill="currentColor" />
+                </svg>
+            </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">Success</h2>
+                <p th:text="${successMessage}"></p>
+            </div>
+
+            <div class="moj-alert__action">
+                <button class="moj-alert__dismiss" hidden>Dismiss</button>
+            </div>
+        </div>
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
-
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
-                        <span class="govuk-caption-l">Firm | 12345</span>
-                        <h1 class="govuk-heading-xl">User Dashboard</h1>
+                        <h1 class="govuk-heading-l">Manage user access</h1>
                     </div>
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
@@ -50,17 +67,15 @@
                                 <div class="govuk-form-group">
                                     <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
                                         Search users
+                                        <div id="offices-hint" class="govuk-hint">
+                                            You can search by name or email
+                                        </div>
                                     </label>
-                                    <input  class="govuk-input moj-search__input"
-                                            id="search"
-                                            name="search"
-                                            type="search"
-                                            th:value="${param.search}"
-                                            autocomplete="off">
+                                    <input class="govuk-input moj-search__input" id="search" name="search" type="search"
+                                        th:value="${param.search}" autocomplete="off">
                                 </div>
-                                <button type="submit"
-                                        class="govuk-button moj-search__button"
-                                        data-module="govuk-button">
+                                <button type="submit" class="govuk-button moj-search__button"
+                                    data-module="govuk-button">
                                     Search
                                 </button>
                             </div>
@@ -125,8 +140,10 @@
                         <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
-                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search})}"
-                                   th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
+                                <a class="moj-pagination__link"
+                                    th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search})}"
+                                    th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}"
+                                    th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
                         <li class="moj-pagination__item  moj-pagination__item--next" th:if="${page < totalPages}">
@@ -136,8 +153,10 @@
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
-                        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b> of <b>
+                    <p class="moj-pagination__results">Showing <b
+                            th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
+                        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
+                        of <b>
                             <b th:text="${totalUsers}"></b>
                         </b> results</p>
                 </nav>
