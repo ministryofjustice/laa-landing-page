@@ -32,14 +32,10 @@ public class BaseEntityTest {
         return Office.builder().name("TestOffice").address("Address").phone("123456").build();
     }
 
-    protected AppRegistration buildTestEntraAppRegistration() {
-        return AppRegistration.builder().name("Test app reg").build();
-    }
-
     protected EntraUser buildTestEntraUser() {
         return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
                 .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
-                .userName("firstname.lastname").email("test@email.com")
+                .entraId("entra_id").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }
 
@@ -48,7 +44,8 @@ public class BaseEntityTest {
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role").build();
+        return AppRole.builder().name("Test App Role")
+                .roleType(RoleType.INTERNAL).build();
     }
 
     protected UserProfile buildTestLaaUserProfile() {

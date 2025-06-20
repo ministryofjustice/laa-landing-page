@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -36,13 +33,6 @@ public class App extends BaseEntity {
     @NotBlank(message = "Application name must be provided")
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
-
-    @OneToOne
-    @JoinColumn(name = "app_registration_id", nullable = false,
-            foreignKey = @ForeignKey(name = "FK_app_app_registration_id"))
-    @ToString.Exclude
-    @JsonIgnore
-    private AppRegistration appRegistration;
 
     @OneToMany(mappedBy = "app", cascade = CascadeType.PERSIST)
     @ToString.Exclude

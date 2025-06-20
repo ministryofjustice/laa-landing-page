@@ -9,16 +9,15 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRegistrationRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -42,8 +41,6 @@ import java.util.Set;
 @Component
 public class DemoDataPopulator {
 
-    private final AppRegistrationRepository entraAppRegistrationRepository;
-
     private final FirmRepository firmRepository;
 
     private final OfficeRepository officeRepository;
@@ -64,11 +61,10 @@ public class DemoDataPopulator {
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
 
-    public DemoDataPopulator(AppRegistrationRepository entraAppRegistrationRepository, FirmRepository firmRepository,
+    public DemoDataPopulator(FirmRepository firmRepository,
                              OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
                              AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
                              UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
-        this.entraAppRegistrationRepository = entraAppRegistrationRepository;
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
         this.entraUserRepository = entraUserRepository;
@@ -84,8 +80,7 @@ public class DemoDataPopulator {
         String lastName = getSurname(user);
 
         return EntraUser.builder().email(email)
-                .userName(user.getUserPrincipalName())
-                .userAppRegistrations(HashSet.newHashSet(11))
+                .entraId(user.getId())
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
@@ -127,11 +122,6 @@ public class DemoDataPopulator {
         }
     }
 
-    protected AppRegistration buildEntraAppRegistration(String name) {
-        return AppRegistration.builder().name(name)
-                .entraUsers(HashSet.newHashSet(1)).build();
-    }
-
     protected Firm buildFirm(String name) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
                 .type(FirmType.INDIVIDUAL).build();
@@ -141,13 +131,12 @@ public class DemoDataPopulator {
         return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
     }
 
-    protected App buildLaaApp(AppRegistration appRegistration, String name) {
-        return App.builder().name(name).appRegistration(appRegistration)
-                .appRoles(HashSet.newHashSet(11)).build();
+    protected App buildLaaApp(String name) {
+        return App.builder().name(name).appRoles(HashSet.newHashSet(11)).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
-        return AppRole.builder().name(name).app(app).build();
+        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
@@ -192,24 +181,19 @@ public class DemoDataPopulator {
             List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
                 assert requestConfig.queryParameters != null;
                 requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
+                requestConfig.queryParameters.top = 10;
             })).getValue();
             assert applications != null;
 
-            Set<AppRegistration> appRegistrations = new HashSet<>();
             Set<String> appNames = new HashSet<>();
 
             for (Application app : applications) {
-                if (!appNames.contains(app.getDisplayName())) {
-                    appNames.add(app.getDisplayName());
-                    appRegistrations.add(buildEntraAppRegistration(app.getDisplayName()));
-                }
+                appNames.add(app.getDisplayName());
             }
-
-            entraAppRegistrationRepository.saveAll(appRegistrations);
 
             List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
                 assert requestConfig.queryParameters != null;
-                requestConfig.queryParameters.select = new String[]{"displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
                 requestConfig.queryParameters.top = 10;
             })).getValue();
 
@@ -217,7 +201,6 @@ public class DemoDataPopulator {
             assert users != null;
             for (User user : users) {
                 EntraUser entraUser = buildEntraUser(user);
-                entraUser.setUserAppRegistrations(appRegistrations);
                 entraUsers.add(entraUser);
             }
 
@@ -242,6 +225,7 @@ public class DemoDataPopulator {
                         System.err.println(e.getMessage());
                         System.err.println("Continuing with the list of users in the database");
                     }
+
                 }
             }
 
@@ -249,8 +233,8 @@ public class DemoDataPopulator {
 
             List<App> laaApps = new ArrayList<>();
 
-            for (AppRegistration appRegistration : appRegistrations) {
-                laaApps.add(buildLaaApp(appRegistration, appRegistration.getName()));
+            for (String appName : appNames) {
+                laaApps.add(buildLaaApp(appName));
             }
 
             laaAppRepository.saveAll(laaApps);
