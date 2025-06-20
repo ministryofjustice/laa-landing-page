@@ -5,19 +5,20 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.UUID;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class BaseRepositoryTest {
@@ -34,18 +35,12 @@ public class BaseRepositoryTest {
         postgresContainer.start();
     }
 
-    protected EntraUser buildEntraUser(String email, String firstName, String lastName) {
-        return EntraUser.builder().email(email).userName(email)
-                .userAppRegistrations(HashSet.newHashSet(11))
+    protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName) {
+        return EntraUser.builder().email(email).entraId(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
-    }
-
-    protected AppRegistration buildEntraAppRegistration(String name) {
-        return AppRegistration.builder().name(name)
-                .entraUsers(HashSet.newHashSet(1)).build();
     }
 
     protected Firm buildFirm(String name) {
@@ -57,19 +52,22 @@ public class BaseRepositoryTest {
         return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
     }
 
-    protected App buildLaaApp(AppRegistration appRegistration, String name) {
-        return App.builder().name(name).appRegistration(appRegistration)
-                .appRoles(HashSet.newHashSet(1)).build();
+    protected App buildLaaApp(String name) {
+        return App.builder().name(name).appRoles(HashSet.newHashSet(1)).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
-        return AppRole.builder().name(name).app(app).build();
+        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser)
                 .userType(userType).appRoles(HashSet.newHashSet(1))
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
+    }
+
+    protected String generateEntraId() {
+        return UUID.randomUUID().toString();
     }
 
 }

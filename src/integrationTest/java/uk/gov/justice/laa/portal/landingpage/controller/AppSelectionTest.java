@@ -10,12 +10,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.TestSecurityConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRegistrationRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -46,10 +44,6 @@ public class AppSelectionTest extends BaseIntegrationTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private AppRegistrationRepository appRegistrationRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
     private UserProfileRepository userProfileRepository;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -66,7 +60,6 @@ public class AppSelectionTest extends BaseIntegrationTest {
         entraUserRepository.deleteAll();
         appRoleRepository.deleteAll();
         appRepository.deleteAll();
-        appRegistrationRepository.deleteAll();
     }
 
     @Test
@@ -112,13 +105,11 @@ public class AppSelectionTest extends BaseIntegrationTest {
     }
 
     private EntraUser buildTestUser() {
-        AppRegistration appRegistration = buildEntraAppRegistration("Test App Registration");
-        appRegistration = appRegistrationRepository.saveAndFlush(appRegistration);
-        App app = buildLaaApp(appRegistration, "Test App");
+        App app = buildLaaApp("Test App");
         app = appRepository.saveAndFlush(app);
         AppRole appRole = buildLaaAppRole(app, "Test App Role");
         appRole = appRoleRepository.saveAndFlush(appRole);
-        EntraUser entraUser = buildEntraUser("test@test.com", "Test", "User");
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "test@test.com", "Test", "User");
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
         userProfile.setAppRoles(Set.of(appRole));
         entraUser.setUserProfiles(Set.of(userProfile));

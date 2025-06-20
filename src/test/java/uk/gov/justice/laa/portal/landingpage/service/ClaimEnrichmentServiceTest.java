@@ -13,7 +13,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraApplicationInfo;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraClaimData;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserInfo;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -43,7 +42,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ClaimEnrichmentServiceTest {
 
-    private static final String USER_PRINCIPAL = "test@example.com";
+    private static final String USER_ENTRA_ID = "entra-123";
     private static final String USER_EMAIL = "test@example.com";
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String APP_ID = "123e4567-e89b-12d3-a456-426614174000";
@@ -74,7 +73,7 @@ class ClaimEnrichmentServiceTest {
     void setUp() {
         // Setup request
         EntraUserInfo userInfo = EntraUserInfo.builder()
-                .userPrincipalName(USER_PRINCIPAL)
+                .id(USER_ENTRA_ID)
                 .build();
         EntraApplicationInfo appInfo = EntraApplicationInfo.builder()
                 .id(APP_ID)
@@ -87,53 +86,45 @@ class ClaimEnrichmentServiceTest {
                 .data(data)
                 .build();
 
-        // Setup app registration
-        AppRegistration appRegistration = AppRegistration.builder()
-                .id(UUID.fromString(APP_ID))
-                .build();
-        
         // Setup app
         app = App.builder()
-                .id(UUID.randomUUID())
-                .appRegistration(appRegistration)
+                .id(UUID.fromString(APP_ID))
                 .name(APP_NAME)
                 .build();
 
-        // Setup firm and offices
+        // Setup firm
         firm = Firm.builder()
                 .id(FIRM_ID)
-                .name("Test Firm")
                 .build();
 
+        // Setup offices
         office1 = Office.builder()
                 .id(OFFICE_ID_1)
-                .name("Office 1")
                 .firm(firm)
                 .build();
 
         office2 = Office.builder()
                 .id(OFFICE_ID_2)
-                .name("Office 2")
                 .firm(firm)
+                .build();
+
+        // Setup app role
+        AppRole appRole = AppRole.builder()
+                .app(app)
+                .name(EXTERNAL_ROLE)
                 .build();
 
         // Setup user profile with firm and role
-        final AppRole appRole = AppRole.builder()
-                .name(EXTERNAL_ROLE)
-                .app(app)
-                .build();
-
         UserProfile userProfile = UserProfile.builder()
-                .appRoles(Set.of(appRole))
                 .firm(firm)
+                .appRoles(Set.of(appRole))
                 .build();
 
         // Setup user with proper app registration and email
         entraUser = EntraUser.builder()
                 .id(USER_ID)
-                .userName(USER_PRINCIPAL)
+                .entraId(USER_ENTRA_ID)
                 .email(USER_EMAIL)
-                .userAppRegistrations(Set.of(appRegistration))
                 .userProfiles(Set.of(userProfile))
                 .build();
     }
@@ -141,8 +132,8 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_Success() {
         // Arrange
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(List.of(office1, office2));
 
@@ -167,7 +158,6 @@ class ClaimEnrichmentServiceTest {
         UUID firm2Id = UUID.randomUUID();
         Firm firm2 = Firm.builder()
                 .id(firm2Id)
-                .name("Test Firm 2")
                 .build();
 
         final Office office3 = Office.builder()
@@ -186,8 +176,8 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(profile1, profile2));
 
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(List.of(office1, office2));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id)))
@@ -223,8 +213,8 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -240,7 +230,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_UserNotFound() {
         // Arrange
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.empty());
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -254,8 +244,8 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_AppNotFound() {
         // Arrange
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(any())).thenReturn(Optional.empty());
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -269,9 +259,9 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_UserNoAppAccess() {
         // Arrange
-        entraUser.setUserAppRegistrations(Collections.emptySet());
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        entraUser.setUserProfiles(Collections.emptySet());
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -283,26 +273,10 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaimThrowsException_UserNoRoles() {
-        // Arrange
-        entraUser.setUserProfiles(Collections.emptySet());
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
-
-        // Act & Assert
-        ClaimEnrichmentException exception = assertThrows(
-            ClaimEnrichmentException.class,
-            () -> claimEnrichmentService.enrichClaim(request)
-        );
-        assertEquals("User has no roles assigned for this application", exception.getMessage());
-        verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
-    }
-
-    @Test
     void enrichClaimThrowsException_ExternalUserWithFirmButNoOffices() {
         // Arrange
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(Collections.emptyList());
 
@@ -324,8 +298,8 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
         
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -345,8 +319,8 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
         
-        when(entraUserRepository.findByUserName(USER_PRINCIPAL)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByAppRegistrationId(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
+        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findById(UUID.fromString(APP_ID))).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(

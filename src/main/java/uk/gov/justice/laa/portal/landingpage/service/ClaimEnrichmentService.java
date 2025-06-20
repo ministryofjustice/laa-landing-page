@@ -37,16 +37,17 @@ public class ClaimEnrichmentService {
 
         try {
             // 1. Get the EntraUser from database
-            EntraUser entraUser = entraUserRepository.findByUserName(request.getData().getUser().getUserPrincipalName())
+            EntraUser entraUser = entraUserRepository.findByEntraId(request.getData().getUser().getId())
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
             // 2. Get app from DB using the ID from request
-            App app = appRepository.findByAppRegistrationId(UUID.fromString(request.getData().getApplication().getId()))
+            App app = appRepository.findById(UUID.fromString(request.getData().getApplication().getId()))
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
             // 3. Check if user has access to this app
-            boolean hasAccess = entraUser.getUserAppRegistrations().stream()
-                    .anyMatch(reg -> reg.getId().equals(app.getAppRegistration().getId()));
+            boolean hasAccess = entraUser.getUserProfiles().stream()
+                    .flatMap(profile -> profile.getAppRoles().stream())
+                    .anyMatch(appRole -> appRole.getApp().getId().equals(app.getId()));
 
             if (!hasAccess) {
                 throw new ClaimEnrichmentException("User does not have access to this application");

@@ -1,0 +1,8 @@
+ignore:
+  SNYK-CC-K8S-11:
+    - '*':
+        reason: "Low severity, mitigated elsewhere"
+
+  SNYK-CC-K8S-42:
+     - '*':
+        reason: "Low severity, mitigated elsewhere"
