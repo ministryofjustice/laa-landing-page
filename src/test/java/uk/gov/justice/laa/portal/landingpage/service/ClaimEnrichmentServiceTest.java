@@ -99,12 +99,6 @@ class ClaimEnrichmentServiceTest {
                 .name(APP_NAME)
                 .build();
 
-        // Setup app role
-        AppRole appRole = AppRole.builder()
-                .name(EXTERNAL_ROLE)
-                .app(app)
-                .build();
-
         // Setup firm and offices
         firm = Firm.builder()
                 .id(FIRM_ID)
@@ -123,7 +117,12 @@ class ClaimEnrichmentServiceTest {
                 .firm(firm)
                 .build();
 
-        // Setup user profile with firm
+        // Setup user profile with firm and role
+        final AppRole appRole = AppRole.builder()
+                .name(EXTERNAL_ROLE)
+                .app(app)
+                .build();
+
         UserProfile userProfile = UserProfile.builder()
                 .appRoles(Set.of(appRole))
                 .firm(firm)
@@ -171,9 +170,8 @@ class ClaimEnrichmentServiceTest {
                 .name("Test Firm 2")
                 .build();
 
-        UUID office3Id = UUID.randomUUID();
-        Office office3 = Office.builder()
-                .id(office3Id)
+        final Office office3 = Office.builder()
+                .id(UUID.randomUUID())
                 .name("Office 3")
                 .firm(firm2)
                 .build();
@@ -205,7 +203,7 @@ class ClaimEnrichmentServiceTest {
             .containsExactlyInAnyOrder(
                 OFFICE_ID_1.toString(),
                 OFFICE_ID_2.toString(),
-                office3Id.toString()
+                office3.getId().toString()
             );
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
