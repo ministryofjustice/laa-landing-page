@@ -24,6 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -88,10 +89,37 @@ class DemoDataPopulatorTest {
 
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        demoDataPopulator.appReady(applicationReadyEvent);
+        verifyMockCalls(1);
+    }
+
+    @Test
+    void populateDummyDataEnabledWithAdditionalAllUsers() {
+        //Setup
+        Application app1 = new Application();
+        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
+        app1.setDisplayName("App One");
+
+        Application app2 = new Application();
+        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
+        app2.setDisplayName("App Two");
+
+        // Mocked response from Graph API
+        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
+        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
+        when(graphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
+        when(applicationsRequestBuilder.get(any())).thenReturn(mockApplicationCollectionResponse);
+
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
         UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = mock(UsersWithUserPrincipalNameRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.usersWithUserPrincipalName(any())).thenReturn(usersWithUserPrincipalNameRequestBuilder);
 
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com"));
+        ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
     }
