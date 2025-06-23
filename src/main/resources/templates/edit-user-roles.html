@@ -30,7 +30,10 @@
 
     <main class="govuk-main-wrapper" id="main-content">
         <div th:if="${#authentication.isAuthenticated()}">
-            <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
+            <a th:if="${selectedAppIndex == 0}" class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
+                Back
+            </a>
+            <a th:if="${selectedAppIndex != 0}" class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/roles(id=${user.id}, selectedAppIndex=${selectedAppIndex - 1})}">
                 Back
             </a>
 
@@ -38,7 +41,7 @@
 
             <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.fullName}"></span></h1>
 
-            <form method="post" th:action="@{/admin/users/edit/{id}/roles(id=${user.id})}">
+            <form method="post" th:action="@{/admin/users/edit/{id}/roles(id=${user.id},selectedAppIndex=${selectedAppIndex})}">
                 <fieldset class="govuk-fieldset">
                     <p class="govuk-hint govuk-!-margin-bottom-3">
                         Select all that apply you will be adding all the roles based off what has been selected

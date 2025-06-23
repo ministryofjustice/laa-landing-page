@@ -443,12 +443,14 @@ public class UserController {
      * Retrieves available user roles for user
      */
     @GetMapping("/users/edit/{id}/roles")
-    public String editUserRoles(@PathVariable String id, Model model, HttpSession session) {
+    public String editUserRoles(@PathVariable String id,
+                                @RequestParam(defaultValue = "0") int selectedAppIndex,
+                                Model model, HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-        List<AppRoleDto> availableRoles = userService.getAppRolesByAppIds(selectedApps);
+        List<AppRoleDto> availableRoles = userService.getAppRolesByAppId(selectedApps.get(selectedAppIndex));
 
         Set<String> userAssignedRoleIds = userRoles.stream()
                 .filter(availableRoles::contains)
@@ -458,6 +460,7 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("availableRoles", availableRoles);
         model.addAttribute("userAssignedRoles", userAssignedRoleIds);
+        model.addAttribute("selectedAppIndex", selectedAppIndex);
 
         return "edit-user-roles";
     }
@@ -468,12 +471,32 @@ public class UserController {
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
             @RequestParam(required = false) List<String> selectedRoles,
-            Authentication authentication) {
+            @RequestParam int selectedAppIndex,
+            HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElse(null);
-        userService.updateUserRoles(id, selectedRoles);
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
-        return new RedirectView("/admin/users");
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class).orElseGet(ArrayList::new);
+        Map<Integer, List<String>> allPageRoles = (Map<Integer, List<String>>) session.getAttribute("allPageRoles");
+        if (allPageRoles == null) {
+            allPageRoles = new HashMap<>();
+        }
+        // Add the roles for the currently selected app to a map for lookup.
+        allPageRoles.put(selectedAppIndex, selectedRoles);
+        if (selectedAppIndex >= selectedApps.size() - 1) {
+            session.setAttribute("allPageRoles", null);
+            // Flatten the map to a single list of all selected roles across all pages.
+            List<String> allSelectedRoles = allPageRoles.values().stream()
+                    .flatMap(List::stream)
+                    .toList();
+            userService.updateUserRoles(id, allSelectedRoles);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
+            return new RedirectView("/admin/users");
+        } else {
+            // Ensure passed in ID is a valid UUID to avoid open redirects.
+            UUID uuid = UUID.fromString(id);
+            session.setAttribute("allPageRoles", allPageRoles);
+            return new RedirectView(String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", uuid, selectedAppIndex + 1));
+        }
     }
 
     /**
@@ -498,6 +521,6 @@ public class UserController {
         session.setAttribute("selectedApps", apps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
+        return new RedirectView(String.format("/admin/users/edit/%s/roles?selectedAppIndex=0", uuid));
     }
 }
