@@ -363,4 +363,9 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .toList();
     }
+
+    public EntraUser getUserByEntraUserId(UUID userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findByEntraId(userId.toString());
+        return optionalUser.orElse(null);
+    }
 }

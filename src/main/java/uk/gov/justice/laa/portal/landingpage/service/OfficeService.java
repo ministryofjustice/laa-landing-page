@@ -25,4 +25,8 @@ public class OfficeService {
     public List<Office> getOfficesByFirms(List<UUID> firmIds) {
         return Optional.of(officeRepository.findOfficeByFirm_IdIn(firmIds)).orElse(Collections.emptyList());
     }
+
+    public Office getOffice(UUID id) {
+        return officeRepository.findById(id).orElse(null);
+    }
 }
