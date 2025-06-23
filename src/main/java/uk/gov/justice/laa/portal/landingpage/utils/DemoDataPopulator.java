@@ -223,7 +223,7 @@ public class DemoDataPopulator {
             if (userPrinciples != null && !userPrinciples.isEmpty()) {
                 for (String userPrincipal : userPrinciples) {
                     //Ensuring the user being running the app is added
-                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
+                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal.trim()));
 
                     try {
                         if (!userAlreadyAdded) {
@@ -240,8 +240,8 @@ public class DemoDataPopulator {
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
-                        System.err.println(e.getMessage());
+                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
+                        e.printStackTrace();
                         System.err.println("Continuing with the list of users in the database");
                     }
 
