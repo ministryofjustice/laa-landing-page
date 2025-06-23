@@ -14,6 +14,7 @@ jobs:
     uses: ./.github/workflows/snyk.yml
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
   ecr:
     needs: call-snyk
     runs-on: ubuntu-latest
