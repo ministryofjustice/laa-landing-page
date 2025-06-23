@@ -78,6 +78,8 @@ jobs:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
           POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
+          TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
+          TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
 
       - name: Deploy to Cloud Platform
         run: |

@@ -54,6 +54,10 @@ spec:
           env:
             - name: POPULATE_DUMMY_DATA
               value: "${POPULATE_DUMMY_DATA}"
+            - name: TEST_DATA_ADMIN_PRINCIPALS
+              value: "${TEST_DATA_ADMIN_PRINCIPALS}"
+            - name: TEST_DATA_NON_ADMIN_PRINCIPALS
+              value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
