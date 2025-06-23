@@ -41,8 +41,8 @@ public class ClaimEnrichmentService {
             EntraUser entraUser = entraUserRepository.findByEntraId(request.getData().getUser().getId())
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
-            // 2. Get app from DB using the ID from request
-            App app = appRepository.findById(UUID.fromString(request.getData().getApplication().getId()))
+            // 2. Get app from DB using the app name from request
+            App app = appRepository.findByName(request.getData().getApplication().getDisplayName())
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
             // 3. Check if user has access to this app
@@ -55,26 +55,26 @@ public class ClaimEnrichmentService {
             }
 
             // 4. Get user roles for this app from the database
-            Set<String> userRoles = entraUser.getUserProfiles().stream()
+            List<String> userRoles = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .filter(role -> role.getApp().equals(app))
                     .map(AppRole::getName)
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toList());
 
             if (userRoles.isEmpty()) {
                 throw new ClaimEnrichmentException("User has no roles assigned for this application");
             }
 
             //5. Get Office IDs
-            String officeIds = entraUser.getUserProfiles().stream()
+            List<String> officeIds = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getFirm() != null)
                     .map(UserProfile::getFirm)
                     .map(Firm::getId)
                     .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
                     .map(office -> office.getId().toString())
                     .distinct()
-                    .collect(Collectors.joining(":"));
+                    .collect(Collectors.toList());
 
             boolean isInternalUser = entraUser.getUserProfiles().stream()
                     .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
@@ -97,9 +97,9 @@ public class ClaimEnrichmentService {
                     .success(true)
                     .message("Access granted to " + app.getName())
                     .appName(app.getName())
-                    .roles(userRoles)
-                    .userId(entraUser.getId().toString())
+                    .userId(entraUser.getEntraId())
                     .email(entraUser.getEmail())
+                    .roles(userRoles)
                     .officeIds(officeIds)
                     .build();
 

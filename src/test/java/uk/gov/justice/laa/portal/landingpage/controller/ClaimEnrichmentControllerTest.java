@@ -17,6 +17,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserInfo;
 import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentService;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,7 +45,7 @@ class ClaimEnrichmentControllerTest {
 
     private ClaimEnrichmentRequest testRequest;
     private ClaimEnrichmentResponse testResponse;
-    private Set<String> testRoles;
+    private List<String> testRoles;
 
     @BeforeEach
     void setUp() {
@@ -89,7 +90,7 @@ class ClaimEnrichmentControllerTest {
                 .build();
 
         // Setup test roles
-        testRoles = new HashSet<>();
+        testRoles = new ArrayList();
         testRoles.add("ROLE_USER");
         testRoles.add("ROLE_ADMIN");
 
