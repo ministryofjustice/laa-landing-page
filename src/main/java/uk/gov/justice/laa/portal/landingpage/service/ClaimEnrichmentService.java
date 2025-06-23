@@ -48,7 +48,12 @@ public class ClaimEnrichmentService {
             // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .anyMatch(appRole -> appRole.getApp().getId().equals(app.getId()));
+                    .anyMatch(appRole ->
+                            //TODO: Update Data Model to compare by ID as name may not be unique
+                            //appRole.getApp().getId().equals(app.getId())
+                            // && appRole.getApp().getName().equals(app.getName())
+                            appRole.getApp().getName().equals(app.getName())
+                    );
 
             if (!hasAccess) {
                 throw new ClaimEnrichmentException("User does not have access to this application");
@@ -58,7 +63,11 @@ public class ClaimEnrichmentService {
             List<String> userRoles = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .filter(role -> role.getApp().equals(app))
+                    .filter(role ->
+                            //TODO: Update Data Model to compare by ID as name may not be unique
+                            role.getApp().getId().equals(app.getId())
+                                    && role.getApp().getName().equals(app.getName())
+                    )
                     .map(AppRole::getName)
                     .collect(Collectors.toList());
 
@@ -67,6 +76,7 @@ public class ClaimEnrichmentService {
             }
 
             //5. Get Office IDs
+            //TODO: officeIds should be updated to officeCode when Data Model Updated
             List<String> officeIds = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getFirm() != null)
                     .map(UserProfile::getFirm)
