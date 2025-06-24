@@ -11,8 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface EntraUserRepository  extends JpaRepository<EntraUser, UUID> {
-
+public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
     @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.entraId = ?1")
     Optional<EntraUser> findByEntraId(String entraId);
 

@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +27,9 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -83,8 +81,9 @@ public class AppSelectionTest extends BaseIntegrationTest {
     @Test
     public void testGetEditUserAppsForUserThrowsExceptionWhenNoUserExists() throws Exception {
         UUID userId = UUID.randomUUID();
-        ServletException servletException = assertThrows(ServletException.class, () -> this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userId))));
-        assertInstanceOf(NoSuchElementException.class, servletException.getCause());
+        this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userId)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof NoSuchElementException));
     }
 
     @Test

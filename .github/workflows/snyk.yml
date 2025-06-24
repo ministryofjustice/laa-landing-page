@@ -17,6 +17,8 @@ on:
       SNYK_ORG_ID:
         required: true
         description: 'Snyk Organization ID'
+      SNYK_SLACK_WEBHOOK_URL:
+        required: false
 jobs:
   vulnerability-scan:
     runs-on: ubuntu-latest
@@ -154,10 +156,10 @@ jobs:
                 }
               ]
             }
+          webhook-type: incoming-webhook
 
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: incoming-webhook
 
       - name: Fail Pipeline if Vulnerability Found
         run: |
