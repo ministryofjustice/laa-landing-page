@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
@@ -79,8 +78,19 @@ public class DemoDataPopulator {
         this.graphServiceClient = graphServiceClient;
     }
 
+    protected EntraUser buildEntraUser(String userPrincipal, String entraId) {
+        String email = getEmailFromUserPrinciple(userPrincipal);
+
+        return EntraUser.builder().email(email)
+                .entraId(entraId)
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName(email).lastName("LastName")
+                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+    }
+
     protected EntraUser buildEntraUser(User user) {
-        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user);
+        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user.getUserPrincipalName());
         String firstName = getFirstName(user);
         String lastName = getSurname(user);
 
@@ -116,8 +126,7 @@ public class DemoDataPopulator {
         return "Firstname";
     }
 
-    protected String getEmailFromUserPrinciple(User user) {
-        String userPrincipalName = user.getUserPrincipalName();
+    protected String getEmailFromUserPrinciple(String userPrincipalName) {
         if (userPrincipalName != null && userPrincipalName.contains("#")) {
             String emailPart = userPrincipalName.split("#")[0];
             int replacementPos = emailPart.lastIndexOf('_');
@@ -222,26 +231,25 @@ public class DemoDataPopulator {
 
             if (userPrinciples != null && !userPrinciples.isEmpty()) {
                 for (String userPrincipal : userPrinciples) {
+                    if (!userPrincipal.contains(":")) {
+                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                    }
                     //Ensuring the user being running the app is added
-                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal));
+                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal.split(":")[0]));
 
                     try {
                         if (!userAlreadyAdded) {
-                            UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
-                            User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
-                                assert requestConfig.queryParameters != null;
-                                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
-                            });
-                            assert me != null;
-                            entraUsers.add(buildEntraUser(me));
-                            users.add(me);
+                            String mail = userPrincipal.split(":")[0];
+                            String entraId = userPrincipal.split(":")[1];
+                            EntraUser user = buildEntraUser(mail, entraId);
+                            entraUsers.add(user);
                             if (nonAdminUserPrincipals.contains(userPrincipal)) {
-                                nonAdminUserIds.add(me.getId());
+                                nonAdminUserIds.add(user.getEntraId());
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra");
-                        System.err.println(e.getMessage());
+                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
+                        e.printStackTrace();
                         System.err.println("Continuing with the list of users in the database");
                     }
 

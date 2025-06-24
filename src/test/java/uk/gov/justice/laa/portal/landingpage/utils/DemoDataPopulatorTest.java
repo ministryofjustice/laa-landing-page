@@ -6,7 +6,6 @@ import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
-import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -114,12 +113,10 @@ class DemoDataPopulatorTest {
 
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-        UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = mock(UsersWithUserPrincipalNameRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.usersWithUserPrincipalName(any())).thenReturn(usersWithUserPrincipalNameRequestBuilder);
 
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
-        ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com"));
-        ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com"));
+        ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
+        ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
     }
@@ -224,14 +221,14 @@ class DemoDataPopulatorTest {
         // UserPrincipalName is null
         User user = new User();
 
-        String email = demoDataPopulator.getEmailFromUserPrinciple(user);
+        String email = demoDataPopulator.getEmailFromUserPrinciple(user.getUserPrincipalName());
 
         Assertions.assertNull(email);
 
         // UserPrincipalName present and is email
         user.setUserPrincipalName("test@email.com");
 
-        email = demoDataPopulator.getEmailFromUserPrinciple(user);
+        email = demoDataPopulator.getEmailFromUserPrinciple(user.getUserPrincipalName());
 
         Assertions.assertNotNull(email);
         Assertions.assertEquals("test@email.com", email);
@@ -239,7 +236,7 @@ class DemoDataPopulatorTest {
         // UserPrincipalName present but not email
         user.setUserPrincipalName("test");
 
-        email = demoDataPopulator.getEmailFromUserPrinciple(user);
+        email = demoDataPopulator.getEmailFromUserPrinciple(user.getUserPrincipalName());
 
         Assertions.assertNotNull(email);
         Assertions.assertEquals("test", email);
@@ -247,7 +244,7 @@ class DemoDataPopulatorTest {
         // UserPrincipalName present and is external email
         user.setUserPrincipalName("test.user_email.com#EXT#@version1workforcesandbox.onmicrosoft.com");
 
-        email = demoDataPopulator.getEmailFromUserPrinciple(user);
+        email = demoDataPopulator.getEmailFromUserPrinciple(user.getUserPrincipalName());
 
         Assertions.assertNotNull(email);
         Assertions.assertEquals("test.user@email.com", email);
