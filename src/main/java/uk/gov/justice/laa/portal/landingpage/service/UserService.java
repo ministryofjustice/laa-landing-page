@@ -364,7 +364,7 @@ public class UserService {
                 .toList();
     }
 
-    public EntraUser getUserByEntraUserId(UUID userId) {
+    public EntraUser getUserByEntraId(UUID userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findByEntraId(userId.toString());
         return optionalUser.orElse(null);
     }

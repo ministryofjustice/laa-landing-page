@@ -42,9 +42,7 @@ public class PdaController {
 
     @GetMapping("/firms")
     public String getFirms(Model model, Authentication authentication) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUser entraUser = userService.getUserByEntraUserId(currentUserDto.getUserId());
-        assert entraUser != null;
+        EntraUser entraUser = getCurrentEntraUser(authentication);
         List<FirmDto> list;
         if (isInternal(entraUser)) {
             list = firmService.getFirms();
@@ -57,26 +55,22 @@ public class PdaController {
 
     @GetMapping("/firms/{id}")
     public String getFirm(@PathVariable String id, Model model, Authentication authentication) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUser entraUser = userService.getUserByEntraUserId(currentUserDto.getUserId());
-        assert entraUser != null;
+        EntraUser entraUser = getCurrentEntraUser(authentication);
         if (!isInternal(entraUser)) {
             boolean isMyFirm = getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
             if (!isMyFirm) {
-                log.debug("Access denied for firm id: {}, user: {}", id, currentUserDto.getUserId());
+                log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraId());
                 return "redirect:/pda/firms";
             }
         }
         FirmDto firmDto = firmService.getFirm(id);
         model.addAttribute("firm", firmDto);
-        return "/firm";
+        return "firm";
     }
 
     @GetMapping("/offices")
     public String getOffices(Model model, Authentication authentication) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUser entraUser = userService.getUserByEntraUserId(currentUserDto.getUserId());
-        assert entraUser != null;
+        EntraUser entraUser = getCurrentEntraUser(authentication);
         List<OfficeDto> list;
         if (isInternal(entraUser)) {
             list = officeService.getOffices().stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
@@ -89,21 +83,26 @@ public class PdaController {
 
     @GetMapping("/offices/{id}")
     public String getOffice(@PathVariable String id, Model model, Authentication authentication) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUser entraUser = userService.getUserByEntraUserId(currentUserDto.getUserId());
-        assert entraUser != null;
+        EntraUser entraUser = getCurrentEntraUser(authentication);
         Office office = officeService.getOffice(UUID.fromString(id));
         UUID myFirmId = office.getFirm().getId();
         if (!isInternal(entraUser)) {
             boolean isMyOffice = entraUser.getUserProfiles()
                     .stream().anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));
             if (!isMyOffice) {
-                log.debug("Access denied for office id: {}, user: {}", id, currentUserDto.getUserId());
+                log.debug("Access denied for office id: {}, user: {}", id, entraUser.getEntraId());
                 return "redirect:/pda/offices";
             }
         }
-        model.addAttribute("office", office);
+        model.addAttribute("office", mapper.map(office, OfficeDto.class));
         return "office";
+    }
+
+    protected EntraUser getCurrentEntraUser(Authentication authentication) {
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
+        assert entraUser != null;
+        return entraUser;
     }
 
     protected List<OfficeDto> getUserOffices(EntraUser entraUser) {

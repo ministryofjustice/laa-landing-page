@@ -944,4 +944,24 @@ class UserServiceTest {
             assertThat(result.get(2)).containsExactly(5);
         }
     }
+
+    @Test
+    public void getUserByEntraIdWhenUserIsPresent() {
+        // Given
+        when(mockEntraUserRepository.findByEntraId(any())).thenReturn(Optional.of(EntraUser.builder().build()));
+        // When
+        EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
+        // Then
+        assertThat(entraUser).isNotNull();
+    }
+
+    @Test
+    public void getUserByEntraIdWhenUserIsNotPresent() {
+        // Given
+        when(mockEntraUserRepository.findByEntraId(any())).thenReturn(Optional.empty());
+        // When
+        EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
+        // Then
+        assertThat(entraUser).isNull();
+    }
 }
