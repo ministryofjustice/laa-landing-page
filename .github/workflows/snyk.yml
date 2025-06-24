@@ -17,7 +17,7 @@ on:
       SNYK_ORG_ID:
         required: true
         description: 'Snyk Organization ID'
-      SLACK_WEBHOOK_URL:
+      SNYK_SLACK_WEBHOOK_URL:
         required: false
 jobs:
   vulnerability-scan:
