@@ -228,10 +228,7 @@ public class DemoDataPopulator {
                     try {
                         if (!userAlreadyAdded) {
                             UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
-                            User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
-                                assert requestConfig.queryParameters != null;
-                                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
-                            });
+                            User me = usersWithUserPrincipalNameRequestBuilder.get();
                             assert me != null;
                             entraUsers.add(buildEntraUser(me));
                             users.add(me);
