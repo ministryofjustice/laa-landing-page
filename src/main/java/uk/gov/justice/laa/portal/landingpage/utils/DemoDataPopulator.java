@@ -231,7 +231,7 @@ public class DemoDataPopulator {
 
             if (userPrinciples != null && !userPrinciples.isEmpty()) {
                 for (String userPrincipal : userPrinciples) {
-                    if(!userPrincipal.contains(":")){
+                    if (!userPrincipal.contains(":")) {
                         throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
                     }
                     //Ensuring the user being running the app is added
