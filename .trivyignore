@@ -9,6 +9,4 @@ DS026
 
 # Ignore a Kubernetes misconfiguration about hostPath usage
 KSV0125
-
-
-
+KSV110

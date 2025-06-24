@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import com.microsoft.graph.models.AppRole;
@@ -21,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Service class for handling login-related logic.
@@ -102,6 +106,8 @@ public class LoginService {
 
         User user = graphApiService.getUserProfile(tokenValue);
 
+        List<UserType> userTypes = userService.findUserTypeByUserEntraId(user.getId());
+
         LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
         String formattedLastLogin = "N/A";
 
@@ -114,6 +120,28 @@ public class LoginService {
         List<LaaApplication> userAppsAndRoles = graphApiService.getUserAppsAndRoles(tokenValue);
 
         return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles);
+                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles, userTypes);
+    }
+
+    /**
+     * Will fetch current logged-in user
+     *
+     * @param authentication   The authentication object containing user details.
+     * @return A {@link CurrentUserDto} object containing the user data
+     */
+    public CurrentUserDto getCurrentUser(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+
+        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+        OAuth2User principal = oauthToken.getPrincipal();
+
+        String name = principal.getAttribute("name");
+        UUID userId = UUID.fromString(Objects.requireNonNull(principal.getAttribute("oid")));
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName(name);
+        currentUserDto.setUserId(userId);
+        return currentUserDto;
     }
 }

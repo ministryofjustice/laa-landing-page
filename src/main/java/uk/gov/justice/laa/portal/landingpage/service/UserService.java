@@ -1,44 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.SignInActivity;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import jakarta.servlet.http.HttpSession;
-import org.modelmapper.ModelMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -53,9 +14,45 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.Invitation;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 /**
  * userService
@@ -76,13 +73,13 @@ public class UserService {
     private final ModelMapper mapper;
     private final NotificationService notificationService;
 
-
-
-    /** The number of pages to load in advance when doing user pagination */
+    /**
+     * The number of pages to load in advance when doing user pagination
+     */
     private static final int PAGES_TO_PRELOAD = 5;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -192,6 +189,22 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserType> findUserTypeByUserEntraId(String entraId) {
+        EntraUser user = entraUserRepository.findByEntraId(entraId)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user entra id: {}", entraId);
+                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given entra id: {}", entraId);
+            throw new RuntimeException(String.format("User profile not found for the given entra id: %s", entraId));
+        }
+
+        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+
+    }
+
     @Async
     public void disableUsers(List<String> ids) throws IOException {
         Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
@@ -233,14 +246,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin) {
+    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin, String createdBy) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin);
-
-        return invitedUser;
+        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
     }
 
     private User inviteUser(User user) {
@@ -260,8 +271,10 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private void persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin) {
+    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
+        // TODO revisit to set the user entra ID
+        entraUser.setEntraId(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -274,20 +287,16 @@ public class UserService {
                 .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
                 .createdDate(LocalDateTime.now())
                 .offices(offices)
-                .createdBy("Admin")
+                .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
                 .build();
 
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser.setCreatedBy("Admin");
+        entraUser.setCreatedBy(createdBy);
         entraUser.setCreatedDate(LocalDateTime.now());
-        Set<AppRegistration> appRegistrations = appRoles.stream()
-                .map(appRole -> appRole.getApp().getAppRegistration())
-                .collect(Collectors.toSet());
-        entraUser.setUserAppRegistrations(appRegistrations);
-        entraUserRepository.saveAndFlush(entraUser);
+        return entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
@@ -306,6 +315,30 @@ public class UserService {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * The method loads the user type from DB and map it as user authorities
+     *
+     * @param entraId the user entra id
+     * @return the list of user types associated with entra user
+     */
+    public List<String> getUserAuthorities(String entraId) {
+        EntraUser user = entraUserRepository.findByEntraId(entraId)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given entra id: {}", entraId);
+                    return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));
+                });
+
+        List<String> grantedAuthorities = Collections.emptyList();
+
+        if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
+            grantedAuthorities = user.getUserProfiles().stream()
+                    .map(userProfile -> userProfile.getUserType().name())
+                    .toList();
+
+        }
+        return grantedAuthorities;
     }
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
