@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
@@ -227,11 +226,12 @@ public class DemoDataPopulator {
 
                     try {
                         if (!userAlreadyAdded) {
-                            UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = graphServiceClient.usersWithUserPrincipalName(userPrincipal);
-                            User me = usersWithUserPrincipalNameRequestBuilder.get(requestConfig -> {
-                                assert requestConfig.queryParameters != null;
-                                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName"};
-                            });
+                            List<User> result = Objects.requireNonNull(graphServiceClient.users().get(requestConfiguration -> {
+                                assert requestConfiguration.queryParameters != null;
+                                requestConfiguration.queryParameters.filter = "userPrincipalName eq '" + userPrincipal.trim() + "'";
+                            })).getValue();
+                            assert result != null;
+                            User me = result.getFirst();
                             assert me != null;
                             entraUsers.add(buildEntraUser(me));
                             users.add(me);

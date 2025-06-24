@@ -6,7 +6,6 @@ import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
-import com.microsoft.graph.userswithuserprincipalname.UsersWithUserPrincipalNameRequestBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -114,8 +113,6 @@ class DemoDataPopulatorTest {
 
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-        UsersWithUserPrincipalNameRequestBuilder usersWithUserPrincipalNameRequestBuilder = mock(UsersWithUserPrincipalNameRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.usersWithUserPrincipalName(any())).thenReturn(usersWithUserPrincipalNameRequestBuilder);
 
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com"));
