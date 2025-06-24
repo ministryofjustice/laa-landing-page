@@ -154,10 +154,10 @@ jobs:
                 }
               ]
             }
+          webhook-type: incoming-webhook
 
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: incoming-webhook
 
       - name: Fail Pipeline if Vulnerability Found
         run: |
