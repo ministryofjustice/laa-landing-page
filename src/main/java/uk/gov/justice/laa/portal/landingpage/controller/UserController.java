@@ -366,7 +366,9 @@ public class UserController {
             for (AppRoleDto role : roles) {
                 if (selectedRoles.contains(role.getId())) {
                     List<AppRoleViewModel> appRoles = cyaRoles.getOrDefault(role.getApp().getId(), new ArrayList<>());
-                    appRoles.add(mapper.map(role, AppRoleViewModel.class));
+                    AppRoleViewModel appRoleViewModel = mapper.map(role, AppRoleViewModel.class);
+                    appRoleViewModel.setAppName(role.getApp().getName());
+                    appRoles.add(appRoleViewModel);
                     cyaRoles.put(role.getApp().getId(), appRoles);
                     displayRoles.add(role.getName());
                 }
