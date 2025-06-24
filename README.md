@@ -136,3 +136,24 @@ http://localhost:8080
 ### Snyk & Trivy Integration
 
 If a pipeline is picking up a vulnerability that you wish to add to the ignore list, then make sure to add it to either `.trivyignore` or `.snyk` rather than resolving in the UI.
+
+
+## Automation Playwright Test Suite
+**These tests are used for automation testing of LAA Landing Page using Playwright with Java**
+
+### Location:
+     src/playwrightTest
+
+### Configuration:
+    src/playwrightTest/resources/playwright.properties
+
+### Running Tests
+- Update url, username and password in configuration file
+- Run individual tests, classes or test suits.
+- Tests can run in headless or headed mode
+    - This can be configured using headless property in configuration file
+
+### Tests Coverage
+- UI of LAA Landing Page
+- Reusable logic e.g. login will be in BaseFrontEndTest class
+
