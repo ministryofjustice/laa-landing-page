@@ -86,7 +86,8 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(loginService, userService, officeService, eventService, firmService, new MapperConfig().modelMapper());
+        userController = new UserController(loginService, userService, officeService, eventService, firmService,
+                new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
@@ -395,7 +396,8 @@ class UserControllerTest {
         ApplicationsForm applicationsForm = new ApplicationsForm();
         applicationsForm.setApps(ids);
         Model model = new ExtendedModelMap();
-        String redirectUrl = userController.setSelectedApps(applicationsForm, model, session);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        String redirectUrl = userController.setSelectedApps(applicationsForm, bindingResult, model, session);
         assertThat(session.getAttribute("apps")).isNotNull();
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/roles");
     }
@@ -507,7 +509,8 @@ class UserControllerTest {
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
+        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model
+                .getAttribute("roles");
 
         assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
@@ -953,25 +956,14 @@ class UserControllerTest {
     }
 
     @Test
-    void setSelectedApps_shouldRedirectToCheckAnswersIfNoApps() {
-        ApplicationsForm form = new ApplicationsForm();
-        form.setApps(new ArrayList<>());
-        HttpSession session = new MockHttpSession();
-        Model model = new ExtendedModelMap();
-
-        String view = userController.setSelectedApps(form, model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
-    }
-
-    @Test
     void setSelectedApps_shouldSetAppsAndRedirectToRoles() {
         ApplicationsForm form = new ApplicationsForm();
         form.setApps(List.of("app1"));
         HttpSession session = new MockHttpSession();
         Model model = new ExtendedModelMap();
 
-        String view = userController.setSelectedApps(form, model, session);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        String view = userController.setSelectedApps(form, bindingResult, model, session);
 
         assertThat(view).isEqualTo("redirect:/admin/user/create/roles");
         assertThat(session.getAttribute("apps")).isEqualTo(List.of("app1"));
