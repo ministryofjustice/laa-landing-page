@@ -78,8 +78,19 @@ public class DemoDataPopulator {
         this.graphServiceClient = graphServiceClient;
     }
 
+    protected EntraUser buildEntraUser(String userPrincipal, String entraId) {
+        String email = getEmailFromUserPrinciple(userPrincipal);
+
+        return EntraUser.builder().email(email)
+                .entraId(entraId)
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName(email).lastName("LastName")
+                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+    }
+
     protected EntraUser buildEntraUser(User user) {
-        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user);
+        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user.getUserPrincipalName());
         String firstName = getFirstName(user);
         String lastName = getSurname(user);
 
@@ -115,8 +126,7 @@ public class DemoDataPopulator {
         return "Firstname";
     }
 
-    protected String getEmailFromUserPrinciple(User user) {
-        String userPrincipalName = user.getUserPrincipalName();
+    protected String getEmailFromUserPrinciple(String userPrincipalName) {
         if (userPrincipalName != null && userPrincipalName.contains("#")) {
             String emailPart = userPrincipalName.split("#")[0];
             int replacementPos = emailPart.lastIndexOf('_');
@@ -221,22 +231,20 @@ public class DemoDataPopulator {
 
             if (userPrinciples != null && !userPrinciples.isEmpty()) {
                 for (String userPrincipal : userPrinciples) {
+                    if(!userPrincipal.contains(":")){
+                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                    }
                     //Ensuring the user being running the app is added
-                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal.trim()));
+                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal.split(":")[0]));
 
                     try {
                         if (!userAlreadyAdded) {
-                            List<User> result = Objects.requireNonNull(graphServiceClient.users().get(requestConfiguration -> {
-                                assert requestConfiguration.queryParameters != null;
-                                requestConfiguration.queryParameters.filter = "userPrincipalName eq '" + userPrincipal.trim() + "'";
-                            })).getValue();
-                            assert result != null;
-                            User me = result.getFirst();
-                            assert me != null;
-                            entraUsers.add(buildEntraUser(me));
-                            users.add(me);
+                            String mail = userPrincipal.split(":")[0];
+                            String entraId = userPrincipal.split(":")[1];
+                            EntraUser user = buildEntraUser(mail, entraId);
+                            entraUsers.add(user);
                             if (nonAdminUserPrincipals.contains(userPrincipal)) {
-                                nonAdminUserIds.add(me.getId());
+                                nonAdminUserIds.add(user.getEntraId());
                             }
                         }
                     } catch (Exception e) {
