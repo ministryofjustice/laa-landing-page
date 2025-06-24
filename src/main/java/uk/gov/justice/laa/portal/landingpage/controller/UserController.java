@@ -167,8 +167,6 @@ public class UserController {
         userDetailsForm = UserUtils.populateUserDetailsFormWithSession(userDetailsForm, user, session);
         model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
-        model.addAttribute("userDetailsForm", userDetailsForm);
-        model.addAttribute("user", user);
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
