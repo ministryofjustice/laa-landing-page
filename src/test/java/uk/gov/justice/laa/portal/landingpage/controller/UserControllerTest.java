@@ -798,7 +798,6 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(false);
 
-        Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
         // Simulate user not in session
@@ -814,8 +813,10 @@ class UserControllerTest {
         sessionModel.addAttribute("user", new User());
         session.setAttribute("createUserDetailsModel", sessionModel);
 
-        // Act
+        Model model = new ExtendedModelMap();
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
+
+        // Act
         String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
 
         // Assert
