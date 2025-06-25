@@ -1,11 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.models.User;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +36,7 @@ import com.microsoft.graph.models.User;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -790,7 +785,162 @@ class UserControllerTest {
                 () -> userController.setSelectedAppsEdit(userId, List.of(), session));
 
     }
+    @Test
+    void postUser_whenEmailAlreadyExists_shouldRejectEmailAndReturnToForm() {
+        // Arrange
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("John");
+        userDetailsForm.setLastName("Doe");
+        userDetailsForm.setEmail("existing@email.com");
+        userDetailsForm.setFirmId("firmId");
+        userDetailsForm.setIsFirmAdmin(false);
 
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Model model = new ExtendedModelMap();
+        HttpSession session = new MockHttpSession();
+
+        // Simulate user not in session
+        session.setAttribute("user", null);
+
+        // Simulate userService returns true for existing email
+        when(userService.userExistsByEmail("existing@email.com")).thenReturn(true);
+
+        // Simulate model in session for error handling
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("firms", List.of());
+        sessionModel.addAttribute("selectedFirm", null);
+        sessionModel.addAttribute("user", new User());
+        session.setAttribute("createUserDetailsModel", sessionModel);
+
+        // Act
+        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
+
+        // Assert
+        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
+        verify(userService).userExistsByEmail("existing@email.com");
+        // Should rejectValue on bindingResult for email
+        Mockito.verify(bindingResult).rejectValue("email", "error.email", "Email address already exist add a new email address.");
+    }
+
+    @Test
+    void postUser_whenValidationErrors_shouldReturnToFormWithModelAttributes() {
+        // Arrange
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("Jane");
+        userDetailsForm.setLastName("Smith");
+        userDetailsForm.setEmail("jane@email.com");
+        userDetailsForm.setFirmId("firmId");
+        userDetailsForm.setIsFirmAdmin(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Model model = new ExtendedModelMap();
+        HttpSession session = new MockHttpSession();
+
+        // Simulate user not in session
+        session.setAttribute("user", null);
+
+        // Simulate userService returns false for existing email
+        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
+
+        // Simulate validation errors
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // Simulate model in session for error handling
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("firms", List.of());
+        sessionModel.addAttribute("selectedFirm", null);
+        sessionModel.addAttribute("user", new User());
+        session.setAttribute("createUserDetailsModel", sessionModel);
+
+        // Act
+        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
+
+        // Assert
+        assertThat(view).isEqualTo("add-user-details");
+        assertThat(model.getAttribute("firms")).isNotNull();
+        assertThat(model.getAttribute("selectedFirm")).isNull();
+        assertThat(model.getAttribute("user")).isNotNull();
+    }
+
+    @Test
+    void postUser_whenNoModelInSessionAndValidationErrors_shouldRedirectToDetails() {
+        // Arrange
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("Jane");
+        userDetailsForm.setLastName("Smith");
+        userDetailsForm.setEmail("jane@email.com");
+        userDetailsForm.setFirmId("firmId");
+        userDetailsForm.setIsFirmAdmin(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Model model = new ExtendedModelMap();
+        HttpSession session = new MockHttpSession();
+
+        // Simulate user not in session
+        session.setAttribute("user", null);
+
+        // Simulate userService returns false for existing email
+        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
+
+        // Simulate validation errors
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // No model in session
+        session.removeAttribute("createUserDetailsModel");
+
+        // Act
+        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
+
+        // Assert
+        assertThat(view).isEqualTo("redirect:/admin/user/create/details");
+    }
+
+    @Test
+    void postUser_whenValid_shouldSetSessionAttributesAndRedirect() {
+        // Arrange
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("Jane");
+        userDetailsForm.setLastName("Smith");
+        userDetailsForm.setEmail("jane@email.com");
+        userDetailsForm.setFirmId("firmId");
+        userDetailsForm.setIsFirmAdmin(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        Model model = new ExtendedModelMap();
+        HttpSession session = new MockHttpSession();
+
+        // Simulate user not in session
+        session.setAttribute("user", null);
+
+        // Simulate userService returns false for existing email
+        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
+
+        // Simulate no validation errors
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        // Simulate firmService returns a firm
+        FirmDto firm = FirmDto.builder().name("Test Firm").build();
+        when(firmService.getFirm("firmId")).thenReturn(firm);
+
+        // Simulate model in session for error handling (should be cleared)
+        Model sessionModel = new ExtendedModelMap();
+        session.setAttribute("createUserDetailsModel", sessionModel);
+
+        // Act
+        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
+
+        // Assert
+        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
+        User sessionUser = (User) session.getAttribute("user");
+        assertThat(sessionUser.getGivenName()).isEqualTo("Jane");
+        assertThat(sessionUser.getSurname()).isEqualTo("Smith");
+        assertThat(sessionUser.getDisplayName()).isEqualTo("Jane Smith");
+        assertThat(sessionUser.getMail()).isEqualTo("jane@email.com");
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
+        assertThat(session.getAttribute("isFirmAdmin")).isEqualTo(true);
+        assertThat(session.getAttribute("createUserDetailsModel")).isNull();
+    }
     @Test
     void displayAllUsers_shouldAddSuccessMessageToModelAndRemoveFromSession() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();

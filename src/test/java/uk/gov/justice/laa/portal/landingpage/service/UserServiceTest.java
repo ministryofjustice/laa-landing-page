@@ -1,8 +1,40 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -20,23 +52,12 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -55,26 +76,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -912,6 +913,116 @@ class UserServiceTest {
 
         // Then
         assertThat(returnedAppRoles.isEmpty()).isTrue();
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).build();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(user);
+    }
+
+    @Test
+    void updateUserRoles_logsWarning_whenUserNotFound() {
+        // Arrange
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(UUID.randomUUID().toString()));
+
+        // Assert
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User with id");
+    }
+
+    @Test
+    void updateUserProfileRoles_logsWarning_whenNoDefaultProfile() {
+        // Arrange
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(UserProfile.builder().defaultProfile(false).build())).build();
+
+        // Act (call private method via reflection)
+        try {
+            var method = UserService.class.getDeclaredMethod("updateUserProfileRoles", EntraUser.class, List.class);
+            method.setAccessible(true);
+            method.invoke(userService, user, List.of());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Assert
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User profile for user ID");
+    }
+
+    @Test
+    void userExistsByEmail_returnsFalse_whenEmailIsNullOrBlank() {
+        assertThat(userService.userExistsByEmail(null)).isFalse();
+        assertThat(userService.userExistsByEmail("")).isFalse();
+        assertThat(userService.userExistsByEmail("   ")).isFalse();
+    }
+
+    @Test
+    void userExistsByEmail_returnsTrue_whenUserFoundInRepository() {
+        String email = "test@example.com";
+        EntraUser user = EntraUser.builder().email(email).build();
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.of(user));
+        assertThat(userService.userExistsByEmail(email)).isTrue();
+    }
+
+    @Test
+    void userExistsByEmail_returnsTrue_whenUserFoundInGraph() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        User graphUser = new User();
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenReturn(graphUser);
+        assertThat(userService.userExistsByEmail(email)).isTrue();
+    }
+
+    @Test
+    void userExistsByEmail_returnsFalse_whenUserNotFoundAnywhere() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenReturn(null);
+        assertThat(userService.userExistsByEmail(email)).isFalse();
+    }
+
+    @Test
+    void userExistsByEmail_logsWarning_whenGraphThrowsException() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenThrow(new RuntimeException("Not found"));
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        assertThat(userService.userExistsByEmail(email)).isFalse();
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("No user found in database with email");
     }
 
     @Nested
