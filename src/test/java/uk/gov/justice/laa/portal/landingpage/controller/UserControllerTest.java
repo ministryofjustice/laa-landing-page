@@ -824,7 +824,7 @@ class UserControllerTest {
         verify(userService).userExistsByEmail("existing@email.com");
         // Should rejectValue on bindingResult for email
         Mockito.verify(bindingResult).rejectValue("email", "error.email",
-                "Email address already exist add a new email address.");
+                "Email address already exists. Please enter a different email address.");
     }
 
     @Test
