@@ -72,7 +72,7 @@ public class PdaControllerTest {
         Model model = new ConcurrentModel();
         String view = controller.getFirms(model, authentication);
         assertThat(view).isEqualTo("firms");
-        assertThat((List)model.getAttribute("firms")).hasSize(1);
+        assertThat((List) model.getAttribute("firms")).hasSize(1);
     }
 
     @Test
@@ -87,7 +87,7 @@ public class PdaControllerTest {
         Model model = new ConcurrentModel();
         String view = controller.getFirms(model, authentication);
         assertThat(view).isEqualTo("firms");
-        assertThat((List)model.getAttribute("firms")).hasSize(1);
+        assertThat((List) model.getAttribute("firms")).hasSize(1);
     }
 
     @Test
@@ -156,7 +156,7 @@ public class PdaControllerTest {
         Model model = new ConcurrentModel();
         String view = controller.getOffices(model, authentication);
         assertThat(view).isEqualTo("offices");
-        assertThat((List)model.getAttribute("offices")).hasSize(2);
+        assertThat((List) model.getAttribute("offices")).hasSize(2);
     }
 
     @Test
@@ -175,7 +175,7 @@ public class PdaControllerTest {
         Model model = new ConcurrentModel();
         String view = controller.getOffices(model, authentication);
         assertThat(view).isEqualTo("offices");
-        assertThat((List)model.getAttribute("offices")).hasSize(1);
+        assertThat((List) model.getAttribute("offices")).hasSize(1);
     }
 
     @Test
