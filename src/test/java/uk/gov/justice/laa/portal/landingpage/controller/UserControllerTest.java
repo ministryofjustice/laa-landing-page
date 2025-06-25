@@ -87,7 +87,8 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(loginService, userService, officeService, eventService, firmService, new MapperConfig().modelMapper());
+        userController = new UserController(loginService, userService, officeService, eventService, firmService,
+                new MapperConfig().modelMapper());
         model = new ExtendedModelMap();
     }
 
@@ -508,7 +509,8 @@ class UserControllerTest {
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model.getAttribute("roles");
+        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model
+                .getAttribute("roles");
 
         assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
@@ -785,6 +787,7 @@ class UserControllerTest {
                 () -> userController.setSelectedAppsEdit(userId, List.of(), session));
 
     }
+
     @Test
     void postUser_whenEmailAlreadyExists_shouldRejectEmailAndReturnToForm() {
         // Arrange
@@ -795,7 +798,6 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(false);
 
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
         Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
@@ -813,13 +815,15 @@ class UserControllerTest {
         session.setAttribute("createUserDetailsModel", sessionModel);
 
         // Act
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
 
         // Assert
         assertThat(view).isEqualTo("redirect:/admin/user/create/services");
         verify(userService).userExistsByEmail("existing@email.com");
         // Should rejectValue on bindingResult for email
-        Mockito.verify(bindingResult).rejectValue("email", "error.email", "Email address already exist add a new email address.");
+        Mockito.verify(bindingResult).rejectValue("email", "error.email",
+                "Email address already exist add a new email address.");
     }
 
     @Test
@@ -832,8 +836,6 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(true);
 
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
         // Simulate user not in session
@@ -843,6 +845,7 @@ class UserControllerTest {
         when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
 
         // Simulate validation errors
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
 
         // Simulate model in session for error handling
@@ -851,6 +854,8 @@ class UserControllerTest {
         sessionModel.addAttribute("selectedFirm", null);
         sessionModel.addAttribute("user", new User());
         session.setAttribute("createUserDetailsModel", sessionModel);
+
+        Model model = new ExtendedModelMap();
 
         // Act
         String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
@@ -872,8 +877,6 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(true);
 
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
         // Simulate user not in session
@@ -882,11 +885,15 @@ class UserControllerTest {
         // Simulate userService returns false for existing email
         when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
 
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+
         // Simulate validation errors
         when(bindingResult.hasErrors()).thenReturn(true);
 
         // No model in session
         session.removeAttribute("createUserDetailsModel");
+
+        Model model = new ExtendedModelMap();
 
         // Act
         String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
@@ -905,8 +912,6 @@ class UserControllerTest {
         userDetailsForm.setFirmId("firmId");
         userDetailsForm.setIsFirmAdmin(true);
 
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
         // Simulate user not in session
@@ -914,6 +919,8 @@ class UserControllerTest {
 
         // Simulate userService returns false for existing email
         when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
         // Simulate no validation errors
         when(bindingResult.hasErrors()).thenReturn(false);
@@ -925,6 +932,8 @@ class UserControllerTest {
         // Simulate model in session for error handling (should be cleared)
         Model sessionModel = new ExtendedModelMap();
         session.setAttribute("createUserDetailsModel", sessionModel);
+
+        Model model = new ExtendedModelMap();
 
         // Act
         String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
@@ -941,6 +950,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("isFirmAdmin")).isEqualTo(true);
         assertThat(session.getAttribute("createUserDetailsModel")).isNull();
     }
+
     @Test
     void displayAllUsers_shouldAddSuccessMessageToModelAndRemoveFromSession() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
