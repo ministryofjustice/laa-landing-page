@@ -12,7 +12,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -37,7 +36,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -51,9 +49,6 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -191,6 +186,9 @@ public class UserController {
             user = new User();
         }
 
+        if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+            result.rejectValue("email", "error.email", "Email address already exist add a new email address.");
+        }
         // Set user details from the form
         user.setGivenName(userDetailsForm.getFirstName());
         user.setSurname(userDetailsForm.getLastName());
@@ -239,8 +237,7 @@ public class UserController {
 
     @PostMapping("/user/create/services")
     public String setSelectedApps(ApplicationsForm applicationsForm, Model model,
-            HttpSession session
-    ) {
+            HttpSession session) {
         if (applicationsForm.getApps() == null || applicationsForm.getApps().isEmpty()) {
             return "redirect:/admin/user/create/check-answers";
         }
@@ -293,13 +290,14 @@ public class UserController {
 
     @GetMapping("/user/create/offices")
     public String offices(OfficesForm officesForm, HttpSession session, Model model) {
-        OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
-        //if user has firms, use officeService.getOfficesByFirms();
+        OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
+                .orElseGet(OfficeData::new);
+        // if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
         List<OfficeModel> officeData = offices.stream()
                 .map(office -> new OfficeModel(office.getName(), office.getAddress(),
-                office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
-                && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
+                        office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
+                                && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
@@ -311,8 +309,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/offices")
-    public String postOffices(@Valid OfficesForm officesForm, BindingResult result, Model model, HttpSession session
-    ) {
+    public String postOffices(@Valid OfficesForm officesForm, BindingResult result, Model model, HttpSession session) {
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting offices: {}", result.getAllErrors());
@@ -330,7 +327,7 @@ public class UserController {
         OfficeData officeData = new OfficeData();
         List<String> selectedOffices = officesForm.getOffices();
         officeData.setSelectedOffices(officesForm.getOffices());
-        //if user has firms, use officeService.getOfficesByFirms();
+        // if user has firms, use officeService.getOfficesByFirms();
         List<Office> offices = officeService.getOffices();
         List<String> selectedDisplayNames = new ArrayList<>();
         for (Office office : offices) {
@@ -352,7 +349,8 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         if (!selectedApps.isEmpty()) {
             List<AppRoleDto> roles = userService.getAllAvailableRolesForApps(selectedApps);
-            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
+            List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class)
+                    .orElseGet(ArrayList::new);
             Map<String, List<AppRoleViewModel>> cyaRoles = new HashMap<>();
             List<String> displayRoles = new ArrayList<>();
             for (AppRoleDto role : roles) {
@@ -370,7 +368,8 @@ public class UserController {
         User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
         model.addAttribute("user", user);
 
-        OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class).orElseGet(OfficeData::new);
+        OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
+                .orElseGet(OfficeData::new);
         model.addAttribute("officeData", officeData);
 
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
@@ -382,13 +381,15 @@ public class UserController {
     }
 
     @PostMapping("/user/create/check-answers")
-    //@PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and hasAuthority('SCOPE_Directory.ReadWrite.All')")
+    // @PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and
+    // hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public RedirectView addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
         Optional<Boolean> isFirmAdminOptional = Optional.ofNullable((Boolean) session.getAttribute("isFirmAdmin"));
-        Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class);
+        Optional<OfficeData> optionalSelectedOfficeData = getObjectFromHttpSession(session, "officeData",
+                OfficeData.class);
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
@@ -398,11 +399,15 @@ public class UserController {
 
             FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
             Boolean isFirmAdmin = isFirmAdminOptional.orElse(Boolean.FALSE);
-            List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices).orElseGet(ArrayList::new);
-            List<String> selectedOfficesDisplay = optionalSelectedOfficeData.map(OfficeData::getSelectedOfficesDisplay).orElseGet(ArrayList::new);
+            List<String> selectedOffices = optionalSelectedOfficeData.map(OfficeData::getSelectedOffices)
+                    .orElseGet(ArrayList::new);
+            List<String> selectedOfficesDisplay = optionalSelectedOfficeData.map(OfficeData::getSelectedOfficesDisplay)
+                    .orElseGet(ArrayList::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm, isFirmAdmin, currentUserDto.getName());
-            eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
+            EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm,
+                    isFirmAdmin, currentUserDto.getName());
+            eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay,
+                    selectedFirm.getName());
 
             String successMessage = "" + user.getGivenName() + " "
                     + user.getSurname()
@@ -440,7 +445,8 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles")
     public String editUserRoles(@PathVariable String id, Model model, HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class).orElseGet(ArrayList::new);
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         List<AppRoleDto> availableRoles = userService.getAppRolesByAppIds(selectedApps);
 
