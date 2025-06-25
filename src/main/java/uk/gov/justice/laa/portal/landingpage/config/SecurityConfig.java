@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .permitAll()
         ).csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/v1/claims/enrich", "/api/v1/claims/enrich/entraid")
         );
         return http.build();
     }

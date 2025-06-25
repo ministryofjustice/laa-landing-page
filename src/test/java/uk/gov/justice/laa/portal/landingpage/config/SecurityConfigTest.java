@@ -27,6 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.http.MediaType;
+
 @WebMvcTest(controllers = SecurityConfigTest.DummyController.class)
 @AutoConfigureMockMvc
 @Import({SecurityConfig.class, SecurityConfigTest.TestConfig.class})
@@ -88,6 +90,22 @@ class SecurityConfigTest {
                 .andExpect(redirectedUrl("/"));
     }
 
+    @Test
+    void claimsEnrichEndpointAllowsRequestsWithoutCsrf() throws Exception {
+        mvc.perform(post("/api/v1/claims/enrich")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void claimsEnrichEntraidEndpointAllowsRequestsWithoutCsrf() throws Exception {
+        mvc.perform(post("/api/v1/claims/enrich/entraid")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().is3xxRedirection());
+    }
+
     @RestController
     static class DummyController {
 
@@ -106,9 +124,14 @@ class SecurityConfigTest {
             return "secured";
         }
 
-        @PostMapping("/secure")
-        public String post() {
-            return "ok";
+        @PostMapping("/api/v1/claims/enrich")
+        public String claimsEnrich() {
+            return "enriched";
+        }
+
+        @PostMapping("/api/v1/claims/enrich/entraid")
+        public String claimsEnrichEntraid() {
+            return "enriched";
         }
     }
 }
