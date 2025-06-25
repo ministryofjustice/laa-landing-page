@@ -1061,7 +1061,7 @@ class UserControllerTest {
         sessionModel.addAttribute("user", new User());
         Mockito.lenient().when(session.getAttribute("createUserDetailsModel")).thenReturn(sessionModel);
 
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
         UserDetailsForm form = new UserDetailsForm();
         String view = userController.postUser(form, result, null, session, model);
 
@@ -1082,7 +1082,7 @@ class UserControllerTest {
         form.setFirmId("firmId");
         form.setIsFirmAdmin(true);
 
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
         String view = userController.postUser(form, result, "true", session, model);
@@ -1125,7 +1125,7 @@ class UserControllerTest {
         ApplicationsForm form = new ApplicationsForm();
         form.setApps(List.of("app1"));
         HttpSession session = new MockHttpSession();
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
 
         String view = userController.setSelectedApps(form, model, session);
 
@@ -1160,7 +1160,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         RolesForm form = new RolesForm();
         form.setRoles(List.of("role1"));
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
 
         String view = userController.setSelectedRoles(form, result, model, session);
 
@@ -1192,7 +1192,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("createUserOfficesModel", sessionModel);
 
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
         OfficesForm form = new OfficesForm();
 
         String view = userController.postOffices(form, result, model, session);
@@ -1211,7 +1211,7 @@ class UserControllerTest {
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of(office.getId().toString()));
         HttpSession session = new MockHttpSession();
-        Model model = new ExtendedModelMap();
+        final Model model = new ExtendedModelMap();
 
         String view = userController.postOffices(form, result, model, session);
 
