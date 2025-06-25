@@ -12,7 +12,7 @@ spec:
     - name: meta-rules
       rules:
         - record: is_alert_hours
-          expr: hour() >= 6 and hour() < 22 # alerts are silenced between 23:00 and 03:59, and allowed from 04:00 to 22:59
+          expr: hour() >= 7 and hour() < 22 # alerts are silenced between 23:00 and 03:59, and allowed from 04:00 to 22:59
     - name: kubernetes-rules
       rules:
         - alert: KubePodNotReady
