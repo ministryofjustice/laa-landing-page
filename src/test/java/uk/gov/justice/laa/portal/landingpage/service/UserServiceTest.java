@@ -112,15 +112,16 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
-                mockOfficeRepository
-        );
+                mockOfficeRepository);
     }
 
     @BeforeAll
     public static void init() {
         // Test data for app registrations in local store
-        LaaApplication laaApp1 = LaaApplication.builder().id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
-        LaaApplication laaApp2 = LaaApplication.builder().id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
+        LaaApplication laaApp1 = LaaApplication.builder()
+                .id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
+        LaaApplication laaApp2 = LaaApplication.builder()
+                .id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
         List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
     }
@@ -130,10 +131,9 @@ class UserServiceTest {
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
     }
 
-
     @Test
     void getManagedAppRegistrations() {
-        //Setup
+        // Setup
         Application app1 = new Application();
         app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
         app1.setDisplayName("App One");
@@ -176,7 +176,8 @@ class UserServiceTest {
         // Arrange
         ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
         when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
+        when(applicationsRequestBuilder.get())
+                .thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
 
         // Act
         List<LaaApplication> result = userService.getManagedAppRegistrations();
@@ -354,12 +355,12 @@ class UserServiceTest {
 
     @Test
     void createUser() {
-        //post user
+        // post user
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         User user = new User();
         when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        //get roles
+        // get roles
         UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
         App app = App.builder()
@@ -372,7 +373,7 @@ class UserServiceTest {
                 .app(app)
                 .build();
         app.setAppRoles(Set.of(appRole));
-        //assign role
+        // assign role
         UUID userId = UUID.randomUUID();
         UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
@@ -393,13 +394,13 @@ class UserServiceTest {
 
     @Test
     void createUserWithPopulatedDisplayName() {
-        //post user
+        // post user
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         User user = new User();
         user.setDisplayName("Test User");
         when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        //get roles
+        // get roles
         UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
         App app = App.builder()
@@ -412,7 +413,7 @@ class UserServiceTest {
                 .app(app)
                 .build();
         app.setAppRoles(Set.of(appRole));
-        //assign role
+        // assign role
         UUID userId = UUID.randomUUID();
         UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
@@ -654,7 +655,8 @@ class UserServiceTest {
     void testFindUserTypeByUsername() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
         when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -670,8 +672,10 @@ class UserServiceTest {
     void testFindUserTypeByUsernameMultiProfile() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
-        UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
         when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -699,7 +703,8 @@ class UserServiceTest {
     void testGetUserAuthorities() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
         when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -753,8 +758,10 @@ class UserServiceTest {
         void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
             // Arrange
             Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+            when(mockEntraUserRepository
+                    .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                            any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
 
             // Act
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
@@ -769,8 +776,10 @@ class UserServiceTest {
             // Arrange
             EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
             Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
-            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+            when(mockEntraUserRepository
+                    .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                            any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
 
             // Act
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
@@ -891,7 +900,8 @@ class UserServiceTest {
         when(mockAppRepository.findAllById(appIds)).thenReturn(List.of(app1, app2));
 
         // When
-        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
+        List<AppRoleDto> returnedAppRoles = userService
+                .getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
 
         // Then
         assertThat(returnedAppRoles.size()).isEqualTo(2);
@@ -958,7 +968,8 @@ class UserServiceTest {
         // Arrange
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userId = UUID.randomUUID();
-        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(UserProfile.builder().defaultProfile(false).build())).build();
+        EntraUser user = EntraUser.builder().id(userId)
+                .userProfiles(Set.of(UserProfile.builder().defaultProfile(false).build())).build();
 
         // Act (call private method via reflection)
         try {
@@ -1022,7 +1033,8 @@ class UserServiceTest {
         assertThat(userService.userExistsByEmail(email)).isFalse();
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("No user found in database with email");
+        assertThat(warningLogs.getFirst().getFormattedMessage())
+                .contains("No user found in Entra with matching email. Catching error and moving on");
     }
 
     @Nested

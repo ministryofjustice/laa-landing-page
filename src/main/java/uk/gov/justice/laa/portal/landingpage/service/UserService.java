@@ -378,23 +378,15 @@ public class UserService {
 
         // Check if the user exists in the local repository
         Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
-        if (user.isPresent()) {
-            logger.info("User found in database with email: {}", email);
-        } else {
-            logger.warn("No user found in database with email: {}", email);
-        }
 
-        // Check if the user exists in Entra 
+        // Check if the user exists in Entra
         User graphUser = null;
         try {
             graphUser = graphClient.users()
                     .byUserId(email)
                     .get();
-            if (graphUser != null) {
-                logger.info("User found in Entra with email: {}", email);
-            }
         } catch (Exception ex) {
-            logger.warn("No user found in Entra with email: {}. Exception: {}", email, ex.getMessage());
+            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
         }
         return user.isPresent() || graphUser != null;
     }
