@@ -403,4 +403,14 @@ public class UserService {
         }
         return appRoles;
     }
+
+    public Optional<AppDto> getAppByAppId(String appId) {
+        Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            return Optional.of(mapper.map(app, AppDto.class));
+        } else {
+            return Optional.empty();
+        }
+    }
 }

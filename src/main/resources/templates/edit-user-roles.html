@@ -52,7 +52,7 @@
                                 th:checked="${userAssignedRoles.contains(role.id)}" th:value="${role.id}"
                                 type="checkbox">
                             <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
-                                <span th:text="${role.app.name}"></span> - <span th:text="${role.name}"></span>
+                                <span th:text="${role.name}"></span>
                             </label>
                         </div>
                     </div>
