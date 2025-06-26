@@ -72,9 +72,9 @@
                         Please ensure the email address you provide is accurate.
                     </p>
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
-                        <span th:each="err : ${#fields.errors('email')}" th:text="${err}"></span>
+                        <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
-                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{email}"
+                    <input class="govuk-input govuk-!-width-one-third" name="email"  th:value="*{email}"
                         id="email" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
                 <div class="govuk-form-group"
@@ -83,7 +83,7 @@
                         First Name
                     </label>
                     <div th:if="${#fields.hasErrors('firstName')}" class="govuk-error-message">
-                        <span th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></span>
+                        <p th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
                         th:value="*{firstName}" id="firstName"
@@ -95,7 +95,7 @@
                         Last Name
                     </label>
                     <div th:if="${#fields.hasErrors('lastName')}" class="govuk-error-message">
-                        <span th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></span>
+                        <p th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
                         th:value="*{lastName}" id="lastName"
