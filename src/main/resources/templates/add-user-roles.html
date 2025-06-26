@@ -34,7 +34,8 @@
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                         <h1 class="govuk-fieldset__heading">
                             Which roles will <span th:text="${user.givenName}"></span> <span
-                                th:text="${user.surname}"></span> for these services?
+                                th:text="${user.surname}"></span> be granted for <span
+                                th:text="${createUserRolesCurrentApp.name}"></span> ?
                         </h1>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">
@@ -49,7 +50,7 @@
                                 <input class="govuk-checkboxes__input" id="roles" name="roles"
                                     th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
                                 <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
-                                    <span th:text="${role.appName}"></span> - <span th:text="${role.name}"></span>
+                                    <span th:text="${role.name}"></span>
                                 </label>
                             </div>
                         </div>
