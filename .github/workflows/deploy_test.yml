@@ -99,7 +99,7 @@ jobs:
       - name: Generate Monitoring Deployment Files
         run: |
           rm deployments/* 2> /dev/null || true
-          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER' > deployments/prometheus.yml
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER,$ALERT_ALWAYS_ON_ENV' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
         env:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
@@ -107,6 +107,9 @@ jobs:
           ENV_NAME: ${{ vars.ENV_NAME }}
           # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
           RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
+          # Sets the variable to 'prd' only if the environment is prd, otherwise it sets it to an empty string. 
+          # This is so that the RDS alerts are always on in prd env.
+          ALERT_ALWAYS_ON_ENV: ${{ vars.ENV_NAME == 'prd' && 'prd' || '' }}
       
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform
