@@ -28,7 +28,7 @@ public class EmailService {
         try {
             log.info("EmailService::sendMail::templateID: {}", emailTemplate);
             notificationClient.sendEmail(emailTemplate, targetEmail, parameters, reference);
-        } catch (NotificationClientException e) {
+        } catch (Exception e) {
             log.error("Error sending mail: {}", e.getMessage());
         }
     }
