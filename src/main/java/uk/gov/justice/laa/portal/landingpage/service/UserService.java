@@ -395,6 +395,29 @@ public class UserService {
         return user.isPresent() || graphUser != null;
     }
 
+    public List<AppRoleDto> getAppRolesByAppId(String appId) {
+        UUID appUuid = UUID.fromString(appId);
+        Optional<App> optionalApp = appRepository.findById(appUuid);
+        List<AppRoleDto> appRoles = new ArrayList<>();
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            appRoles = app.getAppRoles().stream()
+                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .toList();
+        }
+        return appRoles;
+    }
+
+    public Optional<AppDto> getAppByAppId(String appId) {
+        Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            return Optional.of(mapper.map(app, AppDto.class));
+        } else {
+            return Optional.empty();
+        }
+    }
+
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
         Set<AppDto> userApps = getUserAppsByUserId(id);
 

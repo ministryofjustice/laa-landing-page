@@ -938,6 +938,56 @@ class UserServiceTest {
     }
 
     @Test
+    public void testGetAppRolesByAppIdReturnsRolesWhenAppIsPresent() {
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder()
+                .name("Test App Role")
+                .id(appRoleId)
+                .build();
+        App returnedApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .appRoles(Set.of(appRole))
+                .build();
+        when(mockAppRepository.findById(appId)).thenReturn(Optional.of(returnedApp));
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppId(appId.toString());
+        assertThat(returnedAppRoles.size()).isEqualTo(1);
+        AppRoleDto returnedAppRole = returnedAppRoles.getFirst();
+        assertThat(returnedAppRole.getId()).isEqualTo(appRoleId.toString());
+        assertThat(returnedAppRole.getName()).isEqualTo("Test App Role");
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdReturnsEmptyListWhenAppNotFound() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppId(UUID.randomUUID().toString());
+        assertThat(returnedAppRoles.size()).isEqualTo(0);
+    }
+
+    @Test
+    public void testGetAppByAppIdReturnsAppWhenAppIsPresent() {
+        UUID appId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        when(mockAppRepository.findById(appId)).thenReturn(Optional.of(app));
+        Optional<AppDto> returnedApp = userService.getAppByAppId(appId.toString());
+        assertThat(returnedApp.isPresent()).isTrue();
+        AppDto returnedAppDto = returnedApp.get();
+        assertThat(returnedAppDto.getId()).isEqualTo(appId.toString());
+        assertThat(returnedAppDto.getName()).isEqualTo("Test App");
+    }
+
+    @Test
+    public void testGetAppByAppIdReturnsEmptyWhenAppIsNotPresent() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        Optional<AppDto> returnedApp = userService.getAppByAppId(UUID.randomUUID().toString());
+        assertThat(returnedApp.isEmpty()).isTrue();
+    }
+
+    @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist() {
         // Arrange
         UUID userId = UUID.randomUUID();
