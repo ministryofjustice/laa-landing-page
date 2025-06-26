@@ -74,7 +74,7 @@
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
-                    <input class="govuk-input govuk-!-width-one-third" name="email" type="email" th:value="*{email}"
+                    <input class="govuk-input govuk-!-width-one-third" name="email"  th:value="*{email}"
                         id="email" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
                 <div class="govuk-form-group"
