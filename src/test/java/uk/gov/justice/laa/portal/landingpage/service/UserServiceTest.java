@@ -3,12 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
@@ -22,9 +20,7 @@ import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -36,7 +32,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -48,7 +44,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -82,6 +77,8 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
     @Mock
+    private LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    @Mock
     private GraphServiceClient mockGraphServiceClient;
     @Mock
     private EntraUserRepository mockEntraUserRepository;
@@ -111,77 +108,9 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
-                mockOfficeRepository
+                mockOfficeRepository,
+                laaApplicationsList
         );
-    }
-
-    @BeforeAll
-    public static void init() {
-        // Test data for app registrations in local store
-        LaaApplication laaApp1 = LaaApplication.builder().id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
-        LaaApplication laaApp2 = LaaApplication.builder().id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
-        List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2);
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
-    }
-
-    @AfterAll
-    public static void tearDown() {
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
-    }
-
-
-    @Test
-    void getManagedAppRegistrations() {
-        //Setup
-        Application app1 = new Application();
-        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
-        app1.setDisplayName("App One");
-
-        Application app2 = new Application();
-        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
-        app2.setDisplayName("App Two");
-
-        // Mocked response from Graph API
-        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenReturn(mockApplicationCollectionResponse);
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getTitle()).isEqualTo("App One");
-        assertThat(result.get(1).getTitle()).isEqualTo("App Two");
-    }
-
-    @Test
-    void getManagedAppRegistrationsReturnNull() {
-        // Arrange
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenReturn(null);
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getManagedAppRegistrationsReturnEmpty() {
-        // Arrange
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).isEmpty();
     }
 
     @Test
