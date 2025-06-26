@@ -67,7 +67,7 @@
                                 <div class="govuk-form-group">
                                     <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
                                         Search users
-                                        <div id="offices-hint" class="govuk-hint">
+                                        <div id="offices-hint" class="govuk-hint">          
                                             You can search by name or email
                                         </div>
                                     </label>
@@ -84,7 +84,7 @@
                 </div>
 
                 <br>
-                <form method="post" th:action="@{/admin/users/disable}">
+                <form>
                     <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
