@@ -15,7 +15,7 @@ public class UserDetailsForm {
     private String lastName;
 
     @NotEmpty(message = "Enter an email address")
-    @Email
+    @Email(message = "Enter an email address in the correct format")
     private String email;
 
     @NotNull(message = "A firm is required")

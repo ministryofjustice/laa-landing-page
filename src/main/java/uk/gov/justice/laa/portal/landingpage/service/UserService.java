@@ -126,7 +126,8 @@ public class UserService {
 
     private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
         Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                // Set to default profile for now, will need to receive a user profile from front end at some point.
+                // Set to default profile for now, will need to receive a user profile from
+                // front end at some point.
                 .filter(UserProfile::isDefaultProfile)
                 .findFirst();
         if (userProfile.isPresent()) {
@@ -174,8 +175,9 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
-        return getPageOfUsers(() -> entraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
+        return getPageOfUsers(() -> entraUserRepository
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                        searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public List<EntraUserDto> getSavedUsers() {
@@ -188,7 +190,8 @@ public class UserService {
         EntraUser user = entraUserRepository.findByEntraId(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra id: {}", entraId);
-                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                    return new RuntimeException(
+                            String.format("User not found for the given user entra id: %s", entraId));
                 });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
@@ -252,7 +255,8 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
+            boolean isFirmAdmin, String createdBy) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
@@ -269,7 +273,7 @@ public class UserService {
         invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
         Invitation result = graphClient.invitations().post(invitation);
 
-        //Send invitation email
+        // Send invitation email
         assert result != null;
         notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
                 result.getInviteRedeemUrl());
@@ -277,7 +281,8 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin, String createdBy) {
+    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
+            boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         entraUser.setEntraId(newUser.getMail());
@@ -368,6 +373,26 @@ public class UserService {
                 .flatMap(app -> app.getAppRoles().stream())
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .toList();
+    }
+
+    public boolean userExistsByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        // Check if the user exists in the local repository
+        Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
+
+        // Check if the user exists in Entra
+        User graphUser = null;
+        try {
+            graphUser = graphClient.users()
+                    .byUserId(email)
+                    .get();
+        } catch (Exception ex) {
+            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
+        }
+        return user.isPresent() || graphUser != null;
     }
 
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
