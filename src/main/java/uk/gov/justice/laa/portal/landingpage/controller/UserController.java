@@ -187,7 +187,7 @@ public class UserController {
         }
 
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
-            result.rejectValue("email", "error.email", "Email address already exists. Please enter a different email address.");
+            result.rejectValue("email", "error.email", "Email address already exists");
         }
         // Set user details from the form
         user.setGivenName(userDetailsForm.getFirstName());
