@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LaaApplication implements Comparable<LaaApplication>{
+public class LaaApplication implements Comparable<LaaApplication> {
     private String name;
     private String oidGroupName;
     private String title;
