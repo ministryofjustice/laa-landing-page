@@ -19,7 +19,7 @@ public class LaaApplication implements Comparable<LaaApplication> {
     private String title;
     private String description;
     private String url;
-    private short ordinal;
+    private int ordinal;
 
     @Override
     public int compareTo(@NotNull LaaApplication o) {
