@@ -86,8 +86,6 @@ class UserServiceTest {
     @Mock
     private NotificationService mockNotificationService;
     @Mock
-    private ApplicationCollectionResponse mockApplicationCollectionResponse;
-    @Mock
     private AppRepository mockAppRepository;
     @Mock
     private AppRoleRepository mockAppRoleRepository;
@@ -650,15 +648,15 @@ class UserServiceTest {
 
 
     @Test
-    void testFindUserByUserEntraId() {
+    void testFindUserByUserEntraUserId() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().entraId("entra-id").firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        EntraUser entraUser = EntraUser.builder().entraUserId("entra-user-id").firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
-        EntraUserDto result = userService.findUserByUserEntraId("entra-id");
+        EntraUserDto result = userService.findUserByUserEntraId("entra-user-id");
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getEntraId()).isEqualTo("entra-id");
+        assertThat(result.getEntraUserId()).isEqualTo("entra-user-id");
         assertThat(result.getFullName()).isEqualTo("Test1");
 
     }

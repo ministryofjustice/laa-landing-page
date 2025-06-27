@@ -204,9 +204,9 @@ public class UserService {
     }
 
     public EntraUserDto findUserByUserEntraId(String entraId) {
-        EntraUser entraUser = entraUserRepository.findByEntraId(entraId)
+        EntraUser entraUser = entraUserRepository.findByEntraUserId(entraId)
                 .orElseThrow(() -> {
-                    logger.error("User not found for the given user entra id: {}", entraId);
+                    logger.error("User not found for the given user entra user id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
                 });
 
