@@ -36,24 +36,25 @@ public class BaseRepositoryTest {
     }
 
     protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName) {
-        return EntraUser.builder().email(email).entraId(entraId)
+        return EntraUser.builder().email(email).entraUserId(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
-    protected Firm buildFirm(String name) {
+    protected Firm buildFirm(String name, String firmCode) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .type(FirmType.INDIVIDUAL).build();
+                .code(firmCode).type(FirmType.INDIVIDUAL).build();
     }
 
-    protected Office buildOffice(Firm firm, String name, String address, String phone) {
-        return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
+    protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
+        return Office.builder().name(name).code(officeCode).address(address).phone(phone).firm(firm).build();
     }
 
-    protected App buildLaaApp(String name) {
-        return App.builder().name(name).appRoles(HashSet.newHashSet(1)).build();
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {
+        return App.builder().name(name).appRoles(HashSet.newHashSet(1))
+                .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
