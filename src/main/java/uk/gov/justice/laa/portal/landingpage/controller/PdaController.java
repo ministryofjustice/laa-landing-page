@@ -53,7 +53,7 @@ public class PdaController {
         return "firms";
     }
 
-    @GetMapping("/firms/{id}")
+    @GetMapping("/firm/{id}")
     public String getFirm(@PathVariable String id, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         if (!userService.isInternal(entraUser)) {
@@ -81,7 +81,7 @@ public class PdaController {
         return "offices";
     }
 
-    @GetMapping("/offices/{id}")
+    @GetMapping("/office/{id}")
     public String getOffice(@PathVariable String id, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         Office office = officeService.getOffice(UUID.fromString(id));

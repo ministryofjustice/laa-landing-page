@@ -7,13 +7,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -81,7 +81,10 @@ class OfficeServiceTest {
     void getUserOffices() {
         UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(up1)).build();
-        when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(new ArrayList<>());
-        assertThat(officeService.getUserOffices(entraUser)).isNotNull();
+        Office office1 = Office.builder().name("Firm").build();
+        when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office1));
+        List<OfficeDto> offices = officeService.getUserOffices(entraUser);
+        assertThat(offices).hasSize(1);
+        assertThat(offices.getFirst().getName()).isEqualTo("Firm");
     }
 }
