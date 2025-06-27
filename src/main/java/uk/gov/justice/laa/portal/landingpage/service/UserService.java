@@ -418,4 +418,10 @@ public class UserService {
             return Optional.empty();
         }
     }
+
+    public boolean isInternal(EntraUser entraUser) {
+        List<UserType> userTypes = entraUser.getUserProfiles().stream()
+                .map(UserProfile::getUserType).toList();
+        return userTypes.contains(UserType.INTERNAL);
+    }
 }

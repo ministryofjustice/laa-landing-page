@@ -1,16 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +29,11 @@ class OfficeServiceTest {
     private OfficeService officeService;
     @Mock
     private OfficeRepository officeRepository;
+
+    @BeforeEach
+    void setUp() {
+        officeService = new OfficeService(officeRepository, new MapperConfig().modelMapper());
+    }
 
     @Test
     void getOffices() {
@@ -64,5 +75,13 @@ class OfficeServiceTest {
         Office office = officeService.getOffice(UUID.randomUUID());
         // Then
         assertThat(office).isNull();
+    }
+
+    @Test
+    void getUserOffices() {
+        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(up1)).build();
+        when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(new ArrayList<>());
+        assertThat(officeService.getUserOffices(entraUser)).isNotNull();
     }
 }

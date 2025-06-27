@@ -1137,4 +1137,18 @@ class UserServiceTest {
         // Then
         assertThat(entraUser).isNull();
     }
+
+    @Test
+    void isInternal_Ok() {
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.INTERNAL).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isInternal(entraUser)).isTrue();
+    }
+
+    @Test
+    void isInternal_Failed() {
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isInternal(entraUser)).isFalse();
+    }
 }

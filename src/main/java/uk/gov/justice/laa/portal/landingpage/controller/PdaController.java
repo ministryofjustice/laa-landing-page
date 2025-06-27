@@ -42,12 +42,12 @@ public class PdaController {
 
     @GetMapping("/firms")
     public String getFirms(Model model, Authentication authentication) {
-        EntraUser entraUser = getCurrentEntraUser(authentication);
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<FirmDto> list;
-        if (isInternal(entraUser)) {
+        if (userService.isInternal(entraUser)) {
             list = firmService.getFirms();
         } else {
-            list = getUserFirms(entraUser);
+            list = firmService.getUserFirms(entraUser);
         }
         model.addAttribute("firms", list);
         return "firms";
@@ -55,9 +55,9 @@ public class PdaController {
 
     @GetMapping("/firms/{id}")
     public String getFirm(@PathVariable String id, Model model, Authentication authentication) {
-        EntraUser entraUser = getCurrentEntraUser(authentication);
-        if (!isInternal(entraUser)) {
-            boolean isMyFirm = getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        if (!userService.isInternal(entraUser)) {
+            boolean isMyFirm = firmService.getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
             if (!isMyFirm) {
                 log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraId());
                 return "redirect:/pda/firms";
@@ -70,12 +70,12 @@ public class PdaController {
 
     @GetMapping("/offices")
     public String getOffices(Model model, Authentication authentication) {
-        EntraUser entraUser = getCurrentEntraUser(authentication);
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<OfficeDto> list;
-        if (isInternal(entraUser)) {
+        if (userService.isInternal(entraUser)) {
             list = officeService.getOffices().stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
         } else {
-            list = getUserOffices(entraUser);
+            list = officeService.getUserOffices(entraUser);
         }
         model.addAttribute("offices", list);
         return "offices";
@@ -83,10 +83,10 @@ public class PdaController {
 
     @GetMapping("/offices/{id}")
     public String getOffice(@PathVariable String id, Model model, Authentication authentication) {
-        EntraUser entraUser = getCurrentEntraUser(authentication);
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         Office office = officeService.getOffice(UUID.fromString(id));
         UUID myFirmId = office.getFirm().getId();
-        if (!isInternal(entraUser)) {
+        if (!userService.isInternal(entraUser)) {
             boolean isMyOffice = entraUser.getUserProfiles()
                     .stream().anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));
             if (!isMyOffice) {
@@ -96,31 +96,6 @@ public class PdaController {
         }
         model.addAttribute("office", mapper.map(office, OfficeDto.class));
         return "office";
-    }
-
-    protected EntraUser getCurrentEntraUser(Authentication authentication) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
-        assert entraUser != null;
-        return entraUser;
-    }
-
-    protected List<OfficeDto> getUserOffices(EntraUser entraUser) {
-        List<UUID> firms = entraUser.getUserProfiles().stream()
-                .map(userProfile -> userProfile.getFirm().getId()).toList();
-        return officeService.getOfficesByFirms(firms)
-                .stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
-    }
-
-    protected List<FirmDto> getUserFirms(EntraUser entraUser) {
-        return entraUser.getUserProfiles().stream()
-                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
-    }
-
-    protected boolean isInternal(EntraUser entraUser) {
-        List<UserType> userTypes = entraUser.getUserProfiles().stream()
-                .map(UserProfile::getUserType).toList();
-        return userTypes.contains(UserType.INTERNAL);
     }
 
 }
