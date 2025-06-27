@@ -52,9 +52,9 @@ public class BaseRepositoryTest {
         return Office.builder().name(name).code(officeCode).address(address).phone(phone).firm(firm).build();
     }
 
-    protected App buildLaaApp(String name, String entraAppId, String entraAppRegId) {
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {
         return App.builder().name(name).appRoles(HashSet.newHashSet(1))
-                .entraAppId(entraAppId).entraAppRegistrationId(entraAppRegId).build();
+                .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {

@@ -40,7 +40,9 @@ public class BaseEntityTest {
     }
 
     protected App buildTestLaaApp() {
-        return App.builder().name("Test App").entraAppRegistrationId("Entra App Reg Id").entraAppId("Entra App Id").build();
+        return App.builder().name("Test App").entraAppId("Entra App Id")
+                .securityGroupOid("SecGroupId").securityGroupName("SecGroup Name")
+                .build();
     }
 
     protected AppRole buildTestLaaAppRole() {
