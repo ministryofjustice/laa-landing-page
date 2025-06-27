@@ -21,7 +21,8 @@ public class AppRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaApp() {
-        App app = buildLaaApp("App1");
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+                "Security Group Name");
         repository.saveAndFlush(app);
 
         App result = repository.findById(app.getId()).orElseThrow();
@@ -29,6 +30,8 @@ public class AppRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(app.getId());
         Assertions.assertThat(result.getName()).isEqualTo("App1");
-
+        Assertions.assertThat(result.getEntraAppId()).isEqualTo("Entra App 1");
+        Assertions.assertThat(result.getSecurityGroupOid()).isEqualTo("Security Group Id");
+        Assertions.assertThat(result.getSecurityGroupName()).isEqualTo("Security Group Name");
     }
 }

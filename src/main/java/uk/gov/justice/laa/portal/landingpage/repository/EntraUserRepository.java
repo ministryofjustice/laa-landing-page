@@ -13,8 +13,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
-    @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.entraId = ?1")
-    Optional<EntraUser> findByEntraId(String entraId);
+    @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.entraUserId = ?1")
+    Optional<EntraUser> findByEntraUserId(String entraId);
 
     Page<EntraUser> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
             String firstName, String lastName, String email, Pageable pageable);
