@@ -371,11 +371,11 @@ public class UserService {
                 .toList();
     }
 
-<<<<<<< STB-1749-office-firm
     public EntraUser getUserByEntraId(UUID userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findByEntraId(userId.toString());
         return optionalUser.orElse(null);
-=======
+    }
+
     public boolean userExistsByEmail(String email) {
         if (email == null || email.isBlank()) {
             return false;
@@ -417,6 +417,5 @@ public class UserService {
         } else {
             return Optional.empty();
         }
->>>>>>> main
     }
 }
