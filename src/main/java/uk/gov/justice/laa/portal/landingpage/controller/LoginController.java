@@ -73,12 +73,9 @@ public class LoginController {
 
             if (userSessionData != null) {
                 model.addAttribute("name", userSessionData.getName());
-                model.addAttribute("appRoleAssignments", userSessionData.getAppRoleAssignments());
-                model.addAttribute("appRole", userSessionData.getUserAppRoles());
                 model.addAttribute("user", userSessionData.getUser());
-                model.addAttribute("lastLogin", userSessionData.getLastLogin());
+                model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
-                model.addAttribute("userAppsAndRoles", userSessionData.getUserAppsAndRoles());
                 boolean isAdmin = userSessionData.getUserTypes().stream().anyMatch(UserType::isAdmin);
                 model.addAttribute("isAdminUser", isAdmin);
             } else {

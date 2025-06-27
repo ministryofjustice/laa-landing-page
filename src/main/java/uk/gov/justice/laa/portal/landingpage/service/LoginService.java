@@ -1,12 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -42,15 +39,13 @@ public class LoginService {
     private String AZURE_TENANT_ID;
     // CHECKSTYLE.ON: AbbreviationAsWordInName|MemberName
 
-    private final GraphApiService graphApiService;
     private final UserService userService;
 
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
 
-    public LoginService(GraphApiService graphApiService, UserService userService) {
-        this.graphApiService = graphApiService;
+    public LoginService(UserService userService) {
         this.userService = userService;
 
     }
@@ -100,27 +95,13 @@ public class LoginService {
         String tokenValue = accessToken.getTokenValue();
         session.setAttribute("accessToken", tokenValue);
 
-        List<AppRoleAssignment> appRoleAssignments =
-                graphApiService.getAppRoleAssignments(tokenValue);
-        List<AppRole> userAppRoleAssignments = graphApiService.getUserAssignedApps(tokenValue);
+        EntraUserDto entraUser = userService.findUserByUserEntraId(principal.getAttribute("oid"));
 
-        User user = graphApiService.getUserProfile(tokenValue);
+        List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraUserId());
 
-        List<UserType> userTypes = userService.findUserTypeByUserEntraId(user.getId());
+        Set<LaaApplication> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
 
-        LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
-        String formattedLastLogin = "N/A";
-
-        if (lastLogin != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-            formattedLastLogin = lastLogin.format(formatter);
-        }
-
-        List<LaaApplication> managedAppRegistrations = userService.getManagedAppRegistrations();
-        List<LaaApplication> userAppsAndRoles = graphApiService.getUserAppsAndRoles(tokenValue);
-
-        return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles, userTypes);
+        return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);
     }
 
     /**
