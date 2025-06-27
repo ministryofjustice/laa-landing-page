@@ -68,6 +68,40 @@ public class OfficeTest extends BaseEntityTest {
     }
 
     @Test
+    public void testOfficeNullCode() {
+        Office office = buildTestOffice();
+        update(office, off -> off.setCode(null));
+
+        Set<ConstraintViolation<Office>> violations = validator.validate(office);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testOfficeEmptyCode() {
+        Office office = buildTestOffice();
+        update(office, off -> off.setCode(""));
+
+        Set<ConstraintViolation<Office>> violations = validator.validate(office);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testOfficeCodeTooLong() {
+        Office office = buildTestOffice();
+        update(office, off -> off.setCode("TestOfficeNameThatIsTooLong".repeat(25)));
+
+        Set<ConstraintViolation<Office>> violations = validator.validate(office);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office code must be less than 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("code");
+
+    }
+
+    @Test
     public void testOfficeNullAddress() {
         Office office = buildTestOffice();
         update(office, off -> off.setAddress(null));

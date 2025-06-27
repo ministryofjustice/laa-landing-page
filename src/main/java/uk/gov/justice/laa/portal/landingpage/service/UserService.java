@@ -123,7 +123,7 @@ public class UserService {
         Optional<UserProfile> userProfile = user.getUserProfiles().stream()
                 // Set to default profile for now, will need to receive a user profile from
                 // front end at some point.
-                .filter(UserProfile::isDefaultProfile)
+                .filter(UserProfile::isActiveProfile)
                 .findFirst();
         if (userProfile.isPresent()) {
             userProfile.get().setAppRoles(new HashSet<>(roles));
@@ -194,7 +194,7 @@ public class UserService {
     }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraId(entraId)
+        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra id: {}", entraId);
                     return new RuntimeException(
@@ -281,14 +281,14 @@ public class UserService {
             boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraId(newUser.getMail());
+        entraUser.setEntraUserId(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
         UserProfile userProfile = UserProfile.builder()
-                .defaultProfile(true)
+                .activeProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
                 .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
@@ -331,7 +331,7 @@ public class UserService {
      * @return the list of user types associated with entra user
      */
     public List<String> getUserAuthorities(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraId(entraId)
+        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given entra id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));

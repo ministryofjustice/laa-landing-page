@@ -82,7 +82,7 @@ public class DemoDataPopulator {
         String email = getEmailFromUserPrinciple(userPrincipal);
 
         return EntraUser.builder().email(email)
-                .entraId(entraId)
+                .entraUserId(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
@@ -95,7 +95,7 @@ public class DemoDataPopulator {
         String lastName = getSurname(user);
 
         return EntraUser.builder().email(email)
-                .entraId(user.getId())
+                .entraUserId(user.getId())
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
@@ -154,7 +154,7 @@ public class DemoDataPopulator {
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
-        return UserProfile.builder().entraUser(entraUser).defaultProfile(true)
+        return UserProfile.builder().entraUser(entraUser).activeProfile(true)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
@@ -244,7 +244,7 @@ public class DemoDataPopulator {
                             EntraUser user = buildEntraUser(mail, entraId);
                             entraUsers.add(user);
                             if (nonAdminUserPrincipals.contains(userPrincipal)) {
-                                nonAdminUserIds.add(user.getEntraId());
+                                nonAdminUserIds.add(user.getEntraUserId());
                             }
                         }
                     } catch (Exception e) {
@@ -277,7 +277,7 @@ public class DemoDataPopulator {
 
             for (EntraUser entraUser : entraUsers) {
                 UserProfile userProfile = buildLaaUserProfile(entraUser,
-                        nonAdminUserIds.contains(entraUser.getEntraId()) ? UserType.EXTERNAL_SINGLE_FIRM : UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+                        nonAdminUserIds.contains(entraUser.getEntraUserId()) ? UserType.EXTERNAL_SINGLE_FIRM : UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
                 userProfile.getAppRoles().addAll(appRoles);
                 userProfile.setFirm(firm1);
                 userProfiles.add(userProfile);

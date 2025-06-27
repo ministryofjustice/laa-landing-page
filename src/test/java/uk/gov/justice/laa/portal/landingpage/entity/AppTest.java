@@ -63,4 +63,72 @@ public class AppTest extends BaseEntityTest {
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
 
     }
+
+    @Test
+    public void testLaaAppNullEntraAppId() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setEntraAppId(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testLaaAppEmptyEntraAppId() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setEntraAppId(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testLaaAppEntraAppIdTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setEntraAppId("TestLaaAppEntraAppIDThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra App ID must be less than 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraAppId");
+
+    }
+
+    @Test
+    public void testLaaAppNullEntraAppRegistrationId() {
+        App app = buildTestLaaApp();
+        //  update(app, f -> f.setEntraAppRegistrationId(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testLaaAppEmptyEntraAppRegistrationId() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setEntraAppRegistrationId(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testLaaAppEntraAppRegistrationIdTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setEntraAppRegistrationId("TestLaaAppNameThatIsTooLong".repeat(25)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra App Registration ID must be less than 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraAppRegistrationId");
+
+    }
 }

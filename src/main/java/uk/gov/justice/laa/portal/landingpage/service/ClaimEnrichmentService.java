@@ -17,8 +17,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -38,7 +36,7 @@ public class ClaimEnrichmentService {
 
         try {
             // 1. Get the EntraUser from database
-            EntraUser entraUser = entraUserRepository.findByEntraId(request.getData().getUser().getId())
+            EntraUser entraUser = entraUserRepository.findByEntraUserId(request.getData().getUser().getId())
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
             // 2. Get app from DB using the app name from request
@@ -107,7 +105,7 @@ public class ClaimEnrichmentService {
                     .success(true)
                     .message("Access granted to " + app.getName())
                     .appName(app.getName())
-                    .userId(entraUser.getEntraId())
+                    .userId(entraUser.getEntraUserId())
                     .email(entraUser.getEmail())
                     .roles(userRoles)
                     .officeIds(officeIds)

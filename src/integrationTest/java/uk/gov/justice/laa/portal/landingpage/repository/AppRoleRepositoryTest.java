@@ -29,7 +29,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaAppRole() {
-        App app = buildLaaApp("App1");
+        App app = buildLaaApp("App1", "Entra App 1", "Entra App Reg 1");
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
