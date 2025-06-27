@@ -59,7 +59,7 @@ public class PdaController {
         if (!userService.isInternal(entraUser)) {
             boolean isMyFirm = firmService.getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
             if (!isMyFirm) {
-                log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraId());
+                log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraUserId());
                 return "redirect:/pda/firms";
             }
         }
@@ -90,7 +90,7 @@ public class PdaController {
             boolean isMyOffice = entraUser.getUserProfiles()
                     .stream().anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));
             if (!isMyOffice) {
-                log.debug("Access denied for office id: {}, user: {}", id, entraUser.getEntraId());
+                log.debug("Access denied for office id: {}, user: {}", id, entraUser.getEntraUserId());
                 return "redirect:/pda/offices";
             }
         }
