@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,16 +41,17 @@ import java.util.Set;
         constraints = "(firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')")
 public class UserProfile extends AuditableEntity {
 
-    @Column(name = "default_profile", nullable = false)
-    private boolean defaultProfile;
+    @Column(name = "active_profile", nullable = false)
+    private boolean activeProfile;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false, length = 255)
     @NotNull(message = "User type must be provided")
     private UserType userType;
 
-    @Column(name = "cwa_user_id", nullable = true, length = 255)
-    private UserType cwaUserId;
+    @Column(name = "legacy_user_id", nullable = true, length = 100)
+    @Size(max = 100, message = "Legacy user ID must be less than 100 characters")
+    private String legacyUserId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_user_profile_user_id"))

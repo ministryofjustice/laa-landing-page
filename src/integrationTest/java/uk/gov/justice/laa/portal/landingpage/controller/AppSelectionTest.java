@@ -105,7 +105,8 @@ public class AppSelectionTest extends BaseIntegrationTest {
     }
 
     private EntraUser buildTestUser() {
-        App app = buildLaaApp("Test App");
+        App app = buildLaaApp("Test App", "Entra App Id",
+                "Security Group Id", "Security Group Name");
         app = appRepository.saveAndFlush(app);
         AppRole appRole = buildLaaAppRole(app, "Test App Role");
         appRole = appRoleRepository.saveAndFlush(appRole);

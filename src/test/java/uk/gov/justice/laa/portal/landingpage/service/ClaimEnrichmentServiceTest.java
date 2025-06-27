@@ -125,7 +125,7 @@ class ClaimEnrichmentServiceTest {
         // Setup user with proper app registration and email
         entraUser = EntraUser.builder()
                 .id(USER_ID)
-                .entraId(USER_ENTRA_ID)
+                .entraUserId(USER_ENTRA_ID)
                 .email(USER_EMAIL)
                 .userProfiles(Set.of(userProfile))
                 .build();
@@ -134,7 +134,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_Success() {
         // Arrange
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(List.of(office1, office2));
@@ -178,7 +178,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(profile1, profile2));
 
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(List.of(office1, office2));
@@ -213,7 +213,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act
@@ -230,7 +230,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_UserNotFound() {
         // Arrange
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.empty());
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -244,7 +244,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_AppNotFound() {
         // Arrange
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -260,7 +260,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaimThrowsException_UserNoAppAccess() {
         // Arrange
         entraUser.setUserProfiles(Collections.emptySet());
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert
@@ -275,7 +275,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_ExternalUserWithFirmButNoOffices() {
         // Arrange
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
                 .thenReturn(Collections.emptyList());
@@ -298,7 +298,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert
@@ -319,7 +319,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert

@@ -86,6 +86,8 @@ class UserServiceTest {
     @Mock
     private NotificationService mockNotificationService;
     @Mock
+    private ApplicationCollectionResponse mockApplicationCollectionResponse;
+    @Mock
     private AppRepository mockAppRepository;
     @Mock
     private AppRoleRepository mockAppRoleRepository;
@@ -296,7 +298,7 @@ class UserServiceTest {
         app.setAppRoles(Set.of(appRole));
         // assign role
         UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
@@ -336,7 +338,7 @@ class UserServiceTest {
         app.setAppRoles(Set.of(appRole));
         // assign role
         UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
@@ -564,7 +566,7 @@ class UserServiceTest {
     void testFindUserTypeByUsernameUserProfileNotFound() {
         // Arrange
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(entraUser);
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(entraUser);
         // Act
         RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("no-profile-username"));
@@ -576,10 +578,10 @@ class UserServiceTest {
     void testFindUserTypeByUsername() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -593,12 +595,12 @@ class UserServiceTest {
     void testFindUserTypeByUsernameMultiProfile() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_MULTI_FIRM).build();
-        UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -612,7 +614,7 @@ class UserServiceTest {
     void testGetUserAuthoritiesEmpty() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -624,10 +626,10 @@ class UserServiceTest {
     void testGetUserAuthorities() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser)
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -993,7 +995,7 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1026,12 +1028,12 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUserProfileRoles_logsWarning_whenNoDefaultProfile() {
+    void updateUserProfileRoles_logsWarning_whenNoactiveProfile() {
         // Arrange
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId)
-                .userProfiles(Set.of(UserProfile.builder().defaultProfile(false).build())).build();
+                .userProfiles(Set.of(UserProfile.builder().activeProfile(false).build())).build();
 
         // Act (call private method via reflection)
         try {

@@ -34,6 +34,18 @@ public class App extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
+    @Column(name = "entra_app_id", nullable = true, length = 255, unique = true)
+    @Size(max = 255, message = "Entra App ID must be less than 255 characters")
+    private String entraAppId;
+
+    @Column(name = "security_group_oid", nullable = true, length = 255, unique = true)
+    @Size(max = 255, message = "Security Group Oid must be less than 255 characters")
+    private String securityGroupOid;
+
+    @Column(name = "security_group_name", nullable = true, length = 255, unique = true)
+    @Size(max = 255, message = "Security Group Name must be less than 255 characters")
+    private String securityGroupName;
+
     @OneToMany(mappedBy = "app", cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore

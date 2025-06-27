@@ -67,6 +67,40 @@ class FirmTest extends BaseEntityTest {
     }
 
     @Test
+    public void testFirmNullCode() {
+        Firm firm = buildTestFirm();
+        update(firm, f -> f.setCode(null));
+
+        Set<ConstraintViolation<Firm>> violations = validator.validate(firm);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testFirmEmptyCode() {
+        Firm firm = buildTestFirm();
+        update(firm, f -> f.setCode(""));
+
+        Set<ConstraintViolation<Firm>> violations = validator.validate(firm);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testFirmCodeTooLong() {
+        Firm firm = buildTestFirm();
+        update(firm, f -> f.setCode("TestFirmNameThatIsTooLong".repeat(25)));
+
+        Set<ConstraintViolation<Firm>> violations = validator.validate(firm);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Firm code must be less than 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("code");
+
+    }
+
+    @Test
     public void testFirmNullType() {
         Firm firm = buildTestFirm();
         update(firm, f -> f.setType(null));
