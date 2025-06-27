@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
@@ -31,5 +32,10 @@ public class FirmService {
 
     public FirmDto getFirm(String id) {
         return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
+    }
+
+    public List<FirmDto> getUserFirms(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
+                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 }

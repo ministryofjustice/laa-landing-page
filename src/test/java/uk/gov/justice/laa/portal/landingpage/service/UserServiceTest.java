@@ -1115,4 +1115,38 @@ class UserServiceTest {
             assertThat(result.get(2)).containsExactly(5);
         }
     }
+
+    @Test
+    public void getUserByEntraIdWhenUserIsPresent() {
+        // Given
+        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.of(EntraUser.builder().build()));
+        // When
+        EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
+        // Then
+        assertThat(entraUser).isNotNull();
+    }
+
+    @Test
+    public void getUserByEntraIdWhenUserIsNotPresent() {
+        // Given
+        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.empty());
+        // When
+        EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
+        // Then
+        assertThat(entraUser).isNull();
+    }
+
+    @Test
+    void isInternal_Ok() {
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.INTERNAL).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isInternal(entraUser)).isTrue();
+    }
+
+    @Test
+    void isInternal_Failed() {
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isInternal(entraUser)).isFalse();
+    }
 }
