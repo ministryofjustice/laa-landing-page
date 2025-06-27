@@ -79,10 +79,18 @@ jobs:
 
           # Print results for visibility in workflow logs
           echo -e "$SCAN_RESULTS"
+      
+      - name: Set SHOULD_NOTIFY
+        run: |
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
+            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
+          else
+            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
+          fi
 
       - name: Send notification to Slack
         id: slack
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 #v2.1.0
         with:
           payload: |
