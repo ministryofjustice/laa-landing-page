@@ -21,7 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService
  * Configures security filter chains, authentication, and authorization
  */
 @Configuration
-@Profile("!test")
+@Profile("!integration-test")
 @EnableWebSecurity
 public class SecurityConfig {
 

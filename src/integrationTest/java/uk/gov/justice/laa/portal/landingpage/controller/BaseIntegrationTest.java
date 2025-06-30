@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @EnableConfigurationProperties
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
+@ActiveProfiles("integration-test")
 public abstract class BaseIntegrationTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
