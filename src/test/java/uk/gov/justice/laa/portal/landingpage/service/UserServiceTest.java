@@ -1,8 +1,40 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -20,23 +52,12 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -56,26 +77,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
@@ -89,8 +90,6 @@ class UserServiceTest {
     private NotificationService mockNotificationService;
     @Mock
     private ApplicationCollectionResponse mockApplicationCollectionResponse;
-    @Mock
-    private HttpSession session;
     @Mock
     private AppRepository mockAppRepository;
     @Mock
@@ -111,15 +110,16 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
-                mockOfficeRepository
-        );
+                mockOfficeRepository);
     }
 
     @BeforeAll
     public static void init() {
         // Test data for app registrations in local store
-        LaaApplication laaApp1 = LaaApplication.builder().id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
-        LaaApplication laaApp2 = LaaApplication.builder().id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
+        LaaApplication laaApp1 = LaaApplication.builder()
+                .id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
+        LaaApplication laaApp2 = LaaApplication.builder()
+                .id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
         List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2);
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
     }
@@ -129,10 +129,9 @@ class UserServiceTest {
         ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
     }
 
-
     @Test
     void getManagedAppRegistrations() {
-        //Setup
+        // Setup
         Application app1 = new Application();
         app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
         app1.setDisplayName("App One");
@@ -175,7 +174,8 @@ class UserServiceTest {
         // Arrange
         ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
         when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
+        when(applicationsRequestBuilder.get())
+                .thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
 
         // Act
         List<LaaApplication> result = userService.getManagedAppRegistrations();
@@ -353,12 +353,12 @@ class UserServiceTest {
 
     @Test
     void createUser() {
-        //post user
+        // post user
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         User user = new User();
         when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        //get roles
+        // get roles
         UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
         App app = App.builder()
@@ -371,9 +371,9 @@ class UserServiceTest {
                 .app(app)
                 .build();
         app.setAppRoles(Set.of(appRole));
-        //assign role
+        // assign role
         UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
@@ -392,13 +392,13 @@ class UserServiceTest {
 
     @Test
     void createUserWithPopulatedDisplayName() {
-        //post user
+        // post user
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
         User user = new User();
         user.setDisplayName("Test User");
         when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        //get roles
+        // get roles
         UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
         App app = App.builder()
@@ -411,9 +411,9 @@ class UserServiceTest {
                 .app(app)
                 .build();
         app.setAppRoles(Set.of(appRole));
-        //assign role
+        // assign role
         UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
@@ -641,7 +641,7 @@ class UserServiceTest {
     void testFindUserTypeByUsernameUserProfileNotFound() {
         // Arrange
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(entraUser);
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(entraUser);
         // Act
         RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("no-profile-username"));
@@ -653,9 +653,10 @@ class UserServiceTest {
     void testFindUserTypeByUsername() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -669,10 +670,12 @@ class UserServiceTest {
     void testFindUserTypeByUsernameMultiProfile() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile1 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
-        UserProfile userProfile2 = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -686,7 +689,7 @@ class UserServiceTest {
     void testGetUserAuthoritiesEmpty() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -698,9 +701,10 @@ class UserServiceTest {
     void testGetUserAuthorities() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        UserProfile userProfile = UserProfile.builder().defaultProfile(true).entraUser(entraUser).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
+                .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -752,8 +756,10 @@ class UserServiceTest {
         void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
             // Arrange
             Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+            when(mockEntraUserRepository
+                    .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                            any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
 
             // Act
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
@@ -768,8 +774,10 @@ class UserServiceTest {
             // Arrange
             EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
             Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
-            when(mockEntraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                    any(), any(), any(), any(Pageable.class))).thenReturn(userPage);
+            when(mockEntraUserRepository
+                    .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                            any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
 
             // Act
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, "testSearch");
@@ -890,7 +898,8 @@ class UserServiceTest {
         when(mockAppRepository.findAllById(appIds)).thenReturn(List.of(app1, app2));
 
         // When
-        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
+        List<AppRoleDto> returnedAppRoles = userService
+                .getAppRolesByAppIds(appIds.stream().map(UUID::toString).collect(Collectors.toList()));
 
         // Then
         assertThat(returnedAppRoles.size()).isEqualTo(2);
@@ -912,6 +921,168 @@ class UserServiceTest {
 
         // Then
         assertThat(returnedAppRoles.isEmpty()).isTrue();
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdReturnsRolesWhenAppIsPresent() {
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder()
+                .name("Test App Role")
+                .id(appRoleId)
+                .build();
+        App returnedApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .appRoles(Set.of(appRole))
+                .build();
+        when(mockAppRepository.findById(appId)).thenReturn(Optional.of(returnedApp));
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppId(appId.toString());
+        assertThat(returnedAppRoles.size()).isEqualTo(1);
+        AppRoleDto returnedAppRole = returnedAppRoles.getFirst();
+        assertThat(returnedAppRole.getId()).isEqualTo(appRoleId.toString());
+        assertThat(returnedAppRole.getName()).isEqualTo("Test App Role");
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdReturnsEmptyListWhenAppNotFound() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppId(UUID.randomUUID().toString());
+        assertThat(returnedAppRoles.size()).isEqualTo(0);
+    }
+
+    @Test
+    public void testGetAppByAppIdReturnsAppWhenAppIsPresent() {
+        UUID appId = UUID.randomUUID();
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        when(mockAppRepository.findById(appId)).thenReturn(Optional.of(app));
+        Optional<AppDto> returnedApp = userService.getAppByAppId(appId.toString());
+        assertThat(returnedApp.isPresent()).isTrue();
+        AppDto returnedAppDto = returnedApp.get();
+        assertThat(returnedAppDto.getId()).isEqualTo(appId.toString());
+        assertThat(returnedAppDto.getName()).isEqualTo("Test App");
+    }
+
+    @Test
+    public void testGetAppByAppIdReturnsEmptyWhenAppIsNotPresent() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        Optional<AppDto> returnedApp = userService.getAppByAppId(UUID.randomUUID().toString());
+        assertThat(returnedApp.isEmpty()).isTrue();
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(user);
+    }
+
+    @Test
+    void updateUserRoles_logsWarning_whenUserNotFound() {
+        // Arrange
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(UUID.randomUUID().toString()));
+
+        // Assert
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User with id");
+    }
+
+    @Test
+    void updateUserProfileRoles_logsWarning_whenNoactiveProfile() {
+        // Arrange
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId)
+                .userProfiles(Set.of(UserProfile.builder().activeProfile(false).build())).build();
+
+        // Act (call private method via reflection)
+        try {
+            var method = UserService.class.getDeclaredMethod("updateUserProfileRoles", EntraUser.class, List.class);
+            method.setAccessible(true);
+            method.invoke(userService, user, List.of());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Assert
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User profile for user ID");
+    }
+
+    @Test
+    void userExistsByEmail_returnsFalse_whenEmailIsNullOrBlank() {
+        assertThat(userService.userExistsByEmail(null)).isFalse();
+        assertThat(userService.userExistsByEmail("")).isFalse();
+        assertThat(userService.userExistsByEmail("   ")).isFalse();
+    }
+
+    @Test
+    void userExistsByEmail_returnsTrue_whenUserFoundInRepository() {
+        String email = "test@example.com";
+        EntraUser user = EntraUser.builder().email(email).build();
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.of(user));
+        assertThat(userService.userExistsByEmail(email)).isTrue();
+    }
+
+    @Test
+    void userExistsByEmail_returnsTrue_whenUserFoundInGraph() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        User graphUser = new User();
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenReturn(graphUser);
+        assertThat(userService.userExistsByEmail(email)).isTrue();
+    }
+
+    @Test
+    void userExistsByEmail_returnsFalse_whenUserNotFoundAnywhere() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenReturn(null);
+        assertThat(userService.userExistsByEmail(email)).isFalse();
+    }
+
+    @Test
+    void userExistsByEmail_logsWarning_whenGraphThrowsException() {
+        String email = "test@example.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
+        when(usersRequestBuilder.byUserId(email).get()).thenThrow(new RuntimeException("Not found"));
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        assertThat(userService.userExistsByEmail(email)).isFalse();
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs).isNotEmpty();
+        assertThat(warningLogs.getFirst().getFormattedMessage())
+                .contains("No user found in Entra with matching email. Catching error and moving on");
     }
 
     @Nested

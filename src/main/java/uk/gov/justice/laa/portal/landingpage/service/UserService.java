@@ -78,8 +78,10 @@ public class UserService {
      */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
-            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper, NotificationService notificationService, OfficeRepository officeRepository) {
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+            EntraUserRepository entraUserRepository,
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+            NotificationService notificationService, OfficeRepository officeRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -119,8 +121,9 @@ public class UserService {
 
     private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
         Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                // Set to default profile for now, will need to receive a user profile from front end at some point.
-                .filter(UserProfile::isDefaultProfile)
+                // Set to default profile for now, will need to receive a user profile from
+                // front end at some point.
+                .filter(UserProfile::isActiveProfile)
                 .findFirst();
         if (userProfile.isPresent()) {
             userProfile.get().setAppRoles(new HashSet<>(roles));
@@ -179,8 +182,9 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
-        return getPageOfUsers(() -> entraUserRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
+        return getPageOfUsers(() -> entraUserRepository
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                        searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public List<EntraUserDto> getSavedUsers() {
@@ -190,10 +194,11 @@ public class UserService {
     }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraId(entraId)
+        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra id: {}", entraId);
-                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                    return new RuntimeException(
+                            String.format("User not found for the given user entra id: %s", entraId));
                 });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
@@ -246,7 +251,8 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm, boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
+            boolean isFirmAdmin, String createdBy) {
 
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
@@ -263,7 +269,7 @@ public class UserService {
         invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
         Invitation result = graphClient.invitations().post(invitation);
 
-        //Send invitation email
+        // Send invitation email
         assert result != null;
         notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
                 result.getInviteRedeemUrl());
@@ -271,17 +277,18 @@ public class UserService {
         return result.getInvitedUser();
     }
 
-    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto, boolean isFirmAdmin, String createdBy) {
+    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
+            boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraId(newUser.getMail());
+        entraUser.setEntraUserId(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
         UserProfile userProfile = UserProfile.builder()
-                .defaultProfile(true)
+                .activeProfile(true)
                 .appRoles(new HashSet<>(appRoles))
                 // TODO: Set this dynamically once we have usertype selection on the front end
                 .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
@@ -324,7 +331,7 @@ public class UserService {
      * @return the list of user types associated with entra user
      */
     public List<String> getUserAuthorities(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraId(entraId)
+        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given entra id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));
@@ -362,5 +369,48 @@ public class UserService {
                 .flatMap(app -> app.getAppRoles().stream())
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .toList();
+    }
+
+    public boolean userExistsByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        // Check if the user exists in the local repository
+        Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
+
+        // Check if the user exists in Entra
+        User graphUser = null;
+        try {
+            graphUser = graphClient.users()
+                    .byUserId(email)
+                    .get();
+        } catch (Exception ex) {
+            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
+        }
+        return user.isPresent() || graphUser != null;
+    }
+
+    public List<AppRoleDto> getAppRolesByAppId(String appId) {
+        UUID appUuid = UUID.fromString(appId);
+        Optional<App> optionalApp = appRepository.findById(appUuid);
+        List<AppRoleDto> appRoles = new ArrayList<>();
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            appRoles = app.getAppRoles().stream()
+                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .toList();
+        }
+        return appRoles;
+    }
+
+    public Optional<AppDto> getAppByAppId(String appId) {
+        Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            return Optional.of(mapper.map(app, AppDto.class));
+        } else {
+            return Optional.empty();
+        }
     }
 }

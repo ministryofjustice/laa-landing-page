@@ -52,7 +52,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraId()).isEqualTo(entraUserId);
+        Assertions.assertThat(result.getEntraUser().getEntraUserId()).isEqualTo(entraUserId);
         Assertions.assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
@@ -61,8 +61,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveMultipleLaaUserProfilesForEntraUser() {
-        Firm firm1 = buildFirm("Firm1");
-        Firm firm2 = buildFirm("Firm2");
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm2 = buildFirm("Firm2", "Firm Code 2");
         firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
         String entraUserId = generateEntraId();
@@ -84,7 +84,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(userProfile1.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraId()).isEqualTo(entraUserId);
+        Assertions.assertThat(result.getEntraUser().getEntraUserId()).isEqualTo(entraUserId);
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name6");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name6");
         Assertions.assertThat(result.getEntraUser().getUserProfiles()).isNotEmpty();
@@ -94,8 +94,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveMultipleLaaUserProfilesOneDefaultProfile() {
-        Firm firm1 = buildFirm("Firm1");
-        Firm firm2 = buildFirm("Firm2");
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm2 = buildFirm("Firm2", "Firm Code 2");
         firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test7@email.com", "First Name7", "Last Name7");
@@ -105,8 +105,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
         userProfile1.setFirm(firm1);
         userProfile2.setFirm(firm2);
-        userProfile1.setDefaultProfile(true);
-        userProfile2.setDefaultProfile(true);
+        userProfile1.setActiveProfile(true);
+        userProfile2.setActiveProfile(true);
         entraUser.getUserProfiles().add(userProfile1);
         entraUser.getUserProfiles().add(userProfile2);
 
@@ -114,13 +114,13 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
                 () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_default_profile_per_user");
+        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_active_profile_per_user");
     }
 
     @Test
     public void testNoMultipleProfilesForNonMultiFirmUser() {
-        Firm firm1 = buildFirm("Firm1");
-        Firm firm2 = buildFirm("Firm2");
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm2 = buildFirm("Firm2", "Firm Code 2");
         firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test8@email.com", "First Name8", "Last Name8");
@@ -143,7 +143,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testOneUserProfilePerFirm() {
-        Firm firm1 = buildFirm("Firm1");
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firmRepository.save(firm1);
 
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test9@email.com", "First Name9", "Last Name9");
@@ -182,7 +182,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFirmNotNullForInternalUsers() {
-        Firm firm1 = buildFirm("Firm1");
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firmRepository.save(firm1);
 
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test11@email.com", "First Name11", "Last Name11");

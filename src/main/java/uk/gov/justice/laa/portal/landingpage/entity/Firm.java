@@ -24,6 +24,7 @@ import java.util.Set;
 @Entity
 @Table(name = "firm", indexes = {
     @Index(name = "FirmNameIdx", columnList = "name"),
+    @Index(name = "FirmCodeIdx", columnList = "code"),
 })
 @SuperBuilder
 @Getter
@@ -41,6 +42,10 @@ public class Firm extends BaseEntity {
     @NotBlank(message = "Firm name must be provided")
     @Size(min = 1, max = 255, message = "Firm name must be between 1 and 255 characters")
     private String name;
+
+    @Column(name = "code", nullable = true, length = 255, unique = true)
+    @Size(max = 255, message = "Firm code must be less than 255 characters")
+    private String code;
 
     @OneToMany(mappedBy = "firm", fetch = FetchType.LAZY)
     @ToString.Exclude
