@@ -47,7 +47,7 @@ public class SecurityConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
         return jwtAuthenticationConverter;
     }
-    
+
     /**
      * Security filter chain for API endpoints
      * Configures stateless JWT authentication for claims enrichment endpoints
@@ -55,7 +55,7 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/api/v1/claims/enrich", "/api/v1/claims/enrich/entraid")
+        http.securityMatcher("/api/v1/claims/enrich")
             .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().authenticated()
             )
@@ -71,7 +71,7 @@ public class SecurityConfig {
             .httpBasic(basic -> basic.disable());
         return http.build();
     }
-    
+
     /**
      * Main security filter chain for web application
      * Configures OAuth2 login, CSRF protection, and role-based access control

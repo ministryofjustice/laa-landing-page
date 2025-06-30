@@ -13,7 +13,7 @@ import java.time.Instant;
  * Provides a permissive JWT decoder that accepts any token for easier local testing
  */
 @Configuration
-@Profile({"dev","local","test"})
+@Profile({"dev", "local", "test"})
 public class DevJwtDecoderConfig {
 
     /**

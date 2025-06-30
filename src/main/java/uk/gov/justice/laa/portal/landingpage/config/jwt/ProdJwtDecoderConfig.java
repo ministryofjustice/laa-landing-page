@@ -12,12 +12,12 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
-/**
- * JWT Decoder configuration for production environment
+/*
+ *  JWT Decoder configuration for production environment
  * Provides a secure JWT decoder that validates token signature, issuer, and audience
  */
 @Configuration
-@Profile({"!dev", "!local" ,"!test"})
+@Profile({"prod"})
 public class ProdJwtDecoderConfig {
 
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
