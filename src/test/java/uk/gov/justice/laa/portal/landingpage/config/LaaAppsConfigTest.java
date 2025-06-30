@@ -17,28 +17,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(properties = {"azure.client-id=test-client-id", "azure.client-secret=test-client-secret", "azure.tenant-id=test-tenant-id"})
 public class LaaAppsConfigTest {
 
-    private LaaAppsConfig.LaaApplicationsList laaApplicationsList;
-
     @Test
     public void noAppsShouldReturnEmptyList() {
-        laaApplicationsList = new LaaAppsConfig.LaaApplicationsList();
 
-        List<LaaApplication> apps = laaApplicationsList.getApplications();
+        LaaAppsConfig config = new LaaAppsConfig();
+        LaaAppsConfig.LaaApplicationsList applicationsList = config.getApplicationsList();
 
-        assertThat(apps).isNotNull();
+        List<LaaApplication> apps = applicationsList.getApplications();
+
         assertThat(apps).isEmpty();
     }
 
     @Test
     public void testWithApplications() {
-        laaApplicationsList = new LaaAppsConfig.LaaApplicationsList();
+        LaaAppsConfig config = new LaaAppsConfig();
+        LaaAppsConfig.LaaApplicationsList applicationsList = config.getApplicationsList();
+
         List<LaaApplication> applications = Arrays.asList(
                 LaaApplication.builder().name("test1").build(),
                 LaaApplication.builder().name("test2").build()
         );
-        laaApplicationsList.setApplications(applications);
+        applicationsList.setApplications(applications);
 
-        List<LaaApplication> apps = laaApplicationsList.getApplications();
+        List<LaaApplication> apps = applicationsList.getApplications();
 
         assertThat(apps).isNotNull();
         assertThat(apps).hasSize(2);
