@@ -7,6 +7,7 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -62,6 +63,14 @@ class DemoDataPopulatorTest {
 
     @InjectMocks
     private DemoDataPopulator demoDataPopulator;
+
+    @BeforeEach
+    public void setUp() {
+        ReflectionTestUtils.setField(demoDataPopulator, "appCivilApplyName", "Civil Apply");
+        ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyName", "Crime Apply");
+        ReflectionTestUtils.setField(demoDataPopulator, "appPuiName", "PUI");
+        ReflectionTestUtils.setField(demoDataPopulator, "appSubmitCrimeFormName", "Submit a crime form");
+    }
 
     @Test
     void populateDummyDataDisabled() {
