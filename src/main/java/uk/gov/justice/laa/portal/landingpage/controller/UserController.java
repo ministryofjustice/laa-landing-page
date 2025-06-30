@@ -1,10 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.microsoft.graph.models.User;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -17,6 +23,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+
+import com.microsoft.graph.models.User;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -36,23 +49,11 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -270,7 +271,8 @@ public class UserController {
         model.addAttribute("createUserRolesSelectedAppIndex", selectedAppIndex);
         model.addAttribute("createUserRolesCurrentApp", currentApp);
 
-        // Store the model in session to handle validation errors later and track currently selected app.
+        // Store the model in session to handle validation errors later and track
+        // currently selected app.
         session.setAttribute("userCreateRolesModel", model);
         return "add-user-roles";
     }
@@ -287,21 +289,25 @@ public class UserController {
             // If there are validation errors, return to the roles page with errors
             model.addAttribute("roles", modelFromSession.getAttribute("roles"));
             model.addAttribute("user", modelFromSession.getAttribute("user"));
-            model.addAttribute("createUserRolesSelectedAppIndex", modelFromSession.getAttribute("createUserRolesSelectedAppIndex"));
+            model.addAttribute("createUserRolesSelectedAppIndex",
+                    modelFromSession.getAttribute("createUserRolesSelectedAppIndex"));
             model.addAttribute("createUserRolesCurrentApp", modelFromSession.getAttribute("createUserRolesCurrentApp"));
 
             return "add-user-roles";
         }
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session.getAttribute("createUserAllSelectedRoles");
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("createUserAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
         }
-        int selectedAppIndex = (Integer) modelFromSession.getAttribute("createUserRolesSelectedAppIndex");;
+        int selectedAppIndex = (Integer) modelFromSession.getAttribute("createUserRolesSelectedAppIndex");
+        ;
         // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
-            // Clear the userCreateRolesModel and page roles from session to avoid stale data
+            // Clear the userCreateRolesModel and page roles from session to avoid stale
+            // data
             session.removeAttribute("userCreateRolesModel");
             session.removeAttribute("createUserAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
@@ -417,7 +423,7 @@ public class UserController {
     @PostMapping("/user/create/check-answers")
     // @PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and
     // hasAuthority('SCOPE_Directory.ReadWrite.All')")
-    public RedirectView addUserCheckAnswers(HttpSession session, Authentication authentication) {
+    public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
         Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
@@ -452,13 +458,13 @@ public class UserController {
             log.error("No user attribute was present in request. User not created.");
         }
 
-        session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
-        return new RedirectView("/admin/users");
+
+        return "redirect:/admin/user/create/confirmation";
     }
 
     @GetMapping("/user/create/confirmation")
@@ -470,6 +476,7 @@ public class UserController {
         } else {
             log.error("No user attribute was present in request. User not added to model.");
         }
+        session.removeAttribute("user");
         return "add-user-created";
     }
 
@@ -478,8 +485,8 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/roles")
     public String editUserRoles(@PathVariable String id,
-                                @RequestParam(defaultValue = "0") int selectedAppIndex,
-                                Model model, HttpSession session) {
+            @RequestParam(defaultValue = "0") int selectedAppIndex,
+            Model model, HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
@@ -511,8 +518,10 @@ public class UserController {
             Authentication authentication,
             HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElse(null);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class).orElseGet(ArrayList::new);
-        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
         }
@@ -532,7 +541,8 @@ public class UserController {
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
-            return new RedirectView(String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", uuid, selectedAppIndex + 1));
+            return new RedirectView(
+                    String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", uuid, selectedAppIndex + 1));
         }
     }
 

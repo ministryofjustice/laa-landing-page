@@ -2,30 +2,46 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+      pageCategory=${'login'})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
 
 <head>
-    <title>Login Page</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User created - LAA Manage user access</title>
+    <link rel="stylesheet" href="/static/assets/css/govuk-frontend.css">
+    <link rel="stylesheet" href="/static/assets/css/custom.css">
 </head>
 
 <body>
-    <nav class="govuk-breadcrumbs" aria-label="Breadcrumb" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="#">Home</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="#">Section</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item" aria-current="page">Subsection</li>
-        </ol>
-    </nav>
-    <div id="main-content">
-        <h1>Welcome</h1>
-        <p th:text="${user.displayName} + ' created'"></p>
-
-    </div>
+    <main class="govuk-main-wrapper govuk-width-container" id="main-content">
+        <div class="govuk-!-width-two-thirds">
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">User created</h1>
+                <div class="govuk-panel__body">
+                    A letter containing a code will be posted to the address provided
+                    <br>
+                    for
+                    <br>
+                    <span class="govuk-!-font-weight-bold" th:text="${user.givenName}"></span> <span
+                        class="govuk-!-font-weight-bold" th:text="${user.surname}"></span>
+                </div>
+            </div>
+            <h2 class=" govuk-heading-m govuk-!-padding-top-3">What happens next</h2>
+            <p class="govuk-body govuk-!-padding-top-3">The user needs to be verified for the account to be set up.
+            </p>
+            <p class="govuk-body govuk-!-padding-top-3">A code will be sent via Royal Mail postage to the provided
+                address
+                to
+                set up their
+                account with instructions.
+            </p>
+            <p class="govuk-body govuk-!-padding-top-3">This should take 2 working business days to retrieve.</p>
+            <form class="govuk-!-padding-top-6" th:action=" @{/admin/users}" method="get">
+                <button class="govuk-button govuk-button--primary" type="submit">Continue</button>
+            </form>
+        </div>
+    </main>
+    <footer th:replace="~{partials/footer :: footer}"></footer>
 </body>
 
 </html>
