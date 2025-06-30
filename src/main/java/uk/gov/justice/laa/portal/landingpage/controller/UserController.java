@@ -458,6 +458,12 @@ public class UserController {
             log.error("No user attribute was present in request. User not created.");
         }
 
+        session.removeAttribute("firm");
+        session.removeAttribute("isFirmAdmin");
+        session.removeAttribute("apps");
+        session.removeAttribute("roles");
+        session.removeAttribute("officeData");
+
         return "redirect:/admin/user/create/confirmation";
     }
 
@@ -471,11 +477,6 @@ public class UserController {
             log.error("No user attribute was present in request. User not added to model.");
         }
         session.removeAttribute("user");
-        session.removeAttribute("firm");
-        session.removeAttribute("isFirmAdmin");
-        session.removeAttribute("apps");
-        session.removeAttribute("roles");
-        session.removeAttribute("officeData");
         return "add-user-created";
     }
 
