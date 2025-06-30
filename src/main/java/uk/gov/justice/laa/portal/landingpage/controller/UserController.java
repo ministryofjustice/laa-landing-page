@@ -79,14 +79,15 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) boolean showFirmAdmins,
             Model model, HttpSession session) {
 
         PaginatedUsers paginatedUsers;
         if (search != null && !search.isEmpty()) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search, showFirmAdmins);
         } else {
             search = null;
-            paginatedUsers = userService.getPageOfUsers(page, size);
+            paginatedUsers = userService.getPageOfUsers(page, size, showFirmAdmins);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
