@@ -1,47 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import com.microsoft.graph.applications.ApplicationsRequestBuilder;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.invitations.InvitationsRequestBuilder;
-import com.microsoft.graph.models.Application;
-import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.Invitation;
@@ -52,12 +17,20 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.http.HttpSession;
 import okhttp3.Request;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -77,19 +50,41 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
     @Mock
+    private LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    @Mock
     private GraphServiceClient mockGraphServiceClient;
     @Mock
     private EntraUserRepository mockEntraUserRepository;
     @Mock
     private NotificationService mockNotificationService;
-    @Mock
-    private ApplicationCollectionResponse mockApplicationCollectionResponse;
     @Mock
     private AppRepository mockAppRepository;
     @Mock
@@ -98,8 +93,6 @@ class UserServiceTest {
     private OfficeRepository mockOfficeRepository;
     @Mock
     private InvitationsRequestBuilder invitationsRequestBuilder;
-
-    private static String LAST_QUERIED_APP_ROLE_ASSIGNMENT_ID;
 
     @BeforeEach
     void setUp() {
@@ -110,78 +103,8 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
-                mockOfficeRepository);
-    }
-
-    @BeforeAll
-    public static void init() {
-        // Test data for app registrations in local store
-        LaaApplication laaApp1 = LaaApplication.builder()
-                .id("4efb3caa44d53b15ef398fa622110166f63eadc9ad68f6f8954529c39b901889").title("App One").build();
-        LaaApplication laaApp2 = LaaApplication.builder()
-                .id("b21b9c1a0611a09a0158d831b765ffe6ded9103a1ecdbc87c706c4ce44d07be7").title("App Two").build();
-        List<LaaApplication> laaApplications = List.of(laaApp1, laaApp2);
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", laaApplications);
-    }
-
-    @AfterAll
-    public static void tearDown() {
-        ReflectionTestUtils.setField(LaaAppDetailsStore.class, "laaApplications", null);
-    }
-
-    @Test
-    void getManagedAppRegistrations() {
-        // Setup
-        Application app1 = new Application();
-        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
-        app1.setDisplayName("App One");
-
-        Application app2 = new Application();
-        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
-        app2.setDisplayName("App Two");
-
-        // Mocked response from Graph API
-        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenReturn(mockApplicationCollectionResponse);
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getTitle()).isEqualTo("App One");
-        assertThat(result.get(1).getTitle()).isEqualTo("App Two");
-    }
-
-    @Test
-    void getManagedAppRegistrationsReturnNull() {
-        // Arrange
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get()).thenReturn(null);
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void getManagedAppRegistrationsReturnEmpty() {
-        // Arrange
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(mockGraphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get())
-                .thenThrow(new RuntimeException("Failed to fetch managed app registrations"));
-
-        // Act
-        List<LaaApplication> result = userService.getManagedAppRegistrations();
-
-        // Assert
-        assertThat(result).isEmpty();
+                mockOfficeRepository,
+                laaApplicationsList);
     }
 
     @Test
@@ -712,6 +635,97 @@ class UserServiceTest {
         assertThat(result).isNotEmpty();
         assertThat(result).hasSize(1);
         assertThat(result.getFirst()).isEqualTo("EXTERNAL_MULTI_FIRM");
+    }
+
+    @Test
+    void testFindUserByUserEntraIdNotFound() {
+        // Act
+        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.findUserByUserEntraId("non-existent-entra-id"));
+        // Assert
+        assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-entra-id");
+    }
+
+
+    @Test
+    void testFindUserByUserEntraUserId() {
+        // Arrange
+        EntraUser entraUser = EntraUser.builder().entraUserId("entra-user-id").firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        // Act
+        EntraUserDto result = userService.findUserByUserEntraId("entra-user-id");
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getEntraUserId()).isEqualTo("entra-user-id");
+        assertThat(result.getFullName()).isEqualTo("Test1");
+
+    }
+
+    @Test
+    public void testGetUserAssignedAppsforLandingPageWhenNoUserIsPresent() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(UUID.randomUUID().toString());
+        // Then
+        assertThat(returnedApps.isEmpty()).isTrue();
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testGetUserAssignedAppsforLandingPageWhenUserHasAppsAssigned() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        UUID appRoleId = UUID.randomUUID();
+        App app1 = App.builder()
+                .id(appId)
+                .name("Test App 1")
+                .build();
+        App app2 = App.builder()
+                .id(appId)
+                .name("Test App 2")
+                .build();
+        AppRole appRole1 = AppRole.builder()
+                .id(appRoleId)
+                .name("Test App Role 1")
+                .app(app1)
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(appRoleId)
+                .name("Test App Role 2")
+                .app(app2)
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .appRoles(Set.of(appRole1, appRole2))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .userProfiles(Set.of(userProfile))
+                .build();
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        List<LaaApplication> applications = Arrays.asList(
+                LaaApplication.builder().name("Test App 1").ordinal(0).build(),
+                LaaApplication.builder().name("Test App 2").ordinal(1).build(),
+                LaaApplication.builder().name("Test App 3").ordinal(2).build()
+        );
+        when(laaApplicationsList.getApplications()).thenReturn(applications);
+        // When
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
+
+        // Then
+        assertThat(returnedApps).isNotNull();
+        assertThat(returnedApps.size()).isEqualTo(2);
+        Iterator<LaaApplication> iterator = returnedApps.iterator();
+        LaaApplication resultApp1 = iterator.next();
+        assertThat(resultApp1.getName()).isEqualTo("Test App 1");
+        LaaApplication resultApp2 = iterator.next();
+        assertThat(resultApp2.getName()).isEqualTo("Test App 2");
     }
 
     @Nested

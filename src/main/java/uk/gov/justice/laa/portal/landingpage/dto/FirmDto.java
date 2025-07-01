@@ -14,4 +14,5 @@ import lombok.NoArgsConstructor;
 public class FirmDto {
     private UUID id;
     private String name;
+    private String code;
 }
