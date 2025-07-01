@@ -32,7 +32,7 @@ public class DevJwtDecoderConfig {
                     .claim("roles", "USER")
                     .claim("scope", "read")
                     .issuedAt(Instant.now())
-                    .expiresAt(Instant.now().plusSeconds(300))
+                    .expiresAt(Instant.now().plusSeconds(3600))
                     .build();
             } catch (Exception e) {
                 System.err.println("Error in development JWT decoder: " + e.getMessage());

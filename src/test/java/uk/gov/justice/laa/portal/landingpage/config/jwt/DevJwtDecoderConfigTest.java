@@ -27,7 +27,7 @@ class DevJwtDecoderConfigTest {
         assertThat(jwt.getTokenValue()).isEqualTo(token);
 
         Instant now = Instant.now();
-        Instant fiveMinutesFromNow = now.plusSeconds(300);
+        Instant fiveMinutesFromNow = now.plusSeconds(3600);
 
         assertThat(jwt.getIssuedAt()).isNotNull();
         assertThat(jwt.getExpiresAt()).isNotNull();
