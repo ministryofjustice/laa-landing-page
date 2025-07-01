@@ -86,6 +86,14 @@ jobs:
           POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
           TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
           TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
+          APP_CIVIL_APPLY_NAME: Civil Apply
+          APP_CIVIL_APPLY_URL=: ${{ secrets.CIVIL_APPLY_URL }}
+          APP_CRIME_APPLY_NAME: Crime Apply
+          APP_CRIME_APPLY_URL: ${{ secrets.CRIME_APPLY_URL }}
+          APP_PUI_NAME: PUI
+          APP_PUI_URL: ${{ secrets.PUI_URL }}
+          APP_SUBMIT_CRIME_FORM_NAME: Submit a crime form
+          APP_SUBMIT_CRIME_FORM_URL: ${{ secrets.APP_SUBMIT_CRIME_FORM_URL }}
 
       - name: Deploy to Cloud Platform
         run: |
