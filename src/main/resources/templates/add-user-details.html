@@ -41,16 +41,23 @@
                     </div>
                 </div>
                 <div class="govuk-!-margin-bottom-3">
-                    <div class="govuk-form-group">
+                    <div class="govuk-form-group"
+                        th:classappend="${#fields.hasErrors('firmId')} ? 'govuk-form-group--error'">
                         <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
                             Firm Name
                         </label>
+                        <div th:if="${#fields.hasErrors('firmId')}" class="govuk-error-message">
+                            <p th:each="err : ${#fields.errors('firmId')}" th:text="${err}"></p>
+                        </div>
                         <select class="govuk-select" id="firmId" name="firmId">
+                            <option value="" disabled selected th:if="${selectedFirm == null}">Choose firm</option>
                             <div th:each="firm : ${firms}">
                                 <option th:value="${firm.id}" th:text="${firm.name}"
                                     th:selected="${firm.id == selectedFirm?.id}"></option>
                             </div>
                         </select>
+                    </div>
+                    <div class="govuk-form-group">
                         <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
                             data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
@@ -74,8 +81,8 @@
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
-                    <input class="govuk-input govuk-!-width-one-third" name="email"  th:value="*{email}"
-                        id="email" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+                    <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
+                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
@@ -103,7 +110,7 @@
                 </div>
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a href="/home" class="govuk-link">Cancel</a>
+                    <a href="/admin/user/create/cancel"  class="govuk-link">Cancel</a>
                 </div>
             </form>
         </fieldset>
