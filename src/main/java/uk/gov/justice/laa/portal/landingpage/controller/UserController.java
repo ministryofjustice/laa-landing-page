@@ -570,4 +570,15 @@ public class UserController {
         UUID uuid = UUID.fromString(id);
         return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
     }
+
+    @GetMapping("/user/create/cancel")
+    public String cancelUserCreation(HttpSession session) {
+        session.removeAttribute("user");
+        session.removeAttribute("firm");
+        session.removeAttribute("isFirmAdmin");
+        session.removeAttribute("apps");
+        session.removeAttribute("roles");
+        session.removeAttribute("officeData");
+        return "redirect:/admin/users";
+    }
 }

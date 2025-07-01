@@ -1475,4 +1475,25 @@ class UserControllerTest {
         assertThat(view.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", userId, 1));
     }
 
+    @Test
+    void cancelUserCreation_shouldClearSessionAttributesAndRedirect() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("user", new Object());
+        session.setAttribute("firm", new Object());
+        session.setAttribute("isFirmAdmin", true);
+        session.setAttribute("apps", List.of("app1"));
+        session.setAttribute("roles", List.of("role1"));
+        session.setAttribute("officeData", new Object());
+
+        String result = userController.cancelUserCreation(session);
+
+        assertThat(result).isEqualTo("redirect:/admin/users");
+        assertThat(session.getAttribute("user")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("isFirmAdmin")).isNull();
+        assertThat(session.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("roles")).isNull();
+        assertThat(session.getAttribute("officeData")).isNull();
+    }
+
 }
