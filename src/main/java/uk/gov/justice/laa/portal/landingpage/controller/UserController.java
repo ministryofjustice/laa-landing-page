@@ -117,7 +117,7 @@ public class UserController {
         return "users";
     }
 
-    private PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
+    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
         if (searchTerm != null && !searchTerm.isEmpty()) {
             return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
         } else {
@@ -125,7 +125,7 @@ public class UserController {
         }
     }
 
-    private PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
+    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
         boolean isInternal = !userType.equals("external");
         if (searchTerm != null && !searchTerm.isEmpty()) {
             return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);

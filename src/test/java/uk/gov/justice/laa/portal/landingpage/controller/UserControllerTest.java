@@ -206,6 +206,15 @@ class UserControllerTest {
     }
 
     @Test
+    void testSearchPageOfUsersForExternal() {
+        PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
+        mockPaginatedUsers.setUsers(new ArrayList<>());
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), anyList(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        userController.getPageOfUsersForExternal(new ArrayList<>(), "searchTerm", true, 1, 10);
+        verify(userService).getPageOfUsersByNameOrEmail(eq("searchTerm"), eq(false), eq(true), anyList(), eq(1), eq(10));
+    }
+
+    @Test
     void givenValidUserId_whenEditUser_thenFetchesUserAndReturnsEditView() {
 
         // Arrange
