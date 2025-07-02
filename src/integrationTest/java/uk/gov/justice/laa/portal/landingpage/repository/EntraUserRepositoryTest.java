@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
-public class EntraUserPayloadDtoRepositoryTest extends BaseRepositoryTest {
+public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
