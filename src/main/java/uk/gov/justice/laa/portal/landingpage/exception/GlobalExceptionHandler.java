@@ -52,6 +52,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(status)
                 .body(ClaimEnrichmentResponse.builder()
+                        .success(false)
                         .message(message)
                         .build());
     }
