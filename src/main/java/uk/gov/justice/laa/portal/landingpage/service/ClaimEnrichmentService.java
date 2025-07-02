@@ -18,6 +18,8 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -72,6 +74,7 @@ public class ClaimEnrichmentService {
                                     && role.getApp().getName().equals(app.getName())
                     )
                     .map(AppRole::getName)
+                    .distinct()
                     .collect(Collectors.toList());
 
             if (userRoles.isEmpty()) {
@@ -106,14 +109,10 @@ public class ClaimEnrichmentService {
 
             log.info("Successfully processed claim enrichment for user: {}", userPrincipalName);
 
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(userDetails, entraUser, userRoles, officeIds);
+
             return ClaimEnrichmentResponse.builder()
-                    .success(true)
-                    .message("Access granted to " + app.getName())
-                    .appName(app.getName())
-                    .userId(entraUser.getEntraUserId())
-                    .email(entraUser.getEmail())
-                    .roles(userRoles)
-                    .officeIds(officeIds)
+                    .data(responseData)
                     .build();
 
         } catch (ClaimEnrichmentException e) {
@@ -123,5 +122,29 @@ public class ClaimEnrichmentService {
             log.error("Unexpected error during claim enrichment", e);
             throw new ClaimEnrichmentException("Failed to process claim enrichment", e);
         }
+    }
+
+    private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUserPayloadDto userDetails,
+                                                                        EntraUser entraUser,
+                                                                        List<String> userRoles,
+                                                                        List<String> officeIds) {
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("user_name", userDetails.getDisplayName());
+        claims.put("user_email", entraUser.getEmail());
+        claims.put("laa_app_roles", userRoles);
+        claims.put("laa_accounts", officeIds);
+
+        ClaimEnrichmentResponse.ResponseAction action = ClaimEnrichmentResponse.ResponseAction.builder()
+                .odataType("microsoft.graph.tokenIssuanceStart.provideClaimsForToken")
+                .claims(claims)
+                .build();
+
+        ClaimEnrichmentResponse.ResponseData responseData = ClaimEnrichmentResponse.ResponseData.builder()
+                .odataType("microsoft.graph.onTokenIssuanceStartResponseData")
+                .actions(List.of(action))
+                .build();
+
+        return responseData;
     }
 }

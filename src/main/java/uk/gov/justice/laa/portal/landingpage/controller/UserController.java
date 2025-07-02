@@ -38,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -247,7 +248,7 @@ public class UserController {
                     return appViewModel;
                 }).toList();
         model.addAttribute("apps", apps);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         return "add-user-apps";
     }
@@ -265,7 +266,7 @@ public class UserController {
 
     @GetMapping("/user/create/roles")
     public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
-        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
         Integer selectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("createUserRolesSelectedAppIndex") != null) {
@@ -282,7 +283,7 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("createUserRolesSelectedAppIndex", selectedAppIndex);
@@ -355,7 +356,7 @@ public class UserController {
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         // Store the model in session to handle validation errors later
@@ -422,7 +423,7 @@ public class UserController {
             model.addAttribute("roles", cyaRoles);
         }
 
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
