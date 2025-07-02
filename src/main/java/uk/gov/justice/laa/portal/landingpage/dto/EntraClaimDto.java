@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EntraClaim {
+public class EntraClaimDto {
     private String type;
     private String value;
 }

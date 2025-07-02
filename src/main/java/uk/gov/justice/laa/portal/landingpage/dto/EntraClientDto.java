@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ClaimEnrichmentRequest {
-    private String type;
-    private String source;
-    private EntraClaimData data;
+public class EntraClientDto {
+    private String ip;
+    private String locale;
+    private String market;
 }

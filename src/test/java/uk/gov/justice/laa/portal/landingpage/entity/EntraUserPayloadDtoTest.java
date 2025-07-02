@@ -9,7 +9,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class EntraUserTest extends BaseEntityTest {
+public class EntraUserPayloadDtoTest extends BaseEntityTest {
 
     @Test
     public void testEntraUser() {
