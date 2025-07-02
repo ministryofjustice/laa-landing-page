@@ -67,15 +67,16 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           
           #  Tag the image per env (links with lifecycle policy of image)
-          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:development
+          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$ENV_NAME
           
           # Push the image to the ECR repository
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$REPOSITORY:development
+          docker push $REGISTRY/$REPOSITORY:$ENV_NAME
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
 
       - name: Generate Deployment Files
         run: |
