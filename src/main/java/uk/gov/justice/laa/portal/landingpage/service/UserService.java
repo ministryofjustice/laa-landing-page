@@ -26,6 +26,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -170,31 +172,55 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize) {
-        return getPageOfUsers(page, pageSize, false);
+    public PaginatedUsers getPageOfUsers(boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+        List<UserType> types;
+        Page<EntraUser> pageOfUsers;
+        if (Objects.isNull(firmList)) {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else if (isInternal) {
+                types = UserType.INTERNAL_TYPES;
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
+        } else {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+        }
+        return getPageOfUsers(() -> pageOfUsers);
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository.findByUserTypes(userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+        List<UserType> types;
+        Page<EntraUser> pageOfUsers;
+        if (Objects.isNull(firmList)) {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else if (isInternal) {
+                types = UserType.INTERNAL_TYPES;
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
+                    searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+        } else {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
+                    searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+        }
+        return getPageOfUsers(() -> pageOfUsers);
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
-        return getPageOfUsersByNameOrEmail(page, pageSize, searchTerm, false);
-    }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository
-                .findByNameEmailAndUserTypes(
-                        searchTerm, searchTerm, searchTerm, userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
-    }
-
-    public List<EntraUserDto> getSavedUsers() {
-        return entraUserRepository.findAll().stream()
-                .map(user -> mapper.map(user, EntraUserDto.class))
-                .collect(Collectors.toList());
-    }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
         EntraUser user = entraUserRepository.findByEntraUserId(entraId)

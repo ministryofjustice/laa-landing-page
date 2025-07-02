@@ -78,16 +78,22 @@ public class UserController {
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String usertype,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) boolean showFirmAdmins,
-            Model model, HttpSession session) {
+            Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
-        if (search != null && !search.isEmpty()) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search, showFirmAdmins);
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        boolean internal = userService.isInternal(entraUser);
+        if (!internal) {
+            List<UUID> userFirms = firmService.getUserFirms(entraUser).stream().map(FirmDto::getId).toList();
+            paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size);
         } else {
-            search = null;
-            paginatedUsers = userService.getPageOfUsers(page, size, showFirmAdmins);
+            if(Objects.isNull(usertype)) {
+                usertype = "external";
+            }
+            paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -104,8 +110,28 @@ public class UserController {
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", search);
+        model.addAttribute("usertype", usertype);
+        model.addAttribute("internal", internal);
+        model.addAttribute("showFirmAdmins", showFirmAdmins);
 
         return "users";
+    }
+
+    private PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
+        if (searchTerm != null && !searchTerm.isEmpty()) {
+            return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
+        } else {
+            return userService.getPageOfUsers(false, showFirmAdmins, userFirms, page, size);
+        }
+    }
+
+    private PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
+        boolean isInternal = !userType.equals("external");
+        if (searchTerm != null && !searchTerm.isEmpty()) {
+            return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
+        } else {
+            return userService.getPageOfUsers(isInternal, showFirmAdmins, null, page, size);
+        }
     }
 
     @GetMapping("/users/edit/{id}")
@@ -118,16 +144,6 @@ public class UserController {
             model.addAttribute("roles", roles);
         }
         return "edit-user";
-    }
-
-    /**
-     * Retrieves a list of users from Microsoft Graph API.
-     */
-    @GetMapping("/userlist")
-    public String displaySavedUsers(Model model) {
-        List<EntraUserDto> users = userService.getSavedUsers();
-        model.addAttribute("users", users);
-        return "users";
     }
 
     /**
