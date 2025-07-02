@@ -75,7 +75,7 @@ public class ClaimEnrichmentController {
         log.info("Received claim enrichment request for user: {}", userId);
 
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
-        log.info("Successfully processed claim enrichment for user: {}", userId);
+        log.info("Successfully processed claim enrichment, response data: {}", response);
 
         return ResponseEntity.ok(response);
     }
