@@ -7,12 +7,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -35,6 +37,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
 
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -72,16 +75,17 @@ public class UserService {
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
     private final NotificationService notificationService;
+    private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
 
     /**
      * The number of pages to load in advance when doing user pagination
      */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository,
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-            NotificationService notificationService, OfficeRepository officeRepository) {
+                       NotificationService notificationService, OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -89,6 +93,7 @@ public class UserService {
         this.mapper = mapper;
         this.notificationService = notificationService;
         this.officeRepository = officeRepository;
+        this.laaApplicationsList = laaApplicationsList;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -156,18 +161,6 @@ public class UserService {
         return dateTime.format(formatter);
     }
 
-    public List<LaaApplication> getManagedAppRegistrations() {
-        try {
-            var response = graphClient.applications().get();
-            return (response != null && response.getValue() != null)
-                    ? LaaAppDetailsStore.getUserAssignedApps(response.getValue())
-                    : Collections.emptyList();
-        } catch (Exception ex) {
-            logger.error("Error fetching managed app registrations: ", ex);
-            return Collections.emptyList();
-        }
-    }
-
     private PaginatedUsers getPageOfUsers(Supplier<Page<EntraUser>> pageSupplier) {
         Page<EntraUser> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
@@ -178,13 +171,23 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsers(int page, int pageSize) {
-        return getPageOfUsers(() -> entraUserRepository.findAll(PageRequest.of(Math.max(0, page - 1), pageSize)));
+        return getPageOfUsers(page, pageSize, false);
+    }
+
+    public PaginatedUsers getPageOfUsers(int page, int pageSize, boolean isFirmAdmin) {
+        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
+        return getPageOfUsers(() -> entraUserRepository.findByUserTypes(userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
+        return getPageOfUsersByNameOrEmail(page, pageSize, searchTerm, false);
+    }
+
+    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm, boolean isFirmAdmin) {
+        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
         return getPageOfUsers(() -> entraUserRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                        searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
+                .findByNameEmailAndUserTypes(
+                        searchTerm, searchTerm, searchTerm, userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public List<EntraUserDto> getSavedUsers() {
@@ -207,6 +210,17 @@ public class UserService {
         }
 
         return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+
+    }
+
+    public EntraUserDto findUserByUserEntraId(String entraId) {
+        EntraUser entraUser = entraUserRepository.findByEntraUserId(entraId)
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user entra user id: {}", entraId);
+                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                });
+
+        return mapper.map(entraUser, EntraUserDto.class);
 
     }
 
@@ -417,6 +431,19 @@ public class UserService {
         } else {
             return Optional.empty();
         }
+    }
+
+    public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
+        Set<AppDto> userApps = getUserAppsByUserId(id);
+
+        return getUserAssignedApps(userApps);
+    }
+
+    private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
+        List<LaaApplication> applications = laaApplicationsList.getApplications();
+        return applications.stream().filter(app -> userApps.stream()
+                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal)).collect(Collectors.toCollection(TreeSet::new));
     }
 
     public boolean isInternal(EntraUser entraUser) {

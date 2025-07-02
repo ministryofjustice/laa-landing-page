@@ -9,18 +9,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraApplicationInfo;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraAuthenticationContext;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraClaim;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraClaimData;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserInfo;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraClientDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraServicePrincipalDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentService;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,9 +30,8 @@ import static org.mockito.Mockito.times;
 
 class ClaimEnrichmentControllerTest {
 
-    private static final String TEST_EVENT_TYPE = "test-event";
-    private static final String TEST_EVENT_ID = "test-id";
     private static final String TEST_APP_NAME = "Test App";
+    private static final String TEST_USER_ID = "test-user-id";
 
     @Mock
     private ClaimEnrichmentService claimEnrichmentService;
@@ -51,54 +46,62 @@ class ClaimEnrichmentControllerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Create mock EntraAuthenticationContext with claims
-        EntraAuthenticationContext authContext = EntraAuthenticationContext.builder()
-                .claims(List.of(
-                    EntraClaim.builder()
-                        .type("roles")
-                        .value("user")
-                        .build()
-                ))
-                .build();
-
-        // Create mock EntraUserInfo
-        EntraUserInfo userInfo = EntraUserInfo.builder()
-                .id("test-user-id")
+        // Create mock EntraUserPayloadDto
+        EntraUserPayloadDto userPayload = EntraUserPayloadDto.builder()
+                .id(TEST_USER_ID)
                 .displayName("Test User")
                 .userPrincipalName("test.user@justice.gov.uk")
                 .build();
 
-        // Create mock EntraApplicationInfo
-        EntraApplicationInfo appInfo = EntraApplicationInfo.builder()
-                .id("test-app-id")
-                .displayName("Test Application")
+        // Create mock EntraServicePrincipalDto for client
+        EntraServicePrincipalDto clientServicePrincipal = EntraServicePrincipalDto.builder()
+                .appDisplayName("Test Application")
+                .appId("test-app-id")
+                .displayName("Test Service Principal")
+                .id("sp-id-123")
                 .build();
 
-        // Create mock EntraClaimData
+        // Create mock EntraServicePrincipalDto for resource
+        EntraServicePrincipalDto resourceServicePrincipal = EntraServicePrincipalDto.builder()
+                .appDisplayName("Test Resource")
+                .appId("test-resource-id")
+                .displayName("Test Resource Principal")
+                .id("sp-id-456")
+                .build();
+
+        // Create mock EntraClientDto
+        EntraClientDto clientDto = EntraClientDto.builder()
+                .locale("en-US")
+                .build();
+
+        // Create mock EntraAuthenticationContext with new structure
+        EntraAuthenticationContext authContext = EntraAuthenticationContext.builder()
+                .client(clientDto)
+                .clientServicePrincipal(clientServicePrincipal)
+                .resourceServicePrincipal(resourceServicePrincipal)
+                .user(userPayload)
+                .build();
+
+        // Create mock EntraClaimData with new structure
         EntraClaimData claimData = EntraClaimData.builder()
                 .authenticationContext(authContext)
-                .user(userInfo)
-                .application(appInfo)
+                .tenantId("test-tenant-id")
                 .build();
 
         // Setup test request
         testRequest = ClaimEnrichmentRequest.builder()
                 .data(claimData)
-                .eventType(TEST_EVENT_TYPE)
-                .eventId(TEST_EVENT_ID)
-                .time(Instant.now())
                 .build();
 
         // Setup test roles
-        testRoles = new ArrayList();
-        testRoles.add("ROLE_USER");
-        testRoles.add("ROLE_ADMIN");
+        testRoles = List.of("ROLE_USER", "ROLE_ADMIN");
 
         // Setup test response
         testResponse = ClaimEnrichmentResponse.builder()
                 .success(true)
                 .roles(testRoles)
                 .appName(TEST_APP_NAME)
+                .userId(TEST_USER_ID)
                 .message("Access granted to " + TEST_APP_NAME)
                 .build();
     }
@@ -118,6 +121,7 @@ class ClaimEnrichmentControllerTest {
         assertTrue(response.getBody().isSuccess());
         assertEquals(testRoles, response.getBody().getRoles());
         assertEquals(TEST_APP_NAME, response.getBody().getAppName());
+        assertEquals(TEST_USER_ID, response.getBody().getUserId());
 
         verify(claimEnrichmentService, times(1)).enrichClaim(testRequest);
     }

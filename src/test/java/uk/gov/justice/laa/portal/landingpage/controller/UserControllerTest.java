@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -101,9 +102,9 @@ class UserControllerTest {
         paginatedUsers.setTotalUsers(100);
         paginatedUsers.setTotalPages(10);
 
-        when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, model, session);
+        String view = userController.displayAllUsers(10, 1, null, false, model, session);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -133,16 +134,16 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(List.of(new EntraUserDto(), new EntraUserDto()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
-        when(userService.getPageOfUsers(eq(1), eq(10))).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsers(eq(1), eq(10), anyBoolean())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, false, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsers(1, 10);
+        verify(userService).getPageOfUsers(1, 10, false);
     }
 
     @Test
@@ -152,15 +153,15 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
-        when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, false, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(1, 10);
+        verify(userService).getPageOfUsers(1, 10, false);
     }
 
     @Test
@@ -168,15 +169,15 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersByNameOrEmail(anyInt(), anyInt(), eq("Test"))).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyInt(), anyInt(), eq("Test"), anyBoolean())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "Test", model, session);
+        String viewName = userController.displayAllUsers(10, 1, "Test", false, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmail(1, 10, "Test");
+        verify(userService).getPageOfUsersByNameOrEmail(1, 10, "Test", false);
     }
 
     @Test
@@ -184,15 +185,15 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "", model, session);
+        String viewName = userController.displayAllUsers(10, 1, "", false, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(1, 10);
+        verify(userService).getPageOfUsers(1, 10, false);
     }
 
     @Test
@@ -472,7 +473,8 @@ class UserControllerTest {
         assertThat(model.getAttribute("createUserRolesSelectedAppIndex")).isNotNull();
         assertThat(model.getAttribute("createUserRolesSelectedAppIndex")).isEqualTo(1);
         assertThat(session.getAttribute("createUserAllSelectedRoles")).isNotNull();
-        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session.getAttribute("createUserAllSelectedRoles");
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("createUserAllSelectedRoles");
         assertThat(allSelectedRolesByPage.keySet().size()).isEqualTo(1);
         assertThat(allSelectedRolesByPage.get(0)).isEqualTo(List.of("1"));
         assertThat(session.getAttribute("userCreateRolesModel")).isNotNull();
@@ -607,8 +609,8 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
     }
 
     @Test
@@ -628,8 +630,8 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
     }
 
     @Test
@@ -653,8 +655,8 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
@@ -671,8 +673,8 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
@@ -1006,10 +1008,10 @@ class UserControllerTest {
         paginatedUsers.setTotalUsers(1);
         paginatedUsers.setTotalPages(1);
 
-        when(userService.getPageOfUsers(anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(paginatedUsers);
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
-        String view = userController.displayAllUsers(10, 1, null, model, session);
+        String view = userController.displayAllUsers(10, 1, null, false, model, session);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("successMessage")).isEqualTo("User added successfully");
@@ -1322,10 +1324,10 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
 
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
-        assertThat(session.getAttribute("user")).isNull();
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("firm")).isNull();
         assertThat(session.getAttribute("roles")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
@@ -1336,9 +1338,9 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
 
-        RedirectView view = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
 
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(logEvents).hasSize(1);
         assertThat(logEvents.getFirst().getFormattedMessage()).contains("No user attribute was present in request");
@@ -1348,12 +1350,16 @@ class UserControllerTest {
     void addUserCreated_shouldAddUserToModelIfPresent() {
         HttpSession session = new MockHttpSession();
         User user = new User();
+        user.setGivenName("Chris");
+        user.setSurname("Newman");
         session.setAttribute("user", user);
-
+        Model model = new ExtendedModelMap();
         String view = userController.addUserCreated(model, session);
-
         assertThat(view).isEqualTo("add-user-created");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("user")).isNotNull();
+        User modelUser = (User) model.getAttribute("user");
+        assertThat(modelUser.getGivenName()).isEqualTo("Chris");
+        assertThat(modelUser.getSurname()).isEqualTo("Newman");
     }
 
     @Test
@@ -1462,11 +1468,33 @@ class UserControllerTest {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("selectedApps", selectedApps);
         UUID userId = UUID.randomUUID();
-        RedirectView view = userController.updateUserRoles(userId.toString(), selectedRoles, 0, authentication, session);
+        RedirectView view = userController.updateUserRoles(userId.toString(), selectedRoles, 0, authentication,
+                session);
         Map<Integer, String> allSelectedRoles = (Map<Integer, String>) session.getAttribute("editUserAllSelectedRoles");
         assertThat(allSelectedRoles).isNotNull();
         assertThat(allSelectedRoles.keySet()).hasSize(1);
         assertThat(view.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", userId, 1));
+    }
+
+    @Test
+    void cancelUserCreation_shouldClearSessionAttributesAndRedirect() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("user", new Object());
+        session.setAttribute("firm", new Object());
+        session.setAttribute("isFirmAdmin", true);
+        session.setAttribute("apps", List.of("app1"));
+        session.setAttribute("roles", List.of("role1"));
+        session.setAttribute("officeData", new Object());
+
+        String result = userController.cancelUserCreation(session);
+
+        assertThat(result).isEqualTo("redirect:/admin/users");
+        assertThat(session.getAttribute("user")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("isFirmAdmin")).isNull();
+        assertThat(session.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("roles")).isNull();
+        assertThat(session.getAttribute("officeData")).isNull();
     }
 
 }

@@ -9,9 +9,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraApplicationInfo;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraAuthenticationContext;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraClaimData;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserInfo;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraServicePrincipalDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -73,28 +74,33 @@ class ClaimEnrichmentServiceTest {
     @BeforeEach
     void setUp() {
         // Setup test data for request object
-        EntraUserInfo userInfo = EntraUserInfo.builder()
+        EntraUserPayloadDto userInfo = EntraUserPayloadDto.builder()
                 .id(USER_ENTRA_ID)
                 .build();
-        EntraApplicationInfo appInfo = EntraApplicationInfo.builder()
-                .id(APP_ID)
-                .displayName(APP_NAME)
+
+        EntraServicePrincipalDto clientServicePrincipal = EntraServicePrincipalDto.builder()
+                .appDisplayName(APP_NAME)
                 .build();
-        EntraClaimData data = EntraClaimData.builder()
+
+        EntraAuthenticationContext authContext = EntraAuthenticationContext.builder()
                 .user(userInfo)
-                .application(appInfo)
+                .clientServicePrincipal(clientServicePrincipal)
                 .build();
+                
+        EntraClaimData data = EntraClaimData.builder()
+                .authenticationContext(authContext)
+                .tenantId("test-tenant-id")
+                .build();
+                
         request = ClaimEnrichmentRequest.builder()
                 .data(data)
                 .build();
 
-        // Setup test data for app
         app = App.builder()
                 .id(UUID.fromString(APP_ID))
                 .name(APP_NAME)
                 .build();
 
-        // Setup test data for firm
         firm = Firm.builder()
                 .id(FIRM_ID)
                 .build();
@@ -104,25 +110,21 @@ class ClaimEnrichmentServiceTest {
                 .id(OFFICE_ID_1)
                 .firm(firm)
                 .build();
-
         office2 = Office.builder()
                 .id(OFFICE_ID_2)
                 .firm(firm)
                 .build();
 
-        // Setup test data for app role
         AppRole appRole = AppRole.builder()
                 .app(app)
                 .name(EXTERNAL_ROLE)
                 .build();
 
-        // Setup user profile with firm and role
         UserProfile userProfile = UserProfile.builder()
                 .firm(firm)
                 .appRoles(Set.of(appRole))
                 .build();
 
-        // Setup user with proper app registration and email
         entraUser = EntraUser.builder()
                 .id(USER_ID)
                 .entraUserId(USER_ENTRA_ID)

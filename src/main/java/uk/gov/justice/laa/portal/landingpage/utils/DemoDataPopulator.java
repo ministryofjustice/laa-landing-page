@@ -28,9 +28,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -64,6 +66,18 @@ public class DemoDataPopulator {
 
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
+
+    @Value("${app.civil.apply.name}")
+    private String appCivilApplyName;
+
+    @Value("${app.crime.apply.name}")
+    private String appCrimeApplyName;
+
+    @Value("${app.pui.name}")
+    private String appPuiName;
+
+    @Value("${app.submit.crime.form.name}")
+    private String appSubmitCrimeFormName;
 
     public DemoDataPopulator(FirmRepository firmRepository,
                              OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
@@ -171,127 +185,135 @@ public class DemoDataPopulator {
 
         try {
 
-            synchronized (this) {
-                Firm firm = firmRepository.findFirmByName("Firm One");
-                if (firm != null) {
-                    System.out.println("Data population is already being done!!");
-                    return;
+            Firm firm = firmRepository.findFirmByName("Firm One");
+            if (firm == null) {
+
+
+                Firm firm1 = buildFirm("Firm One");
+                Firm firm2 = buildFirm("Firm Two");
+                firmRepository.saveAll(Arrays.asList(firm1, firm2));
+
+                Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
+                Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
+                Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
+                Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
+                Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
+                firm1.getOffices().addAll(Set.of(office1, office2));
+                firm2.getOffices().addAll(Set.of(office3, office4, office5));
+                officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
+
+                List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
+                    assert requestConfig.queryParameters != null;
+                    requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
+                    requestConfig.queryParameters.top = 10;
+                })).getValue();
+                assert applications != null;
+
+                Set<String> appNames = new HashSet<>();
+
+                for (Application app : applications) {
+                    appNames.add(app.getDisplayName());
                 }
-            }
 
-            Firm firm1 = buildFirm("Firm One");
-            Firm firm2 = buildFirm("Firm Two");
-            firmRepository.saveAll(Arrays.asList(firm1, firm2));
+                List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
+                    assert requestConfig.queryParameters != null;
+                    requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+                    requestConfig.queryParameters.top = 10;
+                })).getValue();
 
-            Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
-            Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
-            Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
-            Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
-            Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
-            firm1.getOffices().addAll(Set.of(office1, office2));
-            firm2.getOffices().addAll(Set.of(office3, office4, office5));
-            officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
-
-            List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
-                assert requestConfig.queryParameters != null;
-                requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
-                requestConfig.queryParameters.top = 10;
-            })).getValue();
-            assert applications != null;
-
-            Set<String> appNames = new HashSet<>();
-
-            for (Application app : applications) {
-                appNames.add(app.getDisplayName());
-            }
-
-            List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
-                assert requestConfig.queryParameters != null;
-                requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
-                requestConfig.queryParameters.top = 10;
-            })).getValue();
-
-            List<EntraUser> entraUsers = new ArrayList<>();
-            assert users != null;
-            for (User user : users) {
-                EntraUser entraUser = buildEntraUser(user);
-                entraUsers.add(entraUser);
-            }
-
-            Set<String> userPrinciples = new HashSet<>();
-            if (adminUserPrincipals != null) {
-                userPrinciples.addAll(adminUserPrincipals);
-            }
-
-            if (nonAdminUserPrincipals != null) {
-                userPrinciples.addAll(nonAdminUserPrincipals);
-            }
-
-            List<String> nonAdminUserIds = new ArrayList<>();
-
-            if (userPrinciples != null && !userPrinciples.isEmpty()) {
-                for (String userPrincipal : userPrinciples) {
-                    if (!userPrincipal.contains(":")) {
-                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
-                    }
-                    //Ensuring the user being running the app is added
-                    boolean userAlreadyAdded = users.stream().anyMatch(u -> u.getUserPrincipalName().equals(userPrincipal.split(":")[0]));
-
-                    try {
-                        if (!userAlreadyAdded) {
-                            String mail = userPrincipal.split(":")[0];
-                            String entraId = userPrincipal.split(":")[1];
-                            EntraUser user = buildEntraUser(mail, entraId);
-                            entraUsers.add(user);
-                            if (nonAdminUserPrincipals.contains(userPrincipal)) {
-                                nonAdminUserIds.add(user.getEntraUserId());
-                            }
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
-                        e.printStackTrace();
-                        System.err.println("Continuing with the list of users in the database");
-                    }
-
+                List<EntraUser> entraUsers = new ArrayList<>();
+                assert users != null;
+                for (User user : users) {
+                    EntraUser entraUser = buildEntraUser(user);
+                    entraUsers.add(entraUser);
                 }
+
+                entraUserRepository.saveAll(entraUsers);
+
+                List<App> laaApps = new ArrayList<>();
+
+                for (String appName : appNames) {
+                    laaApps.add(buildLaaApp(appName));
+                }
+
+                laaAppRepository.saveAll(laaApps);
+
+                List<AppRole> appRoles = new ArrayList<>();
+                for (App app : laaApps) {
+                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
+                }
+
+                laaAppRoleRepository.saveAll(appRoles);
+
+                List<UserProfile> userProfiles = new ArrayList<>();
+
+                for (EntraUser entraUser : entraUsers) {
+                    UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+                    userProfile.getAppRoles().addAll(appRoles);
+                    userProfile.setFirm(firm1);
+                    userProfiles.add(userProfile);
+                }
+
+
+                laaUserProfileRepository.saveAll(userProfiles);
+
+                System.out.println("Dummy Data Populated!!");
             }
-
-            entraUserRepository.saveAll(entraUsers);
-
-            List<App> laaApps = new ArrayList<>();
-
-            for (String appName : appNames) {
-                laaApps.add(buildLaaApp(appName));
-            }
-
-            laaAppRepository.saveAll(laaApps);
-
-            List<AppRole> appRoles = new ArrayList<>();
-            for (App app : laaApps) {
-                appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
-            }
-
-            laaAppRoleRepository.saveAll(appRoles);
-
-            List<UserProfile> userProfiles = new ArrayList<>();
-
-            for (EntraUser entraUser : entraUsers) {
-                UserProfile userProfile = buildLaaUserProfile(entraUser,
-                        nonAdminUserIds.contains(entraUser.getEntraUserId()) ? UserType.EXTERNAL_SINGLE_FIRM : UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-                userProfile.getAppRoles().addAll(appRoles);
-                userProfile.setFirm(firm1);
-                userProfiles.add(userProfile);
-            }
-
-
-            laaUserProfileRepository.saveAll(userProfiles);
-
-            System.out.println("Dummy Data Populated!!");
         } catch (Exception ex) {
             System.err.println("Error populating dummy data!!");
             System.err.println(ex.getMessage());
             ex.printStackTrace();
         }
+
+        // Now trying to populate custom-defined apps and roles
+        List<String> preConfApps = Arrays.asList(appPuiName, appCivilApplyName, appCrimeApplyName, appSubmitCrimeFormName);
+
+        for (String appName : preConfApps) {
+            App app = laaAppRepository.findByName(appName).orElse(null);
+            if (app == null) {
+                try {
+                    app = buildLaaApp(appName);
+                    laaAppRepository.save(app);
+                    AppRole role = buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN");
+                    laaAppRoleRepository.save(role);
+                } catch (Exception ex) {
+                    System.out.println("Unable to add app to the list of apps in the database, the app may not present in entra: " + appName);
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        // Users
+        Set<String> userPrinciples = new HashSet<>();
+        userPrinciples.addAll(adminUserPrincipals == null ? Collections.emptySet() : adminUserPrincipals);
+        userPrinciples.addAll(nonAdminUserPrincipals == null ? Collections.emptySet() : nonAdminUserPrincipals);
+        List<AppRole> appRoles = laaAppRoleRepository.findAll();
+        if (adminUserPrincipals != null) {
+            for (String userPrincipal : userPrinciples) {
+                try {
+                    if (!userPrincipal.contains(":")) {
+                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                    }
+                    String mail = userPrincipal.split(":")[0];
+                    String entraId = userPrincipal.split(":")[1];
+                    Optional<EntraUser> entraUser = entraUserRepository.findByEntraUserId(entraId);
+                    if (entraUser.isEmpty()) {
+                        EntraUser user = buildEntraUser(mail, entraId);
+                        entraUserRepository.save(user);
+                        UserProfile userProfile = buildLaaUserProfile(user,
+                                adminUserPrincipals.contains(userPrincipal) ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM);
+                        userProfile.getAppRoles().addAll(appRoles);
+                        userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
+                        laaUserProfileRepository.save(userProfile);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
+                    e.printStackTrace();
+                    System.err.println("Continuing with the list of users in the database");
+                }
+            }
+        }
+
 
     }
 

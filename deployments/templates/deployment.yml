@@ -58,6 +58,22 @@ spec:
               value: "${TEST_DATA_ADMIN_PRINCIPALS}"
             - name: TEST_DATA_NON_ADMIN_PRINCIPALS
               value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
+            - name: APP_CIVIL_APPLY_NAME
+              value: "${APP_CIVIL_APPLY_NAME}"
+            - name: APP_CIVIL_APPLY_URL
+              value: "${APP_CIVIL_APPLY_URL}"
+            - name: APP_CRIME_APPLY_NAME
+              value: "${APP_CRIME_APPLY_NAME}"
+            - name: APP_CRIME_APPLY_URL
+              value: "${APP_CRIME_APPLY_URL}"
+            - name: APP_PUI_NAME
+              value: "${APP_PUI_NAME}"
+            - name: APP_PUI_URL
+              value: "${APP_PUI_URL}"
+            - name: APP_SUBMIT_CRIME_FORM_NAME
+              value: "${APP_SUBMIT_CRIME_FORM_NAME}"
+            - name: APP_SUBMIT_CRIME_FORM_URL
+              value: "${APP_SUBMIT_CRIME_FORM_URL}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:

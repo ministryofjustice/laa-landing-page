@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentService;
 
 /**
@@ -70,9 +71,12 @@ public class ClaimEnrichmentController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ClaimEnrichmentResponse> enrichClaims(
             @Valid @RequestBody ClaimEnrichmentRequest request) {
-        log.info("Received claim enrichment request for user: {}", request.getData().getUser().getId());
+        String userId = request.getData().getAuthenticationContext().getUser().getId();
+        log.info("Received claim enrichment request for user: {}", userId);
+
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
-        log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getId());
+        log.info("Successfully processed claim enrichment, response data: {}", response);
+
         return ResponseEntity.ok(response);
     }
 }

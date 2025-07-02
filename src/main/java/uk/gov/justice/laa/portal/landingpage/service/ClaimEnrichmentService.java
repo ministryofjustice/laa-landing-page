@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -19,9 +20,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Service implementation for enriching user claims with additional permissions from Entra ID.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,15 +30,22 @@ public class ClaimEnrichmentService {
     private final OfficeRepository officeRepository;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
-        log.info("Processing claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
+        EntraUserPayloadDto userDetails =
+            request.getData().getAuthenticationContext().getUser();
+        String userPrincipalName = userDetails.getUserPrincipalName();
+        String userId = userDetails.getId();
+        String appDisplayName = request.getData().getAuthenticationContext()
+            .getClientServicePrincipal().getAppDisplayName();
+        
+        log.info("Processing claim enrichment for user: {}", userPrincipalName);
 
         try {
             // 1. Get the EntraUser from database
-            EntraUser entraUser = entraUserRepository.findByEntraUserId(request.getData().getUser().getId())
+            EntraUser entraUser = entraUserRepository.findByEntraUserId(userId)
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
             // 2. Get app from DB using the app name from request
-            App app = appRepository.findByName(request.getData().getApplication().getDisplayName())
+            App app = appRepository.findByName(appDisplayName)
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
             // 3. Check if user has access to this app
@@ -99,7 +104,7 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            log.info("Successfully processed claim enrichment for user: {}", request.getData().getUser().getUserPrincipalName());
+            log.info("Successfully processed claim enrichment for user: {}", userPrincipalName);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)

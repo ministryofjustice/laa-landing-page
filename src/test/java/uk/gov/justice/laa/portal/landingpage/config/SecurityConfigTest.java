@@ -2,136 +2,217 @@ package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.springframework.http.MediaType;
-
-@WebMvcTest(controllers = SecurityConfigTest.DummyController.class)
-@AutoConfigureMockMvc
-@Import({SecurityConfig.class, SecurityConfigTest.TestConfig.class})
+@WebMvcTest(controllers = TestController.class)
+@Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class})
+@ActiveProfiles("test")
 class SecurityConfigTest {
 
-    @Autowired
-    MockMvc mvc;
-
-    @MockitoBean
-    private AuthzOidcUserDetailsService authzOidcUserDetailsService;
-
-    @Configuration
-    static class TestConfig {
+    @TestConfiguration
+    static class OauthClientTestConfig {
         @Bean
         public ClientRegistrationRepository clientRegistrationRepository() {
-            return new InMemoryClientRegistrationRepository(
-                ClientRegistration.withRegistrationId("azure")
-                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                    .clientId("test-client-id")
-                    .clientSecret("test-client-secret")
-                    .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
-                    .authorizationUri("https://login.microsoftonline.com/common/oauth2/v2.0/authorize")
-                    .tokenUri("https://login.microsoftonline.com/common/oauth2/v2.0/token")
-                    .build()
-            );
+            return new CustomRepository();
+        }
+
+        @Bean
+        @Primary
+        public JwtDecoder jwtDecoder() {
+            // Create a mock JwtDecoder that returns a valid JWT for any token
+            JwtDecoder mockDecoder = mock(JwtDecoder.class);
+            Jwt jwt = Jwt.withTokenValue("token")
+                    .header("alg", "none")
+                    .claim("sub", "user")
+                    .build();
+            when(mockDecoder.decode(anyString())).thenReturn(jwt);
+            return mockDecoder;
+        }
+
+        public static class CustomRepository implements ClientRegistrationRepository {
+            private final Map<String, ClientRegistration> registrations = new HashMap<>();
+
+            public CustomRepository() {
+                // Empty repository for testing
+            }
+
+            @Override
+            public ClientRegistration findByRegistrationId(String registrationId) {
+                return registrations.get(registrationId);
+            }
         }
     }
+
+    @Autowired
+    private WebApplicationContext context;
+    
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private UserService userService;
+
+    @MockBean
+    private AuthzOidcUserDetailsService authzOidcUserDetailsService;
 
     @Test
     void passwordEncoderBeanCreation() {
-        assertThat(new SecurityConfig(authzOidcUserDetailsService).passwordEncoder())
-                .isInstanceOf(PasswordEncoder.class);
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        PasswordEncoder passwordEncoder = securityConfig.passwordEncoder();
+
+        assertThat(passwordEncoder).isInstanceOf(BCryptPasswordEncoder.class);
     }
 
     @Test
-    void protectedEndpointRedirectsToOauthLogin() throws Exception {
-        mvc.perform(get("/secure"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/oauth2/**"));
+    void jwtAuthenticationConverterBeanCreation() {
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        JwtAuthenticationConverter converter = securityConfig.jwtAuthenticationConverter();
+
+        assertThat(converter).isNotNull();
     }
 
     @Test
-    void postWithoutCsrfTokenIsRejected() throws Exception {
-        mvc.perform(post("/secure"))
+    void publicEndpointsAreAccessibleWithoutAuthentication() throws Exception {
+        // Test public endpoints
+        mockMvc.perform(get("/"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+
+        mockMvc.perform(get("/migrate"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+
+        mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+
+        mockMvc.perform(get("/css/style.css"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+    }
+
+    @Test
+    void securedEndpointsRedirectToLogin() throws Exception {
+        mockMvc.perform(get("/secure"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void adminEndpointsRequireAdminRole() throws Exception {
+        // Without admin role - should be redirected
+        mockMvc.perform(get("/admin/dashboard"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().is3xxRedirection());
+
+        // With admin role - should be allowed
+        mockMvc.perform(get("/admin/dashboard")
+                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("admin"));
+    }
+    
+    @Test
+    @WithMockUser
+    void postRequestsRequireCsrfToken() throws Exception {
+        // Create a separate MockMvc instance specifically for CSRF testing
+        MockMvc csrfMockMvc = MockMvcBuilders
+                .webAppContextSetup(context)
+                .apply(springSecurity())
+                .build();
+        
+        csrfMockMvc.perform(post("/secure")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isForbidden());
+        
+        csrfMockMvc.perform(post("/secure")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("secure-post"));
     }
 
     @Test
-    void postWithCsrfTokenContinuesToAuthFlow() throws Exception {
-        mvc.perform(post("/secure").with(csrf()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/oauth2/**"));
+    void claimsEnrichEndpointBypassesCsrfProtection() throws Exception {
+        mockMvc.perform(post("/api/v1/claims/enrich")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("claims-enrich"));
+    }
+    
+    @Test
+    void claimsEnrichEndpointRequiresJwtAuthentication() throws Exception {
+        // Without JWT - should be unauthorized (401)
+        mockMvc.perform(post("/api/v1/claims/enrich")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void logoutRedirectsToRoot() throws Exception {
-        mvc.perform(post("/logout").with(csrf()))
+    void logoutRedirectsToHomePage() throws Exception {
+        mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
-    }
-
-    @Test
-    void claimsEnrichEndpointAllowsRequestsWithoutCsrf() throws Exception {
-        mvc.perform(post("/api/v1/claims/enrich")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
-    void claimsEnrichEntraidEndpointAllowsRequestsWithoutCsrf() throws Exception {
-        mvc.perform(post("/api/v1/claims/enrich/entraid")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @RestController
-    static class DummyController {
-
-        @GetMapping({"/", "/login", "/css/{file:.+}", "/secure"})
-        public String get() {
-            return "ok";
-        }
-
-        @GetMapping("/secure")
-        public String secureGet() {
-            return "secured";
-        }
-
-        @PostMapping("/secure")
-        public String securePost() {
-            return "secured";
-        }
-
-        @PostMapping("/api/v1/claims/enrich")
-        public String claimsEnrich() {
-            return "enriched";
-        }
-
-        @PostMapping("/api/v1/claims/enrich/entraid")
-        public String claimsEnrichEntraid() {
-            return "enriched";
-        }
     }
 }
