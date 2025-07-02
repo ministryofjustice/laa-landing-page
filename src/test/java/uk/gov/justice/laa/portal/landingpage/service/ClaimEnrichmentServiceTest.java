@@ -147,12 +147,10 @@ class ClaimEnrichmentServiceTest {
         // Assert
         assertNotNull(response);
         assertTrue(response.isSuccess());
-        assertEquals(APP_NAME, response.getAppName());
-        assertEquals(List.of(EXTERNAL_ROLE), response.getRoles());
-        assertEquals(USER_ENTRA_ID, response.getUserId());
-        assertEquals(USER_EMAIL, response.getEmail());
-        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), response.getOfficeIds());
         assertEquals("Access granted to " + APP_NAME, response.getMessage());
+        assertEquals(List.of(EXTERNAL_ROLE), response.getLaa_app_roles());
+        assertEquals(USER_EMAIL, response.getUser_email());
+        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), response.getLaa_accounts());
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
 
@@ -193,9 +191,9 @@ class ClaimEnrichmentServiceTest {
         // Assert
         assertNotNull(response);
         assertTrue(response.isSuccess());
-        assertThat(response.getOfficeIds().contains(OFFICE_ID_1.toString()));
-        assertThat(response.getOfficeIds().contains(OFFICE_ID_2.toString()));
-        assertThat(response.getOfficeIds().contains(office3.getId().toString()));
+        assertThat(response.getLaa_accounts().contains(OFFICE_ID_1.toString()));
+        assertThat(response.getLaa_accounts().contains(OFFICE_ID_2.toString()));
+        assertThat(response.getLaa_accounts().contains(office3.getId().toString()));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
     }
@@ -224,8 +222,8 @@ class ClaimEnrichmentServiceTest {
         // Assert
         assertNotNull(response);
         assertTrue(response.isSuccess());
-        assertEquals(Collections.emptyList(), response.getOfficeIds());
-        assertEquals(List.of(INTERNAL_ROLE), response.getRoles());
+        assertEquals(Collections.emptyList(), response.getLaa_accounts());
+        assertEquals(List.of(INTERNAL_ROLE), response.getLaa_app_roles());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 

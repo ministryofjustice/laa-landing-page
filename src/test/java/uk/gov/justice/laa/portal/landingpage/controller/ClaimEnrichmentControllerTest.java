@@ -99,10 +99,12 @@ class ClaimEnrichmentControllerTest {
         // Setup test response
         testResponse = ClaimEnrichmentResponse.builder()
                 .success(true)
-                .roles(testRoles)
-                .appName(TEST_APP_NAME)
-                .userId(TEST_USER_ID)
+                .laa_app_roles(testRoles)
+                .correlationId("test-correlation-id")
+                .user_name(TEST_USER_ID)
+                .user_email("test@example.com")
                 .message("Access granted to " + TEST_APP_NAME)
+                .laa_accounts(List.of("office-1", "office-2"))
                 .build();
     }
 
@@ -119,9 +121,12 @@ class ClaimEnrichmentControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().isSuccess());
-        assertEquals(testRoles, response.getBody().getRoles());
-        assertEquals(TEST_APP_NAME, response.getBody().getAppName());
-        assertEquals(TEST_USER_ID, response.getBody().getUserId());
+        assertEquals(testRoles, response.getBody().getLaa_app_roles());
+        assertEquals("test-correlation-id", response.getBody().getCorrelationId());
+        assertEquals(TEST_USER_ID, response.getBody().getUser_name());
+        assertEquals("test@example.com", response.getBody().getUser_email());
+        assertEquals(List.of("office-1", "office-2"), response.getBody().getLaa_accounts());
+        assertEquals("Access granted to " + TEST_APP_NAME, response.getBody().getMessage());
 
         verify(claimEnrichmentService, times(1)).enrichClaim(testRequest);
     }
