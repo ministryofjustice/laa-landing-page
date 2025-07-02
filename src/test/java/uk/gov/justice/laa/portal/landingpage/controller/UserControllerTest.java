@@ -1060,6 +1060,26 @@ class UserControllerTest {
     }
 
     @Test
+    void displayAllUsers_shouldAddSuccessMessageToModelAndRemoveFromSession() {
+        PaginatedUsers paginatedUsers = new PaginatedUsers();
+        paginatedUsers.setUsers(new ArrayList<>());
+        paginatedUsers.setTotalUsers(1);
+        paginatedUsers.setTotalPages(1);
+
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
+        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(session.getAttribute("successMessage")).thenReturn("User added successfully");
+
+        String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
+
+        assertThat(view).isEqualTo("users");
+        assertThat(model.getAttribute("successMessage")).isEqualTo("User added successfully");
+        verify(session).removeAttribute("successMessage");
+    }
+
+    @Test
     void editUser_shouldAddUserAndRolesToModelIfPresent() {
         EntraUserDto user = new EntraUserDto();
         user.setId("id1");
