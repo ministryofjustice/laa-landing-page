@@ -90,7 +90,7 @@ public class UserController {
             List<UUID> userFirms = firmService.getUserFirms(entraUser).stream().map(FirmDto::getId).toList();
             paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size);
         } else {
-            if(Objects.isNull(usertype)) {
+            if (Objects.isNull(usertype)) {
                 usertype = "external";
             }
             paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size);
