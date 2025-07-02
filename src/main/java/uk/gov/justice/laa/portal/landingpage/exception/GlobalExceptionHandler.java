@@ -1,21 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Global exception handler for the application.
  */
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -38,6 +39,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ClaimEnrichmentResponse> handleConstraintViolation(ConstraintViolationException ex) {
         return createErrorResponse(HttpStatus.BAD_REQUEST, "Validation error: " + ex.getMessage());
+    }
+
+    @ExceptionHandler(CreateUserDetailsIncompleteException.class)
+    public RedirectView handleCreateUserDetailsIncompleteException(CreateUserDetailsIncompleteException ex) {
+        log.warn("A user has tried to skip parts of user creation (usually by changing the URL). Redirecting to user creation screen...");
+        return new RedirectView("/admin/user/create/details");
     }
 
     @ExceptionHandler(Exception.class)

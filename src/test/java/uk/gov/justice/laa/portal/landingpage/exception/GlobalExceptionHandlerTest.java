@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.exception;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.HashSet;
 import java.util.List;
@@ -81,6 +86,22 @@ class GlobalExceptionHandlerTest {
         assertEquals(400, response.getStatusCodeValue());
         assertFalse(response.getBody().isSuccess());
         assertTrue(response.getBody().getMessage().contains("Validation error"));
+    }
+
+    @Test
+    void handleCreateUserDetailsIncompleteException() {
+        // Arrange
+        CreateUserDetailsIncompleteException exception = new CreateUserDetailsIncompleteException();
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(GlobalExceptionHandler.class);
+
+        // Act
+        RedirectView response = exceptionHandler.handleCreateUserDetailsIncompleteException(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("/admin/user/create/details", response.getUrl());
+        List<ILoggingEvent> warningLogs =  LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertEquals(1, warningLogs.size());
     }
 
     @Test
