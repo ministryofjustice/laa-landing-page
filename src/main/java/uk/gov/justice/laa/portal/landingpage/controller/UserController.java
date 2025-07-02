@@ -39,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -494,11 +495,11 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     public String editUserDetails(@PathVariable String id, Model model) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName(user.getFirstName());
-        userDetailsForm.setLastName(user.getLastName());
-        userDetailsForm.setEmail(user.getEmail());
-        model.addAttribute("userDetailsForm", userDetailsForm);
+        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm.setFirstName(user.getFirstName());
+        editUserDetailsForm.setLastName(user.getLastName());
+        editUserDetailsForm.setEmail(user.getEmail());
+        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         return "edit-user-details";
     }
@@ -511,12 +512,12 @@ public class UserController {
      * @param result          Binding result for validation errors
      * @param session         HttpSession to store user details
      * @return Redirect to user management page
-     * @throws IOException If an error occurs during user update
+     * @throws IOException              If an error occurs during user update
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
     public String updateUserDetails(@PathVariable String id,
-            @Valid UserDetailsForm userDetailsForm, BindingResult result,
+            @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
             HttpSession session) throws IOException {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
@@ -524,13 +525,13 @@ public class UserController {
             // errors
             EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
             session.setAttribute("user", user);
-            session.setAttribute("userDetailsForm", userDetailsForm);
-            return String.format("/admin/users/edit/%s/details", id);
+            session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+            return "edit-user-details";
         }
         // Update user details
-        userService.updateUserDetails(id, userDetailsForm.getFirstName(), userDetailsForm.getLastName(),
-                userDetailsForm.getEmail());
-        return "redirect:/admin/users/edit/" + id + "#user-details";
+        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName(),
+                editUserDetailsForm.getEmail());
+        return "redirect:/admin/users/manage/" + id;
     }
 
     /**
@@ -638,7 +639,7 @@ public class UserController {
     @GetMapping("/user/edit/cancel")
     public String cancelUserEdit(HttpSession session) {
         session.removeAttribute("user");
-        session.removeAttribute("userDetailsForm");
+        session.removeAttribute("editUserDetailsForm");
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
         return "redirect:/admin/users";

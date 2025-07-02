@@ -26,7 +26,8 @@
                     User details
                 </h1>
             </legend>
-            <form th:action="@{/admin/user/edit/details}" th:method="post" th:object="${userDetailsForm}">
+            <form th:action="@{/admin/users/edit/{id}/details(id=${id})}" th:method="post"
+                th:object="${editUserDetailsForm}" class="govuk-form">
                 <div th:if="${#fields.hasErrors()}">
                     <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                         aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -52,7 +53,7 @@
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
-                        readonly="readonly" th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">

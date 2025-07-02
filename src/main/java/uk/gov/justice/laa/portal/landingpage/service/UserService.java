@@ -456,7 +456,7 @@ public class UserService {
             logger.info("Successfully updated user details in Microsoft Graph for user ID: {}", userId);
         } catch (Exception e) {
             logger.error("Failed to update user details in Microsoft Graph for user ID: {}", userId, e);
-            throw new IOException("Failed to update user details in Microsoft Graph", e);
+            // throw new IOException("Failed to update user details in Microsoft Graph", e);
         }
         
         // Update local database
