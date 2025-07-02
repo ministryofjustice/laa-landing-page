@@ -27,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,7 +36,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -146,11 +146,23 @@ class ClaimEnrichmentServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertEquals("Access granted to " + APP_NAME, response.getMessage());
-        assertEquals(List.of(EXTERNAL_ROLE), response.getLaa_app_roles());
-        assertEquals(USER_EMAIL, response.getUser_email());
-        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), response.getLaa_accounts());
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("user_email"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("laa_app_roles"));
+        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), claims.get("laa_accounts"));
+        
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
 
@@ -190,10 +202,25 @@ class ClaimEnrichmentServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertThat(response.getLaa_accounts().contains(OFFICE_ID_1.toString()));
-        assertThat(response.getLaa_accounts().contains(OFFICE_ID_2.toString()));
-        assertThat(response.getLaa_accounts().contains(office3.getId().toString()));
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("user_email"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("laa_app_roles"));
+        assertThat(((List<String>)claims.get("laa_accounts")).contains(OFFICE_ID_1.toString()));
+        assertThat(((List<String>)claims.get("laa_accounts")).contains(OFFICE_ID_2.toString()));
+        assertThat(((List<String>)claims.get("laa_accounts")).contains(office3.getId().toString()));
+        
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
     }
@@ -221,9 +248,23 @@ class ClaimEnrichmentServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertEquals(Collections.emptyList(), response.getLaa_accounts());
-        assertEquals(List.of(INTERNAL_ROLE), response.getLaa_app_roles());
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("user_email"));
+        assertEquals(List.of(INTERNAL_ROLE), claims.get("laa_app_roles"));
+        assertEquals(Collections.emptyList(), claims.get("laa_accounts"));
+        
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 
