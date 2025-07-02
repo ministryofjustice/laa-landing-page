@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
 
+import java.util.List; 
+
 @Builder
 @Data
 @NoArgsConstructor
@@ -20,4 +22,5 @@ public class EntraClaimData {
     private String authenticationEventListenerId;
     private String customAuthenticationExtensionId;
     private EntraAuthenticationContext authenticationContext;
+    private List<EntraClaimAction> actions;
 }
