@@ -217,9 +217,9 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(USER_EMAIL, claims.get("user_email"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("laa_app_roles"));
-        assertThat(((List<String>)claims.get("laa_accounts")).contains(OFFICE_ID_1.toString()));
-        assertThat(((List<String>)claims.get("laa_accounts")).contains(OFFICE_ID_2.toString()));
-        assertThat(((List<String>)claims.get("laa_accounts")).contains(office3.getId().toString()));
+        assertThat(((List<String>) claims.get("laa_accounts")).contains(OFFICE_ID_1.toString()));
+        assertThat(((List<String>) claims.get("laa_accounts")).contains(OFFICE_ID_2.toString()));
+        assertThat(((List<String>) claims.get("laa_accounts")).contains(office3.getId().toString()));
         
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
