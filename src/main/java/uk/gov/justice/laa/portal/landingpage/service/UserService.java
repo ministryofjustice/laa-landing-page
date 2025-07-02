@@ -171,13 +171,23 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsers(int page, int pageSize) {
-        return getPageOfUsers(() -> entraUserRepository.findAll(PageRequest.of(Math.max(0, page - 1), pageSize)));
+        return getPageOfUsers(page, pageSize, false);
+    }
+
+    public PaginatedUsers getPageOfUsers(int page, int pageSize, boolean isFirmAdmin) {
+        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
+        return getPageOfUsers(() -> entraUserRepository.findByUserTypes(userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
+        return getPageOfUsersByNameOrEmail(page, pageSize, searchTerm, false);
+    }
+
+    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm, boolean isFirmAdmin) {
+        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
         return getPageOfUsers(() -> entraUserRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                        searchTerm, searchTerm, searchTerm, PageRequest.of(Math.max(0, page - 1), pageSize)));
+                .findByNameEmailAndUserTypes(
+                        searchTerm, searchTerm, searchTerm, userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
     }
 
     public List<EntraUserDto> getSavedUsers() {
