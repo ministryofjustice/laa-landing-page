@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -382,6 +383,7 @@ class UserControllerTest {
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
+        session.setAttribute("user", new User());
         ApplicationsForm applicationsForm = new ApplicationsForm();
         String view = userController.selectUserApps(applicationsForm, model, session);
         assertThat(view).isEqualTo("add-user-apps");
@@ -389,6 +391,16 @@ class UserControllerTest {
         List<AppViewModel> modeApps = (List<AppViewModel>) model.getAttribute("apps");
         assertThat(modeApps.getFirst().getId()).isEqualTo("1");
         assertThat(modeApps.getFirst().isSelected()).isTrue();
+    }
+
+    @Test
+    void selectUserAppsGetThrowsExceptionWhenNoUserPresent() {
+        AppDto app = new AppDto();
+        app.setId("1");
+        when(userService.getApps()).thenReturn(List.of(app));
+        HttpSession session = new MockHttpSession();
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.selectUserApps(applicationsForm, model, session));
     }
 
     @Test
@@ -419,6 +431,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
         when(userService.getAppRolesByAppId(any())).thenReturn(roles);
         String view = userController.getSelectedRoles(new RolesForm(), model, session);
@@ -427,6 +440,32 @@ class UserControllerTest {
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
         assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    void getSelectedRolesGetThrowsExceptionWhenNoAppsPresent() {
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getSelectedRoles(new RolesForm(), model, session));
+    }
+
+    @Test
+    void getSelectedRolesGetThrowsExceptionWhenNoUserPresent() {
+        List<String> selectedApps = new ArrayList<>();
+        selectedApps.add("app1");
+        List<String> selectedRoles = new ArrayList<>();
+        selectedRoles.add("dev");
+        List<AppRoleDto> roles = new ArrayList<>();
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("tester");
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("dev");
+        roles.add(userRole);
+        roles.add(userRole2);
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
+        when(userService.getAppRolesByAppId(any())).thenReturn(roles);
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getSelectedRoles(new RolesForm(), model, session));
     }
 
     @Test
@@ -488,6 +527,7 @@ class UserControllerTest {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(List.of(officeId.toString()));
         session.setAttribute("officeData", officeData);
+        session.setAttribute("user", new User());
         Office office1 = Office.builder().id(officeId).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).build();
         List<Office> dbOffices = List.of(office1, office2);
@@ -557,6 +597,12 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
         assertThat(session.getAttribute("displayRoles")).isNotNull();
+    }
+
+    @Test
+    void addUserCheckAnswersGetThrowsExceptionWhenNoUserPresent() {
+        HttpSession session = new MockHttpSession();
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getUserCheckAnswers(model, session));
     }
 
     @Test
@@ -1159,6 +1205,7 @@ class UserControllerTest {
         when(userService.getApps()).thenReturn(List.of(appDto));
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", List.of("app1"));
+        session.setAttribute("user", new User());
         ApplicationsForm form = new ApplicationsForm();
 
         String view = userController.selectUserApps(form, model, session);
@@ -1235,6 +1282,7 @@ class UserControllerTest {
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
         when(officeService.getOffices()).thenReturn(List.of(office));
         HttpSession session = new MockHttpSession();
+        session.setAttribute("user", new User());
         OfficesForm form = new OfficesForm();
 
         String view = userController.offices(form, session, model);
@@ -1242,6 +1290,16 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-offices");
         assertThat(model.getAttribute("officeData")).isNotNull();
         assertThat(model.getAttribute("user")).isNotNull();
+    }
+
+    @Test
+    void offices_shouldThrowExceptionWhenUserIsNotPresent() {
+        Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
+        when(officeService.getOffices()).thenReturn(List.of(office));
+        HttpSession session = new MockHttpSession();
+        OfficesForm form = new OfficesForm();
+
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.offices(form, session, model));
     }
 
     @Test
