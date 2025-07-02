@@ -11,8 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ClaimEnrichmentRequest {
-    private String type;
-    private String source;
-    private EntraClaimData data;
+public class EntraServicePrincipalDto {
+    private String id;
+    private String appId;
+    private String appDisplayName;
+    private String displayName;
 }
