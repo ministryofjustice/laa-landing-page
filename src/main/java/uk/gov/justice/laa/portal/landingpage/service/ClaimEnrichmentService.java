@@ -109,11 +109,11 @@ public class ClaimEnrichmentService {
             return ClaimEnrichmentResponse.builder()
                     .success(true)
                     .message("Access granted to " + app.getName())
-                    .appName(app.getName())
-                    .userId(entraUser.getEntraUserId())
-                    .email(entraUser.getEmail())
-                    .roles(userRoles)
-                    .officeIds(officeIds)
+                    .correlationId(request.getData().getAuthenticationContext().getCorrelationId())
+                    .user_name(userDetails.getDisplayName())
+                    .user_email(entraUser.getEmail())
+                    .laa_app_roles(userRoles)
+                    .laa_accounts(officeIds)
                     .build();
 
         } catch (ClaimEnrichmentException e) {

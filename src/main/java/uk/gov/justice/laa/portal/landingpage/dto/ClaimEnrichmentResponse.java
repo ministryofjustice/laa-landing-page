@@ -14,9 +14,13 @@ import java.util.List;
 public class ClaimEnrichmentResponse {
     private boolean success;
     private String message;
-    private String appName;
-    private String userId;
-    private String email;
-    private List<String> roles;
-    private List<String> officeIds;
+    private String correlationId;
+    @SuppressWarnings("checkstyle:MemberName")
+    private String user_name;
+    @SuppressWarnings("checkstyle:MemberName")
+    private String user_email;
+    @SuppressWarnings("checkstyle:MemberName")
+    private List<String> laa_app_roles;
+    @SuppressWarnings("checkstyle:MemberName")
+    private List<String> laa_accounts;
 }
