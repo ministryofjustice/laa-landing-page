@@ -481,6 +481,58 @@ public class UserController {
     }
 
     /**
+     * Get User Details for editing
+     * 
+     * @param id    User ID
+     * @param model Model to hold user details form and user data
+     * @return View name for editing user details
+     * @throws IOException              If an error occurs during user retrieval
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+
+    @GetMapping("/users/edit/{id}/details")
+    public String editUserDetails(@PathVariable String id, Model model) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName(user.getFirstName());
+        userDetailsForm.setLastName(user.getLastName());
+        userDetailsForm.setEmail(user.getEmail());
+        model.addAttribute("userDetailsForm", userDetailsForm);
+        model.addAttribute("user", user);
+        return "edit-user-details";
+    }
+
+    /**
+     * Update user details
+     * 
+     * @param id              User ID
+     * @param userDetailsForm User details form
+     * @param result          Binding result for validation errors
+     * @param session         HttpSession to store user details
+     * @return Redirect to user management page
+     * @throws IOException If an error occurs during user update
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+    @PostMapping("/users/edit/{id}/details")
+    public String updateUserDetails(@PathVariable String id,
+            @Valid UserDetailsForm userDetailsForm, BindingResult result,
+            HttpSession session) throws IOException {
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
+            // If there are validation errors, return to the edit user details page with
+            // errors
+            EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+            session.setAttribute("user", user);
+            session.setAttribute("userDetailsForm", userDetailsForm);
+            return String.format("/admin/users/edit/%s/details", id);
+        }
+        // Update user details
+        userService.updateUserDetails(id, userDetailsForm.getFirstName(), userDetailsForm.getLastName(),
+                userDetailsForm.getEmail());
+        return "redirect:/admin/users/edit/" + id + "#user-details";
+    }
+
+    /**
      * Retrieves available user roles for user
      */
     @GetMapping("/users/edit/{id}/roles")
@@ -579,6 +631,15 @@ public class UserController {
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
+        return "redirect:/admin/users";
+    }
+
+    @GetMapping("/user/edit/cancel")
+    public String cancelUserEdit(HttpSession session) {
+        session.removeAttribute("user");
+        session.removeAttribute("userDetailsForm");
+        session.removeAttribute("selectedApps");
+        session.removeAttribute("editUserAllSelectedRoles");
         return "redirect:/admin/users";
     }
 }

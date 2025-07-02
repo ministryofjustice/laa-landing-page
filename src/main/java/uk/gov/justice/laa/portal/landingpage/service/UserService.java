@@ -424,6 +424,51 @@ public class UserService {
         return getUserAssignedApps(userApps);
     }
 
+    /**
+     * Update user details in Microsoft Graph and local database
+     * 
+     * @param userId The user ID
+     * @param firstName The user's first name
+     * @param lastName The user's last name
+     * @param email The user's email address
+     * @throws IOException If an error occurs during the update
+     */
+    public void updateUserDetails(String userId, String firstName, String lastName, String email) throws IOException {
+        // Update Microsoft Graph
+        User user = new User();
+        user.setGivenName(firstName);
+        user.setSurname(lastName);
+        user.setDisplayName(firstName + " " + lastName);
+        user.setMail(email);
+        
+        try {
+            graphClient.users().byUserId(userId).patch(user);
+            logger.info("Successfully updated user details in Microsoft Graph for user ID: {}", userId);
+        } catch (Exception e) {
+            logger.error("Failed to update user details in Microsoft Graph for user ID: {}", userId, e);
+            throw new IOException("Failed to update user details in Microsoft Graph", e);
+        }
+        
+        // Update local database
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser entraUser = optionalUser.get();
+            entraUser.setFirstName(firstName);
+            entraUser.setLastName(lastName);
+            entraUser.setEmail(email);
+            
+            try {
+                entraUserRepository.saveAndFlush(entraUser);
+                logger.info("Successfully updated user details in database for user ID: {}", userId);
+            } catch (Exception e) {
+                logger.error("Failed to update user details in database for user ID: {}", userId, e);
+                throw new IOException("Failed to update user details in database", e);
+            }
+        } else {
+            logger.warn("User with id {} not found in database. Could not update local user details.", userId);
+        }
+    }
+
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()

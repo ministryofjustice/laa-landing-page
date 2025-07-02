@@ -10,5 +10,7 @@ public class EntraUserDto {
     private String fullName;
     private String lastLoggedIn;
     private String entraUserId;
+    private String firstName;
+    private String lastName;
 
 }
