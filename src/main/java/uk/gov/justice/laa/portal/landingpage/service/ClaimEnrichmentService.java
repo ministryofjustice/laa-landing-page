@@ -64,7 +64,7 @@ public class ClaimEnrichmentService {
                             // - Extract specific claims like "extension_xxxx_myclaim"
                             // - Merge them with claims from your database
                             // - Perform validation based on incoming claims
-                            // This part depends heavily on your specific business requirements.
+                            // - This part depends heavily on your specific business requirements.
                         }
                     }
                 }
@@ -82,9 +82,9 @@ public class ClaimEnrichmentService {
             boolean hasAccess = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .anyMatch(appRole ->
-                            // Updated: Comparing by ID for uniqueness as per TODO
-                            appRole.getApp().getId().equals(app.getId())
-                            // Removed: && appRole.getApp().getName().equals(app.getName()) as ID is sufficient and name may not be unique
+                            //TODO: Update Data Model to compare by ID as name may not be unique
+                            // Reverted to original logic based on user's request
+                            appRole.getApp().getName().equals(app.getName())
                     );
 
             if (!hasAccess) {
@@ -96,9 +96,9 @@ public class ClaimEnrichmentService {
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .filter(role ->
-                            // Updated: Comparing by ID for uniqueness as per TODO
+                            //TODO: Update Data Model to compare by ID as name may not be unique
                             role.getApp().getId().equals(app.getId())
-                                    // Removed: && role.getApp().getName().equals(app.getName()) as ID is sufficient
+                                    && role.getApp().getName().equals(app.getName())
                     )
                     .map(AppRole::getName)
                     .collect(Collectors.toList());
@@ -108,13 +108,13 @@ public class ClaimEnrichmentService {
             }
 
             //5. Get Office IDs
+            //TODO: officeIds should be updated to officeCode when Data Model Updated
             List<String> officeIds = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getFirm() != null)
                     .map(UserProfile::getFirm)
                     .map(Firm::getId)
                     .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
-                    // Updated: Map to officeCode as per TODO. Assumes Office entity has a getCode() method.
-                    .map(office -> office.getCode())
+                    .map(office -> office.getId().toString()) // Reverted to original logic based on user's request
                     .distinct()
                     .collect(Collectors.toList());
 
@@ -139,10 +139,10 @@ public class ClaimEnrichmentService {
                     .success(true)
                     .message("Access granted to " + app.getName())
                     .correlationId(request.getData().getAuthenticationContext().getCorrelationId())
-                    .user_name(userDetails.getDisplayName()) // Will be renamed to userName in ClaimEnrichmentResponse
-                    .user_email(entraUser.getEmail()) // Will be renamed to userEmail in ClaimEnrichmentResponse
-                    .laa_app_roles(userRoles) // Will be renamed to laaAppRoles in ClaimEnrichmentResponse
-                    .laa_accounts(officeIds) // Will be renamed to laaAccounts in ClaimEnrichmentResponse
+                    .user_name(userDetails.getDisplayName())
+                    .user_email(entraUser.getEmail())
+                    .laa_app_roles(userRoles)
+                    .laa_accounts(officeIds)
                     .build();
 
         } catch (ClaimEnrichmentException e) {
