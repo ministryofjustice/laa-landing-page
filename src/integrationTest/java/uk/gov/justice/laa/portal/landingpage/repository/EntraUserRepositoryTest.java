@@ -17,7 +17,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -91,28 +90,28 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         String entraUser1Id = generateEntraId();
         EntraUser entraUser1 = buildEntraUser(entraUser1Id, "test1@email.com", "First Name1", "Last Name1");
         repository.save(entraUser1);
-        UserProfile userProfile1_1 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
-        userProfile1_1.setFirm(firm1);
-        UserProfile userProfile1_2 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
-        userProfile1_2.setFirm(firm2);
-        entraUser1.getUserProfiles().add(userProfile1_1);
-        entraUser1.getUserProfiles().add(userProfile1_2);
-        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile1_1, userProfile1_2));
+        UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile11.setFirm(firm1);
+        UserProfile userProfile12 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile12.setFirm(firm2);
+        entraUser1.getUserProfiles().add(userProfile11);
+        entraUser1.getUserProfiles().add(userProfile12);
+        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile11, userProfile12));
 
         String entraUser2Id = generateEntraId();
         EntraUser entraUser2 = buildEntraUser(entraUser2Id, "test2@email.com", "First Name2", "Last Name2");
         repository.save(entraUser2);
-        UserProfile userProfile2_1 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL_SINGLE_FIRM);
-        userProfile2_1.setFirm(firm1);
-        entraUser2.getUserProfiles().add(userProfile2_1);
-        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile2_1));
+        UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL_SINGLE_FIRM);
+        userProfile21.setFirm(firm1);
+        entraUser2.getUserProfiles().add(userProfile21);
+        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile21));
 
         String entraUser3Id = generateEntraId();
         EntraUser entraUser3 = buildEntraUser(entraUser3Id, "test3@email.com", "First Name3", "Last Name3");
         repository.save(entraUser3);
-        UserProfile userProfile3_1 = buildLaaUserProfile(entraUser3, UserType.INTERNAL);
-        entraUser3.getUserProfiles().add(userProfile3_1);
-        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile3_1));
+        UserProfile userProfile31 = buildLaaUserProfile(entraUser3, UserType.INTERNAL);
+        entraUser3.getUserProfiles().add(userProfile31);
+        userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile31));
         Pageable page1 = PageRequest.of(0, 10);
         Page<EntraUser> internalUsers = repository.findByUserTypes(UserType.INTERNAL_TYPES, page1);
         Assertions.assertThat(internalUsers).hasSize(1);
