@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -172,9 +173,10 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsers(boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+    public PaginatedUsers getPageOfUsers(boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort));
         if (Objects.isNull(firmList)) {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
@@ -183,21 +185,22 @@ public class UserService {
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            pageOfUsers = entraUserRepository.findByUserTypes(types, pageRequest);
         } else {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
         }
         return getPageOfUsers(() -> pageOfUsers);
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort));
         if (Objects.isNull(firmList)) {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
@@ -207,7 +210,7 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                    searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+                    searchTerm, types, pageRequest);
         } else {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
@@ -215,12 +218,23 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                    searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+                    searchTerm, types, firmList, pageRequest);
         }
         return getPageOfUsers(() -> pageOfUsers);
     }
 
-
+    protected Sort getSort(String field) {
+        switch (field) {
+            case "firstName":
+                return Sort.by(Sort.Direction.ASC, "firstName");
+            case "lastName":
+                return Sort.by(Sort.Direction.ASC, "lastName");
+            case "email":
+                return Sort.by(Sort.Direction.ASC, "email");
+            default:
+                return Sort.by(Sort.Direction.ASC, "userStatus", "createdDate");
+        }
+    }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
         EntraUser user = entraUserRepository.findByEntraUserId(entraId)
