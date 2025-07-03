@@ -535,7 +535,15 @@ public class UserController {
     }
 
     /**
-     * Retrieves available user roles for user
+     * Retrieves available roles for user and their currently assigned roles.
+     * 
+     * @param id               User ID
+     * @param selectedAppIndex Index of the currently selected app
+     * @param model            Model to hold user and role data
+     * @param session          HttpSession to store selected apps and roles
+     * @return View name for editing user roles
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user retrieval
      */
     @GetMapping("/users/edit/{id}/roles")
     public String editUserRoles(@PathVariable String id,
@@ -563,7 +571,16 @@ public class UserController {
     }
 
     /**
-     * Update user roles via graph SDK
+     * Update user roles for a specific app.
+     * 
+     * @param id               User ID
+     * @param selectedRoles    List of selected role IDs for the user
+     * @param selectedAppIndex Index of the currently selected app
+     * @param authentication   Authentication object for the current user
+     * @param session          HttpSession to store selected apps and roles
+     * @return Redirect view to the user management page or next app roles page
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user role update
      */
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
@@ -638,10 +655,25 @@ public class UserController {
 
     @GetMapping("/user/edit/cancel")
     public String cancelUserEdit(HttpSession session) {
+        // Edit User Details Form
         session.removeAttribute("user");
         session.removeAttribute("editUserDetailsForm");
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
+
+        // Edit User Roles Form
+        session.removeAttribute("user");
+        session.removeAttribute("availableRoles");
+        session.removeAttribute("userAssignedRoles");
+        session.removeAttribute("selectedAppIndex");
+        session.removeAttribute("editUserRolesCurrentApp");
+        // Edit User Apps Form
+        session.removeAttribute("userAssignedApps");
+        session.removeAttribute("availableApps");
+        session.removeAttribute("selectedApps");
+        // Clear any success messages
+        session.removeAttribute("successMessage");
+
         return "redirect:/admin/users";
     }
 }
