@@ -172,10 +172,6 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsers(boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
-        return getPageOfUsersByNameOrEmail(null, isInternal, isFirmAdmin, firmList, page, pageSize);
-    }
-
     public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
@@ -187,7 +183,7 @@ public class UserService {
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            if (Objects.isNull(searchTerm)) {
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
                 pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
             } else {
                 pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
@@ -199,7 +195,7 @@ public class UserService {
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            if (Objects.isNull(searchTerm)) {
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
                 pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
             } else {
                 pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
