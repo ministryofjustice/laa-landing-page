@@ -105,6 +105,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -131,6 +132,8 @@ class UserServiceTest {
     private OfficeRepository mockOfficeRepository;
     @Mock
     private InvitationsRequestBuilder invitationsRequestBuilder;
+    @Mock
+    private TechServicesNotifier techServicesNotifier;
 
     @BeforeEach
     void setUp() {
@@ -142,7 +145,8 @@ class UserServiceTest {
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
                 mockOfficeRepository,
-                laaApplicationsList);
+                laaApplicationsList,
+                techServicesNotifier);
     }
 
     @Test
@@ -343,12 +347,15 @@ class UserServiceTest {
         when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
         Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
         when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
+        doNothing().when(techServicesNotifier).notifyRoleChange(entraUser.getId());
+        when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
         FirmDto firm = FirmDto.builder().name("Firm").build();
         userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+        verify(techServicesNotifier, times(2)).notifyRoleChange(entraUser.getId());
     }
 
     @Test

@@ -76,6 +76,7 @@ public class UserService {
     private final ModelMapper mapper;
     private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private final TechServicesNotifier techServicesNotifier;
 
     /**
      * The number of pages to load in advance when doing user pagination
@@ -85,7 +86,7 @@ public class UserService {
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
                        NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList) {
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesNotifier techServicesNotifier) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -94,6 +95,7 @@ public class UserService {
         this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
+        this.techServicesNotifier = techServicesNotifier;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -133,6 +135,7 @@ public class UserService {
         if (userProfile.isPresent()) {
             userProfile.get().setAppRoles(new HashSet<>(roles));
             entraUserRepository.saveAndFlush(user);
+            techServicesNotifier.notifyRoleChange(user.getId());
         } else {
             logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
         }
@@ -271,7 +274,11 @@ public class UserService {
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
+        EntraUser entraUser = persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
+
+        techServicesNotifier.notifyRoleChange(entraUser.getId());
+
+        return entraUser;
     }
 
     private User inviteUser(User user) {
