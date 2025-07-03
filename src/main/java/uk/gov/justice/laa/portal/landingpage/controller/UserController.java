@@ -626,17 +626,22 @@ public class UserController {
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getApps();
 
+        // Add selected attribute to available apps based on user assigned apps
+        availableApps.forEach(app -> {
+            app.setSelected(userAssignedApps.stream()
+                    .anyMatch(userApp -> userApp.getId().equals(app.getId())));
+        });
+
         model.addAttribute("user", user);
-        model.addAttribute("userAssignedApps", userAssignedApps);
-        model.addAttribute("availableApps", availableApps);
+        model.addAttribute("apps", availableApps);
 
         return "edit-user-apps";
     }
 
     @PostMapping("/users/edit/{id}/apps")
-    public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("selectedApps") List<String> apps,
+    public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("apps") List<String> apps,
             HttpSession session) {
-        session.setAttribute("selectedApps", apps);
+        session.setAttribute("apps", apps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));

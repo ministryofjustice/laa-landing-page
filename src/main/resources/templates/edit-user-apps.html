@@ -13,19 +13,18 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/user/create/details">
+                <a class="govuk-breadcrumbs__link" href="@{'/admin/users/edit/' + ${user.id}}" + ${user.id}>
                     < Back</a>
             </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form method="post" th:action="@{/admin/user/create/services}" th:object="${applicationsForm}">
+        <form method="post" th:action="@{/admin/users/edit/{id}/apps(id=${user.id})}" th:object="${applicationsForm}">
             <div class="govuk-form-group">
                 <fieldset class="govuk-fieldset">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                         <h1 class="govuk-fieldset__heading">
-                            Which of these services will <span th:text="${user.givenName}"></span> <span
-                                th:text="${user.surname}"></span> need access?
+                            Which of these services will <span th:text="${user.fullName}"></span> need access?
                         </h1>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">

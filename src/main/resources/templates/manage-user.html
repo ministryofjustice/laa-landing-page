@@ -74,7 +74,7 @@
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Change</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Edit</a>
                                     </li>
                                 </ul>
                             </div>
@@ -113,7 +113,7 @@
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Manage</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Edit</a>
                                     </li>
                                 </ul>
                             </div>
@@ -122,18 +122,6 @@
                                     <div class="govuk-summary-list__row" th:each="role : ${userAppRoles}">
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
-                                        <dd class="govuk-summary-list__actions">
-                                            <ul class="govuk-summary-list__actions-list">
-                                                <li class="govuk-summary-list__actions-list-item">
-                                                    <a class="govuk-link" href="#">Edit<span
-                                                            class="govuk-visually-hidden"> service details</span></a>
-                                                </li>
-                                                <li class="govuk-summary-list__actions-list-item">
-                                                    <a class="govuk-link" href="#">Remove<span
-                                                            class="govuk-visually-hidden"> service details</span></a>
-                                                </li>
-                                            </ul>
-                                        </dd>
                                     </div>
                                 </dl>
                             </div>
@@ -149,7 +137,7 @@
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/roles'}">Manage</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/roles'}">Edit</a>
                                     </li>
                                 </ul>
                             </div>
