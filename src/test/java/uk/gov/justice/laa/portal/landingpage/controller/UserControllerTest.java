@@ -15,15 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -107,7 +102,7 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(false);
-        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), anyList(), anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
 
         String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
 
@@ -142,7 +137,7 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), any(), eq(1), eq(10))).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), eq(1), eq(10))).thenReturn(mockPaginatedUsers);
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
@@ -151,7 +146,7 @@ class UserControllerTest {
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsers(false, false, null, 1, 10);
+        verify(userService).getPageOfUsersByNameOrEmail(isNull(), false, false, any(), 1, 10);
     }
 
     @Test
@@ -161,7 +156,7 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
-        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
@@ -171,7 +166,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(false, false, null, 1, 10);
+        verify(userService).getPageOfUsersByNameOrEmail(null, false, false, null, 1, 10);
     }
 
     @Test
@@ -200,7 +195,7 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, null, "", false, model, session, authentication);
@@ -208,7 +203,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(false, false, null, 1, 10);
+        verify(userService).getPageOfUsersByNameOrEmail(null, false, false, null, 1, 10);
     }
 
     @Test
@@ -1069,7 +1064,7 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsers(anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
         String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);

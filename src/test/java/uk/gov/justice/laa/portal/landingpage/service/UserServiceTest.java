@@ -655,7 +655,7 @@ class UserServiceTest {
             when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsers(true, false, null, 0, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, null, 0, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
@@ -679,7 +679,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsers(false, false, null, 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, false, false, null, 2, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -705,7 +705,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsers(true, true, null, 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, null, 2, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -732,7 +732,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsers(true, true, new ArrayList<>(), 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, new ArrayList<>(), 2, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -759,7 +759,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsers(true, false, new ArrayList<>(), 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, new ArrayList<>(), 2, 10);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);

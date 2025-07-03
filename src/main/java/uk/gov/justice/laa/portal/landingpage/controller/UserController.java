@@ -119,20 +119,12 @@ public class UserController {
     }
 
     protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
-        if (searchTerm != null && !searchTerm.isEmpty()) {
-            return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
-        } else {
-            return userService.getPageOfUsers(false, showFirmAdmins, userFirms, page, size);
-        }
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
     }
 
     protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
         boolean isInternal = !userType.equals("external");
-        if (searchTerm != null && !searchTerm.isEmpty()) {
-            return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
-        } else {
-            return userService.getPageOfUsers(isInternal, showFirmAdmins, null, page, size);
-        }
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
     }
 
     @GetMapping("/users/edit/{id}")
