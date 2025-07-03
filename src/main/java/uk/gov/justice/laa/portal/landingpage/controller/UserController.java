@@ -79,6 +79,7 @@ public class UserController {
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String sort,
             @RequestParam(required = false) String usertype,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) boolean showFirmAdmins,
@@ -89,12 +90,12 @@ public class UserController {
         boolean internal = userService.isInternal(entraUser);
         if (!internal) {
             List<UUID> userFirms = firmService.getUserFirms(entraUser).stream().map(FirmDto::getId).toList();
-            paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size);
+            paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size, sort);
         } else {
             if (Objects.isNull(usertype)) {
                 usertype = "external";
             }
-            paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size);
+            paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size, sort);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -118,13 +119,13 @@ public class UserController {
         return "users";
     }
 
-    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
+    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size, String sort) {
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size, sort);
     }
 
-    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
+    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size, String sort) {
         boolean isInternal = !userType.equals("external");
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size, sort);
     }
 
     @GetMapping("/users/edit/{id}")
