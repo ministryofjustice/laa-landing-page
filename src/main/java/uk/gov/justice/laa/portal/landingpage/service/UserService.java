@@ -173,26 +173,7 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsers(boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
-        List<UserType> types;
-        Page<EntraUser> pageOfUsers;
-        if (Objects.isNull(firmList)) {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else if (isInternal) {
-                types = UserType.INTERNAL_TYPES;
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
-        } else {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
-        }
-        return getPageOfUsers(() -> pageOfUsers);
+        return getPageOfUsersByNameOrEmail(null, isInternal, isFirmAdmin, firmList, page, pageSize);
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
@@ -206,16 +187,24 @@ public class UserService {
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                    searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            if (Objects.isNull(searchTerm)) {
+                pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
+                        searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            }
         } else {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
             } else {
                 types = UserType.EXTERNAL_TYPES;
             }
-            pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                    searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            if (Objects.isNull(searchTerm)) {
+                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
+                        searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            }
         }
         return getPageOfUsers(() -> pageOfUsers);
     }
