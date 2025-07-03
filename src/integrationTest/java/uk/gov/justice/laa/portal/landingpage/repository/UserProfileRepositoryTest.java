@@ -52,7 +52,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraUserId()).isEqualTo(entraUserId);
+        Assertions.assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
         Assertions.assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
@@ -84,7 +84,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getId()).isEqualTo(userProfile1.getId());
         Assertions.assertThat(result.getEntraUser()).isNotNull();
         Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraUserId()).isEqualTo(entraUserId);
+        Assertions.assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name6");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name6");
         Assertions.assertThat(result.getEntraUser().getUserProfiles()).isNotEmpty();

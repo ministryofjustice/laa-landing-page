@@ -197,7 +197,7 @@ public class UserService {
     }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser user = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra id: {}", entraId);
                     return new RuntimeException(
@@ -214,7 +214,7 @@ public class UserService {
     }
 
     public EntraUserDto findUserByUserEntraId(String entraId) {
-        EntraUser entraUser = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra user id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
@@ -295,7 +295,7 @@ public class UserService {
             boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraUserId(newUser.getMail());
+        entraUser.setEntraOid(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -345,7 +345,7 @@ public class UserService {
      * @return the list of user types associated with entra user
      */
     public List<String> getUserAuthorities(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser user = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given entra id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));
