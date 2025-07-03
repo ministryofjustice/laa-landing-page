@@ -46,10 +46,10 @@ import java.util.Set;
 @Check(name = "end_date_after_start_date", constraints = "end_date > start_date")
 public class EntraUser extends AuditableEntity {
 
-    @Column(name = "entra_user_id", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Entra User ID must be provided")
-    @Size(min = 1, max = 255, message = "Entra User ID must be between 1 and 255 characters")
-    private String entraUserId;
+    @Column(name = "entra_oid", nullable = false, length = 255, unique = true)
+    @NotBlank(message = "Entra Object ID must be provided")
+    @Size(min = 1, max = 255, message = "Entra Object ID must be between 1 and 255 characters")
+    private String entraOid;
 
     @Column(name = "first_name", nullable = false, length = 255)
     @NotBlank(message = "User first name must be provided")

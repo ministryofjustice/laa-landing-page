@@ -30,6 +30,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -139,6 +140,31 @@ class DemoDataPopulatorTest {
         Mockito.verify(laaUserProfileRepository, Mockito.times(0)).saveAll(Mockito.anyList());
     }
 
+    @Test
+    void populateDummyDataErrorAddingCustomApps() {
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+
+        // Mocked response from Graph API
+        when(firmRepository.findFirmByName("Firm One")).thenReturn(Firm.builder().name("Firm One").build());
+        when(laaAppRepository.findByEntraAppIdOrName(any(), anyString())).thenThrow(new RuntimeException("Constraint Violation"));
+
+        demoDataPopulator.appReady(applicationReadyEvent);
+
+        verifyMockCalls(0);
+    }
+
+    @Test
+    void populateDummyDataErrorAddingCustomUser() {
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("test"));
+
+        // Mocked response from Graph API
+        when(firmRepository.findFirmByName("Firm One")).thenReturn(Firm.builder().name("Firm One").build());
+
+        demoDataPopulator.appReady(applicationReadyEvent);
+
+        verifyMockCalls(0);
+    }
 
     @Test
     void populateDummyDataEnabled() {

@@ -51,7 +51,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
 
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUserId()).isEqualTo(entraUserId);
+        Assertions.assertThat(result.getEntraOid()).isEqualTo(entraUserId);
         Assertions.assertThat(result.getFirstName()).isEqualTo("FirstName");
         Assertions.assertThat(result.getLastName()).isEqualTo("LastName");
         Assertions.assertThat(result.getEmail()).isEqualTo("test@email.com");

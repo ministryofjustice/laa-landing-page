@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 @NoArgsConstructor
 public class LaaApplication implements Comparable<LaaApplication> {
     private String name;
+    private String oid;
     private String oidGroupName;
     private String title;
     private String description;
