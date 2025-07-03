@@ -63,7 +63,7 @@ public class MapperConfig {
             }).map(source.getDisplayName(), destination.getLastName());
 
             // Other non-matching fields mapping
-            map().setEntraUserId(source.getId());
+            map().setEntraOid(source.getId());
             map().setEmail(source.getMail());
         }
     };

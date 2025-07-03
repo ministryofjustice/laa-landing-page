@@ -43,7 +43,7 @@ public class ClaimEnrichmentService {
 
         try {
             // 1. Get the EntraUser from database
-            EntraUser entraUser = entraUserRepository.findByEntraUserId(userId)
+            EntraUser entraUser = entraUserRepository.findByEntraOid(userId)
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
             // 2. Get app from DB using the app name from request

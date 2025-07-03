@@ -18,8 +18,8 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isEmpty();
-        assertThat(entraUser.getEntraUserId()).isNotNull();
-        assertThat(entraUser.getEntraUserId()).isEqualTo("entra_id");
+        assertThat(entraUser.getEntraOid()).isNotNull();
+        assertThat(entraUser.getEntraOid()).isEqualTo("entra_id");
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
@@ -34,42 +34,42 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
     @Test
     public void testEntraUserNullEntraId() {
         EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setEntraUserId(null));
+        update(entraUser, entra -> entra.setEntraOid(null));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra User ID must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraUserId");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra Object ID must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraOid");
     }
 
     @Test
     public void testEntraUserEmptyEntraId() {
         EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setEntraUserId(""));
+        update(entraUser, entra -> entra.setEntraOid(""));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(java.util.stream.Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Entra User ID must be provided",
-                "Entra User ID must be between 1 and 255 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraUserId");
+        assertThat(messages).hasSameElementsAs(Set.of("Entra Object ID must be provided",
+                "Entra Object ID must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraOid");
     }
 
     @Test
     public void testEntraUserEntraIdTooLong() {
         EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setEntraUserId("EntraIdThatIsTooLong".repeat(15)));
+        update(entraUser, entra -> entra.setEntraOid("EntraIdThatIsTooLong".repeat(15)));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra User ID must be between 1 and 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraUserId");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Entra Object ID must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("entraOid");
     }
 
     @Test

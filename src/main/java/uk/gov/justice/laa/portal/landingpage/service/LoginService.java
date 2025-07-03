@@ -98,7 +98,7 @@ public class LoginService {
 
         EntraUserDto entraUser = userService.findUserByUserEntraId(principal.getAttribute("oid"));
 
-        List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraUserId());
+        List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraOid());
 
         Set<LaaApplication> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
 

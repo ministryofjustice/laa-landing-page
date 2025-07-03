@@ -480,7 +480,7 @@ class UserServiceTest {
     void testFindUserTypeByUsernameUserProfileNotFound() {
         // Arrange
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(entraUser);
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(entraUser);
         // Act
         RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("no-profile-username"));
@@ -495,7 +495,7 @@ class UserServiceTest {
         UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -514,7 +514,7 @@ class UserServiceTest {
         UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<UserType> userTypeByUsername = userService.findUserTypeByUserEntraId("no-profile-username");
         // Assert
@@ -528,7 +528,7 @@ class UserServiceTest {
     void testGetUserAuthoritiesEmpty() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -543,7 +543,7 @@ class UserServiceTest {
         UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL_MULTI_FIRM).build();
         entraUser.setUserProfiles(Set.of(userProfile));
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
         List<String> result = userService.getUserAuthorities("test");
         // Assert
@@ -566,13 +566,13 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraUserId() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().entraUserId("entra-user-id").firstName("Test1").userStatus(UserStatus.ACTIVE).build();
-        when(mockEntraUserRepository.findByEntraUserId(anyString())).thenReturn(Optional.of(entraUser));
+        EntraUser entraUser = EntraUser.builder().entraOid("entra-oid").firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
-        EntraUserDto result = userService.findUserByUserEntraId("entra-user-id");
+        EntraUserDto result = userService.findUserByUserEntraId("entra-oid");
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getEntraUserId()).isEqualTo("entra-user-id");
+        assertThat(result.getEntraOid()).isEqualTo("entra-oid");
         assertThat(result.getFullName()).isEqualTo("Test1");
 
     }
@@ -626,7 +626,7 @@ class UserServiceTest {
                 .build();
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("Test App 1").ordinal(0).build(),
+                LaaApplication.builder().name("Test App 1").oid("one").ordinal(0).build(),
                 LaaApplication.builder().name("Test App 2").ordinal(1).build(),
                 LaaApplication.builder().name("Test App 3").ordinal(2).build()
         );
@@ -1227,7 +1227,7 @@ class UserServiceTest {
     @Test
     public void getUserByEntraIdWhenUserIsPresent() {
         // Given
-        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.of(EntraUser.builder().build()));
+        when(mockEntraUserRepository.findByEntraOid(any())).thenReturn(Optional.of(EntraUser.builder().build()));
         // When
         EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
         // Then
@@ -1237,7 +1237,7 @@ class UserServiceTest {
     @Test
     public void getUserByEntraIdWhenUserIsNotPresent() {
         // Given
-        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.empty());
+        when(mockEntraUserRepository.findByEntraOid(any())).thenReturn(Optional.empty());
         // When
         EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
         // Then

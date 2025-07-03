@@ -36,7 +36,7 @@ public class BaseRepositoryTest {
     }
 
     protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName) {
-        return EntraUser.builder().email(email).entraUserId(entraId)
+        return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
