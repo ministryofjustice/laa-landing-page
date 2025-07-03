@@ -1227,7 +1227,7 @@ class UserServiceTest {
     @Test
     public void getUserByEntraIdWhenUserIsPresent() {
         // Given
-        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.of(EntraUser.builder().build()));
+        when(mockEntraUserRepository.findByEntraOid(any())).thenReturn(Optional.of(EntraUser.builder().build()));
         // When
         EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
         // Then
@@ -1237,7 +1237,7 @@ class UserServiceTest {
     @Test
     public void getUserByEntraIdWhenUserIsNotPresent() {
         // Given
-        when(mockEntraUserRepository.findByEntraUserId(any())).thenReturn(Optional.empty());
+        when(mockEntraUserRepository.findByEntraOid(any())).thenReturn(Optional.empty());
         // When
         EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
         // Then
