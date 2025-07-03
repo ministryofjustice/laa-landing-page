@@ -94,13 +94,17 @@ jobs:
           POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
           TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
           TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
-          APP_CIVIL_APPLY_NAME: Civil Apply
+          APP_CIVIL_APPLY_NAME: ${{ vars.APP_CIVIL_APPLY_NAME }}
+          APP_CIVIL_APPLY_OID: ${{ vars.APP_CIVIL_APPLY_OID }}
           APP_CIVIL_APPLY_URL: ${{ secrets.APP_CIVIL_APPLY_URL }}
-          APP_CRIME_APPLY_NAME: Crime Apply
+          APP_CRIME_APPLY_NAME: ${{ vars.APP_CRIME_APPLY_NAME }}
+          APP_CRIME_APPLY_OID: ${{ vars.APP_CRIME_APPLY_OID }}
           APP_CRIME_APPLY_URL: ${{ secrets.APP_CRIME_APPLY_URL }}
-          APP_PUI_NAME: PUI (DEV)
+          APP_PUI_NAME: ${{ vars.APP_PUI_NAME }}
+          APP_PUI_OID: ${{ vars.APP_PUI_OID }}
           APP_PUI_URL: ${{ secrets.APP_PUI_URL }}
-          APP_SUBMIT_CRIME_FORM_NAME: Submit a Crime Form
+          APP_SUBMIT_CRIME_FORM_NAME: ${{ vars.APP_SUBMIT_CRIME_FORM_NAME }}
+          APP_SUBMIT_CRIME_FORM_OID: ${{ vars.APP_SUBMIT_CRIME_FORM_OID }}
           APP_SUBMIT_CRIME_FORM_URL: ${{ secrets.APP_SUBMIT_CRIME_FORM_URL }}
 
       - name: Deploy to Cloud Platform
