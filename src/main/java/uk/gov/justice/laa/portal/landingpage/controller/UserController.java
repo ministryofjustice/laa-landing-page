@@ -40,6 +40,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -483,7 +484,67 @@ public class UserController {
     }
 
     /**
-     * Retrieves available user roles for user
+     * Get User Details for editing
+     * 
+     * @param id    User ID
+     * @param model Model to hold user details form and user data
+     * @return View name for editing user details
+     * @throws IOException              If an error occurs during user retrieval
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+
+    @GetMapping("/users/edit/{id}/details")
+    public String editUserDetails(@PathVariable String id, Model model) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm.setFirstName(user.getFirstName());
+        editUserDetailsForm.setLastName(user.getLastName());
+        editUserDetailsForm.setEmail(user.getEmail());
+        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute("user", user);
+        return "edit-user-details";
+    }
+
+    /**
+     * Update user details
+     * 
+     * @param id              User ID
+     * @param userDetailsForm User details form
+     * @param result          Binding result for validation errors
+     * @param session         HttpSession to store user details
+     * @return Redirect to user management page
+     * @throws IOException              If an error occurs during user update
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+    @PostMapping("/users/edit/{id}/details")
+    public String updateUserDetails(@PathVariable String id,
+            @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
+            HttpSession session) throws IOException {
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
+            // If there are validation errors, return to the edit user details page with
+            // errors
+            EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+            session.setAttribute("user", user);
+            session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+            return "edit-user-details";
+        }
+        // Update user details
+        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName(),
+                editUserDetailsForm.getEmail());
+        return "redirect:/admin/users/manage/" + id;
+    }
+
+    /**
+     * Retrieves available roles for user and their currently assigned roles.
+     * 
+     * @param id               User ID
+     * @param selectedAppIndex Index of the currently selected app
+     * @param model            Model to hold user and role data
+     * @param session          HttpSession to store selected apps and roles
+     * @return View name for editing user roles
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user retrieval
      */
     @GetMapping("/users/edit/{id}/roles")
     public String editUserRoles(@PathVariable String id,
@@ -511,7 +572,16 @@ public class UserController {
     }
 
     /**
-     * Update user roles via graph SDK
+     * Update user roles for a specific app.
+     * 
+     * @param id               User ID
+     * @param selectedRoles    List of selected role IDs for the user
+     * @param selectedAppIndex Index of the currently selected app
+     * @param authentication   Authentication object for the current user
+     * @param session          HttpSession to store selected apps and roles
+     * @return Redirect view to the user management page or next app roles page
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user role update
      */
     @PostMapping("/users/edit/{id}/roles")
     public RedirectView updateUserRoles(@PathVariable String id,
@@ -582,5 +652,31 @@ public class UserController {
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
         return "redirect:/admin/users";
+    }
+
+    @GetMapping("/user/edit/cancel")
+    public String cancelUserEdit(HttpSession session) {
+        // Get User from session and use ID to redirect to the user management page
+        User user = (User) session.getAttribute("user");
+        // Edit User Details Form
+        session.removeAttribute("user");
+        session.removeAttribute("editUserDetailsForm");
+        session.removeAttribute("selectedApps");
+        session.removeAttribute("editUserAllSelectedRoles");
+
+        // Edit User Roles Form
+        session.removeAttribute("user");
+        session.removeAttribute("availableRoles");
+        session.removeAttribute("userAssignedRoles");
+        session.removeAttribute("selectedAppIndex");
+        session.removeAttribute("editUserRolesCurrentApp");
+        // Edit User Apps Form
+        session.removeAttribute("userAssignedApps");
+        session.removeAttribute("availableApps");
+        session.removeAttribute("selectedApps");
+        // Clear any success messages
+        session.removeAttribute("successMessage");
+
+        return "redirect:/admin/user/manage/" + user.getId();
     }
 }
