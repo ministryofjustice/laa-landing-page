@@ -16,8 +16,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
-    @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.entraUserId = ?1")
-    Optional<EntraUser> findByEntraUserId(String entraId);
+    @Query("SELECT u from EntraUser u JOIN FETCH u.userProfiles where u.entraOid = ?1")
+    Optional<EntraUser> findByEntraOid(String entraOid);
 
     @Query(
         """
