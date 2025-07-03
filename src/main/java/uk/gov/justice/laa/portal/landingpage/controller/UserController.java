@@ -655,6 +655,8 @@ public class UserController {
 
     @GetMapping("/user/edit/cancel")
     public String cancelUserEdit(HttpSession session) {
+        // Get User from session and use ID to redirect to the user management page
+        User user = (User) session.getAttribute("user");
         // Edit User Details Form
         session.removeAttribute("user");
         session.removeAttribute("editUserDetailsForm");
@@ -674,6 +676,6 @@ public class UserController {
         // Clear any success messages
         session.removeAttribute("successMessage");
 
-        return "redirect:/admin/users";
+        return "redirect:/admin/user/manage/" + user.getId();
     }
 }
