@@ -322,12 +322,15 @@ public class DemoDataPopulator {
                     String mail = userPrincipal.split(":")[0];
                     String entraId = userPrincipal.split(":")[1];
                     EntraUser entraUser = entraUserRepository.findByEntraOid(entraId).orElse(buildEntraUser(mail, entraId));
+                    boolean isNewUser = entraUser.getId() == null;
                     entraUserRepository.save(entraUser);
-                    UserProfile userProfile = buildLaaUserProfile(entraUser,
+                    if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
+                        UserProfile userProfile = buildLaaUserProfile(entraUser,
                                 adminUserPrincipals.contains(userPrincipal) ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM);
-                    userProfile.getAppRoles().addAll(appRoles);
-                    userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
-                    laaUserProfileRepository.save(userProfile);
+                        userProfile.getAppRoles().addAll(appRoles);
+                        userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
+                        laaUserProfileRepository.save(userProfile);
+                    }
                 } catch (Exception e) {
                     System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
                     e.printStackTrace();
