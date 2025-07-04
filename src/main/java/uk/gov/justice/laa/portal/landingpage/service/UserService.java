@@ -315,7 +315,7 @@ public class UserService {
         // TODO: Change this logic to include internal users when we support internal user creation.
         List<AppRole> validAppRoles = appRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
         if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
-            logger.error("User creation blocked for user {}. User tried to assign roles to which they should not have access.", user.getDisplayName());
+            logger.error("User creation blocked for user {}. User tried to assign roles to which they should not have access.", user.getGivenName() + " " + user.getSurname());
             throw new RuntimeException("User creation blocked");
         }
         User invitedUser = inviteUser(user);
