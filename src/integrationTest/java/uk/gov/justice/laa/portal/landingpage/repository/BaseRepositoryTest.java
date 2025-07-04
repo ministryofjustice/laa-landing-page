@@ -61,10 +61,14 @@ public class BaseRepositoryTest {
         return AppRole.builder().name(name).roleType(RoleType.INTERNAL).app(app).build();
     }
 
-    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
+    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
         return UserProfile.builder().entraUser(entraUser)
                 .userType(userType).appRoles(HashSet.newHashSet(1))
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active).build();
+    }
+
+    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
+        return buildLaaUserProfile(entraUser, userType, false);
     }
 
     protected String generateEntraId() {

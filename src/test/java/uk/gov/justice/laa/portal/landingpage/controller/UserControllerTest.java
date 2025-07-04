@@ -51,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -392,7 +393,7 @@ class UserControllerTest {
     void selectUserAppsGet() {
         AppDto app = new AppDto();
         app.setId("1");
-        when(userService.getApps()).thenReturn(List.of(app));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app));
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
@@ -410,7 +411,7 @@ class UserControllerTest {
     void selectUserAppsGetThrowsExceptionWhenNoUserPresent() {
         AppDto app = new AppDto();
         app.setId("1");
-        when(userService.getApps()).thenReturn(List.of(app));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app));
         HttpSession session = new MockHttpSession();
         ApplicationsForm applicationsForm = new ApplicationsForm();
         assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.selectUserApps(applicationsForm, model, session));
@@ -446,7 +447,7 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new User());
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
-        when(userService.getAppRolesByAppId(any())).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
         String view = userController.getSelectedRoles(new RolesForm(), model, session);
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
@@ -477,7 +478,7 @@ class UserControllerTest {
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", selectedRoles);
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
-        when(userService.getAppRolesByAppId(any())).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
         assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getSelectedRoles(new RolesForm(), model, session));
     }
 
@@ -768,6 +769,7 @@ class UserControllerTest {
         // Setup test user call
         EntraUserDto testUser = new EntraUserDto();
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
+        when(userService.getUserTypeByUserId(userId)).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
@@ -790,7 +792,7 @@ class UserControllerTest {
         session.setAttribute("selectedApps", selectedApps);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
-        when(userService.getAppRolesByAppId(any())).thenReturn(allRoles);
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(allRoles);
 
         // When
         String view = userController.editUserRoles(userId, 0, model, session);
@@ -845,8 +847,9 @@ class UserControllerTest {
         testApp.setName("Test App");
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(testUser));
+        when(userService.getUserTypeByUserId(userId.toString())).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
         when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp));
-        when(userService.getApps()).thenReturn(List.of(testApp));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp));
 
         // When
         String view = userController.editUserApps(userId.toString(), model);
@@ -1207,7 +1210,7 @@ class UserControllerTest {
     void selectUserApps_shouldAddAppsAndUserToModel() {
         AppDto appDto = new AppDto();
         appDto.setId("app1");
-        when(userService.getApps()).thenReturn(List.of(appDto));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(appDto));
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", List.of("app1"));
         session.setAttribute("user", new User());
@@ -1446,8 +1449,9 @@ class UserControllerTest {
         List<AppRoleDto> userRoles = List.of(new AppRoleDto());
         List<AppRoleDto> availableRoles = List.of(new AppRoleDto());
         when(userService.getEntraUserById(id)).thenReturn(Optional.of(user));
+        when(userService.getUserTypeByUserId(id)).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(userRoles);
-        when(userService.getAppRolesByAppId(any())).thenReturn(availableRoles);
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(availableRoles);
         HttpSession session = new MockHttpSession();
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
@@ -1483,8 +1487,9 @@ class UserControllerTest {
         Set<AppDto> assignedApps = Set.of(new AppDto());
         List<AppDto> availableApps = List.of(new AppDto());
         when(userService.getEntraUserById(id)).thenReturn(Optional.of(user));
+        when(userService.getUserTypeByUserId(id)).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
         when(userService.getUserAppsByUserId(id)).thenReturn(assignedApps);
-        when(userService.getApps()).thenReturn(availableApps);
+        when(userService.getAppsByUserType(any())).thenReturn(availableApps);
 
         String view = userController.editUserApps(id, model);
 

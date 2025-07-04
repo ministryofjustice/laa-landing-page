@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -1191,6 +1192,145 @@ class UserServiceTest {
         assertThat(warningLogs).isNotEmpty();
         assertThat(warningLogs.getFirst().getFormattedMessage())
                 .contains("No user found in Entra with matching email. Catching error and moving on");
+    }
+
+    @Test
+    public void testGetAppsByUserTypeQueriesInternalUsersWhenUserTypeIsInternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole testAppRole = AppRole.builder()
+                .name("Test Role")
+                .app(testApp)
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        List<AppDto> apps = userService.getAppsByUserType(UserType.INTERNAL);
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
+        List<RoleType> roleTypes = captor.getValue();
+        Assertions.assertEquals(2, roleTypes.size());
+        Assertions.assertEquals(RoleType.INTERNAL, roleTypes.getFirst());
+        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+    }
+
+    @Test
+    public void testGetAppsByUserTypeQueriesExternalUsersWhenUserTypeIsExternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole testAppRole = AppRole.builder()
+                .name("Test Role")
+                .app(testApp)
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
+        List<RoleType> roleTypes = captor.getValue();
+        Assertions.assertEquals(2, roleTypes.size());
+        Assertions.assertEquals(RoleType.EXTERNAL, roleTypes.getFirst());
+        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsInternalRolesWhenUserTypeIsInternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole internalRole = AppRole.builder()
+                .name("Test Internal Role")
+                .roleType(RoleType.INTERNAL)
+                .build();
+        AppRole externalRole = AppRole.builder()
+                .name("Test External Role")
+                .roleType(RoleType.EXTERNAL)
+                .build();
+        AppRole internalAndExternalRole = AppRole.builder()
+                .name("Test Internal And External Role")
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(), UserType.INTERNAL);
+        Assertions.assertEquals(2, returnedAppRoles.size());
+        // Check no external app roles in response
+        Assertions.assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.EXTERNAL)));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsExternalRolesWhenUserTypeIsExternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole internalRole = AppRole.builder()
+                .name("Test Internal Role")
+                .roleType(RoleType.INTERNAL)
+                .build();
+        AppRole externalRole = AppRole.builder()
+                .name("Test External Role")
+                .roleType(RoleType.EXTERNAL)
+                .build();
+        AppRole internalAndExternalRole = AppRole.builder()
+                .name("Test Internal And External Role")
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(), UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(2, returnedAppRoles.size());
+        // Check no external app roles in response
+        Assertions.assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.INTERNAL)));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsEmptyListWhenAppIdIsNotFound() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(), UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(0, returnedAppRoles.size());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsUserTypeWhenUserIsPresent() {
+        UserProfile testUserProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .activeProfile(true)
+                .build();
+        EntraUser testUser = EntraUser.builder()
+                .userProfiles(Set.of(testUserProfile))
+                .build();
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isPresent());
+        Assertions.assertEquals(UserType.INTERNAL, returnedUserType.get());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsEmptyWhenUserIsNotPresent() {
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isEmpty());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsEmptyWhenUserHasNoActiveProfile() {
+        UserProfile testUserProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .activeProfile(false)
+                .build();
+        EntraUser testUser = EntraUser.builder()
+                .userProfiles(Set.of(testUserProfile))
+                .build();
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isEmpty());
     }
 
     @Nested

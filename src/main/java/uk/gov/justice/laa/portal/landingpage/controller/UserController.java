@@ -38,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -233,7 +234,8 @@ public class UserController {
     @GetMapping("/user/create/services")
     public String selectUserApps(ApplicationsForm applicationsForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-        List<AppViewModel> apps = userService.getApps().stream()
+        // TODO: Make this use the selected user type rather than a hard-coded type. Our user creation flow is only for external users right now.
+        List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM).stream()
                 .map(appDto -> {
                     AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
                     appViewModel.setSelected(selectedApps.contains(appDto.getId()));
@@ -267,7 +269,8 @@ public class UserController {
             selectedAppIndex = 0;
         }
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(selectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(selectedAppIndex));
+        // TODO: Make this use the selected user type rather than a hard-coded type. Our user creation flow is only for external users right now.
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex), UserType.EXTERNAL_SINGLE_FIRM);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -498,11 +501,12 @@ public class UserController {
             @RequestParam(defaultValue = "0") int selectedAppIndex,
             Model model, HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UserType userType = userService.getUserTypeByUserId(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(selectedAppIndex)).orElseThrow();
-        List<AppRoleDto> availableRoles = userService.getAppRolesByAppId(selectedApps.get(selectedAppIndex));
+        List<AppRoleDto> availableRoles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex), userType);
 
         Set<String> userAssignedRoleIds = userRoles.stream()
                 .filter(availableRoles::contains)
@@ -562,8 +566,9 @@ public class UserController {
     @GetMapping("/users/edit/{id}/apps")
     public String editUserApps(@PathVariable String id, Model model) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UserType userType = userService.getUserTypeByUserId(id).orElseThrow();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
-        List<AppDto> availableApps = userService.getApps();
+        List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         model.addAttribute("user", user);
         model.addAttribute("userAssignedApps", userAssignedApps);
