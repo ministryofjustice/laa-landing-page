@@ -49,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -152,6 +153,19 @@ public class UserService {
     public Optional<EntraUserDto> getEntraUserById(String userId) {
         return entraUserRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
+    public Optional<UserType> getUserTypeByUserId(String userId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalEntraUser.isPresent()) {
+            EntraUser user = optionalEntraUser.get();
+            return user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getUserType)
+                    .findFirst();
+        } else {
+            return Optional.empty();
+        }
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -262,6 +276,22 @@ public class UserService {
         return appRepository.findAll().stream()
                 .map(app -> mapper.map(app, AppDto.class))
                 .collect(Collectors.toList());
+    }
+
+    public List<AppDto> getAppsByUserType(UserType userType) {
+        if (userType == UserType.INTERNAL) {
+            return getAppsByRoleType(RoleType.INTERNAL);
+        } else {
+            return getAppsByRoleType(RoleType.EXTERNAL);
+        }
+    }
+
+    private List<AppDto> getAppsByRoleType(RoleType roleType) {
+        return appRoleRepository.findByRoleTypeIn(List.of(roleType, RoleType.INTERNAL_AND_EXTERNAL)).stream()
+                .map(AppRole::getApp)
+                .distinct()
+                .map(app -> mapper.map(app, AppDto.class))
+                .toList();
     }
 
     public List<AppRoleDto> getAllAvailableRolesForApps(List<String> selectedApps) {
@@ -433,6 +463,22 @@ public class UserService {
         }
         return appRoles;
     }
+
+    public List<AppRoleDto> getAppRolesByAppIdAndUserType(String appId, UserType userType) {
+        UUID appUuid = UUID.fromString(appId);
+        Optional<App> optionalApp = appRepository.findById(appUuid);
+        List<AppRoleDto> appRoles = new ArrayList<>();
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
+            appRoles = app.getAppRoles().stream()
+                    .filter(appRole -> appRole.getRoleType().equals(userRoleType) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .toList();
+        }
+        return appRoles;
+    }
+
 
     public Optional<AppDto> getAppByAppId(String appId) {
         Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
