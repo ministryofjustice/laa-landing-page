@@ -1,0 +1,5 @@
+<ul>
+    <li th:each="firm : ${firms}">
+        <a th:href="@{/pda/firms/{id}(id=${firm.getId()})}"><span th:text="${firm.getName()}"></span></a>
+    </li>
+</ul>

@@ -8,10 +8,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,5 +53,15 @@ class FirmServiceTest {
         when(firmRepository.getReferenceById(firmId)).thenReturn(dbFirm);
         FirmDto firm = firmService.getFirm(firmId.toString());
         assertThat(firm.getId()).isEqualTo(firmId);
+    }
+
+    @Test
+    void getUserFirms() {
+        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        List<FirmDto> firms = firmService.getUserFirms(entraUser);
+        assertThat(firms).hasSize(1);
+        assertThat(firms.getFirst().getName()).isEqualTo("F1");
     }
 }
