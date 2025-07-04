@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -217,6 +219,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
         userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
         when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
@@ -257,6 +260,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         List<EntraUser> savedUsers = new ArrayList<>();
         when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
             savedUsers.add(invocation.getArgument(0));
@@ -276,6 +280,25 @@ class UserServiceTest {
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
+    }
+
+    @Test
+    public void testUserCreationIsBlockedWhenAppRolesAreNotValid() {
+        UUID appRoleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .build();
+        User user = new User();
+        user.setDisplayName("Test User");
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of());
+
+        List<String> roles = new ArrayList<>();
+        roles.add(UUID.randomUUID().toString());
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> userService.createUser(user, roles, new ArrayList<>(), null, false, "admin"));
+        assertThat(ex).hasMessageContaining("User creation blocked");
+        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -471,7 +494,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsernameUserNotFound() {
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("non-existent-username"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-username");
@@ -483,7 +506,7 @@ class UserServiceTest {
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(entraUser);
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("no-profile-username"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User profile not found for the given entra id: no-profile-username");
@@ -557,7 +580,7 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraIdNotFound() {
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserByUserEntraId("non-existent-entra-id"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-entra-id");

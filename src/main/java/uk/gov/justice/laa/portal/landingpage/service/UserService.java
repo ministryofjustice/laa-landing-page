@@ -309,10 +309,19 @@ public class UserService {
     public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
             boolean isFirmAdmin, String createdBy) {
 
+        // Make sure the user is trying to be assigned valid app roles for their user type.
+        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
+                .collect(Collectors.toList()));
+        // TODO: Change this logic to include internal users when we support internal user creation.
+        List<AppRole> validAppRoles = appRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
+            logger.error("User creation blocked for user {}. User tried to assign roles to which they should not have access.", user.getDisplayName());
+            throw new RuntimeException("User creation blocked");
+        }
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
+        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
     }
 
     private User inviteUser(User user) {
@@ -333,13 +342,11 @@ public class UserService {
     }
 
     private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-            boolean isFirmAdmin, String createdBy) {
+            boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         entraUser.setEntraOid(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
-        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
-                .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
         UserProfile userProfile = UserProfile.builder()
