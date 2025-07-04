@@ -36,6 +36,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -138,8 +139,7 @@ class ClaimEnrichmentServiceTest {
         // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(List.of(office1, office2));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -152,6 +152,7 @@ class ClaimEnrichmentServiceTest {
         // Verify actions
         assertNotNull(response.getData().getActions());
         assertEquals(1, response.getData().getActions().size());
+        assertTrue(response.isSuccess());
         
         ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
         assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
@@ -159,9 +160,9 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(USER_EMAIL, claims.get("user_email"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("laa_app_roles"));
-        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), claims.get("laa_accounts"));
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), claims.get("LAA_ACCOUNTS"));
         
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
@@ -192,10 +193,8 @@ class ClaimEnrichmentServiceTest {
 
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(List.of(office1, office2));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id)))
-                .thenReturn(List.of(office3));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id))).thenReturn(List.of(office3));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -215,12 +214,12 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(USER_EMAIL, claims.get("user_email"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("laa_app_roles"));
-        assertThat(((List<String>) claims.get("laa_accounts")).contains(OFFICE_ID_1.toString()));
-        assertThat(((List<String>) claims.get("laa_accounts")).contains(OFFICE_ID_2.toString()));
-        assertThat(((List<String>) claims.get("laa_accounts")).contains(office3.getId().toString()));
-        
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_1.toString()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_2.toString()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getId().toString()));
+
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
     }
@@ -261,9 +260,9 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(USER_EMAIL, claims.get("user_email"));
-        assertEquals(List.of(INTERNAL_ROLE), claims.get("laa_app_roles"));
-        assertEquals(Collections.emptyList(), claims.get("laa_accounts"));
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
         
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
@@ -318,8 +317,7 @@ class ClaimEnrichmentServiceTest {
         // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(Collections.emptyList());
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(Collections.emptyList());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
