@@ -208,18 +208,15 @@ public class UserService {
     }
 
     protected Sort getSort(String field) {
-        if (Objects.isNull(field)) {
+        if (Objects.isNull(field) || field.isEmpty()) {
             return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
         }
-        switch (field) {
-            case "firstName":
-                return Sort.by(Sort.Direction.ASC, "firstName");
-            case "lastName":
-                return Sort.by(Sort.Direction.ASC, "lastName");
-            case "email":
-                return Sort.by(Sort.Direction.ASC, "email");
-        }
-        throw new IllegalArgumentException("Invalid field: " + field);
+        return switch (field) {
+            case "firstName" -> Sort.by(Sort.Direction.ASC, "firstName");
+            case "lastName" -> Sort.by(Sort.Direction.ASC, "lastName");
+            case "email" -> Sort.by(Sort.Direction.ASC, "email");
+            default -> throw new IllegalArgumentException("Invalid field: " + field);
+        };
     }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
