@@ -1278,7 +1278,7 @@ class UserServiceTest {
 
     @Test
     void getGivenSort() {
-        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName");
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
         String sort = "aSc";
         for (String field : fields) {
             Sort fieldSort = userService.getSort(field, sort);

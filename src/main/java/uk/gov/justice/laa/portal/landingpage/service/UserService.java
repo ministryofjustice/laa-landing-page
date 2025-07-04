@@ -221,6 +221,7 @@ public class UserService {
             case "FIRSTNAME" -> Sort.by(order, "firstName");
             case "LASTNAME" -> Sort.by(order, "lastName");
             case "EMAIL" -> Sort.by(order, "email");
+            case "USERSTATUS" -> Sort.by(order, "userStatus");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }
