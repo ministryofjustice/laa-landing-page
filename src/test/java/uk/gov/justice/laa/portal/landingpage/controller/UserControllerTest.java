@@ -108,9 +108,9 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(false);
-        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any(), any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -143,16 +143,16 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), eq(1), eq(10), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), eq(1), eq(10), any(), any())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, false, model, session, authentication);
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsersByNameOrEmail(isNull(), eq(false), eq(false), any(), eq(1), eq(10), isNull());
+        verify(userService).getPageOfUsersByNameOrEmail(isNull(), eq(false), eq(false), any(), eq(1), eq(10), isNull(), isNull());
     }
 
     @Test
@@ -162,35 +162,35 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
-        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, false, model, session, authentication);
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmail(null, false, false, null, 1, 10, null);
+        verify(userService).getPageOfUsersByNameOrEmail(null, false, false, null, 1, 10, null, null);
     }
 
     @Test
-    void testDisplayAllUsersSearchesUsersWhenSearchTermIsGiven() {
+    void testDisplayAllUsersSearchesUsersWithSortWhenSearchTermIsGiven() {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersByNameOrEmail(eq("Test"), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), anyString())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(eq("Test"), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), anyString(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "firstName", null, "Test", false, model, session, authentication);
+        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "Test", false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmail("Test", false, false, null, 1, 10, "firstName");
+        verify(userService).getPageOfUsersByNameOrEmail(eq("Test"), eq(false), eq(false), eq(null), eq(1), eq(10), eq("firstName"), isNull());
     }
 
     @Test
@@ -201,24 +201,24 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any(), any())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, "", false, model, session, authentication);
+        String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "", false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmail("", false, false, null, 1, 10, null);
+        verify(userService).getPageOfUsersByNameOrEmail("", false, false, null, 1, 10, "firstname", "desc");
     }
 
     @Test
     void testSearchPageOfUsersForExternal() {
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), anyList(), anyInt(), anyInt(), any())).thenReturn(mockPaginatedUsers);
-        userController.getPageOfUsersForExternal(new ArrayList<>(), "searchTerm", true, 1, 10, null);
-        verify(userService).getPageOfUsersByNameOrEmail(eq("searchTerm"), eq(false), eq(true), anyList(), eq(1), eq(10), isNull());
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), anyList(), anyInt(), anyInt(), any(), any())).thenReturn(mockPaginatedUsers);
+        userController.getPageOfUsersForExternal(new ArrayList<>(), "searchTerm", true, 1, 10, "firstName", "asc");
+        verify(userService).getPageOfUsersByNameOrEmail(eq("searchTerm"), eq(false), eq(true), anyList(), eq(1), eq(10), eq("firstName"), eq("asc"));
     }
 
     @Test
@@ -1070,10 +1070,10 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         when(userService.isInternal(any()))
                 .thenReturn(true);
-        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any())).thenReturn(paginatedUsers);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt(), any(), any())).thenReturn(paginatedUsers);
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("successMessage")).isEqualTo("User added successfully");

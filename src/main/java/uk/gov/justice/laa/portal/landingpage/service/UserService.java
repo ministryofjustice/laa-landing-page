@@ -173,10 +173,10 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort) {
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
-        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort));
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         if (Objects.isNull(firmList)) {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
@@ -207,14 +207,20 @@ public class UserService {
         return getPageOfUsers(() -> pageOfUsers);
     }
 
-    protected Sort getSort(String field) {
+    protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
             return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
         }
-        return switch (field) {
-            case "firstName" -> Sort.by(Sort.Direction.ASC, "firstName");
-            case "lastName" -> Sort.by(Sort.Direction.ASC, "lastName");
-            case "email" -> Sort.by(Sort.Direction.ASC, "email");
+        Sort.Direction order;
+        if (direction == null || direction.isEmpty()) {
+            order = Sort.Direction.ASC;
+        } else {
+            order = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+        return switch (field.toUpperCase()) {
+            case "FIRSTNAME" -> Sort.by(order, "firstName");
+            case "LASTNAME" -> Sort.by(order, "lastName");
+            case "EMAIL" -> Sort.by(order, "email");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }

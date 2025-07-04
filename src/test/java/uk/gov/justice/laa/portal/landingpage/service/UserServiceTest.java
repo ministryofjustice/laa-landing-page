@@ -654,7 +654,7 @@ class UserServiceTest {
             when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, null, 0, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, null, 0, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
@@ -678,7 +678,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, false, false, null, 2, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, false, false, null, 2, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -704,7 +704,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, null, 2, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, null, 2, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -731,7 +731,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, new ArrayList<>(), 2, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, new ArrayList<>(), 2, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -758,7 +758,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, new ArrayList<>(), 2, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, new ArrayList<>(), 2, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -784,7 +784,7 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, null, 1, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, null, 1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
@@ -808,7 +808,7 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, new ArrayList<>(), 1, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, new ArrayList<>(), 1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -832,7 +832,7 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, null, 1, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, null, 1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -857,7 +857,7 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, true, false, null, 1, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, true, false, null, 1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -882,7 +882,7 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, new ArrayList<>(), 1, 10, null);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, new ArrayList<>(), 1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -1259,13 +1259,13 @@ class UserServiceTest {
 
     @Test
     void getDefaultSort() {
-        Sort nullSort = userService.getSort(null);
+        Sort nullSort = userService.getSort(null, null);
         assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
         assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
         assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
         assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
 
-        Sort emptySort = userService.getSort("");
+        Sort emptySort = userService.getSort("", null);
         assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
         assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
         assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
@@ -1274,16 +1274,19 @@ class UserServiceTest {
 
     @Test
     void getGivenSort() {
-        List<String> fields = List.of("firstName", "lastName", "email");
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName");
+        String sort = "aSc";
         for (String field : fields) {
-            Sort fieldSort = userService.getSort(field);
-            assertThat(fieldSort.stream().toList().get(0).getProperty()).isEqualTo(field);
+            Sort fieldSort = userService.getSort(field, sort);
+            assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
             assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
         }
+        Sort descendingSort = userService.getSort("lastName", "deSC");
+        assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
     @Test
     void getErrorSort() {
-        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error"));
+        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
     }
 }
