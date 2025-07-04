@@ -175,8 +175,8 @@ public class DemoDataPopulator {
         return App.builder().name(name).entraAppId(entraAppOid).appRoles(HashSet.newHashSet(11)).build();
     }
 
-    protected AppRole buildLaaAppRole(App app, String name) {
-        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).app(app).build();
+    protected AppRole buildLaaAppRole(App app, String name, RoleType roleType) {
+        return AppRole.builder().name(name).roleType(roleType).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
@@ -252,7 +252,8 @@ public class DemoDataPopulator {
 
                 List<AppRole> appRoles = new ArrayList<>();
                 for (App app : laaApps) {
-                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
+                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
+                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
                 }
 
                 laaAppRoleRepository.saveAll(appRoles);
@@ -297,9 +298,13 @@ public class DemoDataPopulator {
                 app.setName(appDetailPair.getRight());
                 laaAppRepository.save(app);
 
-                AppRole role = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_INTERN")
-                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN"));
-                laaAppRoleRepository.save(role);
+                AppRole internalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_INTERN")
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
+                AppRole externalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_EXTERN")
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
+                laaAppRoleRepository.save(internalRole);
+                laaAppRoleRepository.save(externalRole);
+
 
             } catch (Exception ex) {
                 System.out.println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
