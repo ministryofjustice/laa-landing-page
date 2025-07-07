@@ -304,7 +304,7 @@ public class UserController {
             allSelectedRolesByPage = new HashMap<>();
         }
         int selectedAppIndex = (Integer) modelFromSession.getAttribute("createUserRolesSelectedAppIndex");
-        ;
+
         // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
@@ -535,89 +535,6 @@ public class UserController {
     }
 
     /**
-     * Retrieves available roles for user and their currently assigned roles.
-     * 
-     * @param id               User ID
-     * @param selectedAppIndex Index of the currently selected app
-     * @param model            Model to hold user and role data
-     * @param session          HttpSession to store selected apps and roles
-     * @return View name for editing user roles
-     * @throws IllegalArgumentException If the user ID is invalid or not found
-     * @throws IOException              If an error occurs during user retrieval
-     */
-    @GetMapping("/users/edit/{id}/roles")
-    public String editUserRoles(@PathVariable String id,
-            @RequestParam(defaultValue = "0") int selectedAppIndex,
-            Model model, HttpSession session) {
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
-        List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-        AppDto currentApp = userService.getAppByAppId(selectedApps.get(selectedAppIndex)).orElseThrow();
-        List<AppRoleDto> availableRoles = userService.getAppRolesByAppId(selectedApps.get(selectedAppIndex));
-
-        Set<String> userAssignedRoleIds = userRoles.stream()
-                .filter(availableRoles::contains)
-                .map(AppRoleDto::getId)
-                .collect(Collectors.toSet());
-
-        model.addAttribute("user", user);
-        model.addAttribute("availableRoles", availableRoles);
-        model.addAttribute("userAssignedRoles", userAssignedRoleIds);
-        model.addAttribute("selectedAppIndex", selectedAppIndex);
-        model.addAttribute("editUserRolesCurrentApp", currentApp);
-
-        return "edit-user-roles";
-    }
-
-    /**
-     * Update user roles for a specific app.
-     * 
-     * @param id               User ID
-     * @param selectedRoles    List of selected role IDs for the user
-     * @param selectedAppIndex Index of the currently selected app
-     * @param authentication   Authentication object for the current user
-     * @param session          HttpSession to store selected apps and roles
-     * @return Redirect view to the user management page or next app roles page
-     * @throws IllegalArgumentException If the user ID is invalid or not found
-     * @throws IOException              If an error occurs during user role update
-     */
-    @PostMapping("/users/edit/{id}/roles")
-    public RedirectView updateUserRoles(@PathVariable String id,
-            @RequestParam(required = false) List<String> selectedRoles,
-            @RequestParam int selectedAppIndex,
-            Authentication authentication,
-            HttpSession session) {
-        EntraUserDto user = userService.getEntraUserById(id).orElse(null);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
-        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
-                .getAttribute("editUserAllSelectedRoles");
-        if (allSelectedRolesByPage == null) {
-            allSelectedRolesByPage = new HashMap<>();
-        }
-        // Add the roles for the currently selected app to a map for lookup.
-        allSelectedRolesByPage.put(selectedAppIndex, selectedRoles);
-        if (selectedAppIndex >= selectedApps.size() - 1) {
-            session.setAttribute("createUserAllSelectedRoles", null);
-            // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
-                    .flatMap(List::stream)
-                    .toList();
-            userService.updateUserRoles(id, allSelectedRoles);
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            eventService.auditUpdateRole(currentUserDto, user, selectedRoles);
-            return new RedirectView("/admin/users");
-        } else {
-            // Ensure passed in ID is a valid UUID to avoid open redirects.
-            UUID uuid = UUID.fromString(id);
-            session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
-            return new RedirectView(
-                    String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", uuid, selectedAppIndex + 1));
-        }
-    }
-
-    /**
      * Retrieves available apps for user and their currently assigned apps.
      */
     @GetMapping("/users/edit/{id}/apps")
@@ -641,10 +558,139 @@ public class UserController {
     @PostMapping("/users/edit/{id}/apps")
     public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("apps") List<String> apps,
             HttpSession session) {
-        session.setAttribute("apps", apps);
+        session.setAttribute("selectedApps", apps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
+    }
+
+    /**
+     * Retrieves available roles for user and their currently assigned roles.
+     * 
+     * @param id               User ID
+     * @param selectedAppIndex Index of the currently selected app
+     * @param model            Model to hold user and role data
+     * @param session          HttpSession to store selected apps and roles
+     * @return View name for editing user roles
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user retrieval
+     */
+    @GetMapping("/users/edit/{id}/roles")
+    public String editUserRoles(@PathVariable String id,
+            @RequestParam(defaultValue = "0") Integer selectedAppIndex,
+            RolesForm rolesForm,
+            Model model, HttpSession session) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
+        Integer currentSelectedAppIndex;
+        if (modelFromSession != null && modelFromSession.getAttribute("editUserRolesSelectedAppIndex") != null) {
+            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("editUserRolesSelectedAppIndex");
+        } else {
+            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
+        }
+
+        AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
+        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex));
+        List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
+
+        // Get currently selected roles from session or use user's existing roles
+        List<String> selectedRoles = getListFromHttpSession(session, "editUserRoles", String.class)
+                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
+
+        List<AppRoleViewModel> appRoleViewModels = roles.stream()
+                .map(appRoleDto -> {
+                    AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
+                    viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
+                    return viewModel;
+                }).toList();
+
+        model.addAttribute("user", user);
+        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
+        model.addAttribute("editUserRolesCurrentApp", currentApp);
+
+        // Store the model in session to handle validation errors later and track
+        // currently selected app.
+        session.setAttribute("userEditRolesModel", model);
+        return "edit-user-roles";
+    }
+
+    /**
+     * Update user roles for a specific app.
+     * 
+     * @param id               User ID
+     * @param selectedRoles    List of selected role IDs for the user
+     * @param selectedAppIndex Index of the currently selected app
+     * @param authentication   Authentication object for the current user
+     * @param session          HttpSession to store selected apps and roles
+     * @return Redirect view to the user management page or next app roles page
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     * @throws IOException              If an error occurs during user role update
+     */
+    @PostMapping("/users/edit/{id}/roles")
+    public String updateUserRoles(@PathVariable String id,
+            @Valid RolesForm rolesForm, BindingResult result,
+            @RequestParam int selectedAppIndex,
+            Authentication authentication,
+            Model model, HttpSession session) {
+        Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
+        if (modelFromSession == null) {
+            return "redirect:/admin/users/edit/" + id + "/roles";
+        }
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
+            // If there are validation errors, return to the roles page with errors
+            // and role unseleected if it is not in the list
+            List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
+            if (roles != null) {
+                roles.forEach(role -> {
+                    if (!rolesForm.getRoles().contains(role.getId())) {
+                        role.setSelected(false);
+                    }
+                });
+            }
+            model.addAttribute("roles", roles);
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            model.addAttribute("editUserRolesSelectedAppIndex",
+                    modelFromSession.getAttribute("editUserRolesSelectedAppIndex"));
+            model.addAttribute("editUserRolesCurrentApp", modelFromSession.getAttribute("editUserRolesCurrentApp"));
+
+            return "edit-user-roles";
+        }
+
+        EntraUserDto user = userService.getEntraUserById(id).orElse(null);
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
+        if (allSelectedRolesByPage == null) {
+            allSelectedRolesByPage = new HashMap<>();
+        }
+        // Add the roles for the currently selected app to a map for lookup.
+        allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
+        if (selectedAppIndex >= selectedApps.size() - 1) {
+            // Clear the userEditRolesModel and page roles from session to avoid stale data
+            session.removeAttribute("userEditRolesModel");
+            session.removeAttribute("editUserAllSelectedRoles");
+            // Flatten the map to a single list of all selected roles across all pages.
+            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
+                    .flatMap(List::stream)
+                    .toList();
+            userService.updateUserRoles(id, allSelectedRoles);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            eventService.auditUpdateRole(currentUserDto, user, allSelectedRoles);
+            return "redirect:/admin/users/manage/" + id;
+        } else {
+            modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
+            session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
+            session.setAttribute("userEditRolesModel", modelFromSession);
+            // Ensure passed in ID is a valid UUID to avoid open redirects.
+            UUID uuid = UUID.fromString(id);
+            return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
+        }
     }
 
     @GetMapping("/user/create/cancel")
