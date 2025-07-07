@@ -16,10 +16,6 @@
                 <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
                     < Back</a>
             </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}"><span
-                        th:text="${user.fullName}"></span></a>
-            </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -41,7 +37,7 @@
                 <fieldset class="govuk-fieldset" aria-describedby="offices-hint">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                         <h1 class="govuk-fieldset__heading">
-                            Which of these offices will <span th:text="${user.fullName}"></span> have access to?
+                            Which of these offices will <span th:text="${user.fullName}"></span> require access to?
                         </h1>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">

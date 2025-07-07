@@ -16,10 +16,6 @@
                 <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
                     < Back</a>
             </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}"><span
-                        th:text="${user.fullName}"></span></a>
-            </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
