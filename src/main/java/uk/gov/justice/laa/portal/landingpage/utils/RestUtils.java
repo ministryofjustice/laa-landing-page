@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.nimbusds.jose.shaded.gson.reflect.TypeToken;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -21,20 +20,15 @@ public class RestUtils {
 
     public static final String EMPTY_STRING = "";
 
-    public static String callGraphApi(String accessToken, String url) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + accessToken);
-        headers.set("Accept", "application/json");
-
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity, String.class);
-
-        return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
+    public static String getGraphApi(String accessToken, String url) {
+        return callGraphApi(accessToken, url, HttpMethod.GET, null);
     }
 
     public static String postGraphApi(String accessToken, String url, MultiValueMap<String, String> body) {
+        return callGraphApi(accessToken, url, HttpMethod.POST, body);
+    }
+
+    protected static String callGraphApi(String accessToken, String url, HttpMethod method, MultiValueMap<String, String> body) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + accessToken);
@@ -43,7 +37,7 @@ public class RestUtils {
 
         HttpEntity<?> entity = new HttpEntity<Object>(body, headers);
         ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.POST, entity, String.class);
+                url, method, entity, String.class);
 
         return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
     }

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.callGraphApi;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getGraphApi;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.postGraphApi;
 
 @Service
@@ -22,7 +22,7 @@ public class GraphApiService {
     public User getUserProfile(String accessToken) {
         String url = GRAPH_URL + "/me";
         try {
-            String jsonResponse = callGraphApi(accessToken, url);
+            String jsonResponse = getGraphApi(accessToken, url);
             ObjectMapper objectMapper = new ObjectMapper();
 
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

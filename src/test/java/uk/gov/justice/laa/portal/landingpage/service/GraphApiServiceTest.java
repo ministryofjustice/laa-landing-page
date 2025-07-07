@@ -42,7 +42,7 @@ class GraphApiServiceTest {
             // Arrange
             String json = """
                     {"displayName":"Alice Smith","mail":"alice@example.com"}""";
-            mockedRestUtils.when(() -> RestUtils.callGraphApi(anyString(), anyString()))
+            mockedRestUtils.when(() -> RestUtils.getGraphApi(anyString(), anyString()))
                     .thenReturn(json);
 
             // Act
@@ -50,7 +50,7 @@ class GraphApiServiceTest {
 
             // Assert
             assertThat(user.getDisplayName()).isEqualTo("Alice Smith");
-            mockedRestUtils.verify(() -> RestUtils.callGraphApi(anyString(), anyString()));
+            mockedRestUtils.verify(() -> RestUtils.getGraphApi(anyString(), anyString()));
         }
     }
 }

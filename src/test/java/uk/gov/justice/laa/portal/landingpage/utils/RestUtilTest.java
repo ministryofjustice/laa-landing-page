@@ -1,8 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.nimbusds.jose.shaded.gson.reflect.TypeToken;
 import jakarta.servlet.http.HttpSession;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +39,7 @@ class RestUtilTest {
     private ArgumentCaptor<HttpEntity<String>> httpEntityCaptor;
 
     @Test
-    void callGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
+    void getGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
 
         // Arrange
         String expectedResponseBody = "{\"data\":\"success\"}";
@@ -52,7 +50,7 @@ class RestUtilTest {
                         .thenReturn(mockResponseEntity))) {
 
             // Act
-            String actualResponseBody = RestUtils.callGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
+            String actualResponseBody = RestUtils.getGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
 
             // Assert
             assertThat(actualResponseBody).isEqualTo(expectedResponseBody);
@@ -70,7 +68,7 @@ class RestUtilTest {
     }
 
     @Test
-    void callGraphApi_whenApiReturnsSuccessfulButNullBody_returnsEmptyString() {
+    void getGraphApi_whenApiReturnsSuccessfulButNullBody_returnsEmptyString() {
 
         // Arrange
         ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(null, HttpStatus.OK);
@@ -79,7 +77,7 @@ class RestUtilTest {
                 (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                         .thenReturn(mockResponseEntity))) {
             // Act
-            String actualResponseBody = RestUtils.callGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
+            String actualResponseBody = RestUtils.getGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
 
             // Assert
             assertThat(actualResponseBody).isEqualTo(RestUtils.EMPTY_STRING);
