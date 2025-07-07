@@ -6,8 +6,11 @@ import com.microsoft.graph.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.callGraphApi;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.postGraphApi;
 
 @Service
 public class GraphApiService {
@@ -30,6 +33,16 @@ public class GraphApiService {
             logger.error("Unexpected error processing user profile", e);
         }
         return null;
+    }
+
+    public void logoutUser(String accessToken) {
+        String url = GRAPH_URL + "/me" + "/revokeSignInSessions";
+        try {
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            postGraphApi(accessToken, url, body);
+        } catch (Exception e) {
+            logger.error("Unexpected error processing logout", e);
+        }
     }
 
 }

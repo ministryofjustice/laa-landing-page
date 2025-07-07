@@ -91,4 +91,10 @@ public class LoginController {
     public String migrate() {
         return "migrate";
     }
+
+    @GetMapping("/logout")
+    public RedirectView logout(Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+        loginService.logout(authentication, authClient, session);
+        return new RedirectView("/");
+    }
 }

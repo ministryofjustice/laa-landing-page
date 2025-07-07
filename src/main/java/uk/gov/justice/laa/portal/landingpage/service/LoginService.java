@@ -31,6 +31,7 @@ import java.util.UUID;
 public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
+    private final GraphApiService graphApiService;
 
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MemberName
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
@@ -46,9 +47,9 @@ public class LoginService {
     private String redirectUri;
 
 
-    public LoginService(UserService userService) {
+    public LoginService(UserService userService, GraphApiService graphApiService) {
         this.userService = userService;
-
+        this.graphApiService = graphApiService;
     }
 
     /**
@@ -132,5 +133,22 @@ public class LoginService {
         EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
         assert entraUser != null;
         return entraUser;
+    }
+
+    public void logout(Authentication authentication,
+                       OAuth2AuthorizedClient authorizedClient,
+                       HttpSession session) {
+        if (authentication == null) {
+            return;
+        }
+
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+        if (accessToken == null || accessToken.getTokenValue() == null) {
+            logger.info("Access token is null");
+            return;
+        }
+        String tokenValue = accessToken.getTokenValue();
+        graphApiService.logoutUser(tokenValue);
+        session.invalidate();
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -29,6 +30,20 @@ public class RestUtils {
         HttpEntity<String> entity = new HttpEntity<>(headers);
         ResponseEntity<String> response = restTemplate.exchange(
                 url, HttpMethod.GET, entity, String.class);
+
+        return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
+    }
+
+    public static String postGraphApi(String accessToken, String url, MultiValueMap<String, String> body) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+        headers.set("Content-Type", "application/json");
+        headers.set("Accept", "application/json");
+
+        HttpEntity<?> entity = new HttpEntity<Object>(body, headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.POST, entity, String.class);
 
         return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
     }
