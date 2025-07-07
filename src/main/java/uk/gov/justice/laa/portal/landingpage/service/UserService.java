@@ -502,6 +502,55 @@ public class UserService {
                 .sorted(Comparator.comparingInt(LaaApplication::getOrdinal)).collect(Collectors.toCollection(TreeSet::new));
     }
 
+    /**
+     * Get offices assigned to a user
+     * 
+     * @param userId The user ID
+     * @return List of offices assigned to the user
+     */
+    public List<Office> getUserOfficesByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getOffices().stream())
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Update user offices
+     * 
+     * @param userId         The user ID
+     * @param selectedOffices List of selected office IDs
+     * @throws IOException If an error occurs during the update
+     */
+    public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+            Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+            
+            // Update user profile offices
+            Optional<UserProfile> userProfile = user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .findFirst();
+            if (userProfile.isPresent()) {
+                userProfile.get().setOffices(offices);
+                entraUserRepository.saveAndFlush(user);
+                logger.info("Successfully updated user offices for user ID: {}", userId);
+            } else {
+                logger.warn("User profile for user ID {} not found. Could not update offices.", userId);
+                throw new IOException("User profile not found for user ID: " + userId);
+            }
+        } else {
+            logger.warn("User with id {} not found. Could not update offices.", userId);
+            throw new IOException("User not found for user ID: " + userId);
+        }
+    }
+
     public boolean isInternal(EntraUser entraUser) {
         List<UserType> userTypes = entraUser.getUserProfiles().stream()
                 .map(UserProfile::getUserType).toList();

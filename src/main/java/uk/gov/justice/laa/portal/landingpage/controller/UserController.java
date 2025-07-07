@@ -740,4 +740,85 @@ public class UserController {
 
         return "redirect:/admin/user/manage/" + user.getId();
     }
+
+    /**
+     * Get user offices for editing
+     * 
+     * @param id    User ID
+     * @param model Model to hold user and office data
+     * @return View name for editing user offices
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+    @GetMapping("/users/edit/{id}/offices")
+    public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        
+        // Get user's current offices
+        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        Set<String> userOfficeIds = userOffices.stream()
+                .map(office -> office.getId().toString())
+                .collect(Collectors.toSet());
+        
+        // Get all available offices
+        List<Office> allOffices = officeService.getOffices();
+        List<OfficeModel> officeData = allOffices.stream()
+                .map(office -> new OfficeModel(
+                        office.getName(), 
+                        office.getAddress(),
+                        office.getId().toString(), 
+                        userOfficeIds.contains(office.getId().toString())
+                ))
+                .collect(Collectors.toList());
+        
+        // Create form object
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(new ArrayList<>(userOfficeIds));
+        
+        model.addAttribute("user", user);
+        model.addAttribute("officesForm", officesForm);
+        model.addAttribute("officeData", officeData);
+        
+        // Store the model in session to handle validation errors later
+        session.setAttribute("editUserOfficesModel", model);
+        return "edit-user-offices";
+    }
+
+    /**
+     * Update user offices
+     * 
+     * @param id          User ID
+     * @param officesForm Offices form with selected office IDs
+     * @param result      Binding result for validation errors
+     * @param model       Model for the view
+     * @param session     HttpSession to store office data
+     * @return Redirect to user management page
+     * @throws IOException If an error occurs during user office update
+     */
+    @PostMapping("/users/edit/{id}/offices")
+    public String updateUserOffices(@PathVariable String id,
+            @Valid OfficesForm officesForm, BindingResult result,
+            Model model, HttpSession session) throws IOException {
+        
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
+            // If there are validation errors, return to the edit user offices page with errors
+            Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+            if (modelFromSession == null) {
+                return "redirect:/admin/users/edit/" + id + "/offices";
+            }
+
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            return "edit-user-offices";
+        }
+
+        // Update user offices
+        List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
+        userService.updateUserOffices(id, selectedOffices);
+        
+        // Clear the session model
+        session.removeAttribute("editUserOfficesModel");
+        
+        return "redirect:/admin/users/manage/" + id;
+    }
 }
