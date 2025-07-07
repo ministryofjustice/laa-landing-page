@@ -1315,8 +1315,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles");
     }
 
-    // ===== ADDITIONAL COMPREHENSIVE TEST COVERAGE =====
-
     @Test
     void displayAllUsers_shouldHandleExternalUserWithFirms() {
         // Given
@@ -1879,6 +1877,4 @@ class UserControllerTest {
         assertThat(officesForm.getOffices()).containsExactlyInAnyOrder(
             office1Id.toString(), office3Id.toString());
     }
-
-    // ===== END ADDITIONAL COVERAGE =====
 }
