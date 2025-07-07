@@ -53,7 +53,7 @@
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
-                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" disabled />
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
