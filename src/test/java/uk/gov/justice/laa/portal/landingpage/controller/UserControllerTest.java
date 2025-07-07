@@ -945,7 +945,7 @@ class UserControllerTest {
     @Test
     void updateUserDetails_shouldUpdateUserAndRedirect() throws IOException {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
@@ -966,7 +966,7 @@ class UserControllerTest {
     @Test
     void updateUserDetails_shouldReturnToFormOnValidationErrors() throws IOException {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
@@ -1128,7 +1128,7 @@ class UserControllerTest {
     @Test
     void updateUserOffices_shouldHandleAccessToAllOffices() throws IOException {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("ALL")); // Special value for "Access to all offices"
         
@@ -1153,7 +1153,7 @@ class UserControllerTest {
     @Test
     void updateUserOffices_shouldReturnToFormOnValidationErrors() throws IOException {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("office1"));
         
@@ -1246,7 +1246,7 @@ class UserControllerTest {
     @Test
     void updateUserRoles_shouldHandleMultipleAppsNavigation() {
         // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
         RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role1", "role2"));
         
@@ -1272,7 +1272,7 @@ class UserControllerTest {
     @Test
     void updateUserRoles_shouldCompleteEditingOnLastApp() {
         // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
         RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role3"));
         

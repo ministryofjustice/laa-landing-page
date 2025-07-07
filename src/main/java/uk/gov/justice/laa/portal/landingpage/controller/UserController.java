@@ -608,7 +608,7 @@ public class UserController {
             RolesForm rolesForm,
             Model model, HttpSession session) {
 
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        final EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(() -> {
                     // If no selectedApps in session, get user's current apps
@@ -764,11 +764,11 @@ public class UserController {
         List<Office> allOffices = officeService.getOffices();
         
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size() && 
-                                allOffices.stream()
+        boolean hasAllOffices = userOffices.size() == allOffices.size() 
+                                && allOffices.stream()
                                     .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
         
-        List<OfficeModel> officeData = allOffices.stream()
+        final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getName(),
                         office.getAddress(),
