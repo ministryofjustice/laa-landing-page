@@ -610,13 +610,33 @@ public class UserController {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
+                .orElseGet(() -> {
+                    // If no selectedApps in session, get user's current apps
+                    Set<AppDto> userApps = userService.getUserAppsByUserId(id);
+                    List<String> userAppIds = userApps.stream()
+                            .map(AppDto::getId)
+                            .collect(Collectors.toList());
+                    session.setAttribute("selectedApps", userAppIds);
+                    return userAppIds;
+                });
+        
+        // Ensure the selectedAppIndex is within bounds
+        if (selectedApps.isEmpty()) {
+            // No apps assigned to user, redirect back to manage page
+            return "redirect:/admin/users/manage/" + id;
+        }
+        
         Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
         Integer currentSelectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("editUserRolesSelectedAppIndex") != null) {
             currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("editUserRolesSelectedAppIndex");
         } else {
             currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
+        }
+        
+        // Ensure the index is within bounds
+        if (currentSelectedAppIndex >= selectedApps.size()) {
+            currentSelectedAppIndex = 0;
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();

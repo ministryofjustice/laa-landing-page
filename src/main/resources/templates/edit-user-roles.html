@@ -27,12 +27,8 @@
 
     <main class="govuk-main-wrapper" id="main-content">
         <div th:if="${#authentication.isAuthenticated()}">
-            <a th:if="${editUserRolesSelectedAppIndex == 0}" class="govuk-back-link govuk-!-margin-bottom-3"
-                th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
-                Back
-            </a>
-            <a th:if="${editUserRolesSelectedAppIndex != 0}" class="govuk-back-link govuk-!-margin-bottom-3"
-                th:href="@{/admin/users/edit/{id}/roles(id=${user.id}, selectedAppIndex=${selectedAppIndex != null ? selectedAppIndex - 1 : 0})}">
+            <a class="govuk-back-link govuk-!-margin-bottom-3"
+                th:href="@{/admin/users/manage/{id}(id=${user.id})}">
                 Back
             </a>
             <form method="post"
