@@ -19,10 +19,8 @@
                 <a class="govuk-breadcrumbs__link" href="/">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                Edit Roles for <span th:text="${user.fullName}"></span>
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}"><span
+                        th:text="${user.fullName}"></span></a>
             </li>
         </ol>
     </nav>

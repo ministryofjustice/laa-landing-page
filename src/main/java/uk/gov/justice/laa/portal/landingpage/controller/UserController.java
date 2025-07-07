@@ -646,8 +646,10 @@ public class UserController {
             // and role unseleected if it is not in the list
             List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
             if (roles != null) {
+                // Add null check for rolesForm.getRoles()
+                List<String> selectedRoleIds = rolesForm.getRoles() != null ? rolesForm.getRoles() : new ArrayList<>();
                 roles.forEach(role -> {
-                    if (!rolesForm.getRoles().contains(role.getId())) {
+                    if (!selectedRoleIds.contains(role.getId())) {
                         role.setSelected(false);
                     }
                 });
