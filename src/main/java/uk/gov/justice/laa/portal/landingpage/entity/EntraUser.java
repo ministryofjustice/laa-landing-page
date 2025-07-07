@@ -31,7 +31,7 @@ import java.util.Set;
     @Index(name = "UserFirstNameIdx", columnList = "first_name"),
     @Index(name = "UserLastNameIdx", columnList = "last_name"),
     @Index(name = "UserEmailIdx", columnList = "email"),
-    @Index(name = "UserEntraUserIdIdx", columnList = "entra_oid"),
+    @Index(name = "UserEntraOidIdx", columnList = "entra_oid"),
     @Index(name = "UserCreatedByIdx", columnList = "created_by"),
     @Index(name = "UserCreatedDateIdx", columnList = "created_date"),
     @Index(name = "UserLastModifiedDateIdx", columnList = "last_modified_date"),
