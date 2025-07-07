@@ -55,7 +55,6 @@
                         </li>
                     </ul>
                     <div class="govuk-tabs__panel" id="user-details">
-                        <h2 class="govuk-heading-m">User Details</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -94,7 +93,6 @@
                         </div>
                     </div>
                     <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="services">
-                        <h2 class="govuk-heading-m">Services</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -113,12 +111,14 @@
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                     </div>
+                                    <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">No services assigned</dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
                     </div>
                     <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
-                        <h2 class="govuk-heading-m">Offices</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -131,14 +131,17 @@
                                     </li>
                                 </ul>
                             </div>
-                        </div>
-                        <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list">
-                                <div class="govuk-summary-list__row" th:each="office : ${offices}">
-                                    <dt class="govuk-summary-list__key" th:text="${office.name}"></dt>
-                                    <dd class="govuk-summary-list__value" th:text="${office.address}"></dd>
-                                </div>
-                            </dl>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
+                                        <dt class="govuk-summary-list__key" th:text="${office.name}"></dt>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address}"></dd>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(userOffices)}" class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">No offices assigned</dd>
+                                    </div>
+                                </dl>
+                            </div>
                         </div>
                     </div>
                 </div>

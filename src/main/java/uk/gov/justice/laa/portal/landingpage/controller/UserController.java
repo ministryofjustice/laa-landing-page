@@ -119,11 +119,13 @@ public class UserController {
         return "users";
     }
 
-    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
+    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins,
+            int page, int size) {
         return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
     }
 
-    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
+    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins,
+            int page, int size) {
         boolean isInternal = !userType.equals("external");
         return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
     }
@@ -157,10 +159,10 @@ public class UserController {
     public String manageUser(@PathVariable String id, Model model) {
         Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
-        List<Office> offices = officeService.getOffices();
+        List<Office> userOffices = userService.getUserOfficesByUserId(id);
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
-        model.addAttribute("offices", offices);
+        model.addAttribute("userOffices", userOffices);
         return "manage-user";
     }
 
@@ -241,7 +243,8 @@ public class UserController {
                     return appViewModel;
                 }).toList();
         model.addAttribute("apps", apps);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
+        User user = getObjectFromHttpSession(session, "user", User.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         return "add-user-apps";
     }
@@ -259,7 +262,8 @@ public class UserController {
 
     @GetMapping("/user/create/roles")
     public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
-        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseThrow(CreateUserDetailsIncompleteException::new);
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
         Integer selectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("createUserRolesSelectedAppIndex") != null) {
@@ -276,7 +280,8 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
+        User user = getObjectFromHttpSession(session, "user", User.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("createUserRolesSelectedAppIndex", selectedAppIndex);
@@ -349,7 +354,8 @@ public class UserController {
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
+        User user = getObjectFromHttpSession(session, "user", User.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         // Store the model in session to handle validation errors later
@@ -416,7 +422,8 @@ public class UserController {
             model.addAttribute("roles", cyaRoles);
         }
 
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
+        User user = getObjectFromHttpSession(session, "user", User.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
@@ -489,6 +496,17 @@ public class UserController {
         }
         session.removeAttribute("user");
         return "add-user-created";
+    }
+
+    @GetMapping("/user/create/cancel")
+    public String cancelUserCreation(HttpSession session) {
+        session.removeAttribute("user");
+        session.removeAttribute("firm");
+        session.removeAttribute("isFirmAdmin");
+        session.removeAttribute("apps");
+        session.removeAttribute("roles");
+        session.removeAttribute("officeData");
+        return "redirect:/admin/users";
     }
 
     /**
@@ -704,43 +722,6 @@ public class UserController {
         }
     }
 
-    @GetMapping("/user/create/cancel")
-    public String cancelUserCreation(HttpSession session) {
-        session.removeAttribute("user");
-        session.removeAttribute("firm");
-        session.removeAttribute("isFirmAdmin");
-        session.removeAttribute("apps");
-        session.removeAttribute("roles");
-        session.removeAttribute("officeData");
-        return "redirect:/admin/users";
-    }
-
-    @GetMapping("/user/edit/cancel")
-    public String cancelUserEdit(HttpSession session) {
-        // Get User from session and use ID to redirect to the user management page
-        User user = (User) session.getAttribute("user");
-        // Edit User Details Form
-        session.removeAttribute("user");
-        session.removeAttribute("editUserDetailsForm");
-        session.removeAttribute("selectedApps");
-        session.removeAttribute("editUserAllSelectedRoles");
-
-        // Edit User Roles Form
-        session.removeAttribute("user");
-        session.removeAttribute("availableRoles");
-        session.removeAttribute("userAssignedRoles");
-        session.removeAttribute("selectedAppIndex");
-        session.removeAttribute("editUserRolesCurrentApp");
-        // Edit User Apps Form
-        session.removeAttribute("userAssignedApps");
-        session.removeAttribute("availableApps");
-        session.removeAttribute("selectedApps");
-        // Clear any success messages
-        session.removeAttribute("successMessage");
-
-        return "redirect:/admin/user/manage/" + user.getId();
-    }
-
     /**
      * Get user offices for editing
      * 
@@ -752,32 +733,31 @@ public class UserController {
     @GetMapping("/users/edit/{id}/offices")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        
+
         // Get user's current offices
         List<Office> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
-        
+
         // Get all available offices
         List<Office> allOffices = officeService.getOffices();
         List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(), 
+                        office.getName(),
                         office.getAddress(),
-                        office.getId().toString(), 
-                        userOfficeIds.contains(office.getId().toString())
-                ))
+                        office.getId().toString(),
+                        userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
-        
+
         // Create form object
         OfficesForm officesForm = new OfficesForm();
         officesForm.setOffices(new ArrayList<>(userOfficeIds));
-        
+
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
-        
+
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
         return "edit-user-offices";
@@ -798,7 +778,7 @@ public class UserController {
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Model model, HttpSession session) throws IOException {
-        
+
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user offices page with errors
@@ -815,10 +795,41 @@ public class UserController {
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         userService.updateUserOffices(id, selectedOffices);
-        
+
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
+
+        return "redirect:/admin/users/manage/" + id;
+    }
+
+    @GetMapping("/users/edit/{id}/cancel")
+    public String cancelUserEdit(@PathVariable String id, HttpSession session) {
+        // Clear all edit-related session attributes
+        // Edit User Details Form
+        session.removeAttribute("user");
+        session.removeAttribute("editUserDetailsForm");
         
+        // Edit User Apps/Roles Form
+        session.removeAttribute("selectedApps");
+        session.removeAttribute("editUserAllSelectedRoles");
+        session.removeAttribute("userEditRolesModel");
+        session.removeAttribute("editUserRoles");
+        session.removeAttribute("availableRoles");
+        session.removeAttribute("userAssignedRoles");
+        session.removeAttribute("selectedAppIndex");
+        session.removeAttribute("editUserRolesCurrentApp");
+        session.removeAttribute("editUserRolesSelectedAppIndex");
+        
+        // Edit User Apps Form
+        session.removeAttribute("userAssignedApps");
+        session.removeAttribute("availableApps");
+        
+        // Edit User Offices Form
+        session.removeAttribute("editUserOfficesModel");
+        
+        // Clear any success messages
+        session.removeAttribute("successMessage");
+
         return "redirect:/admin/users/manage/" + id;
     }
 }
