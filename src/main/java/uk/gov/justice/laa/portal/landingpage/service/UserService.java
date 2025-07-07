@@ -26,6 +26,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -170,34 +172,43 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize) {
-        return getPageOfUsers(page, pageSize, false);
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+        List<UserType> types;
+        Page<EntraUser> pageOfUsers;
+        if (Objects.isNull(firmList)) {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else if (isInternal) {
+                types = UserType.INTERNAL_TYPES;
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
+                pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
+                        searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+            }
+        } else {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
+                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
+                        searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+            }
+        }
+        return getPageOfUsers(() -> pageOfUsers);
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository.findByUserTypes(userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
-    }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
-        return getPageOfUsersByNameOrEmail(page, pageSize, searchTerm, false);
-    }
-
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository
-                .findByNameEmailAndUserTypes(
-                        searchTerm, searchTerm, searchTerm, userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
-    }
-
-    public List<EntraUserDto> getSavedUsers() {
-        return entraUserRepository.findAll().stream()
-                .map(user -> mapper.map(user, EntraUserDto.class))
-                .collect(Collectors.toList());
-    }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser user = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra id: {}", entraId);
                     return new RuntimeException(
@@ -214,7 +225,7 @@ public class UserService {
     }
 
     public EntraUserDto findUserByUserEntraId(String entraId) {
-        EntraUser entraUser = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra user id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
@@ -295,7 +306,7 @@ public class UserService {
             boolean isFirmAdmin, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraUserId(newUser.getMail());
+        entraUser.setEntraOid(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -345,7 +356,7 @@ public class UserService {
      * @return the list of user types associated with entra user
      */
     public List<String> getUserAuthorities(String entraId) {
-        EntraUser user = entraUserRepository.findByEntraUserId(entraId)
+        EntraUser user = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given entra id: {}", entraId);
                     return new RuntimeException(String.format("User not found for the given entra id: %s", entraId));
@@ -383,6 +394,11 @@ public class UserService {
                 .flatMap(app -> app.getAppRoles().stream())
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .toList();
+    }
+
+    public EntraUser getUserByEntraId(UUID userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findByEntraOid(userId.toString());
+        return optionalUser.orElse(null);
     }
 
     public boolean userExistsByEmail(String email) {
@@ -484,5 +500,11 @@ public class UserService {
         return applications.stream().filter(app -> userApps.stream()
                         .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .sorted(Comparator.comparingInt(LaaApplication::getOrdinal)).collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    public boolean isInternal(EntraUser entraUser) {
+        List<UserType> userTypes = entraUser.getUserProfiles().stream()
+                .map(UserProfile::getUserType).toList();
+        return userTypes.contains(UserType.INTERNAL);
     }
 }

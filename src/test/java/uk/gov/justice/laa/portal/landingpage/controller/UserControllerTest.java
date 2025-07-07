@@ -15,13 +15,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -48,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -101,10 +105,12 @@ class UserControllerTest {
         paginatedUsers.setPreviousPageLink("previousPageLink");
         paginatedUsers.setTotalUsers(100);
         paginatedUsers.setTotalPages(10);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(false);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
 
-        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(paginatedUsers);
-
-        String view = userController.displayAllUsers(10, 1, null, false, model, session);
+        String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -134,16 +140,19 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(List.of(new EntraUserDto(), new EntraUserDto()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
-        when(userService.getPageOfUsers(eq(1), eq(10), anyBoolean())).thenReturn(mockPaginatedUsers);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), eq(1), eq(10))).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, false, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsers(1, 10, false);
+        verify(userService).getPageOfUsersByNameOrEmail(isNull(), eq(false), eq(false), any(), eq(1), eq(10));
     }
 
     @Test
@@ -153,15 +162,17 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         mockPaginatedUsers.setNextPageLink(null);
         mockPaginatedUsers.setPreviousPageLink(null);
-        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(mockPaginatedUsers);
-
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, false, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(1, 10, false);
+        verify(userService).getPageOfUsersByNameOrEmail(null, false, false, null, 1, 10);
     }
 
     @Test
@@ -169,15 +180,17 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersByNameOrEmail(anyInt(), anyInt(), eq("Test"), anyBoolean())).thenReturn(mockPaginatedUsers);
-
+        when(userService.getPageOfUsersByNameOrEmail(eq("Test"), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "Test", false, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, "Test", false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmail(1, 10, "Test", false);
+        verify(userService).getPageOfUsersByNameOrEmail("Test", false, false, null, 1, 10);
     }
 
     @Test
@@ -185,15 +198,27 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(mockPaginatedUsers);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "", false, model, session);
+        String viewName = userController.displayAllUsers(10, 1, null, "", false, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsers(1, 10, false);
+        verify(userService).getPageOfUsersByNameOrEmail("", false, false, null, 1, 10);
+    }
+
+    @Test
+    void testSearchPageOfUsersForExternal() {
+        PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
+        mockPaginatedUsers.setUsers(new ArrayList<>());
+        when(userService.getPageOfUsersByNameOrEmail(anyString(), anyBoolean(), anyBoolean(), anyList(), anyInt(), anyInt())).thenReturn(mockPaginatedUsers);
+        userController.getPageOfUsersForExternal(new ArrayList<>(), "searchTerm", true, 1, 10);
+        verify(userService).getPageOfUsersByNameOrEmail(eq("searchTerm"), eq(false), eq(true), anyList(), eq(1), eq(10));
     }
 
     @Test
@@ -226,17 +251,6 @@ class UserControllerTest {
         String viewName = userController.editUser(userId, model);
 
         verify(userService).getEntraUserById(userId);
-    }
-
-    @Test
-    void displaySavedUsers() {
-
-        when(userService.getSavedUsers()).thenReturn(new ArrayList<>());
-        String view = userController.displaySavedUsers(model);
-
-        assertThat(view).isEqualTo("users");
-        assertThat(model.getAttribute("users")).isNotNull();
-
     }
 
     @Test
@@ -382,6 +396,7 @@ class UserControllerTest {
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
+        session.setAttribute("user", new User());
         ApplicationsForm applicationsForm = new ApplicationsForm();
         String view = userController.selectUserApps(applicationsForm, model, session);
         assertThat(view).isEqualTo("add-user-apps");
@@ -389,6 +404,16 @@ class UserControllerTest {
         List<AppViewModel> modeApps = (List<AppViewModel>) model.getAttribute("apps");
         assertThat(modeApps.getFirst().getId()).isEqualTo("1");
         assertThat(modeApps.getFirst().isSelected()).isTrue();
+    }
+
+    @Test
+    void selectUserAppsGetThrowsExceptionWhenNoUserPresent() {
+        AppDto app = new AppDto();
+        app.setId("1");
+        when(userService.getApps()).thenReturn(List.of(app));
+        HttpSession session = new MockHttpSession();
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.selectUserApps(applicationsForm, model, session));
     }
 
     @Test
@@ -419,6 +444,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new User());
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
         when(userService.getAppRolesByAppId(any())).thenReturn(roles);
         String view = userController.getSelectedRoles(new RolesForm(), model, session);
@@ -427,6 +453,32 @@ class UserControllerTest {
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
         assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    void getSelectedRolesGetThrowsExceptionWhenNoAppsPresent() {
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getSelectedRoles(new RolesForm(), model, session));
+    }
+
+    @Test
+    void getSelectedRolesGetThrowsExceptionWhenNoUserPresent() {
+        List<String> selectedApps = new ArrayList<>();
+        selectedApps.add("app1");
+        List<String> selectedRoles = new ArrayList<>();
+        selectedRoles.add("dev");
+        List<AppRoleDto> roles = new ArrayList<>();
+        AppRoleDto userRole = new AppRoleDto();
+        userRole.setId("tester");
+        AppRoleDto userRole2 = new AppRoleDto();
+        userRole2.setId("dev");
+        roles.add(userRole);
+        roles.add(userRole2);
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
+        when(userService.getAppRolesByAppId(any())).thenReturn(roles);
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getSelectedRoles(new RolesForm(), model, session));
     }
 
     @Test
@@ -488,6 +540,7 @@ class UserControllerTest {
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(List.of(officeId.toString()));
         session.setAttribute("officeData", officeData);
+        session.setAttribute("user", new User());
         Office office1 = Office.builder().id(officeId).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).build();
         List<Office> dbOffices = List.of(office1, office2);
@@ -557,6 +610,12 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
         assertThat(session.getAttribute("displayRoles")).isNotNull();
+    }
+
+    @Test
+    void addUserCheckAnswersGetThrowsExceptionWhenNoUserPresent() {
+        HttpSession session = new MockHttpSession();
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.getUserCheckAnswers(model, session));
     }
 
     @Test
@@ -1008,10 +1067,13 @@ class UserControllerTest {
         paginatedUsers.setTotalUsers(1);
         paginatedUsers.setTotalPages(1);
 
-        when(userService.getPageOfUsers(anyInt(), anyInt(), anyBoolean())).thenReturn(paginatedUsers);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(userService.isInternal(any()))
+                .thenReturn(true);
+        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
-        String view = userController.displayAllUsers(10, 1, null, false, model, session);
+        String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("successMessage")).isEqualTo("User added successfully");
@@ -1042,17 +1104,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isNull();
         assertThat(model.getAttribute("roles")).isNull();
-    }
-
-    @Test
-    void displaySavedUsers_shouldAddUsersToModel() {
-        List<EntraUserDto> users = List.of(new EntraUserDto());
-        when(userService.getSavedUsers()).thenReturn(users);
-
-        String view = userController.displaySavedUsers(model);
-
-        assertThat(view).isEqualTo("users");
-        assertThat(model.getAttribute("users")).isEqualTo(users);
     }
 
     @Test
@@ -1159,6 +1210,7 @@ class UserControllerTest {
         when(userService.getApps()).thenReturn(List.of(appDto));
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", List.of("app1"));
+        session.setAttribute("user", new User());
         ApplicationsForm form = new ApplicationsForm();
 
         String view = userController.selectUserApps(form, model, session);
@@ -1235,6 +1287,7 @@ class UserControllerTest {
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
         when(officeService.getOffices()).thenReturn(List.of(office));
         HttpSession session = new MockHttpSession();
+        session.setAttribute("user", new User());
         OfficesForm form = new OfficesForm();
 
         String view = userController.offices(form, session, model);
@@ -1242,6 +1295,16 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-offices");
         assertThat(model.getAttribute("officeData")).isNotNull();
         assertThat(model.getAttribute("user")).isNotNull();
+    }
+
+    @Test
+    void offices_shouldThrowExceptionWhenUserIsNotPresent() {
+        Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
+        when(officeService.getOffices()).thenReturn(List.of(office));
+        HttpSession session = new MockHttpSession();
+        OfficesForm form = new OfficesForm();
+
+        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.offices(form, session, model));
     }
 
     @Test

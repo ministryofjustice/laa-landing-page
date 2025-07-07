@@ -96,7 +96,7 @@ databaseChangeLog:
               - column:
                   constraints:
                     nullable: false
-                  name: entra_user_id
+                  name: entra_oid
                   type: VARCHAR(255)
               - column:
                   constraints:
@@ -380,8 +380,8 @@ databaseChangeLog:
       author: system
       changes:
         - addUniqueConstraint:
-            columnNames: entra_user_id
-            constraintName: entra_user_entra_user_id_key
+            columnNames: entra_oid
+            constraintName: entra_user_entra_oid_key
             tableName: entra_user
   - changeSet:
       id: 1751014191720-21

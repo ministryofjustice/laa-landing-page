@@ -82,7 +82,7 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/admin/**").hasAnyAuthority(UserType.ADMIN_TYPES)
+                .requestMatchers("/admin/**", "/pda/**").hasAnyAuthority(UserType.ADMIN_TYPES)
                 .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**")
                 .permitAll()
                 .anyRequest().authenticated()

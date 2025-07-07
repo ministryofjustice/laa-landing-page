@@ -17,11 +17,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.service.ClaimEnrichmentService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -55,7 +56,7 @@ class ClaimEnrichmentControllerTest {
 
         // Create mock EntraServicePrincipalDto for client
         EntraServicePrincipalDto clientServicePrincipal = EntraServicePrincipalDto.builder()
-                .appDisplayName("Test Application")
+                .appDisplayName(TEST_APP_NAME)
                 .appId("test-app-id")
                 .displayName("Test Service Principal")
                 .id("sp-id-123")
@@ -96,13 +97,28 @@ class ClaimEnrichmentControllerTest {
         // Setup test roles
         testRoles = List.of("ROLE_USER", "ROLE_ADMIN");
 
+        // Create claims map
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("user_name", TEST_USER_ID);
+        claims.put("user_email", "test@example.com");
+        claims.put("laa_app_roles", testRoles);
+        claims.put("laa_accounts", List.of("office-1", "office-2"));
+        
+        // Create response action
+        ClaimEnrichmentResponse.ResponseAction action = ClaimEnrichmentResponse.ResponseAction.builder()
+                .odataType("microsoft.graph.tokenIssuanceStart.provideClaimsForToken")
+                .claims(claims)
+                .build();
+        
+        // Create response data
+        ClaimEnrichmentResponse.ResponseData responseData = ClaimEnrichmentResponse.ResponseData.builder()
+                .odataType("microsoft.graph.onTokenIssuanceStartResponseData")
+                .actions(List.of(action))
+                .build();
+        
         // Setup test response
         testResponse = ClaimEnrichmentResponse.builder()
-                .success(true)
-                .roles(testRoles)
-                .appName(TEST_APP_NAME)
-                .userId(TEST_USER_ID)
-                .message("Access granted to " + TEST_APP_NAME)
+                .data(responseData)
                 .build();
     }
 
@@ -118,10 +134,15 @@ class ClaimEnrichmentControllerTest {
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals(testRoles, response.getBody().getRoles());
-        assertEquals(TEST_APP_NAME, response.getBody().getAppName());
-        assertEquals(TEST_USER_ID, response.getBody().getUserId());
+        assertNotNull(response.getBody().getData());
+        assertNotNull(response.getBody().getData().getActions());
+        assertEquals(1, response.getBody().getData().getActions().size());
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", response.getBody().getData().getActions().get(0).getOdataType());
+        assertNotNull(response.getBody().getData().getActions().get(0).getClaims());
+        assertEquals(TEST_USER_ID, response.getBody().getData().getActions().get(0).getClaims().get("user_name"));
+        assertEquals("test@example.com", response.getBody().getData().getActions().get(0).getClaims().get("user_email"));
+        assertEquals(testRoles, response.getBody().getData().getActions().get(0).getClaims().get("laa_app_roles"));
+        assertEquals(List.of("office-1", "office-2"), response.getBody().getData().getActions().get(0).getClaims().get("laa_accounts"));
 
         verify(claimEnrichmentService, times(1)).enrichClaim(testRequest);
     }

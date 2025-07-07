@@ -38,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -79,16 +80,22 @@ public class UserController {
     public String displayAllUsers(
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String usertype,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) boolean showFirmAdmins,
-            Model model, HttpSession session) {
+            Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
-        if (search != null && !search.isEmpty()) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmail(page, size, search, showFirmAdmins);
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        boolean internal = userService.isInternal(entraUser);
+        if (!internal) {
+            List<UUID> userFirms = firmService.getUserFirms(entraUser).stream().map(FirmDto::getId).toList();
+            paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size);
         } else {
-            search = null;
-            paginatedUsers = userService.getPageOfUsers(page, size, showFirmAdmins);
+            if (Objects.isNull(usertype)) {
+                usertype = "external";
+            }
+            paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -105,8 +112,20 @@ public class UserController {
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", search);
+        model.addAttribute("usertype", usertype);
+        model.addAttribute("internal", internal);
+        model.addAttribute("showFirmAdmins", showFirmAdmins);
 
         return "users";
+    }
+
+    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size) {
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size);
+    }
+
+    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size) {
+        boolean isInternal = !userType.equals("external");
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size);
     }
 
     @GetMapping("/users/edit/{id}")
@@ -119,16 +138,6 @@ public class UserController {
             model.addAttribute("roles", roles);
         }
         return "edit-user";
-    }
-
-    /**
-     * Retrieves a list of users from Microsoft Graph API.
-     */
-    @GetMapping("/userlist")
-    public String displaySavedUsers(Model model) {
-        List<EntraUserDto> users = userService.getSavedUsers();
-        model.addAttribute("users", users);
-        return "users";
     }
 
     /**
@@ -232,7 +241,7 @@ public class UserController {
                     return appViewModel;
                 }).toList();
         model.addAttribute("apps", apps);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         return "add-user-apps";
     }
@@ -250,7 +259,7 @@ public class UserController {
 
     @GetMapping("/user/create/roles")
     public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
-        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
+        List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
         Integer selectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("createUserRolesSelectedAppIndex") != null) {
@@ -267,7 +276,7 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("createUserRolesSelectedAppIndex", selectedAppIndex);
@@ -340,7 +349,7 @@ public class UserController {
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         // Store the model in session to handle validation errors later
@@ -407,7 +416,7 @@ public class UserController {
             model.addAttribute("roles", cyaRoles);
         }
 
-        User user = getObjectFromHttpSession(session, "user", User.class).orElseGet(User::new);
+        User user = getObjectFromHttpSession(session, "user", User.class).orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
         OfficeData officeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)

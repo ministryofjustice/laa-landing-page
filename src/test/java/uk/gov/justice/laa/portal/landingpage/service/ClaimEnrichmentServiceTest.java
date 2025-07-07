@@ -27,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -127,7 +128,7 @@ class ClaimEnrichmentServiceTest {
 
         entraUser = EntraUser.builder()
                 .id(USER_ID)
-                .entraUserId(USER_ENTRA_ID)
+                .entraOid(USER_ENTRA_ID)
                 .email(USER_EMAIL)
                 .userProfiles(Set.of(userProfile))
                 .build();
@@ -136,23 +137,33 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_Success() {
         // Arrange
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(List.of(office1, office2));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
 
         // Assert
         assertNotNull(response);
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
         assertTrue(response.isSuccess());
-        assertEquals(APP_NAME, response.getAppName());
-        assertEquals(List.of(EXTERNAL_ROLE), response.getRoles());
-        assertEquals(USER_ENTRA_ID, response.getUserId());
-        assertEquals(USER_EMAIL, response.getEmail());
-        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), response.getOfficeIds());
-        assertEquals("Access granted to " + APP_NAME, response.getMessage());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), claims.get("LAA_ACCOUNTS"));
+        
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
 
@@ -180,22 +191,35 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(profile1, profile2));
 
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(List.of(office1, office2));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id)))
-                .thenReturn(List.of(office3));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id))).thenReturn(List.of(office3));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertThat(response.getOfficeIds().contains(OFFICE_ID_1.toString()));
-        assertThat(response.getOfficeIds().contains(OFFICE_ID_2.toString()));
-        assertThat(response.getOfficeIds().contains(office3.getId().toString()));
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_1.toString()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_2.toString()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getId().toString()));
+
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
     }
@@ -215,7 +239,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act
@@ -223,16 +247,30 @@ class ClaimEnrichmentServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertEquals(Collections.emptyList(), response.getOfficeIds());
-        assertEquals(List.of(INTERNAL_ROLE), response.getRoles());
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+        
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+        
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
+        
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 
     @Test
     void enrichClaimThrowsException_UserNotFound() {
         // Arrange
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.empty());
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -246,7 +284,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_AppNotFound() {
         // Arrange
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -262,7 +300,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaimThrowsException_UserNoAppAccess() {
         // Arrange
         entraUser.setUserProfiles(Collections.emptySet());
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert
@@ -277,10 +315,9 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_ExternalUserWithFirmButNoOffices() {
         // Arrange
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID)))
-                .thenReturn(Collections.emptyList());
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(Collections.emptyList());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -300,7 +337,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert
@@ -321,7 +358,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
         entraUser.setUserProfiles(Set.of(userProfile));
 
-        when(entraUserRepository.findByEntraUserId(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
 
         // Act & Assert
