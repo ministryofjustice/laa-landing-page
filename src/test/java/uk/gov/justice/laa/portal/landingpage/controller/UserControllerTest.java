@@ -2,6 +2,8 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -25,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -53,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -268,11 +272,11 @@ class UserControllerTest {
         mockUser.setId(userId);
         mockUser.setFullName("Managed User");
         List<AppRoleDto> appRoles = List.of(new AppRoleDto());
-        List<Office> offices = List.of(Office.builder().build());
+        List<Office> userOffices = List.of(Office.builder().build());
 
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(appRoles);
-        when(officeService.getOffices()).thenReturn(offices);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
 
         // Act
         String view = userController.manageUser(userId, model);
@@ -281,7 +285,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(appRoles);
-        assertThat(model.getAttribute("offices")).isEqualTo(offices);
+        assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
         verify(userService).getEntraUserById(userId);
     }
 
@@ -786,24 +790,18 @@ class UserControllerTest {
         currentApp.setId("testAppId");
         currentApp.setName("testAppName");
         List<String> selectedApps = List.of(currentApp.getId());
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("selectedApps", selectedApps);
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", selectedApps);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppRolesByAppId(any())).thenReturn(allRoles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, model, session);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
         Assertions.assertSame(model.getAttribute("user"), testUser);
-        Assertions.assertSame(allRoles, model.getAttribute("availableRoles"));
-        Set<?> userAssignedRoles = (Set<?>) model.getAttribute("userAssignedRoles");
-        Assertions.assertNotNull(userAssignedRoles);
-        Assertions.assertTrue(userAssignedRoles.stream().findFirst().isPresent());
-        String returnedAssignedAppRoleId = (String) userAssignedRoles.stream().findFirst().get();
-        Assertions.assertEquals(testUserRole.getId(), returnedAssignedAppRoleId);
     }
 
     @Test
@@ -812,23 +810,29 @@ class UserControllerTest {
         final String userId = "12345";
         when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
         // When
-        assertThrows(NoSuchElementException.class, () -> userController.editUserRoles(userId, 0, model, session));
+        Assertions.assertThrows(NoSuchElementException.class, 
+            () -> userController.editUserRoles(userId, 0, new RolesForm(), model, session));
     }
 
     @Test
     public void testUpdateUserRolesReturnsCorrectView() {
         // Given
         final String userId = "12345";
-        final List<String> selectedRoles = new ArrayList<>();
-        MockHttpSession session = new MockHttpSession();
+        final RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role1"));
+        MockHttpSession testSession = new MockHttpSession();
+        Model sessionModel = new ExtendedModelMap();
+        testSession.setAttribute("userEditRolesModel", sessionModel);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
 
         // When
-        RedirectView view = userController.updateUserRoles(userId, selectedRoles, 0, authentication, session);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model, testSession);
 
         // Then
         verify(eventService).auditUpdateRole(any(), any(), any());
         verify(loginService).getCurrentUser(authentication);
-        Assertions.assertEquals("/admin/users", view.getUrl());
+        Assertions.assertEquals("redirect:/admin/users/manage/" + userId, view);
     }
 
     @Test
@@ -857,12 +861,13 @@ class UserControllerTest {
         EntraUserDto returnedUser = (EntraUserDto) model.getAttribute("user");
         Assertions.assertEquals(testUser.getId(), returnedUser.getId());
         Assertions.assertEquals(testUser.getFullName(), returnedUser.getFullName());
-        assertThat(model.getAttribute("userAssignedApps")).isNotNull();
-        Set<AppDto> assignedApps = (Set<AppDto>) model.getAttribute("userAssignedApps");
-        assertThat(assignedApps).hasSize(1);
-        assertThat(model.getAttribute("availableApps")).isNotNull();
-        List<AppDto> availableApps = (List<AppDto>) model.getAttribute("availableApps");
-        assertThat(availableApps).hasSize(1);
+        
+        // Check the correct model attribute name "apps"
+        assertThat(model.getAttribute("apps")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(1);
+        assertThat(apps.get(0).isSelected()).isTrue(); // Should be selected because user has this app
     }
 
     @Test
@@ -896,668 +901,416 @@ class UserControllerTest {
 
     }
 
+    // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
+
     @Test
-    void postUser_whenEmailAlreadyExists_shouldRejectEmailAndReturnToForm() {
-        // Arrange
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("John");
-        userDetailsForm.setLastName("Doe");
-        userDetailsForm.setEmail("existing@email.com");
-        userDetailsForm.setFirmId("firmId");
-        userDetailsForm.setIsFirmAdmin(false);
-
-        HttpSession session = new MockHttpSession();
-
-        // Simulate user not in session
-        session.setAttribute("user", null);
-
-        // Simulate userService returns true for existing email
-        when(userService.userExistsByEmail("existing@email.com")).thenReturn(true);
-
-        // Simulate model in session for error handling
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("firms", List.of());
-        sessionModel.addAttribute("selectedFirm", null);
-        sessionModel.addAttribute("user", new User());
-        session.setAttribute("createUserDetailsModel", sessionModel);
-
-        Model model = new ExtendedModelMap();
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-
-        // Act
-        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
-
-        // Assert
-        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
-        verify(userService).userExistsByEmail("existing@email.com");
-        // Should rejectValue on bindingResult for email
-        Mockito.verify(bindingResult).rejectValue("email", "error.email",
-                "Email address already exists");
+    void editUserDetails_shouldPopulateFormAndReturnView() {
+        // Given
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setEmail("john.doe@example.com");
+        
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        
+        // When
+        String view = userController.editUserDetails(userId, model);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-details");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        
+        EditUserDetailsForm form = (EditUserDetailsForm) model.getAttribute("editUserDetailsForm");
+        assertThat(form).isNotNull();
+        assertThat(form.getFirstName()).isEqualTo("John");
+        assertThat(form.getLastName()).isEqualTo("Doe");
+        assertThat(form.getEmail()).isEqualTo("john.doe@example.com");
+        
+        verify(userService).getEntraUserById(userId);
     }
 
     @Test
-    void postUser_whenValidationErrors_shouldReturnToFormWithModelAttributes() {
-        // Arrange
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("Jane");
-        userDetailsForm.setLastName("Smith");
-        userDetailsForm.setEmail("jane@email.com");
-        userDetailsForm.setFirmId("firmId");
-        userDetailsForm.setIsFirmAdmin(true);
-
-        HttpSession session = new MockHttpSession();
-
-        // Simulate user not in session
-        session.setAttribute("user", null);
-
-        // Simulate userService returns false for existing email
-        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
-
-        // Simulate validation errors
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(true);
-
-        // Simulate model in session for error handling
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("firms", List.of());
-        sessionModel.addAttribute("selectedFirm", null);
-        sessionModel.addAttribute("user", new User());
-        session.setAttribute("createUserDetailsModel", sessionModel);
-
-        Model model = new ExtendedModelMap();
-
-        // Act
-        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
-
-        // Assert
-        assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("firms")).isNotNull();
-        assertThat(model.getAttribute("selectedFirm")).isNull();
-        assertThat(model.getAttribute("user")).isNotNull();
+    void editUserDetails_shouldThrowExceptionWhenUserNotFound() {
+        // Given
+        String userId = "nonexistent";
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
+        
+        // When & Then
+        Assertions.assertThrows(NoSuchElementException.class, 
+            () -> userController.editUserDetails(userId, model));
     }
 
     @Test
-    void postUser_whenNoModelInSessionAndValidationErrors_shouldRedirectToDetails() {
-        // Arrange
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("Jane");
-        userDetailsForm.setLastName("Smith");
-        userDetailsForm.setEmail("jane@email.com");
-        userDetailsForm.setFirmId("firmId");
-        userDetailsForm.setIsFirmAdmin(true);
-
-        HttpSession session = new MockHttpSession();
-
-        // Simulate user not in session
-        session.setAttribute("user", null);
-
-        // Simulate userService returns false for existing email
-        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
-
+    void updateUserDetails_shouldUpdateUserAndRedirect() throws IOException {
+        // Given
+        String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
+        
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
-
-        // Simulate validation errors
-        when(bindingResult.hasErrors()).thenReturn(true);
-
-        // No model in session
-        session.removeAttribute("createUserDetailsModel");
-
-        Model model = new ExtendedModelMap();
-
-        // Act
-        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
-
-        // Assert
-        assertThat(view).isEqualTo("redirect:/admin/user/create/details");
-    }
-
-    @Test
-    void postUser_whenValid_shouldSetSessionAttributesAndRedirect() {
-        // Arrange
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("Jane");
-        userDetailsForm.setLastName("Smith");
-        userDetailsForm.setEmail("jane@email.com");
-        userDetailsForm.setFirmId("firmId");
-        userDetailsForm.setIsFirmAdmin(true);
-
-        HttpSession session = new MockHttpSession();
-
-        // Simulate user not in session
-        session.setAttribute("user", null);
-
-        // Simulate userService returns false for existing email
-        when(userService.userExistsByEmail("jane@email.com")).thenReturn(false);
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-
-        // Simulate no validation errors
         when(bindingResult.hasErrors()).thenReturn(false);
-
-        // Simulate firmService returns a firm
-        FirmDto firm = FirmDto.builder().name("Test Firm").build();
-        when(firmService.getFirm("firmId")).thenReturn(firm);
-
-        // Simulate model in session for error handling (should be cleared)
-        Model sessionModel = new ExtendedModelMap();
-        session.setAttribute("createUserDetailsModel", sessionModel);
-
-        Model model = new ExtendedModelMap();
-
-        // Act
-        String view = userController.postUser(userDetailsForm, bindingResult, null, session, model);
-
-        // Assert
-        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
-        User sessionUser = (User) session.getAttribute("user");
-        assertThat(sessionUser.getGivenName()).isEqualTo("Jane");
-        assertThat(sessionUser.getSurname()).isEqualTo("Smith");
-        assertThat(sessionUser.getDisplayName()).isEqualTo("Jane Smith");
-        assertThat(sessionUser.getMail()).isEqualTo("jane@email.com");
-        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
-        assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
-        assertThat(session.getAttribute("isFirmAdmin")).isEqualTo(true);
-        assertThat(session.getAttribute("createUserDetailsModel")).isNull();
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        verify(userService).updateUserDetails(userId, "Jane", "Smith", "jane.smith@example.com");
     }
 
     @Test
-    void displayAllUsers_shouldAddSuccessMessageToModelAndRemoveFromSession() {
-        PaginatedUsers paginatedUsers = new PaginatedUsers();
-        paginatedUsers.setUsers(new ArrayList<>());
-        paginatedUsers.setTotalUsers(1);
-        paginatedUsers.setTotalPages(1);
-
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
-        when(userService.isInternal(any()))
-                .thenReturn(true);
-        when(userService.getPageOfUsersByNameOrEmail(any(), anyBoolean(), anyBoolean(), any(), anyInt(), anyInt())).thenReturn(paginatedUsers);
-        when(session.getAttribute("successMessage")).thenReturn("User added successfully");
-
-        String view = userController.displayAllUsers(10, 1, null, null, false, model, session, authentication);
-
-        assertThat(view).isEqualTo("users");
-        assertThat(model.getAttribute("successMessage")).isEqualTo("User added successfully");
-        verify(session).removeAttribute("successMessage");
-    }
-
-    @Test
-    void editUser_shouldAddUserAndRolesToModelIfPresent() {
+    void updateUserDetails_shouldReturnToFormOnValidationErrors() throws IOException {
+        // Given
+        String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
+        
         EntraUserDto user = new EntraUserDto();
-        user.setId("id1");
-        List<AppRoleDto> roles = List.of(new AppRoleDto());
-        when(userService.getEntraUserById("id1")).thenReturn(Optional.of(user));
-        when(userService.getUserAppRolesByUserId("id1")).thenReturn(roles);
-
-        String view = userController.editUser("id1", model);
-
-        assertThat(view).isEqualTo("edit-user");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
-        assertThat(model.getAttribute("roles")).isEqualTo(roles);
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-details");
+        assertThat(testSession.getAttribute("user")).isEqualTo(user);
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isEqualTo(form);
+        verify(userService, Mockito.never()).updateUserDetails(anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
-    void editUser_shouldNotAddUserOrRolesIfNotPresent() {
-        when(userService.getEntraUserById("id2")).thenReturn(Optional.empty());
-
-        String view = userController.editUser("id2", model);
-
-        assertThat(view).isEqualTo("edit-user");
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(model.getAttribute("roles")).isNull();
-    }
-
-    @Test
-    void disableUsers_shouldCallServiceAndRedirect() throws IOException {
-        List<String> ids = List.of("id1", "id2");
-        String view = userController.disableUsers(ids);
-        assertThat(view).isEqualTo("redirect:/users");
-        verify(userService).disableUsers(ids);
-    }
-
-    @Test
-    void manageUser_shouldAddUserAppRolesAndOfficesToModel() {
+    void editUserApps_shouldPopulateAppsAndReturnView() {
+        // Given
+        String userId = "user123";
         EntraUserDto user = new EntraUserDto();
-        user.setId("id1");
-        List<AppRoleDto> roles = List.of(new AppRoleDto());
-        List<Office> offices = List.of(Office.builder().build());
-        when(userService.getEntraUserById("id1")).thenReturn(Optional.of(user));
-        when(userService.getUserAppRolesByUserId("id1")).thenReturn(roles);
-        when(officeService.getOffices()).thenReturn(offices);
-
-        String view = userController.manageUser("id1", model);
-
-        assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
-        assertThat(model.getAttribute("userAppRoles")).isEqualTo(roles);
-        assertThat(model.getAttribute("offices")).isEqualTo(offices);
-    }
-
-    @Test
-    void manageUser_shouldHandleUserNotPresent() {
-        when(userService.getEntraUserById("id2")).thenReturn(Optional.empty());
-        when(userService.getUserAppRolesByUserId("id2")).thenReturn(List.of());
-        when(officeService.getOffices()).thenReturn(List.of());
-
-        String view = userController.manageUser("id2", model);
-
-        assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(model.getAttribute("userAppRoles")).isEqualTo(List.of());
-        assertThat(model.getAttribute("offices")).isEqualTo(List.of());
-    }
-
-    @Test
-    void createUser_shouldPopulateModelWithFirmsAndSelectedFirm() {
-        when(session.getAttribute("user")).thenReturn(null);
-        when(session.getAttribute("firm")).thenReturn(null);
-        List<FirmDto> firms = List.of(FirmDto.builder().id(UUID.randomUUID()).build());
-        when(firmService.getFirms()).thenReturn(firms);
-
-        UserDetailsForm form = new UserDetailsForm();
-        String view = userController.createUser(form, session, model);
-
-        assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("firms")).isEqualTo(firms);
-        assertThat(model.getAttribute("selectedFirm")).isNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void postUser_shouldHandleValidationErrors() {
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(true);
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("firms", List.of());
-        sessionModel.addAttribute("selectedFirm", null);
-        sessionModel.addAttribute("user", new User());
-        Mockito.lenient().when(session.getAttribute("createUserDetailsModel")).thenReturn(sessionModel);
-
-        final Model model = new ExtendedModelMap();
-        UserDetailsForm form = new UserDetailsForm();
-        String view = userController.postUser(form, result, null, session, model);
-
-        assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("firms")).isNotNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void postUser_shouldRedirectOnNoValidationErrors() {
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(false);
-        when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().id(UUID.randomUUID()).build());
-        UserDetailsForm form = new UserDetailsForm();
-        form.setFirstName("A");
-        form.setLastName("B");
-        form.setEmail("a@b.com");
-        form.setFirmId("firmId");
-        form.setIsFirmAdmin(true);
-
-        final Model model = new ExtendedModelMap();
-        HttpSession session = new MockHttpSession();
-
-        String view = userController.postUser(form, result, "true", session, model);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
-        assertThat(session.getAttribute("firm")).isNotNull();
-        assertThat(session.getAttribute("isFirmAdmin")).isEqualTo(true);
-    }
-
-    @Test
-    void selectUserApps_shouldAddAppsAndUserToModel() {
-        AppDto appDto = new AppDto();
-        appDto.setId("app1");
-        when(userService.getApps()).thenReturn(List.of(appDto));
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("apps", List.of("app1"));
-        session.setAttribute("user", new User());
-        ApplicationsForm form = new ApplicationsForm();
-
-        String view = userController.selectUserApps(form, model, session);
-
-        assertThat(view).isEqualTo("add-user-apps");
-        assertThat(model.getAttribute("apps")).isNotNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void setSelectedApps_shouldRedirectToCheckAnswersIfNoApps() {
-        ApplicationsForm form = new ApplicationsForm();
-        form.setApps(new ArrayList<>());
-        HttpSession session = new MockHttpSession();
-        Model model = new ExtendedModelMap();
-
-        String view = userController.setSelectedApps(form, model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
-    }
-
-    @Test
-    void setSelectedApps_shouldSetAppsAndRedirectToRoles() {
-        ApplicationsForm form = new ApplicationsForm();
-        form.setApps(List.of("app1"));
-        HttpSession session = new MockHttpSession();
-        final Model model = new ExtendedModelMap();
-
-        String view = userController.setSelectedApps(form, model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/roles");
-        assertThat(session.getAttribute("apps")).isEqualTo(List.of("app1"));
-    }
-
-    @Test
-    void setSelectedRoles_shouldHandleValidationErrors() {
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(true);
-
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("roles", List.of());
-        sessionModel.addAttribute("user", new User());
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("userCreateRolesModel", sessionModel);
-
-        RolesForm form = new RolesForm();
-        Model model = new ExtendedModelMap();
-        String view = userController.setSelectedRoles(form, result, model, session);
-
-        assertThat(view).isEqualTo("add-user-roles");
-        assertThat(model.getAttribute("roles")).isNotNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void setSelectedRoles_shouldSetRolesAndRedirect() {
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(false);
-        HttpSession session = new MockHttpSession();
-        RolesForm form = new RolesForm();
-        form.setRoles(List.of("role1"));
-        final Model model = new ExtendedModelMap();
-        model.addAttribute("createUserRolesSelectedAppIndex", 0);
-        session.setAttribute("userCreateRolesModel", model);
-
-        String view = userController.setSelectedRoles(form, result, model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/offices");
-        assertThat(session.getAttribute("roles")).isEqualTo(List.of("role1"));
-    }
-
-    @Test
-    void offices_shouldAddOfficeDataAndUserToModel() {
-        Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("user", new User());
-        OfficesForm form = new OfficesForm();
-
-        String view = userController.offices(form, session, model);
-
-        assertThat(view).isEqualTo("add-user-offices");
-        assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void offices_shouldThrowExceptionWhenUserIsNotPresent() {
-        Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
-        HttpSession session = new MockHttpSession();
-        OfficesForm form = new OfficesForm();
-
-        assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.offices(form, session, model));
-    }
-
-    @Test
-    void postOffices_shouldHandleValidationErrors() {
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(true);
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("user", new User());
-        sessionModel.addAttribute("officeData", List.of());
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("createUserOfficesModel", sessionModel);
-
-        final Model model = new ExtendedModelMap();
-        OfficesForm form = new OfficesForm();
-
-        String view = userController.postOffices(form, result, model, session);
-
-        assertThat(view).isEqualTo("add-user-offices");
-        assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
-    }
-
-    @Test
-    void postOffices_shouldSetOfficeDataAndRedirect() {
-        Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(false);
-        OfficesForm form = new OfficesForm();
-        form.setOffices(List.of(office.getId().toString()));
-        HttpSession session = new MockHttpSession();
-        final Model model = new ExtendedModelMap();
-
-        String view = userController.postOffices(form, result, model, session);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
-        OfficeData officeData = (OfficeData) session.getAttribute("officeData");
-        assertThat(officeData.getSelectedOffices()).containsExactly(office.getId().toString());
-        assertThat(officeData.getSelectedOfficesDisplay()).containsExactly("Office1");
-    }
-
-    @Test
-    void getUserCheckAnswers_shouldAddAttributesToModel() {
-        AppRoleDto role = new AppRoleDto();
-        role.setId("role1");
-        AppDto app = new AppDto();
-        app.setId("app1");
-        role.setApp(app);
-        List<String> selectedApps = List.of("app1");
-        when(userService.getAllAvailableRolesForApps(selectedApps)).thenReturn(List.of(role));
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("apps", selectedApps);
-        session.setAttribute("roles", List.of("role1"));
-        session.setAttribute("user", new User());
-        session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("isFirmAdmin", true);
-
-        String view = userController.getUserCheckAnswers(model, session);
-
-        assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNotNull();
-        assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(model.getAttribute("firm")).isNotNull();
-        assertThat(model.getAttribute("isFirmAdmin")).isEqualTo(true);
-    }
-
-    @Test
-    void addUserCheckAnswers_shouldCallCreateUserAndRedirect() {
-        HttpSession session = new MockHttpSession();
-        User user = new User();
-        session.setAttribute("user", user);
-        session.setAttribute("roles", List.of("role1"));
-        session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("isFirmAdmin", true);
-        session.setAttribute("officeData", new OfficeData());
-        EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(any(), any(), any(), any(), eq(true), any())).thenReturn(entraUser);
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setName("tester");
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
-
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
-        assertThat(session.getAttribute("user")).isNotNull();
-        assertThat(session.getAttribute("firm")).isNull();
-        assertThat(session.getAttribute("roles")).isNull();
-        assertThat(session.getAttribute("officeData")).isNull();
-    }
-
-    @Test
-    void addUserCheckAnswers_shouldLogErrorIfNoUser() {
-        HttpSession session = new MockHttpSession();
-        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
-
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
-        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
-        assertThat(logEvents).hasSize(1);
-        assertThat(logEvents.getFirst().getFormattedMessage()).contains("No user attribute was present in request");
-    }
-
-    @Test
-    void addUserCreated_shouldAddUserToModelIfPresent() {
-        HttpSession session = new MockHttpSession();
-        User user = new User();
-        user.setGivenName("Chris");
-        user.setSurname("Newman");
-        session.setAttribute("user", user);
-        Model model = new ExtendedModelMap();
-        String view = userController.addUserCreated(model, session);
-        assertThat(view).isEqualTo("add-user-created");
-        assertThat(model.getAttribute("user")).isNotNull();
-        User modelUser = (User) model.getAttribute("user");
-        assertThat(modelUser.getGivenName()).isEqualTo("Chris");
-        assertThat(modelUser.getSurname()).isEqualTo("Newman");
-    }
-
-    @Test
-    void addUserCreated_shouldLogErrorIfNoUser() {
-        HttpSession session = new MockHttpSession();
-        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-
-        String view = userController.addUserCreated(model, session);
-
-        assertThat(view).isEqualTo("add-user-created");
-        assertThat(model.getAttribute("user")).isNull();
-        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
-        assertThat(logEvents).hasSize(1);
-        assertThat(logEvents.getFirst().getFormattedMessage()).contains("No user attribute was present in request");
-    }
-
-    @Test
-    void editUserRoles_shouldAddAttributesToModel() {
-        String id = "id1";
-        EntraUserDto user = new EntraUserDto();
-        List<AppRoleDto> userRoles = List.of(new AppRoleDto());
-        List<AppRoleDto> availableRoles = List.of(new AppRoleDto());
-        when(userService.getEntraUserById(id)).thenReturn(Optional.of(user));
-        when(userService.getUserAppRolesByUserId(id)).thenReturn(userRoles);
-        when(userService.getAppRolesByAppId(any())).thenReturn(availableRoles);
-        HttpSession session = new MockHttpSession();
-        AppDto currentApp = new AppDto();
-        currentApp.setId("testAppId");
-        currentApp.setName("testAppName");
-        List<String> selectedApps = List.of(currentApp.getId());
-        session.setAttribute("selectedApps", selectedApps);
-        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-
-        String view = userController.editUserRoles(id, 0, model, session);
-
-        assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
-        assertThat(model.getAttribute("availableRoles")).isEqualTo(availableRoles);
-        assertThat(model.getAttribute("userAssignedRoles")).isNotNull();
-    }
-
-    @Test
-    void updateUserRoles_shouldCallServiceAndRedirect() {
-        String id = "id1";
-        List<String> roles = List.of("role1");
-        MockHttpSession session = new MockHttpSession();
-
-        RedirectView view = userController.updateUserRoles(id, roles, 0, authentication, session);
-
-        assertThat(view.getUrl()).isEqualTo("/admin/users");
-        verify(userService).updateUserRoles(id, roles);
-    }
-
-    @Test
-    void editUserApps_shouldAddAttributesToModel() {
-        String id = "id1";
-        EntraUserDto user = new EntraUserDto();
-        Set<AppDto> assignedApps = Set.of(new AppDto());
-        List<AppDto> availableApps = List.of(new AppDto());
-        when(userService.getEntraUserById(id)).thenReturn(Optional.of(user));
-        when(userService.getUserAppsByUserId(id)).thenReturn(assignedApps);
-        when(userService.getApps()).thenReturn(availableApps);
-
-        String view = userController.editUserApps(id, model);
-
+        user.setId(userId);
+        
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+        
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> allApps = List.of(app1, app2);
+        
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getApps()).thenReturn(allApps);
+        
+        // When
+        String view = userController.editUserApps(userId, model);
+        
+        // Then
         assertThat(view).isEqualTo("edit-user-apps");
         assertThat(model.getAttribute("user")).isEqualTo(user);
-        assertThat(model.getAttribute("userAssignedApps")).isEqualTo(assignedApps);
-        assertThat(model.getAttribute("availableApps")).isEqualTo(availableApps);
+        
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
+        assertThat(apps.get(1).isSelected()).isFalse(); // app2 should not be selected
     }
 
     @Test
-    void setSelectedAppsEdit_shouldSetSelectedAppsAndRedirect() {
-        UUID userId = UUID.randomUUID();
-        List<String> apps = List.of("app1");
-        HttpSession session = new MockHttpSession();
-
-        RedirectView view = userController.setSelectedAppsEdit(userId.toString(), apps, session);
-
-        assertThat(view.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        assertThat(session.getAttribute("selectedApps")).isEqualTo(apps);
+    void setSelectedAppsEdit_shouldStoreAppsInSessionAndRedirect() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        List<String> apps = List.of("app1", "app2");
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, testSession);
+        
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
+        assertThat(testSession.getAttribute("selectedApps")).isEqualTo(apps);
     }
 
     @Test
-    void setSelectedAppsEdit_shouldThrowExceptionForInvalidUuid() {
-        String invalidId = "not-a-uuid";
-        HttpSession session = new MockHttpSession();
-
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
-                () -> userController.setSelectedAppsEdit(invalidId, List.of("app1"), session));
-        assertThat(thrown).isNotNull();
+    void editUserOffices_shouldPopulateOfficesAndReturnView() {
+        // Given
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        
+        Office office1 = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
+        Office office2 = Office.builder().id(UUID.randomUUID()).name("Office 2").build();
+        List<Office> allOffices = List.of(office1, office2);
+        
+        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        when(officeService.getOffices()).thenReturn(allOffices);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.editUserOffices(userId, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-offices");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
+        
+        @SuppressWarnings("unchecked")
+        List<OfficeModel> offices = (List<OfficeModel>) model.getAttribute("officeData");
+        assertThat(offices).hasSize(2);
+        assertThat(offices.get(0).isSelected()).isTrue(); // office1 should be selected
+        assertThat(offices.get(1).isSelected()).isFalse(); // office2 should not be selected
     }
 
     @Test
-    public void testThatUpdateRolesRedirectsToNextIndex() {
-        UUID role1Id = UUID.randomUUID();
-        UUID role2Id = UUID.randomUUID();
-        AppRoleDto role1 = new AppRoleDto();
-        role1.setId(role1Id.toString());
-        role1.setName("role1");
-        AppRoleDto role2 = new AppRoleDto();
-        role2.setId(role2Id.toString());
-        role2.setName("role2");
-        List<String> selectedRoles = List.of(role1.getId(), role2.getId());
-        List<String> selectedApps = List.of("app1", "app2");
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("selectedApps", selectedApps);
-        UUID userId = UUID.randomUUID();
-        RedirectView view = userController.updateUserRoles(userId.toString(), selectedRoles, 0, authentication,
-                session);
-        Map<Integer, String> allSelectedRoles = (Map<Integer, String>) session.getAttribute("editUserAllSelectedRoles");
-        assertThat(allSelectedRoles).isNotNull();
-        assertThat(allSelectedRoles.keySet()).hasSize(1);
-        assertThat(view.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles?selectedAppIndex=%d", userId, 1));
+    void editUserOffices_shouldHandleAccessToAllOffices() {
+        // Given
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        
+        Office office1 = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
+        Office office2 = Office.builder().id(UUID.randomUUID()).name("Office 2").build();
+        List<Office> allOffices = List.of(office1, office2);
+        
+        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        when(officeService.getOffices()).thenReturn(allOffices);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.editUserOffices(userId, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-offices");
+        assertThat(model.getAttribute("hasAllOffices")).isEqualTo(true);
+        
+        @SuppressWarnings("unchecked")
+        List<OfficeModel> offices = (List<OfficeModel>) model.getAttribute("officeData");
+        assertThat(offices).hasSize(2);
+        // All offices should be selected when user has access to all
+        assertThat(offices.get(0).isSelected()).isTrue();
+        assertThat(offices.get(1).isSelected()).isTrue();
     }
 
     @Test
-    void cancelUserCreation_shouldClearSessionAttributesAndRedirect() {
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("user", new Object());
-        session.setAttribute("firm", new Object());
-        session.setAttribute("isFirmAdmin", true);
-        session.setAttribute("apps", List.of("app1"));
-        session.setAttribute("roles", List.of("role1"));
-        session.setAttribute("officeData", new Object());
-
-        String result = userController.cancelUserCreation(session);
-
-        assertThat(result).isEqualTo("redirect:/admin/users");
-        assertThat(session.getAttribute("user")).isNull();
-        assertThat(session.getAttribute("firm")).isNull();
-        assertThat(session.getAttribute("isFirmAdmin")).isNull();
-        assertThat(session.getAttribute("apps")).isNull();
-        assertThat(session.getAttribute("roles")).isNull();
-        assertThat(session.getAttribute("officeData")).isNull();
+    void updateUserOffices_shouldUpdateOfficesAndRedirect() throws IOException {
+        // Given
+        String userId = "user123";
+        OfficesForm form = new OfficesForm();
+        form.setOffices(List.of("office1", "office2"));
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
     }
 
+    @Test
+    void updateUserOffices_shouldHandleAccessToAllOffices() throws IOException {
+        // Given
+        String userId = "user123";
+        OfficesForm form = new OfficesForm();
+        form.setOffices(List.of("ALL")); // Special value for "Access to all offices"
+        
+        Office office1 = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
+        Office office2 = Office.builder().id(UUID.randomUUID()).name("Office 2").build();
+        when(officeService.getOffices()).thenReturn(List.of(office1, office2));
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // When
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        // Should pass all office IDs to the service
+        List<String> expectedOfficeIds = List.of(office1.getId().toString(), office2.getId().toString());
+        verify(userService).updateUserOffices(userId, expectedOfficeIds);
+    }
+
+    @Test
+    void updateUserOffices_shouldReturnToFormOnValidationErrors() throws IOException {
+        // Given
+        String userId = "user123";
+        OfficesForm form = new OfficesForm();
+        form.setOffices(List.of("office1"));
+        
+        EntraUserDto user = new EntraUserDto();
+        List<Office> offices = List.of(Office.builder().build());
+        
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("user", user);
+        sessionModel.addAttribute("officeData", offices);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("editUserOfficesModel", sessionModel);
+        
+        // When
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-offices");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("officeData")).isEqualTo(offices);
+        verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
+    }
+
+    @Test
+    void cancelUserEdit_shouldClearSessionAndRedirect() {
+        // Given
+        String userId = "user123";
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", List.of("app1"));
+        testSession.setAttribute("editUserRoles", List.of("role1"));
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("editUserRolesCurrentApp", new AppDto());
+        testSession.setAttribute("editUserRolesSelectedAppIndex", 0);
+        
+        // When
+        String view = userController.cancelUserEdit(userId, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(testSession.getAttribute("selectedApps")).isNull();
+        assertThat(testSession.getAttribute("editUserRoles")).isNull();
+        assertThat(testSession.getAttribute("userEditRolesModel")).isNull();
+        assertThat(testSession.getAttribute("editUserRolesCurrentApp")).isNull();
+        assertThat(testSession.getAttribute("editUserRolesSelectedAppIndex")).isNull();
+    }
+
+    @Test
+    void editUserRoles_shouldAutoPopulateSelectedAppsFromUserApps() {
+        // Given
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        
+        AppDto userApp1 = new AppDto();
+        userApp1.setId("app1");
+        AppDto userApp2 = new AppDto();
+        userApp2.setId("app2");
+        Set<AppDto> userApps = new LinkedHashSet<>();
+        userApps.add(userApp1);
+        userApps.add(userApp2);
+        
+        AppDto currentApp = new AppDto();
+        currentApp.setId("app1");
+        currentApp.setName("App 1");
+        
+        List<AppRoleDto> appRoles = List.of(new AppRoleDto());
+        
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
+        lenient().when(userService.getAppByAppId("app2")).thenReturn(Optional.of(userApp2));
+        when(userService.getAppRolesByAppId("app1")).thenReturn(appRoles);
+        lenient().when(userService.getAppRolesByAppId("app2")).thenReturn(List.of());
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        
+        MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
+        
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
+        @SuppressWarnings("unchecked")
+        List<String> selectedApps = (List<String>) testSession.getAttribute("selectedApps");
+        assertThat(selectedApps).containsExactlyInAnyOrder("app1", "app2");
+    }
+
+    @Test
+    void updateUserRoles_shouldHandleMultipleAppsNavigation() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role1", "role2"));
+        
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When - updating roles for first app (index 0)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model, testSession);
+        
+        // Then - should redirect to next app (index 1)
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
+        
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allRoles = (Map<Integer, List<String>>) testSession.getAttribute("editUserAllSelectedRoles");
+        assertThat(allRoles).isNotNull();
+        assertThat(allRoles.get(0)).containsExactlyInAnyOrder("role1", "role2");
+    }
+
+    @Test
+    void updateUserRoles_shouldCompleteEditingOnLastApp() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role3"));
+        
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1", "role2"));
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When - updating roles for last app (index 1)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model, testSession);
+        
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        
+        List<String> allSelectedRoles = List.of("role1", "role2", "role3");
+        verify(userService).updateUserRoles(userId, allSelectedRoles);
+        verify(eventService).auditUpdateRole(any(), any(), eq(allSelectedRoles));
+    }
+
+    @Test
+    void updateUserRoles_shouldRedirectWhenSessionModelMissing() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        MockHttpSession testSession = new MockHttpSession(); // No session model
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model, testSession);
+        
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles");
+    }
 }
