@@ -762,6 +762,12 @@ public class UserController {
 
         // Get all available offices
         List<Office> allOffices = officeService.getOffices();
+        
+        // Check if user has access to all offices
+        boolean hasAllOffices = userOffices.size() == allOffices.size() && 
+                                allOffices.stream()
+                                    .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+        
         List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getName(),
@@ -772,11 +778,20 @@ public class UserController {
 
         // Create form object
         OfficesForm officesForm = new OfficesForm();
-        officesForm.setOffices(new ArrayList<>(userOfficeIds));
+        List<String> selectedOffices = new ArrayList<>();
+        
+        if (hasAllOffices) {
+            selectedOffices.add("ALL");
+        } else {
+            selectedOffices.addAll(userOfficeIds);
+        }
+        
+        officesForm.setOffices(selectedOffices);
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
+        model.addAttribute("hasAllOffices", hasAllOffices);
 
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
@@ -814,6 +829,16 @@ public class UserController {
 
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
+        
+        // Handle "ALL" option
+        if (selectedOffices.contains("ALL")) {
+            // If "ALL" is selected, get all available office IDs
+            List<Office> allOffices = officeService.getOffices();
+            selectedOffices = allOffices.stream()
+                    .map(office -> office.getId().toString())
+                    .collect(Collectors.toList());
+        }
+        
         userService.updateUserOffices(id, selectedOffices);
 
         // Clear the session model
