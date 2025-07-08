@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.utils.RestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,5 +52,12 @@ class GraphApiServiceTest {
             assertThat(user.getDisplayName()).isEqualTo("Alice Smith");
             mockedRestUtils.verify(() -> RestUtils.getGraphApi(anyString(), anyString()));
         }
+    }
+
+    @Test
+    void logsUser_fromGraph() {
+        service.logoutUser("token");
+        String url = "https://graph.microsoft.com/v1.0/me/revokeSignInSessions";
+        mockedRestUtils.verify(() -> RestUtils.postGraphApi(eq("token"), eq(url), any()));
     }
 }

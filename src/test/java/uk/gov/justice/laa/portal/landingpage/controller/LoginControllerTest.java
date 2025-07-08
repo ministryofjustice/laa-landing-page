@@ -176,4 +176,14 @@ class LoginControllerTest {
         assertThat(viewName).isEqualTo("home");
         assertThat(model.asMap()).doesNotContainKey("name");
     }
+
+    @Test
+    void whenLogout_thenReturnsLogoutPage() {
+
+        // Arrange & Act
+        RedirectView result = controller.logout(authentication, session, authClient);
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/");
+    }
 }

@@ -15,10 +15,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +39,7 @@ class RestUtilTest {
     @Mock
     private RestTemplate mockRestTemplate;
     @Captor
-    private ArgumentCaptor<HttpEntity<String>> httpEntityCaptor;
+    private ArgumentCaptor<HttpEntity<?>> httpEntityCaptor;
 
     @Test
     void getGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
@@ -89,6 +92,39 @@ class RestUtilTest {
                     any(HttpEntity.class),
                     eq(String.class)
             );
+        }
+    }
+
+    @Test
+    void postGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
+        // Arrange
+        String expectedResponseBody = "{\"data\":\"success\"}";
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(expectedResponseBody, HttpStatus.OK);
+
+        try (MockedConstruction<RestTemplate> mockedConstruction = Mockito.mockConstruction(RestTemplate.class,
+                (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
+                        .thenReturn(mockResponseEntity))) {
+
+            // Act
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("data", "payload");
+            String actualResponseBody = RestUtils.postGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL, body);
+
+            // Assert
+            assertThat(actualResponseBody).isEqualTo(expectedResponseBody);
+            RestTemplate constructedRestTemplate = mockedConstruction.constructed().get(0);
+            verify(constructedRestTemplate).exchange(
+                    eq(DUMMY_URL),
+                    eq(HttpMethod.POST),
+                    httpEntityCaptor.capture(),
+                    eq(String.class)
+            );
+            HttpHeaders capturedHeaders = httpEntityCaptor.getValue().getHeaders();
+            assertThat(capturedHeaders.getFirst("Authorization")).isEqualTo("Bearer " + DUMMY_ACCESS_TOKEN);
+            assertThat(capturedHeaders.getFirst("Accept")).isEqualTo("application/json");
+            MultiValueMap<String, String> payload = (MultiValueMap<String, String>) httpEntityCaptor.getValue().getBody();
+            assertThat(payload).containsKey("data");
+            assertThat(payload.get("data")).containsExactly("payload");
         }
     }
 
