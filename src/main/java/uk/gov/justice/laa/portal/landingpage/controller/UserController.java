@@ -760,8 +760,10 @@ public class UserController {
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
 
-        // Get all available offices
-        List<Office> allOffices = officeService.getOffices();
+        // Get user's available offices by firm
+        List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
+        List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
+        List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
         
         // Check if user has access to all offices
         boolean hasAllOffices = userOffices.size() == allOffices.size() 

@@ -1053,8 +1053,13 @@ class UserControllerTest {
         
         List<Office> userOffices = List.of(office1); // User has access to office1 only
         
+        // Mock user firms for the new firmService call
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> userFirms = List.of(firmDto);
+        
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
-        when(officeService.getOffices()).thenReturn(allOffices);
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
         MockHttpSession testSession = new MockHttpSession();
         
@@ -1086,8 +1091,13 @@ class UserControllerTest {
         
         List<Office> userOffices = List.of(office1, office2); // User has access to all offices
         
+        // Mock user firms for the new firmService call
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> userFirms = List.of(firmDto);
+        
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
-        when(officeService.getOffices()).thenReturn(allOffices);
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
         MockHttpSession testSession = new MockHttpSession();
         
@@ -1853,9 +1863,14 @@ class UserControllerTest {
         List<Office> userOffices = List.of(office1, office3); // User has access to 2 out of 3 offices
         List<Office> allOffices = List.of(office1, office2, office3);
         
+        // Mock user firms for the new firmService call
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> userFirms = List.of(firmDto);
+        
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
-        when(officeService.getOffices()).thenReturn(allOffices);
         
         MockHttpSession testSession = new MockHttpSession();
 
