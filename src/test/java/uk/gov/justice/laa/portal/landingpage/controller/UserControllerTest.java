@@ -1173,7 +1173,14 @@ class UserControllerTest {
         
         Office office1 = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
         Office office2 = Office.builder().id(UUID.randomUUID()).name("Office 2").build();
-        when(officeService.getOffices()).thenReturn(List.of(office1, office2));
+        
+        // Mock firm service to return user firms
+        UUID firmId = UUID.randomUUID();
+        FirmDto firmDto = FirmDto.builder().id(firmId).name("Test Firm").build();
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(List.of(firmDto));
+        
+        // Mock office service to return offices by firms
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);

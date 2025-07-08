@@ -583,13 +583,13 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/apps")
-    public RedirectView setSelectedAppsEdit(@PathVariable String id, 
+    public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
-        
+
         // If no apps are selected, persist empty roles to database and redirect to manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
@@ -598,7 +598,7 @@ public class UserController {
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
         }
-        
+
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
@@ -632,13 +632,13 @@ public class UserController {
                     session.setAttribute("selectedApps", userAppIds);
                     return userAppIds;
                 });
-        
+
         // Ensure the selectedAppIndex is within bounds
         if (selectedApps.isEmpty()) {
             // No apps assigned to user, redirect back to manage page
             return "redirect:/admin/users/manage/" + id;
         }
-        
+
         Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
         Integer currentSelectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("editUserRolesSelectedAppIndex") != null) {
@@ -646,7 +646,7 @@ public class UserController {
         } else {
             currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
         }
-        
+
         // Ensure the index is within bounds
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
@@ -777,12 +777,12 @@ public class UserController {
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
         List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
-        
+
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size() 
-                                && allOffices.stream()
-                                    .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
-        
+        boolean hasAllOffices = userOffices.size() == allOffices.size()
+                && allOffices.stream()
+                        .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getName(),
@@ -794,13 +794,13 @@ public class UserController {
         // Create form object
         OfficesForm officesForm = new OfficesForm();
         List<String> selectedOffices = new ArrayList<>();
-        
+
         if (hasAllOffices) {
             selectedOffices.add("ALL");
         } else {
             selectedOffices.addAll(userOfficeIds);
         }
-        
+
         officesForm.setOffices(selectedOffices);
 
         model.addAttribute("user", user);
@@ -844,16 +844,18 @@ public class UserController {
 
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-        
+
         // Handle "ALL" option
         if (selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available office IDs
-            List<Office> allOffices = officeService.getOffices();
+            // If "ALL" is selected, get all available offices by firm
+            List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
+            List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
+            List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
             selectedOffices = allOffices.stream()
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
         }
-        
+
         userService.updateUserOffices(id, selectedOffices);
 
         // Clear the session model
@@ -868,7 +870,7 @@ public class UserController {
         // Edit User Details Form
         session.removeAttribute("user");
         session.removeAttribute("editUserDetailsForm");
-        
+
         // Edit User Apps/Roles Form
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
@@ -879,14 +881,14 @@ public class UserController {
         session.removeAttribute("selectedAppIndex");
         session.removeAttribute("editUserRolesCurrentApp");
         session.removeAttribute("editUserRolesSelectedAppIndex");
-        
+
         // Edit User Apps Form
         session.removeAttribute("userAssignedApps");
         session.removeAttribute("availableApps");
-        
+
         // Edit User Offices Form
         session.removeAttribute("editUserOfficesModel");
-        
+
         // Clear any success messages
         session.removeAttribute("successMessage");
 
