@@ -86,10 +86,11 @@ public class UserService {
      */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+            EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList) {
+            NotificationService notificationService, OfficeRepository officeRepository,
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -187,7 +188,8 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort, String direction) {
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
+            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
@@ -261,7 +263,8 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra user id: {}", entraId);
-                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                    return new RuntimeException(
+                            String.format("User not found for the given user entra id: %s", entraId));
                 });
 
         return mapper.map(entraUser, EntraUserDto.class);
@@ -328,13 +331,18 @@ public class UserService {
     public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
             boolean isFirmAdmin, String createdBy) {
 
-        // Make sure the user is trying to be assigned valid app roles for their user type.
+        // Make sure the user is trying to be assigned valid app roles for their user
+        // type.
         List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
                 .collect(Collectors.toList()));
-        // TODO: Change this logic to include internal users when we support internal user creation.
-        List<AppRole> validAppRoles = appRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        // TODO: Change this logic to include internal users when we support internal
+        // user creation.
+        List<AppRole> validAppRoles = appRoleRepository
+                .findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
         if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
-            logger.error("User creation blocked for user {}. User tried to assign roles to which they should not have access.", user.getGivenName() + " " + user.getSurname());
+            logger.error(
+                    "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
+                    user.getGivenName() + " " + user.getSurname());
             throw new RuntimeException("User creation blocked");
         }
         User invitedUser = inviteUser(user);
@@ -498,13 +506,13 @@ public class UserService {
             App app = optionalApp.get();
             RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> appRole.getRoleType().equals(userRoleType) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
+                            || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .toList();
         }
         return appRoles;
     }
-
 
     public Optional<AppDto> getAppByAppId(String appId) {
         Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
@@ -525,36 +533,19 @@ public class UserService {
     /**
      * Update user details in Microsoft Graph and local database
      * 
-     * @param userId The user ID
+     * @param userId    The user ID
      * @param firstName The user's first name
-     * @param lastName The user's last name
-     * @param email The user's email address
+     * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserDetails(String userId, String firstName, String lastName, String email) throws IOException {
-        // Update Microsoft Graph
-        User user = new User();
-        user.setGivenName(firstName);
-        user.setSurname(lastName);
-        user.setDisplayName(firstName + " " + lastName);
-        user.setMail(email);
-        
-        try {
-            graphClient.users().byUserId(userId).patch(user);
-            logger.info("Successfully updated user details in Microsoft Graph for user ID: {}", userId);
-        } catch (Exception e) {
-            logger.error("Failed to update user details in Microsoft Graph for user ID: {}", userId, e);
-            // throw new IOException("Failed to update user details in Microsoft Graph", e);
-        }
-        
+    public void updateUserDetails(String userId, String firstName, String lastName) throws IOException {
         // Update local database
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
             entraUser.setFirstName(firstName);
             entraUser.setLastName(lastName);
-            entraUser.setEmail(email);
-            
+
             try {
                 entraUserRepository.saveAndFlush(entraUser);
                 logger.info("Successfully updated user details in database for user ID: {}", userId);
@@ -570,8 +561,9 @@ public class UserService {
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()
-                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
-                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal)).collect(Collectors.toCollection(TreeSet::new));
+                .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     /**
@@ -594,7 +586,7 @@ public class UserService {
     /**
      * Update user offices
      * 
-     * @param userId         The user ID
+     * @param userId          The user ID
      * @param selectedOffices List of selected office IDs
      * @throws IOException If an error occurs during the update
      */
@@ -604,7 +596,7 @@ public class UserService {
             EntraUser user = optionalUser.get();
             List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
             Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
-            
+
             // Update user profile offices
             Optional<UserProfile> userProfile = user.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)

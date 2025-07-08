@@ -122,13 +122,17 @@ public class UserController {
         return "users";
     }
 
-    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins, int page, int size, String sort, String direction) {
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size, sort, direction);
+    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins,
+            int page, int size, String sort, String direction) {
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size, sort,
+                direction);
     }
 
-    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins, int page, int size, String sort, String direction) {
+    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins,
+            int page, int size, String sort, String direction) {
         boolean isInternal = !userType.equals("external");
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size, sort, direction);
+        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size, sort,
+                direction);
     }
 
     @GetMapping("/users/edit/{id}")
@@ -237,7 +241,8 @@ public class UserController {
     @GetMapping("/user/create/services")
     public String selectUserApps(ApplicationsForm applicationsForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
-        // TODO: Make this use the selected user type rather than a hard-coded type. Our user creation flow is only for external users right now.
+        // TODO: Make this use the selected user type rather than a hard-coded type. Our
+        // user creation flow is only for external users right now.
         List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM).stream()
                 .map(appDto -> {
                     AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
@@ -274,8 +279,10 @@ public class UserController {
             selectedAppIndex = 0;
         }
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(selectedAppIndex)).orElseThrow();
-        // TODO: Make this use the selected user type rather than a hard-coded type. Our user creation flow is only for external users right now.
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex), UserType.EXTERNAL_SINGLE_FIRM);
+        // TODO: Make this use the selected user type rather than a hard-coded type. Our
+        // user creation flow is only for external users right now.
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex),
+                UserType.EXTERNAL_SINGLE_FIRM);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -559,8 +566,7 @@ public class UserController {
             return "edit-user-details";
         }
         // Update user details
-        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName(),
-                editUserDetailsForm.getEmail());
+        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
         return "redirect:/admin/users/manage/" + id;
     }
 

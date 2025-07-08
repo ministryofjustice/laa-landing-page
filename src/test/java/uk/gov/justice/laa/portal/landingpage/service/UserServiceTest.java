@@ -1451,15 +1451,11 @@ class UserServiceTest {
     class UpdateUserDetailsTests {
 
         @Test
-        void updateUserDetails_updatesGraphAndDatabase_whenUserExists() throws IOException {
+        void updateUserDetails_updatesDatabase_whenUserExists() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
             String firstName = "John";
             String lastName = "Doe";
-            String email = "john.doe@example.com";
-
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
 
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
@@ -1471,13 +1467,11 @@ class UserServiceTest {
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
             // Act
-            userService.updateUserDetails(userId.toString(), firstName, lastName, email);
+            userService.updateUserDetails(userId.toString(), firstName, lastName);
 
             // Assert
-            verify(usersRequestBuilder.byUserId(userId.toString())).patch(any(User.class));
             assertThat(entraUser.getFirstName()).isEqualTo(firstName);
             assertThat(entraUser.getLastName()).isEqualTo(lastName);
-            assertThat(entraUser.getEmail()).isEqualTo(email);
             verify(mockEntraUserRepository).saveAndFlush(entraUser);
         }
 
@@ -1489,12 +1483,9 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenThrow(new RuntimeException("DB error"));
 
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
-                    () -> userService.updateUserDetails(userId.toString(), "John", "Doe", "john@example.com"));
+                    () -> userService.updateUserDetails(userId.toString(), "John", "Doe"));
             assertThat(exception.getMessage()).contains("Failed to update user details in database");
         }
 
@@ -1504,13 +1495,10 @@ class UserServiceTest {
             UUID userId = UUID.randomUUID();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
 
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
 
             // Act
-            userService.updateUserDetails(userId.toString(), "John", "Doe", "john@example.com");
+            userService.updateUserDetails(userId.toString(), "John", "Doe");
 
             // Assert
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -1520,22 +1508,17 @@ class UserServiceTest {
         }
 
         @Test
-        void updateUserDetails_handlesGraphException_gracefully() throws IOException {
+        void updateUserDetails_handlesRepositoryException_gracefully() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
-            UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-            when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-            when(usersRequestBuilder.byUserId(userId.toString()).patch(any(User.class)))
-                    .thenThrow(new RuntimeException("Graph API error"));
-
             // Act - should not throw exception
-            userService.updateUserDetails(userId.toString(), "John", "Doe", "john@example.com");
+            userService.updateUserDetails(userId.toString(), "John", "Doe");
 
-            // Assert - database update should still occur
+            // Assert - database update should occur
             verify(mockEntraUserRepository).saveAndFlush(entraUser);
         }
     }
@@ -2154,6 +2137,6 @@ class UserServiceTest {
         void getErrorSort() {
             assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
         }
-    
+
     } // End of EdgeCaseTests nested class
 }

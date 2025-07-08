@@ -1011,7 +1011,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserDetails(userId, "Jane", "Smith", "jane.smith@example.com");
+        verify(userService).updateUserDetails(userId, "Jane", "Smith");
     }
 
     @Test
@@ -1037,7 +1037,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-details");
         assertThat(testSession.getAttribute("user")).isEqualTo(user);
         assertThat(testSession.getAttribute("editUserDetailsForm")).isEqualTo(form);
-        verify(userService, Mockito.never()).updateUserDetails(anyString(), anyString(), anyString(), anyString());
+        verify(userService, Mockito.never()).updateUserDetails(anyString(), anyString(), anyString());
     }
 
     @Test
