@@ -14,7 +14,7 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
                     < Back</a>
             </li>
         </ol>
@@ -26,7 +26,8 @@
                     User details
                 </h1>
             </legend>
-            <form th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
+            <form th:action="@{/admin/users/edit/{id}/details(id=${id})}" th:method="post"
+                th:object="${editUserDetailsForm}" class="govuk-form">
                 <div th:if="${#fields.hasErrors()}">
                     <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                         aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -40,49 +41,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="govuk-!-margin-bottom-3">
-                    <div class="govuk-form-group"
-                        th:classappend="${#fields.hasErrors('firmId')} ? 'govuk-form-group--error'">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
-                            Firm name
-                        </label>
-                        <div th:if="${#fields.hasErrors('firmId')}" class="govuk-error-message">
-                            <p th:each="err : ${#fields.errors('firmId')}" th:text="${err}"></p>
-                        </div>
-                        <select class="govuk-select" id="firmId" name="firmId">
-                            <option value="" disabled selected th:if="${selectedFirm == null}">Choose firm</option>
-                            <div th:each="firm : ${firms}">
-                                <option th:value="${firm.id}" th:text="${firm.name}"
-                                    th:selected="${firm.id == selectedFirm?.id}"></option>
-                            </div>
-                        </select>
-                    </div>
-                    <div class="govuk-form-group">
-                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
-                            data-module="govuk-checkboxes">
-                            <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="isFirmAdmin" name="isFirmAdmin"
-                                    type="checkbox" value="true" th:checked="*{isFirmAdmin}" />
-                                <label class="govuk-label govuk-checkboxes__label" for="isFirmAdmin">
-                                    Firm admin
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="email">
                         Email address
                     </label>
                     <p class="govuk-hint">
-                        Please ensure the email address you provide is accurate.
+                        Email address can not be edited.
                     </p>
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
-                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" readonly 
+                        style="background-color: #f3f2f1; color: #505a5f; cursor: not-allowed;" />
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
@@ -109,8 +81,8 @@
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
                 <div class="govuk-button-group">
-                    <button type="submit" class="govuk-button">Continue</button>
-                    <a href="/admin/user/create/cancel"  class="govuk-link">Cancel</a>
+                    <button type="submit" class="govuk-button">Update</button>
+                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </fieldset>

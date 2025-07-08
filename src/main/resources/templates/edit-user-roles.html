@@ -13,59 +13,72 @@
     <script>
         document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');
     </script>
-
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" href="/">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                Edit Roles for <span th:text="${user.fullName}"></span>
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}"><span
+                        th:text="${user.fullName}"></span></a>
             </li>
         </ol>
     </nav>
 
     <main class="govuk-main-wrapper" id="main-content">
         <div th:if="${#authentication.isAuthenticated()}">
-            <a th:if="${selectedAppIndex == 0}" class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
+            <a class="govuk-back-link govuk-!-margin-bottom-3"
+                th:href="@{/admin/users/manage/{id}(id=${user.id})}">
                 Back
             </a>
-            <a th:if="${selectedAppIndex != 0}" class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{/admin/users/edit/{id}/roles(id=${user.id}, selectedAppIndex=${selectedAppIndex - 1})}">
-                Back
-            </a>
-
-            <span class="govuk-caption-m govuk-!-margin-top-3">Permissions and roles</span>
-
-            <h1 class="govuk-heading-l">Add permissions for <span th:text="${user.fullName}"></span></h1>
-
-            <form method="post" th:action="@{/admin/users/edit/{id}/roles(id=${user.id},selectedAppIndex=${selectedAppIndex})}">
-                <fieldset class="govuk-fieldset">
-                    <p class="govuk-hint govuk-!-margin-bottom-3">
-                        Select all that apply you will be adding all the roles based off what has been selected
-                    </p>
-                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                        <div class="govuk-checkboxes__item" th:each="role : ${availableRoles}">
-                            <input class="govuk-checkboxes__input" id="role-[[${role.id}]]" name="selectedRoles"
-                                th:checked="${userAssignedRoles.contains(role.id)}" th:value="${role.id}"
-                                type="checkbox">
-                            <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
-                                <span th:text="${role.name}"></span>
-                            </label>
+            <form method="post"
+                th:action="@{/admin/users/edit/{id}/roles(id=${user.id},selectedAppIndex=${editUserRolesSelectedAppIndex})}"
+                th:object="${rolesForm}" class="govuk-form">
+                <div th:if="${#fields.hasErrors()}">
+                    <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                        aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                        <h2 class="govuk-error-summary__title" id="error-summary-title">
+                            There is a problem
+                        </h2>
+                        <div class="govuk-error-summary__body" id="error-summary-description">
+                            <ul class="govuk-list govuk-error-summary__list">
+                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                            </ul>
                         </div>
                     </div>
-                </fieldset>
-
-                <button class="govuk-button govuk-!-margin-top-3" data-module="govuk-button" type="submit">
-                    Save and continue
-                </button>
-
-                <button class="govuk-button govuk-button--secondary govuk-!-margin-top-3 govuk-!-margin-left-2"
-                    data-module="govuk-button" type="submit">
-                    Save as draft
-                </button>
+                </div>
+                <div class="govuk-form-group">
+                    <fieldset class="govuk-fieldset">
+                        <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                            <h1 class="govuk-fieldset__heading">
+                                Which roles will <span th:text="${user.fullName}"></span> be granted for <span
+                                    th:text="${editUserRolesCurrentApp.name}"></span> ?
+                            </h1>
+                        </legend>
+                        <div id="offices-hint" class="govuk-hint">
+                            Select all that apply
+                        </div>
+                        <div class="govuk-form-group govuk-!-padding-top-3"
+                            th:classappend="${#fields.hasErrors('roles')} ? 'govuk-form-group--error'">
+                            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                                <span class="govuk-error-message" th:if="${#fields.hasErrors('roles')}"
+                                    th:errors="*{roles}"></span>
+                                <div class="govuk-checkboxes__item" th:each="role : ${roles}"
+                                    th:id="'role-' + ${role.id}">
+                                    <input class="govuk-checkboxes__input" id="roles" name="roles"
+                                        th:checked="${role.selected}" th:value="${role.id}" type="checkbox">
+                                    <label class="govuk-label govuk-checkboxes__label" th:for="'role-' + ${role.id}">
+                                        <span th:text="${role.name}"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button">Continue</button>
+                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                </div>
             </form>
         </div>
     </main>

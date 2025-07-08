@@ -1,7 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import jakarta.validation.ConstraintViolationException;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+
 import org.assertj.core.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,17 +14,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+
+import jakarta.validation.ConstraintViolationException;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 public class EntraUserRepositoryTest extends BaseRepositoryTest {
@@ -36,11 +36,16 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private OfficeRepository officeRepository;
+
     @BeforeEach
     public void beforeEach() {
-        repository.deleteAll();
-        firmRepository.deleteAll();
         userProfileRepository.deleteAll();
+        repository.deleteAll();
+        officeRepository.deleteAll();
+        firmRepository.deleteAll();
     }
 
     @Test

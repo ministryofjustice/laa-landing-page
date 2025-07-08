@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 
 @DataJpaTest
@@ -14,8 +15,14 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private AppRepository repository;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private AppRoleRepository appRoleRepository;
+
     @BeforeEach
     public void beforeEach() {
+        // Delete child tables first to avoid foreign key constraint violations
+        appRoleRepository.deleteAll();
         repository.deleteAll();
     }
 
