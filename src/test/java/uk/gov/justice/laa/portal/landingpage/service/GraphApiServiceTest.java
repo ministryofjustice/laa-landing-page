@@ -73,7 +73,9 @@ class GraphApiServiceTest {
     @Test
     void logoutUser_fromGraph_Error() {
         String url = "https://graph.microsoft.com/v1.0/me/revokeSignInSessions";
-        given(RestUtils.postGraphApi(eq("token"), eq(url), any())).willAnswer(invocation -> { throw new Exception("abc msg"); });
+        given(RestUtils.postGraphApi(eq("token"), eq(url), any())).willAnswer(invocation -> {
+            throw new Exception("abc msg");
+        });
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(GraphApiService.class);
         service.logoutUser("token");
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
