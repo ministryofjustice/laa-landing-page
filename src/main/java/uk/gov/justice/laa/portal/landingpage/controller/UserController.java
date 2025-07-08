@@ -590,7 +590,8 @@ public class UserController {
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
 
-        // If no apps are selected, persist empty roles to database and redirect to manage user page
+        // If no apps are selected, persist empty roles to database and redirect to
+        // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             userService.updateUserRoles(id, new ArrayList<>());
@@ -831,10 +832,23 @@ public class UserController {
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
-            // If there are validation errors, return to the edit user offices page with errors
+            // If there are validation errors, return to the edit user offices page with
+            // errors
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession == null) {
                 return "redirect:/admin/users/edit/" + id + "/offices";
+            }
+
+            // make sure selected offices are not selected if validation errors occur
+            List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
+            if (officeData != null) {
+                List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
+                        : new ArrayList<>();
+                officeData.forEach(office -> {
+                    if (!selectedOfficeIds.contains(office.getId())) {
+                        office.setSelected(false);
+                    }
+                });
             }
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));

@@ -1204,11 +1204,11 @@ class UserControllerTest {
         form.setOffices(List.of("office1"));
         
         EntraUserDto user = new EntraUserDto();
-        List<Office> offices = List.of(Office.builder().build());
+        List<OfficeModel> officeData = List.of(new OfficeModel("Test Office", "Test Address", "office1", true));
         
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("user", user);
-        sessionModel.addAttribute("officeData", offices);
+        sessionModel.addAttribute("officeData", officeData);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
@@ -1221,7 +1221,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
         assertThat(model.getAttribute("user")).isEqualTo(user);
-        assertThat(model.getAttribute("officeData")).isEqualTo(offices);
+        assertThat(model.getAttribute("officeData")).isEqualTo(officeData);
         verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
     }
 
