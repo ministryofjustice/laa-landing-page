@@ -2121,38 +2121,39 @@ class UserServiceTest {
             // Assert
             assertThat(result).isFalse();
         }
-    @Test
-    void getDefaultSort() {
-        Sort nullSort = userService.getSort(null, null);
-        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
 
-        Sort emptySort = userService.getSort("", null);
-        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
-    }
+        @Test
+        void getDefaultSort() {
+            Sort nullSort = userService.getSort(null, null);
+            assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+            assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+            assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+            assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
 
-    @Test
-    void getGivenSort() {
-        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
-        String sort = "aSc";
-        for (String field : fields) {
-            Sort fieldSort = userService.getSort(field, sort);
-            assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
-            assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+            Sort emptySort = userService.getSort("", null);
+            assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+            assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+            assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+            assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
         }
-        Sort descendingSort = userService.getSort("lastName", "deSC");
-        assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
-    }
 
-    @Test
-    void getErrorSort() {
-        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
-    }
+        @Test
+        void getGivenSort() {
+            List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
+            String sort = "aSc";
+            for (String field : fields) {
+                Sort fieldSort = userService.getSort(field, sort);
+                assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
+                assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+            }
+            Sort descendingSort = userService.getSort("lastName", "deSC");
+            assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getErrorSort() {
+            assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
+        }
     
     } // End of EdgeCaseTests nested class
 }
