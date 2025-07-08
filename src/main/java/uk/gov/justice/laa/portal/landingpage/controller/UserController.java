@@ -583,9 +583,22 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/apps")
-    public RedirectView setSelectedAppsEdit(@PathVariable String id, @RequestParam("apps") List<String> apps,
+    public RedirectView setSelectedAppsEdit(@PathVariable String id, 
+            @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
-        session.setAttribute("selectedApps", apps);
+        // Handle case where no apps are selected (apps will be null)
+        List<String> selectedApps = apps != null ? apps : new ArrayList<>();
+        session.setAttribute("selectedApps", selectedApps);
+        
+        // If no apps are selected, persist empty roles to database and redirect to manage user page
+        if (selectedApps.isEmpty()) {
+            // Update user to have no roles (empty list)
+            userService.updateUserRoles(id, new ArrayList<>());
+            // Ensure passed in ID is a valid UUID to avoid open redirects.
+            UUID uuid = UUID.fromString(id);
+            return new RedirectView(String.format("/admin/users/manage/%s", uuid));
+        }
+        
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));

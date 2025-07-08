@@ -57,8 +57,7 @@
                     <div class="govuk-tabs__panel" id="user-details">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
-                                <h2 class="govuk-summary-card__title">
-                                    User details
+                                <h2 class="govuk-summary-card__title" th:text="${user.email}">
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
@@ -71,20 +70,13 @@
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            Email
-                                        </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.email}">
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                            First Name
+                                            First name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            Last Name
+                                            Last name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
                                     </div>
@@ -112,7 +104,9 @@
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                     </div>
                                     <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">No services assigned</dd>
+                                        <dd class="govuk-summary-list__value">
+                                            <p class="govuk-body">No services are currently assigned to this user.</p>
+                                        </dd>
                                     </div>
                                 </dl>
                             </div>

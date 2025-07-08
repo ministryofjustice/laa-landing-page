@@ -890,15 +890,44 @@ class UserControllerTest {
     }
 
     @Test
-    public void testSetSelectedAppsEditThrowsExceptionWhenIdIsNotValidUuid() {
+    public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
-        String userId = "testUserId";
+        UUID userId = UUID.randomUUID();
+        HttpSession session = new MockHttpSession();
+
+        // When - passing null for apps (simulates no checkboxes selected)
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, session);
+
+        // Then - should redirect to manage user page when no apps selected
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
+        assertThat(session.getAttribute("selectedApps")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(returnedApps).isEmpty();
+        
+        // Verify that updateUserRoles was called with empty list to persist the change
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+    }
+
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
 
         // When
-        assertThrows(IllegalArgumentException.class,
-                () -> userController.setSelectedAppsEdit(userId, List.of(), session));
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
 
+        // Then - should redirect to manage user page when empty apps list
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
+        assertThat(session.getAttribute("selectedApps")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(returnedApps).isEmpty();
+        
+        // Verify that updateUserRoles was called with empty list to persist the change
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
@@ -1871,7 +1900,6 @@ class UserControllerTest {
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
-        
         MockHttpSession testSession = new MockHttpSession();
 
         // When
