@@ -13,47 +13,52 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class TechServicesNotifier {
+public class TechServicesClient {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
+    private static final String TECH_SERVICES_ENDPOINT = "/businessUnit/%s/users/%s";
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final RestClient restClient;
     private final EntraUserRepository entraUserRepository;
     private final ObjectMapper objectMapper;
-    @Value("${app.tech.services.sec.group.uri}")
-    private String TECH_SERVICES_SEC_GROUP_URI;
+    @Value("${app.laa.business.unit}")
+    private static String LAA_BUSINESS_UNIT;
 
-    public TechServicesNotifier(RestClient restClient, EntraUserRepository entraUserRepository, ObjectMapper objectMapper) {
+
+    public TechServicesClient(RestClient restClient, EntraUserRepository entraUserRepository, ObjectMapper objectMapper) {
         this.restClient = restClient;
         this.entraUserRepository = entraUserRepository;
         this.objectMapper = objectMapper;
     }
 
     @Async
-    public void notifyRoleChange(UUID userId) {
-        Optional<EntraUser> entraUser = entraUserRepository.findById(userId);
-        if (entraUser.isPresent()) {
-            UpdateSecurityGroupsRequest.UpdateSecurityGroupsRequestBuilder builder = UpdateSecurityGroupsRequest.builder();
-            EntraUser user = entraUser.get();
-            builder.firstName(user.getFirstName()).lastName(user.getLastName()).email(user.getEmail());
+    public void updateRoleAssignment(UUID userId) {
+        EntraUser entraUser = entraUserRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
-            Set<String> securityGroups = user.getUserProfiles().stream()
+        try {
+            UpdateSecurityGroupsRequest.UpdateSecurityGroupsRequestBuilder builder = UpdateSecurityGroupsRequest.builder();
+
+            Set<String> securityGroups = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .map(appRole -> appRole.getApp().getSecurityGroupName() + ":" + appRole.getApp().getSecurityGroupOid())
+                    .filter(appRole -> Objects.nonNull(appRole.getApp().getSecurityGroupOid()))
+                    .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
-            builder.securityGroups(securityGroups);
+            builder.requiredGroups(securityGroups);
 
             UpdateSecurityGroupsRequest request = builder.build();
             String jsonRequest = objectMapper.convertValue(request, String.class);
-            System.out.println("Sending update security groups request to tech services: " + jsonRequest);
+
+            logger.info("Sending update security groups request to tech services: {}", jsonRequest);
+
+            String uri = String.format(TECH_SERVICES_ENDPOINT, LAA_BUSINESS_UNIT, entraUser.getEntraOid());
 
             ResponseEntity<UpdateSecurityGroupsResponse> response = restClient
-                    .put()
-                    .uri(TECH_SERVICES_SEC_GROUP_URI)
+                    .patch()
+                    .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(jsonRequest)
                     .retrieve()
@@ -61,14 +66,16 @@ public class TechServicesNotifier {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 UpdateSecurityGroupsResponse respBody = response.getBody();
-                LOGGER.info("Security Groups assigned successfully for {}", user.getFirstName() + " " + user.getLastName());
+                logger.info("Security Groups assigned successfully for {}", entraUser.getFirstName() + " " + entraUser.getLastName());
             } else {
-                LOGGER.error("Failed to assign security groups for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to assign security groups for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
+                throw new RuntimeException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
             }
-
+        } catch (Exception ex) {
+            logger.error("Error while sending security group changes to Tech Services.", ex);
+            throw new RuntimeException("Error while sending security group changes to Tech Services.", ex);
         }
 
-
     }
+
 }

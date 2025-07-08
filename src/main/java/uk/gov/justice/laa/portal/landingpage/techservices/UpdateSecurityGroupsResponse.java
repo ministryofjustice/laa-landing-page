@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -15,4 +15,6 @@ import java.util.UUID;
 public class UpdateSecurityGroupsResponse {
     private boolean success;
     private String message;
+    List<UUID> groupsAdded;
+    List<UUID> groupsRemoved;
 }

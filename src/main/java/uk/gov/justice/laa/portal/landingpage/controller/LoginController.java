@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import jakarta.servlet.http.HttpSession;
@@ -32,8 +31,7 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login(Model model) {
-        model.addAttribute("user", new UserModel());
+    public String login() {
         return "index";
     }
 

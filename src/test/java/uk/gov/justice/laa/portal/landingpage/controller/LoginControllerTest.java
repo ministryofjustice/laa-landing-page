@@ -41,16 +41,11 @@ class LoginControllerTest {
 
     @Test
     void givenEmptyEmail_whenLoginGet_thenReturnsIndexView() {
-
-        // Arrange
-        Model model = new ConcurrentModel();
-
         // Act
-        String viewIndex = controller.login(model);
+        String viewIndex = controller.login();
 
         // Assert
         assertThat(viewIndex).isEqualTo("index");
-        assertThat(model.containsAttribute("user")).isTrue();
     }
 
     @Test

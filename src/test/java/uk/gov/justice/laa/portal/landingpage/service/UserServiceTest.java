@@ -1,43 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import com.microsoft.graph.applications.ApplicationsRequestBuilder;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -61,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -104,6 +67,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -133,7 +97,7 @@ class UserServiceTest {
     @Mock
     private InvitationsRequestBuilder invitationsRequestBuilder;
     @Mock
-    private TechServicesNotifier techServicesNotifier;
+    private TechServicesClient techServicesClient;
 
     @BeforeEach
     void setUp() {
@@ -146,7 +110,7 @@ class UserServiceTest {
                 mockNotificationService,
                 mockOfficeRepository,
                 laaApplicationsList,
-                techServicesNotifier);
+                techServicesClient);
     }
 
     @Test
@@ -347,7 +311,7 @@ class UserServiceTest {
         when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
         Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
         when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
-        doNothing().when(techServicesNotifier).notifyRoleChange(entraUser.getId());
+        doNothing().when(techServicesClient).updateRoleAssignment(entraUser.getId());
         when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
         List<String> roles = new ArrayList<>();
@@ -355,7 +319,7 @@ class UserServiceTest {
         FirmDto firm = FirmDto.builder().name("Firm").build();
         userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
-        verify(techServicesNotifier, times(2)).notifyRoleChange(entraUser.getId());
+        verify(techServicesClient, times(2)).updateRoleAssignment(entraUser.getId());
     }
 
     @Test
@@ -755,9 +719,9 @@ class UserServiceTest {
                 .build();
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("Test App 1").oid("one").ordinal(0).build(),
-                LaaApplication.builder().name("Test App 2").ordinal(1).build(),
-                LaaApplication.builder().name("Test App 3").ordinal(2).build()
+                LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
+                LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
+                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build()
         );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
@@ -771,155 +735,6 @@ class UserServiceTest {
         assertThat(resultApp1.getName()).isEqualTo("Test App 1");
         LaaApplication resultApp2 = iterator.next();
         assertThat(resultApp2.getName()).isEqualTo("Test App 2");
-    }
-
-    @Nested
-    class PaginationTests {
-
-        @Test
-        void zeroUsers_setsTotalPagesToOne() {
-            // Arrange
-            Page<EntraUser> userPage = new PageImpl<>(List.of());
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
-
-            // Act
-            PaginatedUsers result = userService.getPageOfUsers(1, 10);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(0);
-            assertThat(result.getTotalPages()).isEqualTo(1);
-            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(UserType.values().length);
-        }
-
-        @Test
-        void testRequestingPage2ReturnsThirdPageOfUsers_NoFirmAdmin() {
-            // Arrange
-            List<EntraUser> allUsers = new ArrayList<>();
-            for (int i = 0; i < 25; i++) {
-                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
-            }
-            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
-            // Arrange
-
-            // Act
-            PaginatedUsers result = userService.getPageOfUsers(2, 10);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(25);
-            assertThat(result.getTotalPages()).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(5);
-            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
-            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(UserType.values().length);
-        }
-
-        @Test
-        void testRequestingPage2ReturnsThirdPageOfUsers_FirmAdmin() {
-            // Arrange
-            List<EntraUser> allUsers = new ArrayList<>();
-            for (int i = 0; i < 25; i++) {
-                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
-            }
-            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
-            // Arrange
-
-            // Act
-            PaginatedUsers result = userService.getPageOfUsers(2, 10, true);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(25);
-            assertThat(result.getTotalPages()).isEqualTo(3);
-            assertThat(result.getUsers().size()).isEqualTo(5);
-            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
-            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(1);
-            assertThat(userTypes.getFirst()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-        }
-
-        @Test
-        void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
-            // Arrange
-            Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository
-                    .findByNameEmailAndUserTypes(
-                            any(), any(), any(), any(), any(Pageable.class)))
-                    .thenReturn(userPage);
-
-            // Act
-            String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(0);
-            assertThat(result.getTotalPages()).isEqualTo(0);
-            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(UserType.values().length);
-        }
-
-        @Test
-        void testSearchThatReturnsOneUserSetsTotalPagesToOne_NoFirmAdmin() {
-            // Arrange
-            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository
-                    .findByNameEmailAndUserTypes(
-                            any(), any(), any(), any(), any(Pageable.class)))
-                    .thenReturn(userPage);
-
-            // Act
-            String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(1);
-            assertThat(result.getTotalPages()).isEqualTo(1);
-            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(UserType.values().length);
-        }
-
-        @Test
-        void testSearchThatReturnsOneUserSetsTotalPagesToOne_FirmAdmin() {
-            // Arrange
-            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
-            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
-            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
-            when(mockEntraUserRepository
-                    .findByNameEmailAndUserTypes(
-                            any(), any(), any(), any(), any(Pageable.class)))
-                    .thenReturn(userPage);
-
-            // Act
-            String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm, true);
-
-            // Assert
-            assertThat(result.getTotalUsers()).isEqualTo(1);
-            assertThat(result.getTotalPages()).isEqualTo(1);
-            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
-            List<UserType> userTypes = captor.getValue();
-            assertThat(userTypes).isNotNull();
-            assertThat(userTypes).hasSize(1);
-            assertThat(userTypes.getFirst()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-        }
-
     }
 
     @Test
@@ -1216,6 +1031,155 @@ class UserServiceTest {
         assertThat(warningLogs).isNotEmpty();
         assertThat(warningLogs.getFirst().getFormattedMessage())
                 .contains("No user found in Entra with matching email. Catching error and moving on");
+    }
+
+    @Nested
+    class PaginationTests {
+
+        @Test
+        void zeroUsers_setsTotalPagesToOne() {
+            // Arrange
+            Page<EntraUser> userPage = new PageImpl<>(List.of());
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsers(1, 10);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(UserType.values().length);
+        }
+
+        @Test
+        void testRequestingPage2ReturnsThirdPageOfUsers_NoFirmAdmin() {
+            // Arrange
+            List<EntraUser> allUsers = new ArrayList<>();
+            for (int i = 0; i < 25; i++) {
+                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
+            }
+            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
+            // Arrange
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsers(2, 10);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(5);
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
+            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(UserType.values().length);
+        }
+
+        @Test
+        void testRequestingPage2ReturnsThirdPageOfUsers_FirmAdmin() {
+            // Arrange
+            List<EntraUser> allUsers = new ArrayList<>();
+            for (int i = 0; i < 25; i++) {
+                allUsers.add(EntraUser.builder().firstName("Test" + i).build());
+            }
+            Page<EntraUser> userPage = new PageImpl<>(allUsers.subList(20, 25), PageRequest.of(2, 10), allUsers.size());
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
+            // Arrange
+
+            // Act
+            PaginatedUsers result = userService.getPageOfUsers(2, 10, true);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getUsers().size()).isEqualTo(5);
+            assertThat(result.getUsers().getFirst().getFullName()).isEqualTo("Test20");
+            verify(mockEntraUserRepository).findByUserTypes(captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(1);
+            assertThat(userTypes.getFirst()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        }
+
+        @Test
+        void testSearchThatReturnsZeroUsersSetsTotalPagesToZero() {
+            // Arrange
+            Page<EntraUser> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository
+                    .findByNameEmailAndUserTypes(
+                            any(), any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
+
+            // Act
+            String searchTerm = "testSearch";
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(0);
+            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(UserType.values().length);
+        }
+
+        @Test
+        void testSearchThatReturnsOneUserSetsTotalPagesToOne_NoFirmAdmin() {
+            // Arrange
+            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
+            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository
+                    .findByNameEmailAndUserTypes(
+                            any(), any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
+
+            // Act
+            String searchTerm = "testSearch";
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(UserType.values().length);
+        }
+
+        @Test
+        void testSearchThatReturnsOneUserSetsTotalPagesToOne_FirmAdmin() {
+            // Arrange
+            EntraUser entraUser = EntraUser.builder().firstName("Test1").build();
+            Page<EntraUser> userPage = new PageImpl<>(List.of(entraUser), PageRequest.of(0, 10), 1);
+            ArgumentCaptor<List<UserType>> captor = ArgumentCaptor.forClass(List.class);
+            when(mockEntraUserRepository
+                    .findByNameEmailAndUserTypes(
+                            any(), any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(userPage);
+
+            // Act
+            String searchTerm = "testSearch";
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(1, 10, searchTerm, true);
+
+            // Assert
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            verify(mockEntraUserRepository).findByNameEmailAndUserTypes(eq(searchTerm), eq(searchTerm), eq(searchTerm), captor.capture(), any(Pageable.class));
+            List<UserType> userTypes = captor.getValue();
+            assertThat(userTypes).isNotNull();
+            assertThat(userTypes).hasSize(1);
+            assertThat(userTypes.getFirst()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        }
+
     }
 
     @Nested
