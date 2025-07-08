@@ -108,7 +108,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
         AppRole appRole = buildLaaAppRole(app, "Test App Role");
         appRole = appRoleRepository.saveAndFlush(appRole);
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test@test.com", "Test", "User");
-        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL, true);
         userProfile.setAppRoles(Set.of(appRole));
         entraUser.setUserProfiles(Set.of(userProfile));
         return entraUser;

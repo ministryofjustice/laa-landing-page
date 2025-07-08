@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,6 +39,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
@@ -69,6 +72,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -220,6 +224,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
         userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
         when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
@@ -260,6 +265,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         List<EntraUser> savedUsers = new ArrayList<>();
         when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
             savedUsers.add(invocation.getArgument(0));
@@ -279,6 +285,26 @@ class UserServiceTest {
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
+    }
+
+    @Test
+    public void testUserCreationIsBlockedWhenAppRolesAreNotValid() {
+        UUID appRoleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder()
+                .id(appRoleId)
+                .name("appRoleDisplayName")
+                .build();
+        User user = new User();
+        user.setDisplayName("Test User");
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of());
+
+        List<String> roles = new ArrayList<>();
+        roles.add(UUID.randomUUID().toString());
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> userService.createUser(user, roles, new ArrayList<>(), null, false, "admin"));
+        assertThat(ex).hasMessageContaining("User creation blocked");
+        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -474,7 +500,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsernameUserNotFound() {
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("non-existent-username"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-username");
@@ -486,7 +512,7 @@ class UserServiceTest {
         Optional<EntraUser> entraUser = Optional.of(EntraUser.builder().firstName("Test1").build());
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(entraUser);
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserTypeByUserEntraId("no-profile-username"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User profile not found for the given entra id: no-profile-username");
@@ -560,7 +586,7 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraIdNotFound() {
         // Act
-        RuntimeException rtEx = Assertions.assertThrows(RuntimeException.class,
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> userService.findUserByUserEntraId("non-existent-entra-id"));
         // Assert
         assertThat(rtEx.getMessage()).isEqualTo("User not found for the given user entra id: non-existent-entra-id");
@@ -658,7 +684,7 @@ class UserServiceTest {
             when(mockEntraUserRepository.findByUserTypes(any(), any(Pageable.class))).thenReturn(userPage);
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, null, 0, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, null, 0, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
@@ -682,7 +708,8 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, false, false, null, 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, false, false, null, 2, 10, null,
+                    null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -708,7 +735,7 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, null, 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, null, 2, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -736,7 +763,8 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, new ArrayList<>(), 2, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, true, new ArrayList<>(), 2, 10,
+                    null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -764,8 +792,8 @@ class UserServiceTest {
             // Arrange
 
             // Act
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, new ArrayList<>(), 2,
-                    10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(null, true, false, new ArrayList<>(), 2, 10,
+                    null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(25);
@@ -791,7 +819,8 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, null, 1, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, null, 1, 10, null,
+                    null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(0);
@@ -817,7 +846,7 @@ class UserServiceTest {
             // Act
             String searchTerm = "testSearch";
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, false, new ArrayList<>(),
-                    1, 10);
+                    1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -842,7 +871,8 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, null, 1, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, null, 1, 10, null,
+                    null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -868,7 +898,8 @@ class UserServiceTest {
 
             // Act
             String searchTerm = "testSearch";
-            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, true, false, null, 1, 10);
+            PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, true, false, null, 1, 10, null,
+                    null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -895,7 +926,7 @@ class UserServiceTest {
             // Act
             String searchTerm = "testSearch";
             PaginatedUsers result = userService.getPageOfUsersByNameOrEmail(searchTerm, false, true, new ArrayList<>(),
-                    1, 10);
+                    1, 10, null, null);
 
             // Assert
             assertThat(result.getTotalUsers()).isEqualTo(1);
@@ -1204,6 +1235,150 @@ class UserServiceTest {
         assertThat(warningLogs).isNotEmpty();
         assertThat(warningLogs.getFirst().getFormattedMessage())
                 .contains("No user found in Entra with matching email. Catching error and moving on");
+    }
+
+    @Test
+    public void testGetAppsByUserTypeQueriesInternalUsersWhenUserTypeIsInternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole testAppRole = AppRole.builder()
+                .name("Test Role")
+                .app(testApp)
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        List<AppDto> apps = userService.getAppsByUserType(UserType.INTERNAL);
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
+        List<RoleType> roleTypes = captor.getValue();
+        Assertions.assertEquals(2, roleTypes.size());
+        Assertions.assertEquals(RoleType.INTERNAL, roleTypes.getFirst());
+        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+    }
+
+    @Test
+    public void testGetAppsByUserTypeQueriesExternalUsersWhenUserTypeIsExternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole testAppRole = AppRole.builder()
+                .name("Test Role")
+                .app(testApp)
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
+        List<RoleType> roleTypes = captor.getValue();
+        Assertions.assertEquals(2, roleTypes.size());
+        Assertions.assertEquals(RoleType.EXTERNAL, roleTypes.getFirst());
+        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsInternalRolesWhenUserTypeIsInternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole internalRole = AppRole.builder()
+                .name("Test Internal Role")
+                .roleType(RoleType.INTERNAL)
+                .build();
+        AppRole externalRole = AppRole.builder()
+                .name("Test External Role")
+                .roleType(RoleType.EXTERNAL)
+                .build();
+        AppRole internalAndExternalRole = AppRole.builder()
+                .name("Test Internal And External Role")
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
+                UserType.INTERNAL);
+        Assertions.assertEquals(2, returnedAppRoles.size());
+        // Check no external app roles in response
+        Assertions
+                .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.EXTERNAL)));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsExternalRolesWhenUserTypeIsExternal() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+        AppRole internalRole = AppRole.builder()
+                .name("Test Internal Role")
+                .roleType(RoleType.INTERNAL)
+                .build();
+        AppRole externalRole = AppRole.builder()
+                .name("Test External Role")
+                .roleType(RoleType.EXTERNAL)
+                .build();
+        AppRole internalAndExternalRole = AppRole.builder()
+                .name("Test Internal And External Role")
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
+                UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(2, returnedAppRoles.size());
+        // Check no external app roles in response
+        Assertions
+                .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.INTERNAL)));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeReturnsEmptyListWhenAppIdIsNotFound() {
+        when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
+        List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
+                UserType.EXTERNAL_SINGLE_FIRM);
+        Assertions.assertEquals(0, returnedAppRoles.size());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsUserTypeWhenUserIsPresent() {
+        UserProfile testUserProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .activeProfile(true)
+                .build();
+        EntraUser testUser = EntraUser.builder()
+                .userProfiles(Set.of(testUserProfile))
+                .build();
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isPresent());
+        Assertions.assertEquals(UserType.INTERNAL, returnedUserType.get());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsEmptyWhenUserIsNotPresent() {
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.empty());
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isEmpty());
+    }
+
+    @Test
+    public void testGetUserTypeByUserIdReturnsEmptyWhenUserHasNoActiveProfile() {
+        UserProfile testUserProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .activeProfile(false)
+                .build();
+        EntraUser testUser = EntraUser.builder()
+                .userProfiles(Set.of(testUserProfile))
+                .build();
+        when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
+        Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
+        Assertions.assertTrue(returnedUserType.isEmpty());
     }
 
     @Nested
@@ -1772,8 +1947,10 @@ class UserServiceTest {
             when(invitationsRequestBuilder.post(any(Invitation.class))).thenReturn(invitation);
 
             UUID roleId = UUID.randomUUID();
-            AppRole appRole = AppRole.builder().id(roleId).build();
+            AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+            when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+                    .thenReturn(List.of(appRole));
             UUID officeId = UUID.randomUUID();
             Office office = Office.builder().id(officeId).build();
             when(mockOfficeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office));
@@ -1944,5 +2121,38 @@ class UserServiceTest {
             // Assert
             assertThat(result).isFalse();
         }
+    @Test
+    void getDefaultSort() {
+        Sort nullSort = userService.getSort(null, null);
+        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+
+        Sort emptySort = userService.getSort("", null);
+        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
     }
+
+    @Test
+    void getGivenSort() {
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
+        String sort = "aSc";
+        for (String field : fields) {
+            Sort fieldSort = userService.getSort(field, sort);
+            assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
+            assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        }
+        Sort descendingSort = userService.getSort("lastName", "deSC");
+        assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getErrorSort() {
+        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
+    }
+    
+    } // End of EdgeCaseTests nested class
 }
