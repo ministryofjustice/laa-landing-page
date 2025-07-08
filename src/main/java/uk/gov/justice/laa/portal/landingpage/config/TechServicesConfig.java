@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.azure.identity.ClientSecretCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +13,20 @@ import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 public class TechServicesConfig {
 
     @Bean
-    public RestClient restClient(@Value("${TECH_SERVICES_BASE_URL}") String techServicesBaseUrl) {
+    public ClientSecretCredential techServicesClientSecretCredential(
+            @Value("${spring.security.tech.services.credentials.client-id}") String clientId,
+            @Value("${spring.security.tech.services.credentials.client-secret}") String clientSecret,
+            @Value("${spring.security.tech.services.credentials.tenant-id}") String tenantId
+    ) {
+        return new ClientSecretCredentialBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .build();
+    }
+
+    @Bean
+    public RestClient restClient(@Value("${spring.security.tech.services.credentials.base-url}") String techServicesBaseUrl) {
         return RestClient.builder()
                 .baseUrl(techServicesBaseUrl)
                 .defaultHeader("Content-Type", "application/json")
@@ -21,7 +35,8 @@ public class TechServicesConfig {
     }
 
     @Bean
-    public TechServicesClient techServicesNotifier(RestClient restClient, EntraUserRepository entraUserRepository, ObjectMapper objectMapper) {
-        return new TechServicesClient(restClient, entraUserRepository, objectMapper);
+    public TechServicesClient techServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
+                                                 EntraUserRepository entraUserRepository) {
+        return new TechServicesClient(clientSecretCredential, restClient, entraUserRepository);
     }
 }

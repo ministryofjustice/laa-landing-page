@@ -4,6 +4,9 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.azure.core.credential.AccessToken;
+import com.azure.core.credential.TokenRequestContext;
+import com.azure.identity.ClientSecretCredential;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -17,10 +20,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
+import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
 import java.time.LocalDateTime;
@@ -41,6 +47,8 @@ import static org.mockito.Mockito.when;
 public class TechServicesClientTest {
 
     private ListAppender<ILoggingEvent> logAppender;
+    @Mock
+    private ClientSecretCredential clientSecretCredential;
     @Mock
     private RestClient restClient;
     @Mock
@@ -63,6 +71,9 @@ public class TechServicesClientTest {
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
+        ReflectionTestUtils.setField(techServicesClient, "accessTokenRequestScope", "scope");
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
     }
 
     @Test
@@ -76,7 +87,7 @@ public class TechServicesClientTest {
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage()).contains("User not found");
+        Assertions.assertThat(rtEx.getMessage()).contains("Error while sending security group changes to Tech Services.");
     }
 
     @Test
@@ -112,9 +123,9 @@ public class TechServicesClientTest {
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(objectMapper.convertValue(any(), any(Class.class))).thenReturn(reqStr);
-        when(requestBodySpec.body(reqStr)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
                 .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
@@ -134,13 +145,12 @@ public class TechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
-        String reqStr = "{\"requiredGroups\": []}";
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(objectMapper.convertValue(any(), any(Class.class))).thenReturn(reqStr);
-        when(requestBodySpec.body(reqStr)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.badRequest().build();
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
@@ -171,9 +181,9 @@ public class TechServicesClientTest {
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(objectMapper.convertValue(any(), any(Class.class))).thenReturn(reqStr);
-        when(requestBodySpec.body(reqStr)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.internalServerError().build();
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))

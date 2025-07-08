@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.azure.identity.ClientSecretCredential;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,9 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TechServicesConfigTest {
 
     @Mock
-    private EntraUserRepository entraUserRepository;
+    private ClientSecretCredential clientSecretCredential;
     @Mock
-    private ObjectMapper objectMapper;
+    private EntraUserRepository entraUserRepository;
 
     private TechServicesConfig techServicesConfig;
 
@@ -37,7 +37,7 @@ public class TechServicesConfigTest {
     @Test
     void techServicesConfig_shouldCreateTechServicesNotifierInstance() {
         RestClient client = techServicesConfig.restClient("http://localhost");
-        TechServicesClient techServicesClient = techServicesConfig.techServicesNotifier(client, entraUserRepository, objectMapper);
+        TechServicesClient techServicesClient = techServicesConfig.techServicesClient(clientSecretCredential, client, entraUserRepository);
 
         assertThat(techServicesClient).isNotNull();
     }
