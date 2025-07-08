@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -172,9 +173,10 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize) {
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin, List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         if (Objects.isNull(firmList)) {
             if (isFirmAdmin) {
                 types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
@@ -184,10 +186,10 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypes(types, PageRequest.of(Math.max(0, page - 1), pageSize));
+                pageOfUsers = entraUserRepository.findByUserTypes(types, pageRequest);
             } else {
                 pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                        searchTerm, types, PageRequest.of(Math.max(0, page - 1), pageSize));
+                        searchTerm, types, pageRequest);
             }
         } else {
             if (isFirmAdmin) {
@@ -196,16 +198,33 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
             } else {
                 pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                        searchTerm, types, firmList, PageRequest.of(Math.max(0, page - 1), pageSize));
+                        searchTerm, types, firmList, pageRequest);
             }
         }
         return getPageOfUsers(() -> pageOfUsers);
     }
 
-
+    protected Sort getSort(String field, String direction) {
+        if (Objects.isNull(field) || field.isEmpty()) {
+            return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
+        }
+        Sort.Direction order;
+        if (direction == null || direction.isEmpty()) {
+            order = Sort.Direction.ASC;
+        } else {
+            order = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+        return switch (field.toUpperCase()) {
+            case "FIRSTNAME" -> Sort.by(order, "firstName");
+            case "LASTNAME" -> Sort.by(order, "lastName");
+            case "EMAIL" -> Sort.by(order, "email");
+            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            default -> throw new IllegalArgumentException("Invalid field: " + field);
+        };
+    }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
         EntraUser user = entraUserRepository.findByEntraOid(entraId)
