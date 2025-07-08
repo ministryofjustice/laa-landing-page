@@ -60,6 +60,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 /**
  * userService
@@ -80,6 +81,7 @@ public class UserService {
     private final ModelMapper mapper;
     private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private final UserProfileRepository userProfileRepository;
 
     /**
      * The number of pages to load in advance when doing user pagination
@@ -90,7 +92,7 @@ public class UserService {
             EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
             NotificationService notificationService, OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList) {
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList, UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -99,6 +101,7 @@ public class UserService {
         this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
+        this.userProfileRepository = userProfileRepository;
     }
 
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -532,7 +535,7 @@ public class UserService {
 
     /**
      * Update user details in Microsoft Graph and local database
-     * 
+     *
      * @param userId    The user ID
      * @param firstName The user's first name
      * @param lastName  The user's last name
@@ -568,7 +571,7 @@ public class UserService {
 
     /**
      * Get offices assigned to a user
-     * 
+     *
      * @param userId The user ID
      * @return List of offices assigned to the user
      */
@@ -585,7 +588,7 @@ public class UserService {
 
     /**
      * Update user offices
-     * 
+     *
      * @param userId          The user ID
      * @param selectedOffices List of selected office IDs
      * @throws IOException If an error occurs during the update
@@ -619,5 +622,9 @@ public class UserService {
         List<UserType> userTypes = entraUser.getUserProfiles().stream()
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
+    }
+
+    public List<UUID> getInternalUserEntraIds() {
+        return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
 }
