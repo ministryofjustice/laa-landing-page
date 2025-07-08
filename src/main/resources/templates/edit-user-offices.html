@@ -61,7 +61,7 @@
                             <div th:each="office : ${officeData}">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
-                                        type="checkbox" th:value="${office.id}" th:checked="${office.selected}">
+                                        type="checkbox" th:value="${office.id}" th:checked="${!hasAllOffices && office.selected}">
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}" 
                                         th:text="${office.name}">
                                     </label>
