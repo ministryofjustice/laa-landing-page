@@ -323,7 +323,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
+    public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
                                 boolean isFirmAdmin, String createdBy) {
 
         // Make sure the user is trying to be assigned valid app roles for their user
@@ -337,11 +337,13 @@ public class UserService {
         if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
             logger.error(
                     "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
-                    user.getGivenName() + " " + user.getSurname());
+                    user.getFirstName() + " " + user.getLastName());
             throw new RuntimeException("User creation blocked");
         }
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
+
+        //techServicesClient.registerNewUser()
 
         EntraUser entraUser = persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
 
@@ -350,28 +352,28 @@ public class UserService {
         return entraUser;
     }
 
-    private User inviteUser(User user) {
+    private User inviteUser(EntraUserDto user) {
         Invitation invitation = new Invitation();
-        invitation.setInvitedUserEmailAddress(user.getMail());
+        invitation.setInvitedUserEmailAddress(user.getEmail());
         invitation.setInviteRedirectUrl(redirectUri);
         invitation.setInvitedUserType("Guest");
         invitation.setSendInvitationMessage(false);
-        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
+        invitation.setInvitedUserDisplayName(user.getFirstName() + " " + user.getLastName());
         Invitation result = graphClient.invitations().post(invitation);
 
         // Send invitation email
         assert result != null;
-        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
+        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getEmail(),
                 result.getInviteRedeemUrl());
 
         return result.getInvitedUser();
     }
 
-    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
+    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
                                      boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraOid(newUser.getMail());
+        entraUser.setEntraOid(newUser.getEmail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
