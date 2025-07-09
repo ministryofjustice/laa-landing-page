@@ -42,4 +42,11 @@ public class TechServicesConfigTest {
         assertThat(techServicesClient).isNotNull();
     }
 
+    @Test
+    void techServicesConfig_shouldCreateTechServicesClientSecretCredential() {
+        ClientSecretCredential client = techServicesConfig.techServicesClientSecretCredential("client", "secret", "tenant");
+
+        assertThat(client).isNotNull();
+    }
+
 }
