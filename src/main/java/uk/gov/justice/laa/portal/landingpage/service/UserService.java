@@ -26,6 +26,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -47,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -83,7 +87,8 @@ public class UserService {
      */
     private static final int PAGES_TO_PRELOAD = 5;
 
-    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient, EntraUserRepository entraUserRepository,
+    public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
+            EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
                        NotificationService notificationService, OfficeRepository officeRepository,
                        LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
@@ -155,6 +160,19 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<UserType> getUserTypeByUserId(String userId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalEntraUser.isPresent()) {
+            EntraUser user = optionalEntraUser.get();
+            return user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getUserType)
+                    .findFirst();
+        } else {
+            return Optional.empty();
+        }
+    }
+
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
         if (dateTime == null) {
             return "N/A";
@@ -173,30 +191,58 @@ public class UserService {
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize) {
-        return getPageOfUsers(page, pageSize, false);
+    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
+            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
+        List<UserType> types;
+        Page<EntraUser> pageOfUsers;
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
+        if (Objects.isNull(firmList)) {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else if (isInternal) {
+                types = UserType.INTERNAL_TYPES;
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
+                pageOfUsers = entraUserRepository.findByUserTypes(types, pageRequest);
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
+                        searchTerm, types, pageRequest);
+            }
+        } else {
+            if (isFirmAdmin) {
+                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+            } else {
+                types = UserType.EXTERNAL_TYPES;
+            }
+            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
+                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
+            } else {
+                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
+                        searchTerm, types, firmList, pageRequest);
+            }
+        }
+        return getPageOfUsers(() -> pageOfUsers);
     }
 
-    public PaginatedUsers getPageOfUsers(int page, int pageSize, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository.findByUserTypes(userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
-    }
-
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm) {
-        return getPageOfUsersByNameOrEmail(page, pageSize, searchTerm, false);
-    }
-
-    public PaginatedUsers getPageOfUsersByNameOrEmail(int page, int pageSize, String searchTerm, boolean isFirmAdmin) {
-        List<UserType> userTypes = isFirmAdmin ? List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN) : UserType.ALL_USER_TYPES;
-        return getPageOfUsers(() -> entraUserRepository
-                .findByNameEmailAndUserTypes(
-                        searchTerm, searchTerm, searchTerm, userTypes, PageRequest.of(Math.max(0, page - 1), pageSize)));
-    }
-
-    public List<EntraUserDto> getSavedUsers() {
-        return entraUserRepository.findAll().stream()
-                .map(user -> mapper.map(user, EntraUserDto.class))
-                .collect(Collectors.toList());
+    protected Sort getSort(String field, String direction) {
+        if (Objects.isNull(field) || field.isEmpty()) {
+            return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
+        }
+        Sort.Direction order;
+        if (direction == null || direction.isEmpty()) {
+            order = Sort.Direction.ASC;
+        } else {
+            order = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+        return switch (field.toUpperCase()) {
+            case "FIRSTNAME" -> Sort.by(order, "firstName");
+            case "LASTNAME" -> Sort.by(order, "lastName");
+            case "EMAIL" -> Sort.by(order, "email");
+            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            default -> throw new IllegalArgumentException("Invalid field: " + field);
+        };
     }
 
     public List<UserType> findUserTypeByUserEntraId(String entraId) {
@@ -220,7 +266,8 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
                 .orElseThrow(() -> {
                     logger.error("User not found for the given user entra user id: {}", entraId);
-                    return new RuntimeException(String.format("User not found for the given user entra id: %s", entraId));
+                    return new RuntimeException(
+                            String.format("User not found for the given user entra id: %s", entraId));
                 });
 
         return mapper.map(entraUser, EntraUserDto.class);
@@ -256,6 +303,22 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<AppDto> getAppsByUserType(UserType userType) {
+        if (userType == UserType.INTERNAL) {
+            return getAppsByRoleType(RoleType.INTERNAL);
+        } else {
+            return getAppsByRoleType(RoleType.EXTERNAL);
+        }
+    }
+
+    private List<AppDto> getAppsByRoleType(RoleType roleType) {
+        return appRoleRepository.findByRoleTypeIn(List.of(roleType, RoleType.INTERNAL_AND_EXTERNAL)).stream()
+                .map(AppRole::getApp)
+                .distinct()
+                .map(app -> mapper.map(app, AppDto.class))
+                .toList();
+    }
+
     public List<AppRoleDto> getAllAvailableRolesForApps(List<String> selectedApps) {
         // Fetch selected apps
         List<App> apps = appRepository.findAllById(selectedApps.stream()
@@ -271,10 +334,24 @@ public class UserService {
     public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
             boolean isFirmAdmin, String createdBy) {
 
+        // Make sure the user is trying to be assigned valid app roles for their user
+        // type.
+        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
+                .collect(Collectors.toList()));
+        // TODO: Change this logic to include internal users when we support internal
+        // user creation.
+        List<AppRole> validAppRoles = appRoleRepository
+                .findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
+            logger.error(
+                    "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
+                    user.getGivenName() + " " + user.getSurname());
+            throw new RuntimeException("User creation blocked");
+        }
         User invitedUser = inviteUser(user);
         assert invitedUser != null;
 
-        EntraUser entraUser = persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy);
+        EntraUser entraUser = persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
 
@@ -299,13 +376,11 @@ public class UserService {
     }
 
     private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-            boolean isFirmAdmin, String createdBy) {
+            boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         entraUser.setEntraOid(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
-        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
-                .collect(Collectors.toList()));
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
         UserProfile userProfile = UserProfile.builder()
@@ -392,6 +467,11 @@ public class UserService {
                 .toList();
     }
 
+    public EntraUser getUserByEntraId(UUID userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findByEntraOid(userId.toString());
+        return optionalUser.orElse(null);
+    }
+
     public boolean userExistsByEmail(String email) {
         if (email == null || email.isBlank()) {
             return false;
@@ -425,6 +505,22 @@ public class UserService {
         return appRoles;
     }
 
+    public List<AppRoleDto> getAppRolesByAppIdAndUserType(String appId, UserType userType) {
+        UUID appUuid = UUID.fromString(appId);
+        Optional<App> optionalApp = appRepository.findById(appUuid);
+        List<AppRoleDto> appRoles = new ArrayList<>();
+        if (optionalApp.isPresent()) {
+            App app = optionalApp.get();
+            RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
+            appRoles = app.getAppRoles().stream()
+                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
+                            || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .toList();
+        }
+        return appRoles;
+    }
+
     public Optional<AppDto> getAppByAppId(String appId) {
         Optional<App> optionalApp = appRepository.findById(UUID.fromString(appId));
         if (optionalApp.isPresent()) {
@@ -441,10 +537,94 @@ public class UserService {
         return getUserAssignedApps(userApps);
     }
 
+    /**
+     * Update user details in Microsoft Graph and local database
+     *
+     * @param userId    The user ID
+     * @param firstName The user's first name
+     * @param lastName  The user's last name
+     * @throws IOException If an error occurs during the update
+     */
+    public void updateUserDetails(String userId, String firstName, String lastName) throws IOException {
+        // Update local database
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser entraUser = optionalUser.get();
+            entraUser.setFirstName(firstName);
+            entraUser.setLastName(lastName);
+
+            try {
+                entraUserRepository.saveAndFlush(entraUser);
+                logger.info("Successfully updated user details in database for user ID: {}", userId);
+            } catch (Exception e) {
+                logger.error("Failed to update user details in database for user ID: {}", userId, e);
+                throw new IOException("Failed to update user details in database", e);
+            }
+        } else {
+            logger.warn("User with id {} not found in database. Could not update local user details.", userId);
+        }
+    }
+
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()
-                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
-                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal)).collect(Collectors.toCollection(TreeSet::new));
+                .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    /**
+     * Get offices assigned to a user
+     *
+     * @param userId The user ID
+     * @return List of offices assigned to the user
+     */
+    public List<Office> getUserOfficesByUserId(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            return user.getUserProfiles().stream()
+                    .flatMap(userProfile -> userProfile.getOffices().stream())
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Update user offices
+     *
+     * @param userId          The user ID
+     * @param selectedOffices List of selected office IDs
+     * @throws IOException If an error occurs during the update
+     */
+    public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+            Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+
+            // Update user profile offices
+            Optional<UserProfile> userProfile = user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .findFirst();
+            if (userProfile.isPresent()) {
+                userProfile.get().setOffices(offices);
+                entraUserRepository.saveAndFlush(user);
+                logger.info("Successfully updated user offices for user ID: {}", userId);
+            } else {
+                logger.warn("User profile for user ID {} not found. Could not update offices.", userId);
+                throw new IOException("User profile not found for user ID: " + userId);
+            }
+        } else {
+            logger.warn("User with id {} not found. Could not update offices.", userId);
+            throw new IOException("User not found for user ID: " + userId);
+        }
+    }
+
+    public boolean isInternal(EntraUser entraUser) {
+        List<UserType> userTypes = entraUser.getUserProfiles().stream()
+                .map(UserProfile::getUserType).toList();
+        return userTypes.contains(UserType.INTERNAL);
     }
 }

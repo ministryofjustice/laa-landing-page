@@ -1,21 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-
-import java.util.List;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FirmServiceTest {
@@ -24,11 +28,14 @@ class FirmServiceTest {
     private FirmService firmService;
     @Mock
     private FirmRepository firmRepository;
+    @Mock
+    private EntraUserRepository entraUserRepository;
 
     @BeforeEach
     void setUp() {
         firmService = new FirmService(
             firmRepository,
+            entraUserRepository,
             new MapperConfig().modelMapper()
         );
     }
@@ -50,5 +57,49 @@ class FirmServiceTest {
         when(firmRepository.getReferenceById(firmId)).thenReturn(dbFirm);
         FirmDto firm = firmService.getFirm(firmId.toString());
         assertThat(firm.getId()).isEqualTo(firmId);
+    }
+
+    @Test
+    void getUserFirms() {
+        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        List<FirmDto> firms = firmService.getUserFirms(entraUser);
+        assertThat(firms).hasSize(1);
+        assertThat(firms.getFirst().getName()).isEqualTo("F1");
+    }
+
+    @Test
+    void getUserFirmsByUserId() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID firmId = UUID.randomUUID();
+        Firm firm = Firm.builder().id(firmId).name("Test Firm").build();
+        UserProfile userProfile = UserProfile.builder().firm(firm).build();
+        Set<UserProfile> userProfiles = Set.of(userProfile);
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
+
+        when(entraUserRepository.findById(userId)).thenReturn(java.util.Optional.of(entraUser));
+
+        // When
+        List<FirmDto> firms = firmService.getUserFirmsByUserId(userId.toString());
+
+        // Then
+        assertThat(firms).hasSize(1);
+        assertThat(firms.getFirst().getId()).isEqualTo(firmId);
+        assertThat(firms.getFirst().getName()).isEqualTo("Test Firm");
+    }
+
+    @Test
+    void getUserFirmsByUserId_userNotFound() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        when(entraUserRepository.findById(userId)).thenReturn(java.util.Optional.empty());
+
+        // When
+        List<FirmDto> firms = firmService.getUserFirmsByUserId(userId.toString());
+
+        // Then
+        assertThat(firms).isEmpty();
     }
 }

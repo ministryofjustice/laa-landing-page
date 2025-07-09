@@ -1,0 +1,5 @@
+<ul>
+    <li th:each="office : ${offices}">
+        <a th:href="@{/pda/offices/{id}(id=${office.getId()})}"><span th:text="${office.getName()}"></span></a>
+    </li>
+</ul>

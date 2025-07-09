@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -186,5 +188,33 @@ class LoginServiceTest {
 
         // Assert
         assertThat(userDto).isNull();
+    }
+
+
+
+    @Test
+    void getCurrentEntraUser_Ok() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        when(userService.getUserByEntraId(any())).thenReturn(EntraUser.builder().build());
+        assertThat(loginService.getCurrentEntraUser(realAuthToken)).isNotNull();
+    }
+
+    @Test
+    void getCurrentEntraUser_fail() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        when(userService.getUserByEntraId(any())).thenReturn(null);
+        assertThrows(AssertionError.class, () -> {
+            loginService.getCurrentEntraUser(realAuthToken);
+        });
     }
 }

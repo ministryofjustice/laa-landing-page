@@ -14,10 +14,11 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/home">Home</a>
+                <a class="govuk-breadcrumbs__link" href="/admin/users">Home</a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users" th:text="${user.fullName}" aria-label="Users"></a>
+                <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
+                        th:text="${user.fullName}"></span></a>
             </li>
         </ol>
     </nav>
@@ -28,19 +29,9 @@
                     <div class="moj-page-header-actions__title">
                         <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
                     </div>
-                    <form class="form" method="post" action="">
-                        <div class="moj-page-header-actions__actions">
-                            <div class="moj-button-group moj-button-group--inline">
-                                <button type="button" class="govuk-button govuk-button--secondary"
-                                    data-module="govuk-button" data-govuk-button-init="" onclick="location.href='#';">
-                                    Deactivate
-                                </button>
-                            </div>
-                        </div>
-                    </form>
                 </div>
                 <div id="event-name-hint" class="govuk-hint">
-                    Last logged in <span th:text="${lastLoggedIn}"></span>
+                    Last logged in <span th:text="${user.lastLoggedIn}"></span>
                 </div>
                 <div class="govuk-tabs" data-module="govuk-tabs">
                     <h2 class="govuk-tabs__title">
@@ -64,45 +55,36 @@
                         </li>
                     </ul>
                     <div class="govuk-tabs__panel" id="user-details">
-                        <h2 class="govuk-heading-m">User Details</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
-                                <h2 class="govuk-summary-card__title">
-                                    User details
+                                <h2 class="govuk-summary-card__title" th:text="${user.email}">
                                 </h2>
-                                <ul class="govuk-summary-card__actions">
+                                <!-- <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="#">Change</a>
+                                        <a class="govuk-link"
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Edit</a>
                                     </li>
-                                </ul>
+                                </ul> -->
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            Email
+                                            First name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.email}">
-                                        </dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
-                                            First Name
+                                            Last name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.fullName.split(' ')[0]}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
-                                            Last Name
-                                        </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.fullName.split(' ')[1]}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
                                     </div>
                                 </dl>
                             </div>
                         </div>
                     </div>
                     <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="services">
-                        <h2 class="govuk-heading-m">Services</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -110,7 +92,8 @@
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="#">Manage</a>
+                                        <a class="govuk-link"
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Edit</a>
                                     </li>
                                 </ul>
                             </div>
@@ -119,17 +102,10 @@
                                     <div class="govuk-summary-list__row" th:each="role : ${userAppRoles}">
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
-                                        <dd class="govuk-summary-list__actions">
-                                            <ul class="govuk-summary-list__actions-list">
-                                                <li class="govuk-summary-list__actions-list-item">
-                                                    <a class="govuk-link" href="#">Edit<span
-                                                            class="govuk-visually-hidden"> service details</span></a>
-                                                </li>
-                                                <li class="govuk-summary-list__actions-list-item">
-                                                    <a class="govuk-link" href="#">Remove<span
-                                                            class="govuk-visually-hidden"> service details</span></a>
-                                                </li>
-                                            </ul>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">
+                                            <p class="govuk-body">No services are currently assigned to this user.</p>
                                         </dd>
                                     </div>
                                 </dl>
@@ -137,7 +113,6 @@
                         </div>
                     </div>
                     <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
-                        <h2 class="govuk-heading-m">Offices</h2>
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -145,15 +120,19 @@
                                 </h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" href="#">Manage</a>
+                                        <a class="govuk-link"
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Edit</a>
                                     </li>
                                 </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row" th:each="office : ${offices}">
+                                    <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
                                         <dt class="govuk-summary-list__key" th:text="${office.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${office.address}"></dd>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(userOffices)}" class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">No offices assigned</dd>
                                     </div>
                                 </dl>
                             </div>
@@ -161,6 +140,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </main>
 </body>

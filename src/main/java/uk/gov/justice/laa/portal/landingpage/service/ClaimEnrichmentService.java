@@ -112,6 +112,7 @@ public class ClaimEnrichmentService {
             ClaimEnrichmentResponse.ResponseData responseData = getResponseData(userDetails, entraUser, userRoles, officeIds);
 
             return ClaimEnrichmentResponse.builder()
+                    .success(true)
                     .data(responseData)
                     .build();
 
@@ -130,10 +131,10 @@ public class ClaimEnrichmentService {
                                                                         List<String> officeIds) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("user_name", userDetails.getDisplayName());
-        claims.put("user_email", entraUser.getEmail());
-        claims.put("laa_app_roles", userRoles);
-        claims.put("laa_accounts", officeIds);
+        claims.put("USER_NAME", userDetails.getDisplayName());
+        claims.put("USER_EMAIL", entraUser.getEmail());
+        claims.put("LAA_APP_ROLES", userRoles);
+        claims.put("LAA_ACCOUNTS", officeIds);
 
         ClaimEnrichmentResponse.ResponseAction action = ClaimEnrichmentResponse.ResponseAction.builder()
                 .odataType("microsoft.graph.tokenIssuanceStart.provideClaimsForToken")
