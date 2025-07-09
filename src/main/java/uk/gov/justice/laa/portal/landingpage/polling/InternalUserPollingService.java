@@ -34,8 +34,12 @@ public class InternalUserPollingService {
                 .members().get();
         if (response != null && response.getValue() != null) {
             List<DirectoryObject> users = response.getValue();
-            List<DirectoryObject> newUserIds = users.stream().filter(u ->
-                    !internalUserEntraOids.contains(UUID.fromString(u.getId()))).toList();
+            List<String> newUserIds = users.stream().filter(u ->
+                    !internalUserEntraOids.contains(UUID.fromString(u.getId()))).map(DirectoryObject::getId).toList();
+            for (String newUserId : newUserIds) {
+                //TODO create user in user profile table + entraoid FK
+                logger.info("Adding user with id '{}'", newUserId);
+            }
         }
     }
 }
