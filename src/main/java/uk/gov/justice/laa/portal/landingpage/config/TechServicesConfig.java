@@ -16,8 +16,7 @@ public class TechServicesConfig {
     public ClientSecretCredential techServicesClientSecretCredential(
             @Value("${spring.security.tech.services.credentials.client-id}") String clientId,
             @Value("${spring.security.tech.services.credentials.client-secret}") String clientSecret,
-            @Value("${spring.security.tech.services.credentials.tenant-id}") String tenantId
-    ) {
+            @Value("${spring.security.tech.services.credentials.tenant-id}") String tenantId) {
         return new ClientSecretCredentialBuilder()
                 .clientId(clientId)
                 .clientSecret(clientSecret)
