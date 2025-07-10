@@ -21,6 +21,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -35,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -70,6 +73,8 @@ public class TechServicesClientTest {
     private RestClient.RequestBodySpec requestBodySpec;
     @Mock
     private RestClient.ResponseSpec responseSpec;
+    @Mock
+    private JwtDecoder jwtDecoder;
 
     @BeforeEach
     public void setup() {
@@ -79,8 +84,6 @@ public class TechServicesClientTest {
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
         ReflectionTestUtils.setField(techServicesClient, "accessTokenRequestScope", "scope");
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
     }
 
     @Test
@@ -92,6 +95,8 @@ public class TechServicesClientTest {
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         String reqStr = "{\"requiredGroups\": []}";
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
@@ -114,6 +119,8 @@ public class TechServicesClientTest {
     void testUpdateRoleAssignmentUserNotFound() {
         UUID userId = UUID.randomUUID();
         restClient = Mockito.mock(RestClient.class, RETURNS_DEEP_STUBS);
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenThrow(new RuntimeException("User not found"));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
@@ -133,6 +140,8 @@ public class TechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenThrow(new RuntimeException("Error sending request to Tech services"));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
@@ -155,6 +164,8 @@ public class TechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
@@ -189,6 +200,8 @@ public class TechServicesClientTest {
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
 
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
@@ -216,6 +229,35 @@ public class TechServicesClientTest {
 
     @Test
     void testRegisterUser() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
+        concurrentMapCache.put("access_token", "techServicesDetails");
+        when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
+        when(jwtDecoder.decode(anyString())).thenThrow(new RuntimeException("Error decoding JWT token"));
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok("{}"));
+
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+        App app = App.builder().securityGroupOid("securityGroupOid").build();
+        AppRole appRole = AppRole.builder().name("name").app(app).build();
+
+        techServicesClient.registerNewUser(user, List.of(appRole));
+
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testRegisterUserTokenFromCache() {
         when(restClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
@@ -224,7 +266,11 @@ public class TechServicesClientTest {
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.toEntity(String.class))
                 .thenReturn(ResponseEntity.ok("{}"));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
+        concurrentMapCache.put("access_token", "techServicesDetails");
+        when(jwtDecoder.decode(anyString())).thenReturn(Jwt.withTokenValue("techServicesDetails")
+                .header("alg", "none").claim("exp", Instant.now().plusSeconds(120)).build());
+        when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
 
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
@@ -240,6 +286,8 @@ public class TechServicesClientTest {
 
     @Test
     void testRegisterUserError() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
         App app = App.builder().securityGroupOid("securityGroupOid").build();
@@ -265,6 +313,8 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
@@ -295,6 +345,8 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
         when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
