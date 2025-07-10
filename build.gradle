@@ -103,9 +103,6 @@ dependencies {
     // Model mapper (used for mapping between Entities, DTOs and ViewModels
     implementation 'org.modelmapper:modelmapper:3.2.3'
 
-    // Http Client
-    implementation 'org.apache.httpcomponents.client5:httpclient5'
-
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
