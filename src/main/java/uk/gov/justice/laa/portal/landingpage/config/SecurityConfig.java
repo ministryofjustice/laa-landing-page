@@ -89,8 +89,8 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
                     boolean allowed =
-                            new IpAddressMatcher("127.0.0.1").matches(request) ||
-                            new IpAddressMatcher("::1").matches(request) ||
+                            new IpAddressMatcher("127.0.0.1").matches(context.getRequest()) ||
+                            new IpAddressMatcher("::1").matches(context.getRequest()) ||
                             new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest()) ||
                             new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest()) ||
                             new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
