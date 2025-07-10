@@ -28,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRe
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -111,7 +112,7 @@ public class TechServicesClient {
         try {
             String accessToken = getAccessToken();
 
-            Set<String> securityGroups = validAppRoles.stream()
+            Set<String> securityGroups = validAppRoles == null ? Collections.emptySet() : validAppRoles.stream()
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
 
@@ -123,7 +124,7 @@ public class TechServicesClient {
                     .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
                     .requiredGroups(securityGroups).build();
 
-            logger.info("Sending update security groups request to tech services: {}", request);
+            logger.info("Sending create new user request with security groups to tech services: {}", request);
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
@@ -139,15 +140,15 @@ public class TechServicesClient {
             if (response.getStatusCode().is2xxSuccessful()) {
                 ObjectMapper mapper = new ObjectMapper();
                 RegisterUserResponse registerUserResponse = mapper.readValue(response.getBody(), RegisterUserResponse.class);
-                logger.info("Security Groups assigned successfully for {}", user.getFirstName() + " " + user.getLastName());
+                logger.info("New User creation by Tech Services is successful for {}", user.getFirstName() + " " + user.getLastName());
                 return registerUserResponse;
             } else {
-                logger.error("Failed to assign security groups for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to assign security groups for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Failed to create new user by Tech Services for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
+                throw new RuntimeException("Failed to create new user by Tech Services for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
             }
         } catch (Exception ex) {
-            logger.error("Error while sending security group changes to Tech Services.", ex);
-            throw new RuntimeException("Error while sending security group changes to Tech Services.", ex);
+            logger.error("Error while create user request to Tech Services.", ex);
+            throw new RuntimeException("Error while create user request to Tech Services.", ex);
         }
     }
 

@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
@@ -54,6 +55,14 @@ public class TechServicesConfigTest {
         ClientSecretCredential client = techServicesConfig.techServicesClientSecretCredential("client", "secret", "tenant");
 
         assertThat(client).isNotNull();
+    }
+
+    @Test
+    void techServicesConfig_shouldCreateTechServicesJwtDecoder() {
+        ReflectionTestUtils.setField(techServicesConfig, "jwkSetUri", "https://login.microsoftonline.com/test-tenant-id/discovery/v2.0/keys");
+        JwtDecoder jwtDecoder = techServicesConfig.jwtDecoderForTokenExpiry();
+
+        assertThat(jwtDecoder).isNotNull();
     }
 
 }

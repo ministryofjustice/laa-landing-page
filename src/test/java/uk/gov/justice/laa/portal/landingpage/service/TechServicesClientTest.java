@@ -25,14 +25,19 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,6 +84,33 @@ public class TechServicesClientTest {
     }
 
     @Test
+    void testUpdateRoleAssignment() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName("firstName").lastName("lastName")
+                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+        String reqStr = "{\"requiredGroups\": []}";
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
+                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        techServicesClient.updateRoleAssignment(userId);
+
+        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
+        assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
+        verify(restClient, times(1)).patch();
+    }
+
+    @Test
     void testUpdateRoleAssignmentUserNotFound() {
         UUID userId = UUID.randomUUID();
         restClient = Mockito.mock(RestClient.class, RETURNS_DEEP_STUBS);
@@ -113,33 +145,6 @@ public class TechServicesClientTest {
         Assertions.assertThat(rtEx.getMessage()).contains("Error while sending security group changes to Tech Services.");
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.ERROR, "Error while sending security group changes to Tech Services.");
-    }
-
-    @Test
-    void testUpdateRoleAssignment() {
-        UUID userId = UUID.randomUUID();
-        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
-                .userProfiles(HashSet.newHashSet(11))
-                .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
-        String reqStr = "{\"requiredGroups\": []}";
-        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(restClient.patch()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
-                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
-
-        techServicesClient.updateRoleAssignment(userId);
-
-        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
-        assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
-        verify(restClient, times(1)).patch();
     }
 
     @Test
@@ -183,7 +188,7 @@ public class TechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
-        String reqStr = "{\"requiredGroups\": []}";
+
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
@@ -207,6 +212,110 @@ public class TechServicesClientTest {
         assertLogMessage(Level.ERROR,
                 "Failed to assign security groups for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
         verify(restClient, times(1)).patch();
+    }
+
+    @Test
+    void testRegisterUser() {
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok("{}"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+        App app = App.builder().securityGroupOid("securityGroupOid").build();
+        AppRole appRole = AppRole.builder().name("name").app(app).build();
+
+        techServicesClient.registerNewUser(user, List.of(appRole));
+
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testRegisterUserError() {
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+        App app = App.builder().securityGroupOid("securityGroupOid").build();
+        AppRole appRole = AppRole.builder().name("name").app(app).build();
+
+        when(restClient.post()).thenThrow(new RuntimeException("Error sending request to Tech services"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
+                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                "RuntimeException expected");
+
+        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
+        Assertions.assertThat(rtEx.getMessage()).contains("Error while create user request to Tech Services.");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.ERROR, "Error while create user request to Tech Services.");
+    }
+
+    @Test
+    void testRegisterUserError4Xx() {
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+        App app = App.builder().securityGroupOid("securityGroupOid").build();
+        AppRole appRole = AppRole.builder().name("name").app(app).build();
+
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.badRequest().build());
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
+                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                "RuntimeException expected");
+
+        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
+        Assertions.assertThat(rtEx.getMessage())
+                .contains("Error while create user request to Tech Services.");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.ERROR,
+                "Failed to create new user by Tech Services for user firstName lastName with error code 400 BAD_REQUEST");
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testRegisterUserError5Xx() {
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+        App app = App.builder().securityGroupOid("securityGroupOid").build();
+        AppRole appRole = AppRole.builder().name("name").app(app).build();
+
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.internalServerError().build());
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
+                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                "RuntimeException expected");
+
+        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
+        Assertions.assertThat(rtEx.getMessage())
+                .contains("Error while create user request to Tech Services.");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.ERROR,
+                "Failed to create new user by Tech Services for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
+        verify(restClient, times(1)).post();
     }
 
     private void assertLogMessage(ch.qos.logback.classic.Level logLevel, String message) {
