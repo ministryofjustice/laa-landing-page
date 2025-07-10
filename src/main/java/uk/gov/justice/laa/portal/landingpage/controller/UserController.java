@@ -354,8 +354,9 @@ public class UserController {
     public String offices(OfficesForm officesForm, HttpSession session, Model model) {
         OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
                 .orElseGet(OfficeData::new);
-        // if user has firms, use officeService.getOfficesByFirms();
-        List<Office> offices = officeService.getOffices();
+        FirmDto selectedFirm = getObjectFromHttpSession(session, "firm", FirmDto.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
+        List<Office> offices = officeService.getOfficesByFirms(List.of(selectedFirm.getId()));
         List<OfficeModel> officeData = offices.stream()
                 .map(office -> new OfficeModel(office.getName(), office.getAddress(),
                         office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
@@ -390,8 +391,8 @@ public class UserController {
         OfficeData officeData = new OfficeData();
         List<String> selectedOffices = officesForm.getOffices();
         officeData.setSelectedOffices(officesForm.getOffices());
-        // if user has firms, use officeService.getOfficesByFirms();
-        List<Office> offices = officeService.getOffices();
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        List<Office> offices = officeService.getOfficesByFirms(List.of(selectedFirm.getId()));
         List<String> selectedDisplayNames = new ArrayList<>();
         for (Office office : offices) {
             if (Objects.nonNull(selectedOffices)

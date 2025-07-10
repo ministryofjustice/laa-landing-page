@@ -359,7 +359,7 @@ public class UserService {
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
-        Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
+        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .appRoles(new HashSet<>(appRoles))
