@@ -88,6 +88,7 @@ public class ClaimEnrichmentService {
                     .map(Firm::getId)
                     .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
                     .map(office -> office.getCode())
+                    .filter(officeCode -> officeCode != null)
                     .distinct()
                     .collect(Collectors.toList());
 
