@@ -10,12 +10,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UpdateRoleAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -62,8 +60,8 @@ class EventServiceTest {
         entraUser.setId(userId.toString());
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
         List<String> selectedRoles = List.of("ROLE_ADMIN", "ROLE_USER");
-        UpdateRoleAuditEvent updateRoleAuditEvent = new UpdateRoleAuditEvent(currentUserDto, entraUser, selectedRoles);
-        eventService.logEvent(updateRoleAuditEvent);
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUser, selectedRoles, "role");
+        eventService.logEvent(updateUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User admin with user id " + adminUuid

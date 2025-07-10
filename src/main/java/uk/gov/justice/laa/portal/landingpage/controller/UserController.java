@@ -37,7 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.UpdateRoleAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -755,8 +755,8 @@ public class UserController {
                     .toList();
             userService.updateUserRoles(id, allSelectedRoles);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateRoleAuditEvent updateRoleAuditEvent = new UpdateRoleAuditEvent(currentUserDto, user, allSelectedRoles);
-            eventService.logEvent(updateRoleAuditEvent);
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user, allSelectedRoles, "role");
+            eventService.logEvent(updateUserAuditEvent);
             return "redirect:/admin/users/manage/" + id;
         } else {
             modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
