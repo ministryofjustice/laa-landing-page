@@ -81,14 +81,13 @@ public class ClaimEnrichmentService {
                 throw new ClaimEnrichmentException("User has no roles assigned for this application");
             }
 
-            //5. Get Office IDs
-            //TODO: officeIds should be updated to officeCode when Data Model Updated
+            //5. Get Office codes associated to the user
             List<String> officeIds = entraUser.getUserProfiles().stream()
                     .filter(profile -> profile.getFirm() != null)
                     .map(UserProfile::getFirm)
                     .map(Firm::getId)
                     .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
-                    .map(office -> office.getId().toString())
+                    .map(office -> office.getCode())
                     .distinct()
                     .collect(Collectors.toList());
 
