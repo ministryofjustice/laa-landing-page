@@ -77,6 +77,7 @@ public class SecurityConfig {
     /**
      * Main security filter chain for web application
      * Configures OAuth2 login, CSRF protection, and role-based access control
+     * Restrict /actuator/** endpoints to private IPv4 CIDR ranges (no public access)
      */
     @Bean
     @Order(2)
@@ -85,6 +86,16 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**", "/pda/**").hasAnyAuthority(UserType.ADMIN_TYPES)
                 .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**")
                 .permitAll()
+                .requestMatchers("/actuator/**")
+                .access((auth, context) -> {
+                    boolean allowed =
+                            new IpAddressMatcher("127.0.0.1").matches(request) ||
+                            new IpAddressMatcher("::1").matches(request) ||
+                            new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest()) ||
+                            new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest()) ||
+                            new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
+                    return new AuthorizationDecision(allowed);
+                })
                 .anyRequest().authenticated()
         ).oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
