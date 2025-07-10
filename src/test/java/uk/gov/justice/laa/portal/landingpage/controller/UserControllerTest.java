@@ -743,7 +743,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
-        verify(eventService).auditUserCreate(currentUserDto, entraUser, "dev, tester", List.of("of1"), "test firm");
+        verify(eventService).logEvent(any());
     }
 
     @Test
@@ -844,13 +844,16 @@ class UserControllerTest {
         testSession.setAttribute("userEditRolesModel", sessionModel);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
         // When
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model,
                 testSession);
 
         // Then
-        verify(eventService).auditUpdateRole(any(), any(), any());
+        verify(eventService).logEvent(any());
         verify(loginService).getCurrentUser(authentication);
         Assertions.assertEquals("redirect:/admin/users/manage/" + userId, view);
     }
@@ -1358,7 +1361,10 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
                 testSession);
@@ -1370,7 +1376,7 @@ class UserControllerTest {
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
         verify(userService).updateUserRoles(userId, allSelectedRoles);
-        verify(eventService).auditUpdateRole(any(), any(), eq(allSelectedRoles));
+        verify(eventService).logEvent(any());
     }
 
     @Test

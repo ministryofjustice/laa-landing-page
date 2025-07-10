@@ -36,6 +36,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateRoleAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -474,8 +476,8 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm,
                     isFirmAdmin, currentUserDto.getName());
-            eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay,
-                    selectedFirm.getName());
+            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
+            eventService.logEvent(createUserAuditEvent);
 
             String successMessage = "" + user.getGivenName() + " "
                     + user.getSurname()
@@ -545,7 +547,7 @@ public class UserController {
      * Update user details
      * 
      * @param id              User ID
-     * @param userDetailsForm User details form
+     * @param editUserDetailsForm User details form
      * @param result          Binding result for validation errors
      * @param session         HttpSession to store user details
      * @return Redirect to user management page
@@ -693,7 +695,6 @@ public class UserController {
      * Update user roles for a specific app.
      * 
      * @param id               User ID
-     * @param selectedRoles    List of selected role IDs for the user
      * @param selectedAppIndex Index of the currently selected app
      * @param authentication   Authentication object for the current user
      * @param session          HttpSession to store selected apps and roles
@@ -754,7 +755,8 @@ public class UserController {
                     .toList();
             userService.updateUserRoles(id, allSelectedRoles);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            eventService.auditUpdateRole(currentUserDto, user, allSelectedRoles);
+            UpdateRoleAuditEvent updateRoleAuditEvent = new UpdateRoleAuditEvent(currentUserDto, user, allSelectedRoles);
+            eventService.logEvent(updateRoleAuditEvent);
             return "redirect:/admin/users/manage/" + id;
         } else {
             modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
