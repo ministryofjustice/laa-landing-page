@@ -7,7 +7,6 @@ import ch.qos.logback.core.read.ListAppender;
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,11 +17,14 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
+import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -54,7 +56,7 @@ public class TechServicesClientTest {
     @Mock
     private EntraUserRepository entraUserRepository;
     @Mock
-    private ObjectMapper objectMapper;
+    private CacheManager cacheManager;
     @InjectMocks
     private TechServicesClient techServicesClient;
     @Mock
@@ -81,6 +83,7 @@ public class TechServicesClientTest {
         UUID userId = UUID.randomUUID();
         restClient = Mockito.mock(RestClient.class, RETURNS_DEEP_STUBS);
         when(entraUserRepository.findById(userId)).thenThrow(new RuntimeException("User not found"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> techServicesClient.updateRoleAssignment(userId),
@@ -100,6 +103,7 @@ public class TechServicesClientTest {
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         when(restClient.patch()).thenThrow(new RuntimeException("Error sending request to Tech services"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> techServicesClient.updateRoleAssignment(userId),
@@ -129,6 +133,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
                 .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         techServicesClient.updateRoleAssignment(userId);
 
@@ -155,6 +160,7 @@ public class TechServicesClientTest {
         ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.badRequest().build();
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
                 .thenReturn(responseEntity);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> techServicesClient.updateRoleAssignment(userId),
@@ -188,6 +194,7 @@ public class TechServicesClientTest {
         ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.internalServerError().build();
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
                 .thenReturn(responseEntity);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> techServicesClient.updateRoleAssignment(userId),

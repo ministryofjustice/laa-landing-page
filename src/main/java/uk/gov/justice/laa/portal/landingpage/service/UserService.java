@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
@@ -37,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -340,40 +340,23 @@ public class UserService {
                     user.getFirstName() + " " + user.getLastName());
             throw new RuntimeException("User creation blocked");
         }
-        User invitedUser = inviteUser(user);
-        assert invitedUser != null;
 
-        //techServicesClient.registerNewUser()
+        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user, appRoles);
+        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
 
-        EntraUser entraUser = persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
+        if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
+            user.setEntraOid(createdUser.getId());
+        } else {
+            throw new RuntimeException("User creation failed");
+        }
 
-        techServicesClient.updateRoleAssignment(entraUser.getId());
-
-        return entraUser;
-    }
-
-    private User inviteUser(EntraUserDto user) {
-        Invitation invitation = new Invitation();
-        invitation.setInvitedUserEmailAddress(user.getEmail());
-        invitation.setInviteRedirectUrl(redirectUri);
-        invitation.setInvitedUserType("Guest");
-        invitation.setSendInvitationMessage(false);
-        invitation.setInvitedUserDisplayName(user.getFirstName() + " " + user.getLastName());
-        Invitation result = graphClient.invitations().post(invitation);
-
-        // Send invitation email
-        assert result != null;
-        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getEmail(),
-                result.getInviteRedeemUrl());
-
-        return result.getInvitedUser();
+        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
                                      boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraOid(newUser.getEmail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
         Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
@@ -389,6 +372,7 @@ public class UserService {
                 .entraUser(entraUser)
                 .build();
 
+        entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setCreatedBy(createdBy);
