@@ -83,23 +83,25 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/admin/**", "/pda/**").hasAnyAuthority(UserType.ADMIN_TYPES)
+                .requestMatchers("/admin/**", "/pda/**")
+                    .hasAnyAuthority(UserType.ADMIN_TYPES)
                 .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**")
-                .permitAll()
+                    .permitAll()
                 .requestMatchers("/actuator/**")
-                .access((auth, context) -> {
-                    boolean allowed =
-                            new IpAddressMatcher("127.0.0.1").matches(context.getRequest()) ||
-                            new IpAddressMatcher("::1").matches(context.getRequest()) ||
-                            new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest()) ||
-                            new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest()) ||
-                            new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
+                    .access((auth, context) -> {
+                        boolean allowed =
+                                new IpAddressMatcher("127.0.0.1").matches(context.getRequest()) ||
+                                new IpAddressMatcher("::1").matches(context.getRequest()) ||
+                                new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest()) ||
+                                new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest()) ||
+                                new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
                     return new AuthorizationDecision(allowed);
                 })
-                .anyRequest().authenticated()
+                .anyRequest()
+                    .authenticated()
         ).oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
-                        .oidcUserService(authzOidcUserDetailsService)
+                    .oidcUserService(authzOidcUserDetailsService)
                 )
                 .loginPage("/oauth2/authorization/azure")
                 .defaultSuccessUrl("/home", true)
