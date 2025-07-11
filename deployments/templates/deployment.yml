@@ -62,26 +62,26 @@ spec:
               value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
             - name: APP_CIVIL_APPLY_NAME
               value: "${APP_CIVIL_APPLY_NAME}"
-            - name: APP_CIVIL_APPLY_OID
-              value: "${APP_CIVIL_APPLY_OID}"
+            - name: APP_CIVIL_APPLY_DETAILS
+              value: "${APP_CIVIL_APPLY_DETAILS}"
             - name: APP_CIVIL_APPLY_URL
               value: "${APP_CIVIL_APPLY_URL}"
             - name: APP_CRIME_APPLY_NAME
               value: "${APP_CRIME_APPLY_NAME}"
-            - name: APP_CRIME_APPLY_OID
-              value: "${APP_CRIME_APPLY_OID}"
+            - name: APP_CRIME_APPLY_DETAILS
+              value: "${APP_CRIME_APPLY_DETAILS}"
             - name: APP_CRIME_APPLY_URL
               value: "${APP_CRIME_APPLY_URL}"
             - name: APP_PUI_NAME
               value: "${APP_PUI_NAME}"
-            - name: APP_PUI_OID
-              value: "${APP_PUI_OID}"
+            - name: APP_PUI_DETAILS
+              value: "${APP_PUI_DETAILS}"
             - name: APP_PUI_URL
               value: "${APP_PUI_URL}"
             - name: APP_SUBMIT_CRIME_FORM_NAME
               value: "${APP_SUBMIT_CRIME_FORM_NAME}"
-            - name: APP_SUBMIT_CRIME_FORM_OID
-              value: "${APP_SUBMIT_CRIME_FORM_OID}"
+            - name: APP_SUBMIT_CRIME_FORM_DETAILS
+              value: "${APP_SUBMIT_CRIME_FORM_DETAILS}"
             - name: APP_SUBMIT_CRIME_FORM_URL
               value: "${APP_SUBMIT_CRIME_FORM_URL}"
             - name: AZURE_CLIENT_ID
@@ -99,11 +99,31 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-azure-tenant-secret-k8s
                   key: AZURE_TENANT_ID
+            - name: TECH_SERVICES_AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-id-k8s
+                  key: TECH_SERVICES_AZURE_CLIENT_ID
+            - name: TECH_SERVICES_AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-client-secret-k8s
+                  key: TECH_SERVICES_AZURE_CLIENT_SECRET
+            - name: TECH_SERVICES_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-azure-tenant-secret-k8s
+                  key: TECH_SERVICES_TENANT_ID
             - name: BASE_URL
               valueFrom:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
+            - name: TECH_SERVICES_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-url-k8s
+                  key: TECH_SERVICES_BASE_URL
             - name: GOV_NOTIFY_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -134,3 +154,5 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
                   key: rds_instance_endpoint
+            - name: TECH_SERVICES_LAA_BUSINESS_UNIT
+              value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
