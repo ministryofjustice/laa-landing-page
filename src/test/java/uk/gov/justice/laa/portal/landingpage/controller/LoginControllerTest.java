@@ -46,11 +46,27 @@ class LoginControllerTest {
         Model model = new ConcurrentModel();
 
         // Act
-        String viewIndex = controller.login(model);
+        String viewIndex = controller.login(null, model);
 
         // Assert
         assertThat(viewIndex).isEqualTo("index");
         assertThat(model.containsAttribute("user")).isTrue();
+        assertThat(model.getAttribute("successMessage")).isNull();
+    }
+
+    @Test
+    void givenLogout_whenLoginGet_thenDisplayLogoutOkView() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+
+        // Act
+        String viewIndex = controller.login("logout", model);
+
+        // Assert
+        assertThat(viewIndex).isEqualTo("index");
+        assertThat(model.containsAttribute("user")).isTrue();
+        assertThat(model.getAttribute("successMessage")).isEqualTo("You have been securely logged out");
     }
 
     @Test
@@ -175,5 +191,15 @@ class LoginControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("home");
         assertThat(model.asMap()).doesNotContainKey("name");
+    }
+
+    @Test
+    void whenLogout_thenReturnsLogoutPage() {
+
+        // Arrange & Act
+        RedirectView result = controller.logout(authentication, session, authClient);
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/?message=logout");
     }
 }
