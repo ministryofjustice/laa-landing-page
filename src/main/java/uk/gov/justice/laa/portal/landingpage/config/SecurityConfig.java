@@ -87,7 +87,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests((authorize) -> authorize
             .requestMatchers("/admin/**", "/pda/**")
                 .hasAnyAuthority(UserType.ADMIN_TYPES)
-            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**"
+            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
             ).permitAll()
             .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
