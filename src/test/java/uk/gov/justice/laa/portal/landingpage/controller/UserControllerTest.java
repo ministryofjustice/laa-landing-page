@@ -2263,4 +2263,14 @@ class UserControllerTest {
         assertThat(officesForm.getOffices()).containsExactlyInAnyOrder(
                 office1Id.toString(), office3Id.toString());
     }
+
+    @Test
+    void whenHandleException_thenRedirectToErrorPage() {
+
+        // Arrange & Act
+        RedirectView result = userController.handleException(new Exception());
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/error");
+    }
 }

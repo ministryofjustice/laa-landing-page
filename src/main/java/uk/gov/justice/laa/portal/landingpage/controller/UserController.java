@@ -920,8 +920,8 @@ public class UserController {
     }
 
     @ExceptionHandler(Exception.class)
-    public String handleException(Exception ex) {
+    public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
-        return "redirect:/error";
+        return new RedirectView("/error");
     }
 }

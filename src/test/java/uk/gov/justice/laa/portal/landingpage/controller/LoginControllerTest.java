@@ -200,4 +200,14 @@ class LoginControllerTest {
         // Assert
         assertThat(result.getUrl()).isEqualTo("/?message=logout");
     }
+
+    @Test
+    void whenHandleException_thenRedirectToErrorPage() {
+
+        // Arrange & Act
+        RedirectView result = controller.handleException(new Exception());
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/error");
+    }
 }

@@ -102,8 +102,8 @@ public class LoginController {
     }
 
     @ExceptionHandler(Exception.class)
-    public String handleException(Exception ex) {
+    public RedirectView handleException(Exception ex) {
         logger.error("Error while user login:", ex);
-        return "redirect:/error";
+        return new RedirectView("/error");
     }
 }
