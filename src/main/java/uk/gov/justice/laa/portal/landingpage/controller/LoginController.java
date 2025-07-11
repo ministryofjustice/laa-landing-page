@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -88,5 +89,11 @@ public class LoginController {
     @GetMapping("/migrate")
     public String migrate() {
         return "migrate";
+    }
+
+    @ExceptionHandler(Exception.class)
+    public String handleException(Exception ex) {
+        logger.error("Error while user login:", ex);
+        return "redirect:/error";
     }
 }
