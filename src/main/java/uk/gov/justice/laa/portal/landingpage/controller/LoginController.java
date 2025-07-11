@@ -32,7 +32,11 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login() {
+    public String login(@RequestParam(value = "message", required = false) String message, Model model) {
+        if (message != null && message.equals("logout")) {
+            String successMessage = "You have been securely logged out";
+            model.addAttribute("successMessage", successMessage);
+        }
         return "index";
     }
 
@@ -89,6 +93,12 @@ public class LoginController {
     @GetMapping("/migrate")
     public String migrate() {
         return "migrate";
+    }
+
+    @PostMapping("/logout")
+    public RedirectView logout(Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+        loginService.logout(authentication, authClient, session);
+        return new RedirectView("/?message=logout");
     }
 
     @ExceptionHandler(Exception.class)
