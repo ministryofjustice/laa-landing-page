@@ -97,8 +97,8 @@ public class SecurityConfig {
                             || new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest())
                             || new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest())
                             || new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
-                return new AuthorizationDecision(allowed);
-            })
+                    return new AuthorizationDecision(allowed);
+                })
             .anyRequest()
                 .authenticated()
         ).oauth2Login(oauth2 -> oauth2
@@ -108,7 +108,7 @@ public class SecurityConfig {
             .loginPage("/oauth2/authorization/azure")
             .defaultSuccessUrl("/home", true)
             .permitAll()
-    ).logout(logout -> logout
+        ).logout(logout -> logout
             .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
             .logoutSuccessUrl("/")
             .clearAuthentication(true)
