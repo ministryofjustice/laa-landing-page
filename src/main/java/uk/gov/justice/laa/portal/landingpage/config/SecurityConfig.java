@@ -13,6 +13,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 
@@ -77,31 +79,44 @@ public class SecurityConfig {
     /**
      * Main security filter chain for web application
      * Configures OAuth2 login, CSRF protection, and role-based access control
+     * Restrict /actuator/** endpoints to private IPv4 CIDR ranges (no public access)
      */
     @Bean
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/admin/**", "/pda/**").hasAnyAuthority(UserType.ADMIN_TYPES)
-                .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/actuator/**")
-                .permitAll()
-                .anyRequest().authenticated()
+            .requestMatchers("/admin/**", "/pda/**")
+                .hasAnyAuthority(UserType.ADMIN_TYPES)
+            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
+            ).permitAll()
+            .requestMatchers("/actuator/**")
+                .access((auth, context) -> {
+                    boolean allowed =
+                            new IpAddressMatcher("127.0.0.1").matches(context.getRequest())
+                            || new IpAddressMatcher("::1").matches(context.getRequest())
+                            || new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest())
+                            || new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest())
+                            || new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
+                    return new AuthorizationDecision(allowed);
+                })
+            .anyRequest()
+                .authenticated()
         ).oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                        .oidcUserService(authzOidcUserDetailsService)
-                )
-                .loginPage("/oauth2/authorization/azure")
-                .defaultSuccessUrl("/home", true)
-                .permitAll()
+            .userInfoEndpoint(userInfo -> userInfo
+                .oidcUserService(authzOidcUserDetailsService)
+            )
+            .loginPage("/oauth2/authorization/azure")
+            .defaultSuccessUrl("/home", true)
+            .permitAll()
         ).logout(logout -> logout
-                .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
-                .logoutSuccessUrl("/")
-                .clearAuthentication(true)
-                .deleteCookies("JSESSIONID")
-                .invalidateHttpSession(true)
-                .permitAll()
+            .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
+            .logoutSuccessUrl("/")
+            .clearAuthentication(true)
+            .deleteCookies("JSESSIONID")
+            .invalidateHttpSession(true)
+            .permitAll()
         ).csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         );
         return http.build();
     }
