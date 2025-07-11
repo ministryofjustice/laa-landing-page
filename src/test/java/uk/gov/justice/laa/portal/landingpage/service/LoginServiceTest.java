@@ -53,6 +53,8 @@ class LoginServiceTest {
     private OAuth2AuthorizedClient authorizedClient;
     @Mock
     private OAuth2AccessToken accessToken;
+    @Mock
+    private GraphApiService graphApiService;
 
     private static final String TEST_REDIRECT_URI = "http://localhost:8080/login/oauth2/code/azure";
     private static final String TEST_TOKEN_VALUE = "test-token-123";
@@ -216,5 +218,37 @@ class LoginServiceTest {
         assertThrows(AssertionError.class, () -> {
             loginService.getCurrentEntraUser(realAuthToken);
         });
+    }
+
+    @Test
+    void logout_whenAuthenticationIsNull_doNothing() {
+
+        // Arrange & Act
+        loginService.logout(null, authorizedClient, session);
+
+        // Assert
+        verify(graphApiService, never()).logoutUser(anyString());
+    }
+
+    @Test
+    void logout_whenAccessTokenIsNull_doNothing() {
+        // Arrange & Act
+        when(authorizedClient.getAccessToken()).thenReturn(null);
+        loginService.logout(oauthToken, authorizedClient, session);
+
+        // Assert
+        verify(graphApiService, never()).logoutUser(anyString());
+    }
+
+    @Test
+    void logout_ok() {
+        // Arrange & Act
+        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
+        when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
+        loginService.logout(oauthToken, authorizedClient, session);
+
+        // Assert
+        verify(graphApiService).logoutUser(anyString());
+        verify(session).invalidate();
     }
 }
