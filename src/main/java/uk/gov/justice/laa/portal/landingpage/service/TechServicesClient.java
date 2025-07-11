@@ -83,18 +83,20 @@ public class TechServicesClient {
 
             String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraUser.getEntraOid());
 
-            ResponseEntity<UpdateSecurityGroupsResponse> response = restClient
+            ResponseEntity<String> response = restClient
                     .patch()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
-                    .toEntity(UpdateSecurityGroupsResponse.class);
+                    .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                UpdateSecurityGroupsResponse respBody = response.getBody();
-                logger.info("Security Groups assigned successfully for {}", entraUser.getFirstName() + " " + entraUser.getLastName());
+                ObjectMapper mapper = new ObjectMapper();
+                UpdateSecurityGroupsResponse respBody = mapper.readValue(response.getBody(), UpdateSecurityGroupsResponse.class);
+                logger.info("Security Groups assigned successfully for {} with {} added and {} removed",
+                        entraUser.getFirstName() + " " + entraUser.getLastName(), respBody.getGroupsAdded(), respBody.getGroupsRemoved());
             } else {
                 logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
                 throw new RuntimeException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());

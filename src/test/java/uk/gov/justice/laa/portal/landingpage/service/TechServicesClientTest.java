@@ -35,7 +35,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
-import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -104,8 +103,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
-                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(responseSpec.toEntity(String.class)).thenReturn(ResponseEntity.ok("{}"));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         techServicesClient.updateRoleAssignment(userId);
@@ -173,9 +171,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.badRequest().build();
-        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
-                .thenReturn(responseEntity);
+        when(responseSpec.toEntity(String.class)).thenReturn(ResponseEntity.badRequest().build());
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
@@ -209,9 +205,8 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.internalServerError().build();
-        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
-                .thenReturn(responseEntity);
+        ResponseEntity<String> responseEntity = ResponseEntity.internalServerError().build();
+        when(responseSpec.toEntity(String.class)).thenReturn(responseEntity);
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
