@@ -597,6 +597,7 @@ public class UserController {
     @PostMapping("/users/edit/{id}/apps")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
+            Authentication authentication,
             HttpSession session) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
@@ -607,6 +608,10 @@ public class UserController {
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             userService.updateUserRoles(id, new ArrayList<>());
+            EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto, List.of(), "apps");
+            eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
@@ -753,8 +758,8 @@ public class UserController {
             List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
                     .flatMap(List::stream)
                     .toList();
-            userService.updateUserRoles(id, allSelectedRoles);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            userService.updateUserRoles(id, allSelectedRoles);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user, allSelectedRoles, "role");
             eventService.logEvent(updateUserAuditEvent);
             return "redirect:/admin/users/manage/" + id;
@@ -840,8 +845,8 @@ public class UserController {
     @PostMapping("/users/edit/{id}/offices")
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
+            Authentication authentication,
             Model model, HttpSession session) throws IOException {
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user offices page with
@@ -850,9 +855,9 @@ public class UserController {
             if (modelFromSession == null) {
                 return "redirect:/admin/users/edit/" + id + "/offices";
             }
+            List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
 
             // make sure selected offices are not selected if validation errors occur
-            List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
             if (officeData != null) {
                 List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
                         : new ArrayList<>();
@@ -870,7 +875,7 @@ public class UserController {
 
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-
+        List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
         if (selectedOffices.contains("ALL")) {
             // If "ALL" is selected, get all available offices by firm
@@ -880,10 +885,29 @@ public class UserController {
             selectedOffices = allOffices.stream()
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
+            selectOfficesDisplay = allOffices.stream()
+                    .map(Office::getName).toList();
+        } else {
+            Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+            if (modelFromSession != null) {
+                List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
+                if (officeData != null) {
+                    List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
+                            : new ArrayList<>();
+                    for (OfficeModel office : officeData) {
+                        if (!selectedOfficeIds.contains(office.getId())) {
+                            selectOfficesDisplay.add(office.getName());
+                        }
+                    }
+                }
+            }
         }
 
         userService.updateUserOffices(id, selectedOffices);
-
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto, selectOfficesDisplay, "office");
+        eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
 
