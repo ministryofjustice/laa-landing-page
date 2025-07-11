@@ -558,15 +558,23 @@ class UserControllerTest {
     @Test
     void offices() {
         HttpSession session = new MockHttpSession();
+        UUID firmId = UUID.randomUUID();
         UUID officeId = UUID.randomUUID();
+        
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(List.of(officeId.toString()));
         session.setAttribute("officeData", officeData);
         session.setAttribute("user", new User());
+        session.setAttribute("firm", selectedFirm);
+        
         Office office1 = Office.builder().id(officeId).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).build();
         List<Office> dbOffices = List.of(office1, office2);
-        when(officeService.getOffices()).thenReturn(dbOffices);
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(dbOffices);
+        
         String view = userController.offices(new OfficesForm(), session, model);
         List<OfficeModel> modelOfficeData = (List<OfficeModel>) model.getAttribute("officeData");
         assertThat(modelOfficeData).isNotNull();
@@ -578,13 +586,19 @@ class UserControllerTest {
     @Test
     void postOffices() {
         MockHttpSession mockSession = new MockHttpSession();
+        UUID firmId = UUID.randomUUID();
         UUID officeId1 = UUID.randomUUID();
         UUID officeId2 = UUID.randomUUID();
+        
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        mockSession.setAttribute("firm", selectedFirm);
+        
         List<String> selectedOffices = List.of(officeId1.toString());
         Office office1 = Office.builder().id(officeId1).name("of1").build();
         Office office2 = Office.builder().id(officeId2).name("of2").build();
         List<Office> dbOffices = List.of(office1, office2);
-        when(officeService.getOffices()).thenReturn(dbOffices);
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(dbOffices);
 
         // Prepare OfficesForm and BindingResult
         OfficesForm officesForm = new OfficesForm();
@@ -1731,10 +1745,16 @@ class UserControllerTest {
 
     @Test
     void offices_shouldAddOfficeDataAndUserToModel() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+        
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", new User());
+        session.setAttribute("firm", selectedFirm);
         OfficesForm form = new OfficesForm();
 
         String view = userController.offices(form, session, model);
@@ -1746,9 +1766,16 @@ class UserControllerTest {
 
     @Test
     void offices_shouldThrowExceptionWhenUserIsNotPresent() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+        
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        
         HttpSession session = new MockHttpSession();
+        session.setAttribute("firm", selectedFirm);
+        // Note: not setting "user" in session to trigger the exception
         OfficesForm form = new OfficesForm();
 
         assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.offices(form, session, model));
@@ -1776,13 +1803,19 @@ class UserControllerTest {
 
     @Test
     void postOffices_shouldSetOfficeDataAndRedirect() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+        
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of(office.getId().toString()));
         HttpSession session = new MockHttpSession();
+        session.setAttribute("firm", selectedFirm);
         final Model model = new ExtendedModelMap();
 
         String view = userController.postOffices(form, result, model, session);
@@ -2057,20 +2090,25 @@ class UserControllerTest {
     @Test
     void offices_shouldHandleExistingOfficeDataInSession() {
         // Given
+        UUID firmId = UUID.randomUUID();
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
+
+        final Office office1 = Office.builder().id(office1Id).name("Office 1").build();
+        final Office office2 = Office.builder().id(office2Id).name("Office 2").build();
 
         OfficeData existingOfficeData = new OfficeData();
         existingOfficeData.setSelectedOffices(List.of(office1Id.toString()));
 
-        Office office1 = Office.builder().id(office1Id).name("Office 1").build();
-        Office office2 = Office.builder().id(office2Id).name("Office 2").build();
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("officeData", existingOfficeData);
         testSession.setAttribute("user", new User());
+        testSession.setAttribute("firm", selectedFirm);
 
-        when(officeService.getOffices()).thenReturn(List.of(office1, office2));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
 
         // When
         String view = userController.offices(new OfficesForm(), testSession, model);

@@ -1,5 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -14,26 +26,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -1932,11 +1932,10 @@ class UserServiceTest {
             UUID roleId = UUID.randomUUID();
             AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
             when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-            when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
-                    .thenReturn(List.of(appRole));
+            when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(appRole));
             UUID officeId = UUID.randomUUID();
             Office office = Office.builder().id(officeId).build();
-            when(mockOfficeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office));
+            when(mockOfficeRepository.findAllById(any())).thenReturn(List.of(office));
 
             EntraUser savedUser = EntraUser.builder().build();
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
@@ -1961,8 +1960,8 @@ class UserServiceTest {
             User user = new User();
             user.setMail("test@example.com");
 
+            // Setup invitation mocks
             when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
-
             Invitation invitation = new Invitation();
             User invitedUser = new User();
             invitation.setInvitedUser(invitedUser);
@@ -1970,7 +1969,8 @@ class UserServiceTest {
             when(invitationsRequestBuilder.post(any(Invitation.class))).thenReturn(invitation);
 
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
-            when(mockOfficeRepository.findOfficeByFirm_IdIn(any())).thenReturn(Collections.emptyList());
+            when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(Collections.emptyList());
+            when(mockOfficeRepository.findAllById(any())).thenReturn(Collections.emptyList());
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
