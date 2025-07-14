@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
@@ -46,12 +47,7 @@ import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.*;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -1187,6 +1183,15 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
         MockHttpSession testSession = new MockHttpSession();
+        OfficeModel of1 = new OfficeModel();
+        of1.setId("office1");
+        of1.setName("Office 1");
+        OfficeModel of2 = new OfficeModel();
+        of2.setId("office2");
+        of2.setName("Office 2");
+        List<OfficeModel> officeData = List.of(of1, of2);
+        model.addAttribute("officeData", officeData);
+        testSession.setAttribute("editUserOfficesModel", model);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
@@ -1197,6 +1202,11 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
         verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
+        ArgumentCaptor<UpdateUserAuditEvent> captor = ArgumentCaptor.forClass(UpdateUserAuditEvent.class);
+        verify(eventService).logEvent(captor.capture());
+        UpdateUserAuditEvent updateUserAuditEvent = captor.getValue();
+        assertThat(updateUserAuditEvent.getField()).isEqualTo("office");
+        assertThat(updateUserAuditEvent.getChangedValues()).hasSize(2);
     }
 
     @Test
