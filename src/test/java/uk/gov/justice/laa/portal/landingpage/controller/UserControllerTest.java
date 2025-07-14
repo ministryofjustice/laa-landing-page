@@ -47,7 +47,13 @@ import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.*;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -913,12 +919,12 @@ class UserControllerTest {
     @Test
     public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
-        UUID userId = UUID.randomUUID();
-        HttpSession session = new MockHttpSession();
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
+        UUID userId = UUID.randomUUID();
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        HttpSession session = new MockHttpSession();
         // When - passing null for apps (simulates no checkboxes selected)
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session);
 
@@ -936,13 +942,13 @@ class UserControllerTest {
     @Test
     public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
         // Given
-        UUID userId = UUID.randomUUID();
-        List<String> apps = new ArrayList<>(); // Empty list
-        HttpSession session = new MockHttpSession();
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        UUID userId = UUID.randomUUID();
+        List<String> apps = new ArrayList<>(); // Empty list
+        HttpSession session = new MockHttpSession();
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
 
@@ -1176,13 +1182,11 @@ class UserControllerTest {
     @Test
     void updateUserOffices_shouldUpdateOfficesAndRedirect() throws IOException {
         // Given
-        String userId = "user123";
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("office1", "office2"));
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        MockHttpSession testSession = new MockHttpSession();
         OfficeModel of1 = new OfficeModel();
         of1.setId("office1");
         of1.setName("Office 1");
@@ -1191,11 +1195,13 @@ class UserControllerTest {
         of2.setName("Office 2");
         List<OfficeModel> officeData = List.of(of1, of2);
         model.addAttribute("officeData", officeData);
+        MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("editUserOfficesModel", model);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        String userId = "user123";
         // When
         String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
@@ -1229,11 +1235,11 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        MockHttpSession testSession = new MockHttpSession();
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        MockHttpSession testSession = new MockHttpSession();
         // When
         String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
@@ -1998,11 +2004,11 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        MockHttpSession testSession = new MockHttpSession();
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        MockHttpSession testSession = new MockHttpSession();
         // When
         String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
