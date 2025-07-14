@@ -1,13 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,9 +75,12 @@ public class AppSelectionTest extends BaseIntegrationTest {
     @Test
     public void testGetEditUserAppsForUserThrowsExceptionWhenNoUserExists() throws Exception {
         UUID userId = UUID.randomUUID();
-        this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userId)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof NoSuchElementException));
+        MvcResult result = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userId)))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertNotNull(result.getResponse().getRedirectedUrl());
+        assertEquals("/error", result.getResponse().getRedirectedUrl());
     }
 
     @Test
@@ -98,7 +99,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
         @SuppressWarnings("unchecked")
         List<String> returnedSelectApps = (List<String>) session.getAttribute("selectedApps");
         assertEquals(1, returnedSelectApps.size());
-        assertEquals(selectedApps[0], returnedSelectApps.get(0));
+        assertEquals(selectedApps[0], returnedSelectApps.getFirst());
     }
 
     private EntraUser buildTestUser() {

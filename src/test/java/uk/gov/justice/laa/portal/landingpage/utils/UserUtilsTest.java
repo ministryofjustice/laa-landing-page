@@ -1,3 +1,5 @@
+package uk.gov.justice.laa.portal.landingpage.utils;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -7,11 +9,10 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
-import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 
 class UserUtilsTest {
 
@@ -26,10 +27,10 @@ class UserUtilsTest {
 
     @Test
     void testPopulateUserDetailsFormWithAllFields() {
-        User user = new User();
-        user.setGivenName("John");
-        user.setSurname("Doe");
-        user.setMail("john.doe@example.com");
+        EntraUserDto user = new EntraUserDto();
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setEmail("john.doe@example.com");
         when(session.getAttribute("isFirmAdmin")).thenReturn(Boolean.TRUE);
 
         UserDetailsForm result = UserUtils.populateUserDetailsFormWithSession(form, user, session);
@@ -42,10 +43,7 @@ class UserUtilsTest {
 
     @Test
     void testPopulateUserDetailsFormWithNullFields() {
-        User user = new User();
-        user.setGivenName(null);
-        user.setSurname(null);
-        user.setMail(null);
+        EntraUserDto user = new EntraUserDto();
         when(session.getAttribute("isFirmAdmin")).thenReturn(Boolean.FALSE);
 
         UserDetailsForm result = UserUtils.populateUserDetailsFormWithSession(form, user, session);
@@ -58,10 +56,10 @@ class UserUtilsTest {
 
     @Test
     void testPopulateUserDetailsFormWithPartialFields() {
-        User user = new User();
-        user.setGivenName("Alice");
-        user.setSurname(null);
-        user.setMail("alice@example.com");
+        EntraUserDto user = new EntraUserDto();
+        user.setFirstName("Alice");
+        user.setLastName(null);
+        user.setEmail("alice@example.com");
         when(session.getAttribute("isFirmAdmin")).thenReturn(null);
 
         UserDetailsForm result = UserUtils.populateUserDetailsFormWithSession(form, user, session);
@@ -74,8 +72,8 @@ class UserUtilsTest {
 
     @Test
     void testIsFirmAdminAttributeNotBooleanTrue() {
-        User user = new User();
-        user.setGivenName("Bob");
+        EntraUserDto user = new EntraUserDto();
+        user.setFirstName("Bob");
         when(session.getAttribute("isFirmAdmin")).thenReturn("notBoolean");
 
         UserDetailsForm result = UserUtils.populateUserDetailsFormWithSession(form, user, session);

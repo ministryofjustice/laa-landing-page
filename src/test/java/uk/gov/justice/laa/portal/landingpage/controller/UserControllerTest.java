@@ -340,8 +340,8 @@ class UserControllerTest {
 
     @Test
     void createUserFromSession() {
-        User mockUser = new User();
-        mockUser.setDisplayName("Test User");
+        EntraUserDto mockUser = new EntraUserDto();
+        mockUser.setFullName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
         when(session.getAttribute("firm")).thenReturn(FirmDto.builder().name("Test firm").build());
         FirmDto firm1 = FirmDto.builder().build();
@@ -351,8 +351,8 @@ class UserControllerTest {
         String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("firms")).isNotNull();
-        User sessionUser = (User) session.getAttribute("user");
-        assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
+        EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
+        assertThat(sessionUser.getFullName()).isEqualTo("Test User");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test firm");
         assertThat(view).isEqualTo("add-user-details");
@@ -370,11 +370,11 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         HttpSession session = new MockHttpSession();
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
-        User sessionUser = (User) session.getAttribute("user");
-        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
-        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
-        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
-        assertThat(sessionUser.getMail()).isEqualTo("email");
+        EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
+        assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
+        assertThat(sessionUser.getLastName()).isEqualTo("lastName");
+        assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getEmail()).isEqualTo("email");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
@@ -383,8 +383,8 @@ class UserControllerTest {
 
     @Test
     void postSessionUser() {
-        User mockUser = new User();
-        mockUser.setDisplayName("Test User");
+        EntraUserDto mockUser = new EntraUserDto();
+        mockUser.setFullName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
         session.setAttribute("firm", FirmDto.builder().name("oldFirm").build());
@@ -397,11 +397,11 @@ class UserControllerTest {
         userDetailsForm.setIsFirmAdmin(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "newFirm", session, model);
-        User sessionUser = (User) session.getAttribute("user");
-        assertThat(sessionUser.getGivenName()).isEqualTo("firstName");
-        assertThat(sessionUser.getSurname()).isEqualTo("lastName");
-        assertThat(sessionUser.getDisplayName()).isEqualTo("firstName lastName");
-        assertThat(sessionUser.getMail()).isEqualTo("email");
+        EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
+        assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
+        assertThat(sessionUser.getLastName()).isEqualTo("lastName");
+        assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
+        assertThat(sessionUser.getEmail()).isEqualTo("email");
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
         boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
         assertThat(firmAdmin).isTrue();
@@ -417,7 +417,7 @@ class UserControllerTest {
         List<String> ids = List.of("1");
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", ids);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         ApplicationsForm applicationsForm = new ApplicationsForm();
         String view = userController.selectUserApps(applicationsForm, model, session);
         assertThat(view).isEqualTo("add-user-apps");
@@ -466,7 +466,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
         when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
         String view = userController.getSelectedRoles(new RolesForm(), model, session);
@@ -560,15 +560,23 @@ class UserControllerTest {
     @Test
     void offices() {
         HttpSession session = new MockHttpSession();
+        UUID firmId = UUID.randomUUID();
         UUID officeId = UUID.randomUUID();
+
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+
         OfficeData officeData = new OfficeData();
         officeData.setSelectedOffices(List.of(officeId.toString()));
         session.setAttribute("officeData", officeData);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
+        session.setAttribute("firm", selectedFirm);
+
         Office office1 = Office.builder().id(officeId).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).build();
         List<Office> dbOffices = List.of(office1, office2);
-        when(officeService.getOffices()).thenReturn(dbOffices);
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(dbOffices);
+
         String view = userController.offices(new OfficesForm(), session, model);
         List<OfficeModel> modelOfficeData = (List<OfficeModel>) model.getAttribute("officeData");
         assertThat(modelOfficeData).isNotNull();
@@ -580,13 +588,19 @@ class UserControllerTest {
     @Test
     void postOffices() {
         MockHttpSession mockSession = new MockHttpSession();
+        UUID firmId = UUID.randomUUID();
         UUID officeId1 = UUID.randomUUID();
         UUID officeId2 = UUID.randomUUID();
+
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+        mockSession.setAttribute("firm", selectedFirm);
+
         List<String> selectedOffices = List.of(officeId1.toString());
         Office office1 = Office.builder().id(officeId1).name("of1").build();
         Office office2 = Office.builder().id(officeId2).name("of2").build();
         List<Office> dbOffices = List.of(office1, office2);
-        when(officeService.getOffices()).thenReturn(dbOffices);
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(dbOffices);
 
         // Prepare OfficesForm and BindingResult
         OfficesForm officesForm = new OfficesForm();
@@ -622,7 +636,7 @@ class UserControllerTest {
                 .thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
@@ -661,7 +675,7 @@ class UserControllerTest {
         when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev", "app1-tester");
         session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
@@ -687,7 +701,7 @@ class UserControllerTest {
                 .thenReturn(List.of(userRole, userRole2));
         List<String> selectedRoles = List.of("app1-dev");
         session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("isFirmAdmin", true);
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -708,7 +722,7 @@ class UserControllerTest {
         List<String> selectedRoles = List.of("app1-dev");
         HttpSession session = new MockHttpSession();
         session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -721,7 +735,7 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswersPost() {
         HttpSession session = new MockHttpSession();
-        User user = new User();
+        EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
         List<String> roles = List.of("dev", "tester");
         session.setAttribute("roles", roles);
@@ -768,7 +782,7 @@ class UserControllerTest {
     @Test
     void addUserCreated() {
         HttpSession session = new MockHttpSession();
-        User user = new User();
+        EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
         String view = userController.addUserCreated(model, session);
         assertThat(model.getAttribute("user")).isNotNull();
@@ -1530,7 +1544,7 @@ class UserControllerTest {
         List<String> selectedApps = List.of("app1", "app2");
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("apps", selectedApps);
-        testSession.setAttribute("user", new User());
+        testSession.setAttribute("user", new EntraUserDto());
 
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("createUserRolesSelectedAppIndex", 1); // Second app
@@ -1576,7 +1590,7 @@ class UserControllerTest {
         // Given
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("apps", new ArrayList<String>()); // Empty apps list
-        testSession.setAttribute("user", new User());
+        testSession.setAttribute("user", new EntraUserDto());
         testSession.setAttribute("officeData", new OfficeData());
 
         // When
@@ -1691,7 +1705,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(any())).thenReturn(List.of(appDto));
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", List.of("app1"));
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         ApplicationsForm form = new ApplicationsForm();
 
         String view = userController.selectUserApps(form, model, session);
@@ -1765,10 +1779,16 @@ class UserControllerTest {
 
     @Test
     void offices_shouldAddOfficeDataAndUserToModel() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+
         HttpSession session = new MockHttpSession();
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
+        session.setAttribute("firm", selectedFirm);
         OfficesForm form = new OfficesForm();
 
         String view = userController.offices(form, session, model);
@@ -1780,9 +1800,16 @@ class UserControllerTest {
 
     @Test
     void offices_shouldThrowExceptionWhenUserIsNotPresent() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+
         HttpSession session = new MockHttpSession();
+        session.setAttribute("firm", selectedFirm);
+        // Note: not setting "user" in session to trigger the exception
         OfficesForm form = new OfficesForm();
 
         assertThrows(CreateUserDetailsIncompleteException.class, () -> userController.offices(form, session, model));
@@ -1810,13 +1837,19 @@ class UserControllerTest {
 
     @Test
     void postOffices_shouldSetOfficeDataAndRedirect() {
+        UUID firmId = UUID.randomUUID();
         Office office = Office.builder().id(UUID.randomUUID()).name("Office1").build();
-        when(officeService.getOffices()).thenReturn(List.of(office));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office));
+
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
+
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of(office.getId().toString()));
         HttpSession session = new MockHttpSession();
+        session.setAttribute("firm", selectedFirm);
         final Model model = new ExtendedModelMap();
 
         String view = userController.postOffices(form, result, model, session);
@@ -1839,7 +1872,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("apps", selectedApps);
         session.setAttribute("roles", List.of("role1"));
-        session.setAttribute("user", new User());
+        session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
         session.setAttribute("isFirmAdmin", true);
@@ -1857,7 +1890,7 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_shouldCallCreateUserAndRedirect() {
         MockHttpSession mockSession = new MockHttpSession();
-        User user = new User();
+        EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         // No other session attributes set
 
@@ -1882,7 +1915,7 @@ class UserControllerTest {
     void cancelUserCreation_shouldClearAllSessionAttributes() {
         // Given
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("user", new User());
+        testSession.setAttribute("user", new EntraUserDto());
         testSession.setAttribute("firm", new FirmDto());
         testSession.setAttribute("isFirmAdmin", true);
         testSession.setAttribute("apps", List.of("app1"));
@@ -2037,9 +2070,9 @@ class UserControllerTest {
     @Test
     void createUser_shouldHandleExistingUserAndFirmInSession() {
         // Given
-        User existingUser = new User();
-        existingUser.setGivenName("Existing");
-        existingUser.setSurname("User");
+        EntraUserDto existingUser = new EntraUserDto();
+        existingUser.setFirstName("Existing");
+        existingUser.setLastName("User");
 
         FirmDto existingFirm = FirmDto.builder().id(UUID.randomUUID()).name("Existing Firm").build();
         List<FirmDto> allFirms = List.of(existingFirm,
@@ -2071,7 +2104,7 @@ class UserControllerTest {
         userDetailsForm.setFirstName("Test");
         userDetailsForm.setLastName("User");
 
-        User existingUser = new User();
+        EntraUserDto existingUser = new EntraUserDto();
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", existingUser);
 
@@ -2084,30 +2117,35 @@ class UserControllerTest {
 
         // Then
         verify(bindingResult).rejectValue("email", "error.email", "Email address already exists");
-        User sessionUser = (User) testSession.getAttribute("user");
-        assertThat(sessionUser.getGivenName()).isEqualTo("Test");
-        assertThat(sessionUser.getSurname()).isEqualTo("User");
-        assertThat(sessionUser.getDisplayName()).isEqualTo("Test User");
-        assertThat(sessionUser.getMail()).isEqualTo("existing@example.com");
+        EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
+        assertThat(sessionUser.getFirstName()).isEqualTo("Test");
+        assertThat(sessionUser.getLastName()).isEqualTo("User");
+        assertThat(sessionUser.getFullName()).isEqualTo("Test User");
+        assertThat(sessionUser.getEmail()).isEqualTo("existing@example.com");
     }
 
     @Test
     void offices_shouldHandleExistingOfficeDataInSession() {
         // Given
+        UUID firmId = UUID.randomUUID();
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
+
+        final Office office1 = Office.builder().id(office1Id).name("Office 1").build();
+        final Office office2 = Office.builder().id(office2Id).name("Office 2").build();
 
         OfficeData existingOfficeData = new OfficeData();
         existingOfficeData.setSelectedOffices(List.of(office1Id.toString()));
 
-        Office office1 = Office.builder().id(office1Id).name("Office 1").build();
-        Office office2 = Office.builder().id(office2Id).name("Office 2").build();
+        FirmDto selectedFirm = new FirmDto();
+        selectedFirm.setId(firmId);
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("officeData", existingOfficeData);
-        testSession.setAttribute("user", new User());
+        testSession.setAttribute("user", new EntraUserDto());
+        testSession.setAttribute("firm", selectedFirm);
 
-        when(officeService.getOffices()).thenReturn(List.of(office1, office2));
+        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
 
         // When
         String view = userController.offices(new OfficesForm(), testSession, model);
@@ -2200,9 +2238,9 @@ class UserControllerTest {
     @Test
     void addUserCreated_shouldRemoveUserFromSession() {
         // Given
-        User user = new User();
-        user.setGivenName("Test");
-        user.setSurname("User");
+        EntraUserDto user = new EntraUserDto();
+        user.setFirstName("Test");
+        user.setLastName("User");
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", user);
@@ -2261,5 +2299,15 @@ class UserControllerTest {
         OfficesForm officesForm = (OfficesForm) model.getAttribute("officesForm");
         assertThat(officesForm.getOffices()).containsExactlyInAnyOrder(
                 office1Id.toString(), office3Id.toString());
+    }
+
+    @Test
+    void whenHandleException_thenRedirectToErrorPage() {
+
+        // Arrange & Act
+        RedirectView result = userController.handleException(new Exception());
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/error");
     }
 }
