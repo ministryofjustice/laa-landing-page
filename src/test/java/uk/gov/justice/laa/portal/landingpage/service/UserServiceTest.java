@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,11 +47,9 @@ import org.springframework.data.domain.Sort;
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
-import com.microsoft.graph.invitations.InvitationsRequestBuilder;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
@@ -57,10 +58,6 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import okhttp3.Request;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
@@ -82,6 +79,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,7 +102,7 @@ class UserServiceTest {
     @Mock
     private OfficeRepository mockOfficeRepository;
     @Mock
-    private InvitationsRequestBuilder invitationsRequestBuilder;
+    private TechServicesClient techServicesClient;
 
     @BeforeEach
     void setUp() {
@@ -116,7 +114,8 @@ class UserServiceTest {
                 new MapperConfig().modelMapper(),
                 mockNotificationService,
                 mockOfficeRepository,
-                laaApplicationsList);
+                laaApplicationsList,
+                techServicesClient);
     }
 
     @Test
@@ -227,15 +226,23 @@ class UserServiceTest {
         when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
         userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
-        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
-        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
-        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
+        RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+        createdUser.setId("id");
+        createdUser.setMail("test.user@email.com");
+        RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
+        when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setFirstName("Test");
+        entraUserDto.setLastName("User");
+        entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
+        userService.createUser(entraUserDto, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class), anyList());
     }
 
     @Test
@@ -271,20 +278,27 @@ class UserServiceTest {
             savedUsers.add(invocation.getArgument(0));
             return invocation.getArgument(0);
         });
-        when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
-        Invitation invitation = mock(Invitation.class, RETURNS_DEEP_STUBS);
-        when(invitationsRequestBuilder.post(any())).thenReturn(invitation);
+        RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+        createdUser.setId("id");
+        createdUser.setMail("test.user@email.com");
+        RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setFirstName("Test");
+        entraUserDto.setLastName("User");
+        entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(user, roles, new ArrayList<>(), firm, false, "admin");
+        userService.createUser(entraUserDto, roles, new ArrayList<>(), firm, false, "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class), anyList());
     }
 
     @Test
@@ -294,8 +308,9 @@ class UserServiceTest {
                 .id(appRoleId)
                 .name("appRoleDisplayName")
                 .build();
-        User user = new User();
-        user.setDisplayName("Test User");
+        EntraUserDto user = new EntraUserDto();
+        user.setFirstName("Test");
+        user.setLastName("User");
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of());
 
@@ -656,9 +671,10 @@ class UserServiceTest {
                 .build();
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
         List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("Test App 1").oid("one").ordinal(0).build(),
-                LaaApplication.builder().name("Test App 2").ordinal(1).build(),
-                LaaApplication.builder().name("Test App 3").ordinal(2).build());
+                LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
+                LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
+                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build()
+        );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
         Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
@@ -1916,18 +1932,10 @@ class UserServiceTest {
         @Test
         void createUser_createsAndInvitesUser_withCorrectUserProfile() {
             // Arrange
-            User user = new User();
-            user.setMail("test@example.com");
-            user.setGivenName("John");
-            user.setSurname("Doe");
-
-            when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
-
-            Invitation invitation = new Invitation();
-            User invitedUser = new User();
-            invitation.setInvitedUser(invitedUser);
-            invitation.setInviteRedeemUrl("http://test-url");
-            when(invitationsRequestBuilder.post(any(Invitation.class))).thenReturn(invitation);
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("test@example.com");
+            user.setFirstName("John");
+            user.setLastName("Doe");
 
             UUID roleId = UUID.randomUUID();
             AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
@@ -1940,33 +1948,29 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().build();
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
 
-            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("id");
+            createdUser.setMail("test@example.com");
+            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
             List<String> roles = List.of(roleId.toString());
             List<String> offices = List.of(officeId.toString());
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
             EntraUser result = userService.createUser(user, roles, offices, firmDto, true, "admin");
 
             // Assert
             assertThat(result).isNotNull();
-            verify(invitationsRequestBuilder).post(any(Invitation.class));
-            verify(mockNotificationService).notifyCreateUser(anyString(), anyString(), anyString());
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
+            verify(techServicesClient).registerNewUser(any(EntraUserDto.class), anyList());
         }
 
         @Test
         void createUser_setsCorrectUserType_whenIsFirmAdminFalse() {
             // Arrange
-            User user = new User();
-            user.setMail("test@example.com");
-
-            // Setup invitation mocks
-            when(mockGraphServiceClient.invitations()).thenReturn(invitationsRequestBuilder);
-            Invitation invitation = new Invitation();
-            User invitedUser = new User();
-            invitation.setInvitedUser(invitedUser);
-            invitation.setInviteRedeemUrl("http://test-url");
-            when(invitationsRequestBuilder.post(any(Invitation.class))).thenReturn(invitation);
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("test@example.com");
 
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
             when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(Collections.emptyList());
@@ -1974,6 +1978,12 @@ class UserServiceTest {
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("id");
+            createdUser.setMail("test@example.com");
+            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 

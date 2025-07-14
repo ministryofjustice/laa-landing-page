@@ -23,8 +23,8 @@
         <h1 class="govuk-heading-m">Check your answers</h1>
 
         <div th:if="${officeData != null}">
-            <p class="govuk-body"><span th:text="${user.mail}"></span></p>
-            <p class="govuk-body"><span th:text="${user.givenName}"></span></p>
+            <p class="govuk-body"><span th:text="${user.email}"></span></p>
+            <p class="govuk-body"><span th:text="${user.firstName}"></span></p>
         </div>
         <div th:if="${officeData != null}">
             <p class="govuk-body"><span th:text="${officeData.selectedOffices}"></span></p>
