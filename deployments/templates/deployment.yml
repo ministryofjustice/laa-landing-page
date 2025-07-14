@@ -93,7 +93,7 @@ spec:
             - name: TECH_SERVICES_TENANT_ID
               value: "{$TECH_SERVICES_TENANT_ID}"
             - name: TECH_SERVICES_BASE_URL
-              value: "{$TECH_SERVICES_BASE_URL}"     
+              value: "{$TECH_SERVICES_BASE_URL}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -144,4 +144,3 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
                   key: rds_instance_endpoint
-
