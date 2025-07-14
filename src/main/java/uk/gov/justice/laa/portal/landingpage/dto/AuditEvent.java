@@ -13,7 +13,9 @@ public abstract class AuditEvent {
     @Getter
     protected String userName;
     private final LocalDateTime createdDate;
+
     public abstract EventType getEventType();
+
     public abstract String getDescription();
 
     private static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
