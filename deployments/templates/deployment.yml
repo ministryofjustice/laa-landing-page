@@ -87,13 +87,13 @@ spec:
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_CLIENT_ID
-              value: "{$TECH_SERVICES_AZURE_CLIENT_ID}"
+              value: "${TECH_SERVICES_AZURE_CLIENT_ID}"
             - name: TECH_SERVICES_AZURE_CLIENT_SECRET
-              value: "{$TECH_SERVICES_AZURE_CLIENT_SECRET}"
+              value: "${TECH_SERVICES_AZURE_CLIENT_SECRET}"
             - name: TECH_SERVICES_TENANT_ID
-              value: "{$TECH_SERVICES_TENANT_ID}"
+              value: "${TECH_SERVICES_TENANT_ID}"
             - name: TECH_SERVICES_BASE_URL
-              value: "{$TECH_SERVICES_BASE_URL}"
+              value: "${TECH_SERVICES_BASE_URL}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
