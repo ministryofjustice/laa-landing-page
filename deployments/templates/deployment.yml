@@ -86,6 +86,8 @@ spec:
               value: "${APP_SUBMIT_CRIME_FORM_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
+            - name: TECH_SERVICES_AZURE_SCOPE
+              value: "${TECH_SERVICES_AZURE_SCOPE}"
             - name: TECH_SERVICES_AZURE_CLIENT_ID
               value: "${TECH_SERVICES_AZURE_CLIENT_ID}"
             - name: TECH_SERVICES_AZURE_CLIENT_SECRET
