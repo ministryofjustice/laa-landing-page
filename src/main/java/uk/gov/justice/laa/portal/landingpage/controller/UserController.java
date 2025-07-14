@@ -17,14 +17,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
-
-import com.microsoft.graph.models.User;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -173,9 +172,9 @@ public class UserController {
 
     @GetMapping("/user/create/details")
     public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
+        EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
-            user = new User();
+            user = new EntraUserDto();
         }
         List<FirmDto> firms = firmService.getFirms();
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
@@ -186,7 +185,7 @@ public class UserController {
         model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute("userDetailsForm", userDetailsForm);
-        model.addAttribute("user", user);
+
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
@@ -199,19 +198,19 @@ public class UserController {
             @RequestParam(required = false) String isFirmAdmin,
             HttpSession session, Model model) {
 
-        User user = (User) session.getAttribute("user");
+        EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
-            user = new User();
+            user = new EntraUserDto();
         }
 
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
         // Set user details from the form
-        user.setGivenName(userDetailsForm.getFirstName());
-        user.setSurname(userDetailsForm.getLastName());
-        user.setDisplayName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
-        user.setMail(userDetailsForm.getEmail());
+        user.setFirstName(userDetailsForm.getFirstName());
+        user.setLastName(userDetailsForm.getLastName());
+        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setEmail(userDetailsForm.getEmail());
         session.setAttribute("user", user);
 
         if (result.hasErrors()) {
@@ -250,7 +249,7 @@ public class UserController {
                     return appViewModel;
                 }).toList();
         model.addAttribute("apps", apps);
-        User user = getObjectFromHttpSession(session, "user", User.class)
+        EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         return "add-user-apps";
@@ -290,7 +289,7 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
-        User user = getObjectFromHttpSession(session, "user", User.class)
+        EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
@@ -365,7 +364,7 @@ public class UserController {
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
         model.addAttribute("officeData", officeData);
-        User user = getObjectFromHttpSession(session, "user", User.class)
+        EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
@@ -433,7 +432,7 @@ public class UserController {
             model.addAttribute("roles", cyaRoles);
         }
 
-        User user = getObjectFromHttpSession(session, "user", User.class)
+        EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
 
@@ -453,7 +452,7 @@ public class UserController {
     // @PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and
     // hasAuthority('SCOPE_Directory.ReadWrite.All')")
     public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
-        Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
+        Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<List<String>> selectedRolesOptional = getListFromHttpSession(session, "roles", String.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
         Optional<Boolean> isFirmAdminOptional = Optional.ofNullable((Boolean) session.getAttribute("isFirmAdmin"));
@@ -461,7 +460,7 @@ public class UserController {
                 OfficeData.class);
 
         if (userOptional.isPresent()) {
-            User user = userOptional.get();
+            EntraUserDto user = userOptional.get();
             List<String> selectedRoles = selectedRolesOptional.orElseGet(ArrayList::new);
             Optional<String> displayRolesOption = getObjectFromHttpSession(session, "displayRoles", String.class);
             String displayRoles = displayRolesOption.map(String::toString).orElse("");
@@ -478,9 +477,9 @@ public class UserController {
             eventService.auditUserCreate(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay,
                     selectedFirm.getName());
 
-            String successMessage = "" + user.getGivenName() + " "
-                    + user.getSurname()
-                    + " has been added to the system" + (isFirmAdmin ? " as a Firm Admin" : "")
+            String successMessage = user.getFirstName() + " " + user.getLastName()
+                    + " has been added to the system"
+                    + (isFirmAdmin ? " as a Firm Admin" : "")
                     + ". An email invitation has been sent. They must accept the invitation to gain access.";
             session.setAttribute("successMessage", successMessage);
         } else {
@@ -498,9 +497,9 @@ public class UserController {
 
     @GetMapping("/user/create/confirmation")
     public String addUserCreated(Model model, HttpSession session) {
-        Optional<User> userOptional = getObjectFromHttpSession(session, "user", User.class);
+        Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         if (userOptional.isPresent()) {
-            User user = userOptional.get();
+            EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
         } else {
             log.error("No user attribute was present in request. User not added to model.");
@@ -918,5 +917,11 @@ public class UserController {
         session.removeAttribute("successMessage");
 
         return "redirect:/admin/users/manage/" + id;
+    }
+
+    @ExceptionHandler(Exception.class)
+    public RedirectView handleException(Exception ex) {
+        log.error("Error while user management", ex);
+        return new RedirectView("/error");
     }
 }

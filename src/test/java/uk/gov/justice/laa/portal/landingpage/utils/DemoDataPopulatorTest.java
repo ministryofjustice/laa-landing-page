@@ -74,6 +74,10 @@ class DemoDataPopulatorTest {
         ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyName", "Crime Apply");
         ReflectionTestUtils.setField(demoDataPopulator, "appPuiName", "PUI");
         ReflectionTestUtils.setField(demoDataPopulator, "appSubmitCrimeFormName", "Submit a crime form");
+        ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyDetails",
+                "crime_apply_oid//APPREG-USER-Access-LAAD-Apply-Criminal-Legal-Aid//6466b2ed-1103-4588-9c28-561ec9dafa5d");
+        ReflectionTestUtils.setField(demoDataPopulator, "appCivilApplyDetails",
+                "civil_apply_oid//AppReg-User-Access-LAAD-Apply-Civil-Legal-Aid//3e3003ee-2183-4058-8279-4a557daba8c8");
     }
 
     @Test

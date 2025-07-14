@@ -34,8 +34,8 @@ public class LaaAppsConfigTest {
         LaaAppsConfig.LaaApplicationsList applicationsList = config.getApplicationsList();
 
         List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("test1").oid("oid1").build(),
-                LaaApplication.builder().name("test2").oid("oid2").build()
+                LaaApplication.builder().name("test1").laaApplicationDetails("a//b//c").build(),
+                LaaApplication.builder().name("test2").laaApplicationDetails("d//e//f").build()
         );
         applicationsList.setApplications(applications);
 

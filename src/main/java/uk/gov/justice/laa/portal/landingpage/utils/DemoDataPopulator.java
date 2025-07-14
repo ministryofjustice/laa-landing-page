@@ -70,26 +70,26 @@ public class DemoDataPopulator {
     @Value("${app.civil.apply.name}")
     private String appCivilApplyName;
 
-    @Value("${app.civil.apply.oid}")
-    private String appCivilApplyOid;
+    @Value("${app.civil.apply.details}")
+    private String appCivilApplyDetails;
 
     @Value("${app.crime.apply.name}")
     private String appCrimeApplyName;
 
-    @Value("${app.crime.apply.oid}")
-    private String appCrimeApplyOid;
+    @Value("${app.crime.apply.details}")
+    private String appCrimeApplyDetails;
 
     @Value("${app.pui.name}")
     private String appPuiName;
 
-    @Value("${app.pui.oid}")
-    private String appPuiOid;
+    @Value("${app.pui.details}")
+    private String appPuiDetails;
 
     @Value("${app.submit.crime.form.name}")
     private String appSubmitCrimeFormName;
 
-    @Value("${app.submit.crime.form.oid}")
-    private String appSubmitCrimeFormOid;
+    @Value("${app.submit.crime.form.details}")
+    private String appSubmitCrimeFormDetails;
 
     public DemoDataPopulator(FirmRepository firmRepository,
                              OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
@@ -279,8 +279,8 @@ public class DemoDataPopulator {
         }
 
         // Now trying to populate custom-defined apps and roles
-        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiOid, appPuiName), Pair.of(appCivilApplyOid, appCivilApplyName),
-                Pair.of(appCrimeApplyOid, appCrimeApplyName), Pair.of(appSubmitCrimeFormOid, appSubmitCrimeFormName));
+        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName), Pair.of(appCivilApplyDetails, appCivilApplyName),
+                Pair.of(appCrimeApplyDetails, appCrimeApplyName), Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
@@ -289,11 +289,17 @@ public class DemoDataPopulator {
             }
 
             try {
-                App app = laaAppRepository.findByEntraAppIdOrName(appDetailPair.getLeft(),
-                        appDetailPair.getRight()).orElse(buildLaaApp(appDetailPair.getLeft(), appDetailPair.getRight()));
+                String[] values = appDetailPair.getLeft() == null ? new String[0] : appDetailPair.getLeft().split("//");
+                String oid = values.length > 0 ? values[0] : "";
+                String securityGroupName = values.length > 1 ? values[1] : "";
+                String securityGroupOid = values.length > 2 ? values[2] : "";
+                App app = laaAppRepository.findByEntraAppIdOrName(oid,
+                        appDetailPair.getRight()).orElse(buildLaaApp(oid, appDetailPair.getRight()));
 
                 // Update if the record already exists
-                app.setEntraAppId(appDetailPair.getLeft());
+                app.setEntraAppId(oid);
+                app.setSecurityGroupName(securityGroupName);
+                app.setSecurityGroupOid(securityGroupOid);
                 String currentAppName = app.getName();
                 app.setName(appDetailPair.getRight());
                 laaAppRepository.save(app);

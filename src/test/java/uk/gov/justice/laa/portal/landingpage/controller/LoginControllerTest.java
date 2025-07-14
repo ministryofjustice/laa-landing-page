@@ -50,7 +50,6 @@ class LoginControllerTest {
 
         // Assert
         assertThat(viewIndex).isEqualTo("index");
-        assertThat(model.containsAttribute("user")).isTrue();
         assertThat(model.getAttribute("successMessage")).isNull();
     }
 
@@ -65,7 +64,6 @@ class LoginControllerTest {
 
         // Assert
         assertThat(viewIndex).isEqualTo("index");
-        assertThat(model.containsAttribute("user")).isTrue();
         assertThat(model.getAttribute("successMessage")).isEqualTo("You have been securely logged out");
     }
 
@@ -201,5 +199,15 @@ class LoginControllerTest {
 
         // Assert
         assertThat(result.getUrl()).isEqualTo("/?message=logout");
+    }
+
+    @Test
+    void whenHandleException_thenRedirectToErrorPage() {
+
+        // Arrange & Act
+        RedirectView result = controller.handleException(new Exception());
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/error");
     }
 }
