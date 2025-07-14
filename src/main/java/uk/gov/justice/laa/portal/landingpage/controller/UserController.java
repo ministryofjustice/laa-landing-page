@@ -895,7 +895,7 @@ public class UserController {
                     List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
-                        if (!selectedOfficeIds.contains(office.getId())) {
+                        if (selectedOfficeIds.contains(office.getId())) {
                             selectOfficesDisplay.add(office.getName());
                         }
                     }

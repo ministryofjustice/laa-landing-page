@@ -1,9 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
 import java.util.List;
 
+@Getter
 public class UpdateUserAuditEvent extends AuditEvent {
 
     private final EntraUserDto user;
