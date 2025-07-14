@@ -84,6 +84,16 @@ spec:
               value: "${APP_SUBMIT_CRIME_FORM_DETAILS}"
             - name: APP_SUBMIT_CRIME_FORM_URL
               value: "${APP_SUBMIT_CRIME_FORM_URL}"
+            - name: TECH_SERVICES_LAA_BUSINESS_UNIT
+              value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
+            - name: TECH_SERVICES_AZURE_CLIENT_ID
+              value: "{$TECH_SERVICES_AZURE_CLIENT_ID}"
+            - name: TECH_SERVICES_AZURE_CLIENT_SECRET
+              value: "{$TECH_SERVICES_AZURE_CLIENT_SECRET}"
+            - name: TECH_SERVICES_TENANT_ID
+              value: "{$TECH_SERVICES_TENANT_ID}"
+            - name: TECH_SERVICES_BASE_URL
+              value: "{$TECH_SERVICES_BASE_URL}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -99,31 +109,11 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-azure-tenant-secret-k8s
                   key: AZURE_TENANT_ID
-            - name: TECH_SERVICES_AZURE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: laa-landing-page-azure-client-id-k8s
-                  key: TECH_SERVICES_AZURE_CLIENT_ID
-            - name: TECH_SERVICES_AZURE_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: laa-landing-page-azure-client-secret-k8s
-                  key: TECH_SERVICES_AZURE_CLIENT_SECRET
-            - name: TECH_SERVICES_TENANT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: laa-landing-page-azure-tenant-secret-k8s
-                  key: TECH_SERVICES_TENANT_ID
             - name: BASE_URL
               valueFrom:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
-            - name: TECH_SERVICES_BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: laa-landing-page-base-url-k8s
-                  key: TECH_SERVICES_BASE_URL
             - name: GOV_NOTIFY_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -154,5 +144,3 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
                   key: rds_instance_endpoint
-            - name: TECH_SERVICES_LAA_BUSINESS_UNIT
-              value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
