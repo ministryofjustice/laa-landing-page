@@ -229,6 +229,12 @@ databaseChangeLog:
                     nullable: false
                   name: user_type
                   type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+                  name: access_granted
+                  type: BOOLEAN
             tableName: user_profile
   - changeSet:
       id: 1752020733897-7
@@ -609,3 +615,6 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE user_profile SET access_granted = true WHERE user_type = 'EXTERNAL_SINGLE_FIRM_ADMIN' AND user_type = 'INTERNAL'"

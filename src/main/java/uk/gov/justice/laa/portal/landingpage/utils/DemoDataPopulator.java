@@ -1,14 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.models.Application;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import com.microsoft.graph.models.Application;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -26,18 +37,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
 /**
- * The class to populate dummy data in the local db. Flag to decide whether to populate the dummy data or not and
- * what user details to user for creation can be configured in application.properties file.
+ * The class to populate dummy data in the local db. Flag to decide whether to
+ * populate the dummy data or not and
+ * what user details to user for creation can be configured in
+ * application.properties file.
  * Some data is being populated from entra to keep names consistent with entra.
  */
 @Component
@@ -92,9 +96,9 @@ public class DemoDataPopulator {
     private String appSubmitCrimeFormDetails;
 
     public DemoDataPopulator(FirmRepository firmRepository,
-                             OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
-                             AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
-                             UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
+            OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
+            AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
+            UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
         this.entraUserRepository = entraUserRepository;
@@ -181,10 +185,10 @@ public class DemoDataPopulator {
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser).activeProfile(true)
+                .accessGranted(true)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
-
 
     @EventListener
     public void appReady(ApplicationReadyEvent event) {
@@ -200,7 +204,6 @@ public class DemoDataPopulator {
             Firm firm = firmRepository.findFirmByName("Firm One");
             if (firm == null) {
 
-
                 Firm firm1 = buildFirm("Firm One");
                 Firm firm2 = buildFirm("Firm Two");
                 firmRepository.saveAll(Arrays.asList(firm1, firm2));
@@ -214,11 +217,12 @@ public class DemoDataPopulator {
                 firm2.getOffices().addAll(Set.of(office3, office4, office5));
                 officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
 
-                List<Application> applications = Objects.requireNonNull(graphServiceClient.applications().get(requestConfig -> {
-                    assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.select = new String[]{"id", "appId", "displayName"};
-                    requestConfig.queryParameters.top = 10;
-                })).getValue();
+                List<Application> applications = Objects
+                        .requireNonNull(graphServiceClient.applications().get(requestConfig -> {
+                            assert requestConfig.queryParameters != null;
+                            requestConfig.queryParameters.select = new String[] { "id", "appId", "displayName" };
+                            requestConfig.queryParameters.top = 10;
+                        })).getValue();
                 assert applications != null;
 
                 Set<String> appNames = new HashSet<>();
@@ -229,7 +233,8 @@ public class DemoDataPopulator {
 
                 List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
                     assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+                    requestConfig.queryParameters.select = new String[] { "id", "displayName", "mail", "mobilePhone",
+                            "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
                     requestConfig.queryParameters.top = 10;
                 })).getValue();
 
@@ -252,8 +257,10 @@ public class DemoDataPopulator {
 
                 List<AppRole> appRoles = new ArrayList<>();
                 for (App app : laaApps) {
-                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
-                    appRoles.add(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
+                    appRoles.add(
+                            buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
+                    appRoles.add(
+                            buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
                 }
 
                 laaAppRoleRepository.saveAll(appRoles);
@@ -267,7 +274,6 @@ public class DemoDataPopulator {
                     userProfiles.add(userProfile);
                 }
 
-
                 laaUserProfileRepository.saveAll(userProfiles);
 
                 System.out.println("Dummy Data Populated!!");
@@ -279,8 +285,10 @@ public class DemoDataPopulator {
         }
 
         // Now trying to populate custom-defined apps and roles
-        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName), Pair.of(appCivilApplyDetails, appCivilApplyName),
-                Pair.of(appCrimeApplyDetails, appCrimeApplyName), Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
+        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName),
+                Pair.of(appCivilApplyDetails, appCivilApplyName),
+                Pair.of(appCrimeApplyDetails, appCrimeApplyName),
+                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
@@ -305,19 +313,20 @@ public class DemoDataPopulator {
                 laaAppRepository.save(app);
 
                 AppRole internalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_INTERN")
-                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN",
+                                RoleType.INTERNAL));
                 AppRole externalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_EXTERN")
-                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN",
+                                RoleType.EXTERNAL));
                 laaAppRoleRepository.save(internalRole);
                 laaAppRoleRepository.save(externalRole);
 
-
             } catch (Exception ex) {
-                System.out.println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
+                System.out
+                        .println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
                 ex.printStackTrace();
             }
         }
-
 
         // Users
         Set<String> userPrinciples = new HashSet<>();
@@ -328,28 +337,32 @@ public class DemoDataPopulator {
             for (String userPrincipal : userPrinciples) {
                 try {
                     if (!userPrincipal.contains(":")) {
-                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                        throw new RuntimeException(
+                                "Invalid user principal format, the format should be <userprinciple>:<entraid>");
                     }
                     String mail = userPrincipal.split(":")[0];
                     String entraId = userPrincipal.split(":")[1];
-                    EntraUser entraUser = entraUserRepository.findByEntraOid(entraId).orElse(buildEntraUser(mail, entraId));
+                    EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
+                            .orElse(buildEntraUser(mail, entraId));
                     boolean isNewUser = entraUser.getId() == null;
                     entraUserRepository.save(entraUser);
                     if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
                         UserProfile userProfile = buildLaaUserProfile(entraUser,
-                                adminUserPrincipals.contains(userPrincipal) ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM);
+                                adminUserPrincipals.contains(userPrincipal) ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN
+                                        : UserType.EXTERNAL_SINGLE_FIRM);
                         userProfile.getAppRoles().addAll(appRoles);
                         userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
                         laaUserProfileRepository.save(userProfile);
                     }
                 } catch (Exception e) {
-                    System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
+                    System.err.println(
+                            "Unable to add user to the list of users in the database, the user may not present in entra: "
+                                    + userPrincipal);
                     e.printStackTrace();
                     System.err.println("Continuing with the list of users in the database");
                 }
             }
         }
-
 
     }
 

@@ -1,11 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +29,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -37,25 +58,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * userService
@@ -82,10 +84,10 @@ public class UserService {
     private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
+            EntraUserRepository entraUserRepository,
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+            NotificationService notificationService, OfficeRepository officeRepository,
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -192,7 +194,7 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
-                                                      List<UUID> firmList, int page, int pageSize, String sort, String direction) {
+            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
@@ -324,7 +326,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
-                                boolean isFirmAdmin, String createdBy) {
+            boolean isFirmAdmin, String createdBy) {
 
         // Make sure the user is trying to be assigned valid app roles for their user
         // type.
@@ -353,8 +355,9 @@ public class UserService {
         return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
     }
 
-    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-                                     boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
+    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices,
+            FirmDto firmDto,
+            boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
@@ -546,7 +549,7 @@ public class UserService {
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()
-                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
     }
@@ -604,5 +607,18 @@ public class UserService {
         List<UserType> userTypes = entraUser.getUserProfiles().stream()
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
+    }
+
+    public boolean isAccessGranted(String userId) {
+        // Get user profile by userId
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            EntraUser user = optionalUser.get();
+            // Check if the user has access granted
+            return user.getUserProfiles().stream().anyMatch(UserProfile::isAccessGranted);
+        } else {
+            logger.warn("User with id {} not found. Could not check access.", userId);
+            return false;
+        }
     }
 }

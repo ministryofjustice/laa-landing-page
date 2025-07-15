@@ -164,9 +164,11 @@ public class UserController {
         Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        Boolean isAccessGranted = userService.isAccessGranted(id);
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
+        model.addAttribute("isAccessGranted", isAccessGranted);
         return "manage-user";
     }
 
@@ -185,7 +187,6 @@ public class UserController {
         model.addAttribute("userDetailsForm", userDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute("userDetailsForm", userDetailsForm);
-
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
