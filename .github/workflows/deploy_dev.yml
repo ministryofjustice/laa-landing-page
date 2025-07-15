@@ -112,6 +112,7 @@ jobs:
           TECH_SERVICES_AZURE_CLIENT_SECRET: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_SECRET }}
           TECH_SERVICES_TENANT_ID: ${{ secrets.TECH_SERVICES_TENANT_ID }}
           TECH_SERVICES_BASE_URL: ${{ secrets.TECH_SERVICES_BASE_URL }}
+          APP_DEFAULT_USER_ACC_SEC_GROUP: ${{ secrets.APP_DEFAULT_USER_ACC_SEC_GROUP }}
 
       - name: Deploy to Cloud Platform
         run: |
