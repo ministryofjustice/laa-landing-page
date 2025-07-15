@@ -34,7 +34,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -103,7 +105,8 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class)).thenReturn(ResponseEntity.ok("{}"));
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
+                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         techServicesClient.updateRoleAssignment(userId);
@@ -171,7 +174,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class)).thenReturn(ResponseEntity.badRequest().build());
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenReturn(ResponseEntity.badRequest().build());
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
@@ -205,8 +208,8 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        ResponseEntity<String> responseEntity = ResponseEntity.internalServerError().build();
-        when(responseSpec.toEntity(String.class)).thenReturn(responseEntity);
+        ResponseEntity<UpdateSecurityGroupsResponse> responseEntity = ResponseEntity.internalServerError().build();
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenReturn(responseEntity);
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
@@ -236,8 +239,8 @@ public class TechServicesClientTest {
         concurrentMapCache.put("access_token", "techServicesDetails");
         when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
         when(jwtDecoder.decode(anyString())).thenThrow(new RuntimeException("Error decoding JWT token"));
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(ResponseEntity.ok("{}"));
+        when(responseSpec.toEntity(RegisterUserResponse.class))
+                .thenReturn(ResponseEntity.ok(RegisterUserResponse.builder().build()));
 
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
@@ -259,8 +262,8 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class))
-                .thenReturn(ResponseEntity.ok("{}"));
+        when(responseSpec.toEntity(RegisterUserResponse.class))
+                .thenReturn(ResponseEntity.ok(RegisterUserResponse.builder().build()));
         ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
         concurrentMapCache.put("access_token", "techServicesDetails");
         when(jwtDecoder.decode(anyString())).thenReturn(Jwt.withTokenValue("techServicesDetails")
@@ -316,7 +319,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(RegisterUserResponse.class))
                 .thenReturn(ResponseEntity.badRequest().build());
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
@@ -348,7 +351,7 @@ public class TechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(String.class))
+        when(responseSpec.toEntity(RegisterUserResponse.class))
                 .thenReturn(ResponseEntity.internalServerError().build());
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
