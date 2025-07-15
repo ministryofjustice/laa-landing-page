@@ -54,10 +54,7 @@ public class ClaimEnrichmentService {
             boolean hasAccess = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .anyMatch(appRole ->
-                            //TODO: Update Data Model to compare by ID as name may not be unique
-                            //appRole.getApp().getId().equals(app.getId())
-                            // && appRole.getApp().getName().equals(app.getName())
-                            appRole.getApp().getName().equals(app.getName())
+                            appRole.getApp().getId().equals(app.getId())
                     );
 
             if (!hasAccess) {
@@ -69,9 +66,7 @@ public class ClaimEnrichmentService {
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .filter(role ->
-                            //TODO: Update Data Model to compare by ID as name may not be unique
                             role.getApp().getId().equals(app.getId())
-                                    && role.getApp().getName().equals(app.getName())
                     )
                     .map(AppRole::getName)
                     .distinct()
