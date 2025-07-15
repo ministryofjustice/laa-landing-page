@@ -27,6 +27,16 @@ public class TestController {
         return "admin";
     }
 
+    @GetMapping("/admin/users/manage")
+    public String adminManageUserEndpoint() {
+        return "manage-user";
+    }
+
+    @GetMapping("/admin/user/create")
+    public String adminCreateUserEndpoint() {
+        return "create-user";
+    }
+
     @PostMapping({"/api/v1/claims/enrich"})
     public String claimsEnrichEndpoint() {
         return "claims-enrich";
