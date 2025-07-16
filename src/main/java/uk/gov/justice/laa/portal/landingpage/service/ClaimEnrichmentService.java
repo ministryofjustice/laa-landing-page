@@ -36,8 +36,7 @@ public class ClaimEnrichmentService {
             request.getData().getAuthenticationContext().getUser();
         String userPrincipalName = userDetails.getUserPrincipalName();
         String userId = userDetails.getId();
-        String appDisplayName = request.getData().getAuthenticationContext()
-            .getClientServicePrincipal().getAppDisplayName();
+        String appEntraId = request.getData().getAuthenticationContext().getClientServicePrincipal().getAppId();
         
         log.info("Processing claim enrichment for user: {}", userPrincipalName);
 
@@ -46,17 +45,15 @@ public class ClaimEnrichmentService {
             EntraUser entraUser = entraUserRepository.findByEntraOid(userId)
                     .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
 
-            // 2. Get app from DB using the app name from request
-            App app = appRepository.findByName(appDisplayName)
+            // 2. Get app from DB using the app entra id from request
+            App app = appRepository.findByEntraAppId(appEntraId)
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
             // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .anyMatch(appRole ->
-                            appRole.getApp().getId().equals(app.getId())
-                    );
+                    .anyMatch(appRole -> appRole.getApp().getId().equals(app.getId()));
 
             if (!hasAccess) {
                 throw new ClaimEnrichmentException("User does not have access to this application");
@@ -67,9 +64,7 @@ public class ClaimEnrichmentService {
                     .filter(UserProfile::isActiveProfile)
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
-                    .filter(role ->
-                            role.getApp().getId().equals(app.getId())
-                    )
+                    .filter(role -> role.getApp().getId().equals(app.getId()))
                     .map(AppRole::getName)
                     .distinct()
                     .collect(Collectors.toList());
