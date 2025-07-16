@@ -258,7 +258,8 @@ public class UserService {
             throw new RuntimeException(String.format("User profile not found for the given entra id: %s", entraId));
         }
 
-        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getUserType).collect(Collectors.toList());
 
     }
 
@@ -385,6 +386,7 @@ public class UserService {
         if (optionalUser.isPresent()) {
             EntraUser user = optionalUser.get();
             return user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .flatMap(userProfile -> userProfile.getAppRoles().stream())
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .collect(Collectors.toList());
@@ -602,6 +604,7 @@ public class UserService {
 
     public boolean isInternal(EntraUser entraUser) {
         List<UserType> userTypes = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
     }

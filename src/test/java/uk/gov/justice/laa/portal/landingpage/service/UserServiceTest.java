@@ -343,7 +343,7 @@ class UserServiceTest {
 
         appRole.setApp(app);
 
-        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).appRoles(Set.of(appRole)).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
 
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
@@ -371,7 +371,7 @@ class UserServiceTest {
                 .name("Test Role")
                 .build();
 
-        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).appRoles(Set.of(appRole)).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
 
         when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
@@ -1450,7 +1450,7 @@ class UserServiceTest {
 
     @Test
     void isInternal_Ok() {
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.INTERNAL).build());
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build());
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         assertThat(userService.isInternal(entraUser)).isTrue();
     }
@@ -2092,7 +2092,7 @@ class UserServiceTest {
         void isInternal_handlesMultipleUserTypes() {
             // Arrange - user with both internal and external types
             Set<UserProfile> userProfiles = Set.of(
-                    UserProfile.builder().userType(UserType.INTERNAL).build(),
+                    UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build(),
                     UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM).build());
             EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
 
