@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collections;
@@ -36,6 +37,7 @@ public class OfficeService {
 
     public List<OfficeDto> getUserOffices(EntraUser entraUser) {
         List<UUID> firms = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
                 .map(userProfile -> userProfile.getFirm().getId()).toList();
         return getOfficesByFirms(firms)
                 .stream().map(office -> mapper.map(office, OfficeDto.class)).toList();

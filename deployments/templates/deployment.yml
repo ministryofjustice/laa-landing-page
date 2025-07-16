@@ -94,6 +94,8 @@ spec:
               value: "${TECH_SERVICES_AZURE_CLIENT_SECRET}"
             - name: TECH_SERVICES_TENANT_ID
               value: "${TECH_SERVICES_TENANT_ID}"
+            - name: APP_DEFAULT_USER_ACC_SEC_GROUP
+              value: "${APP_DEFAULT_USER_ACC_SEC_GROUP}"
             - name: TECH_SERVICES_BASE_URL
               value: "${TECH_SERVICES_BASE_URL}"
             - name: AZURE_CLIENT_ID
