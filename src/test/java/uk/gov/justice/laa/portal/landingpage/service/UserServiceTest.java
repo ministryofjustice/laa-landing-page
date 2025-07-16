@@ -65,14 +65,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
+import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -2115,38 +2109,71 @@ class UserServiceTest {
             assertThat(result).isFalse();
         }
 
-        @Test
-        void getDefaultSort() {
-            Sort nullSort = userService.getSort(null, null);
-            assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-            assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-            assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
-
-            Sort emptySort = userService.getSort("", null);
-            assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-            assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-            assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
-        }
-
-        @Test
-        void getGivenSort() {
-            List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
-            String sort = "aSc";
-            for (String field : fields) {
-                Sort fieldSort = userService.getSort(field, sort);
-                assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
-                assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            }
-            Sort descendingSort = userService.getSort("lastName", "deSC");
-            assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
-        }
-
-        @Test
-        void getErrorSort() {
-            assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
-        }
-
     } // End of EdgeCaseTests nested class
+
+    @Test
+    void getDefaultSort() {
+        Sort nullSort = userService.getSort(null, null);
+        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+
+        Sort emptySort = userService.getSort("", null);
+        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getGivenSort() {
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
+        String sort = "aSc";
+        for (String field : fields) {
+            Sort fieldSort = userService.getSort(field, sort);
+            assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
+            assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        }
+        Sort descendingSort = userService.getSort("lastName", "deSC");
+        assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getErrorSort() {
+        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
+    }
+
+    @Test
+    void setDefaultActiveProfile_switch_firm() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
+        ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+        userService.setDefaultActiveProfile(entraUser, firm2Id);
+        verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+        EntraUser updatedEntraUser = captor.getValue();
+        for (UserProfile userProfile : updatedEntraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firm1Id)) {
+                assertThat(userProfile.isActiveProfile()).isFalse();
+            } else {
+                assertThat(userProfile.isActiveProfile()).isTrue();
+                assertThat(userProfile.getFirm().getId()).isEqualTo(firm2Id);
+            }
+        }
+    }
+
+    @Test
+    void setDefaultActiveProfile_no_firm() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UUID firm3Id = UUID.randomUUID();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
+        assertThrows(IOException.class,
+                () -> userService.setDefaultActiveProfile(entraUser, firm3Id));
+    }
 }
