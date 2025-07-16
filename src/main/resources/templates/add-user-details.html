@@ -57,17 +57,23 @@
                             </div>
                         </select>
                     </div>
-                    <div class="govuk-form-group">
-                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
-                            data-module="govuk-checkboxes">
-                            <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="isFirmAdmin" name="isFirmAdmin"
-                                    type="checkbox" value="true" th:checked="*{isFirmAdmin}" />
-                                <label class="govuk-label govuk-checkboxes__label" for="isFirmAdmin">
-                                    Firm admin
-                                </label>
-                            </div>
+                </div>
+                <div class="govuk-!-margin-bottom-3">
+                    <div class="govuk-form-group"
+                         th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="userType">
+                            User Type
+                        </label>
+                        <div th:if="${#fields.hasErrors('userType')}" class="govuk-error-message">
+                            <p th:each="err : ${#fields.errors('userType')}" th:text="${err}"></p>
                         </div>
+                        <select class="govuk-select" id="userType" name="userType">
+                            <option value="" disabled selected th:if="${selectedUserType == null}">Choose User Type</option>
+                            <div th:each="userType : ${userTypes}">
+                                <option th:value="${userType}" th:text="${userType.friendlyName}"
+                                        th:selected="${userType == selectedUserType}"></option>
+                            </div>
+                        </select>
                     </div>
                 </div>
                 <div class="govuk-form-group"

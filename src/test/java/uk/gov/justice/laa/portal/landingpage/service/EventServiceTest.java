@@ -12,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.List;
@@ -36,16 +37,14 @@ class EventServiceTest {
         UUID userId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().firstName("new").lastName("User").id(userId).build();
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
-        String selectedRoles = "ROLE_ADMIN, ROLE_USER";
-        List<String> selectedOfficesDisplay = List.of("Office 1", "Office 2", "Office 3");
         String selectedFirm = "Firm";
-        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedRoles, selectedOfficesDisplay, selectedFirm);
+        UserType selectedUserType = UserType.EXTERNAL_SINGLE_FIRM;
+        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirm, selectedUserType);
         eventService.logEvent(createUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User admin with user id " + adminUuid
-                + ", New user new User created, user id " + userId + ", with role ROLE_ADMIN, ROLE_USER, office Office 1, Office 2, Office 3, firm Firm\n"
-                + "\n");
+                + ", New user new User created, user id " + userId + ", with firm Firm and user type " + selectedUserType.getFriendlyName());
     }
 
     @Test
