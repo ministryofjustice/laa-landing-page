@@ -25,6 +25,7 @@ public enum UserType {
     UserType(String friendlyName) {
         this.friendlyName = friendlyName;
     }
+
     public boolean isAdmin() {
         return Arrays.stream(ADMIN_TYPES).anyMatch(type -> type.equals(this.name()));
     }
