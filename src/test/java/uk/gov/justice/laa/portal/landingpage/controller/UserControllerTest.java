@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
@@ -48,6 +49,7 @@ import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -757,7 +759,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("officeData")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
-        verify(eventService).auditUserCreate(currentUserDto, entraUser, "dev, tester", List.of("of1"), "test firm");
+        verify(eventService).logEvent(any());
     }
 
     @Test
@@ -858,13 +860,16 @@ class UserControllerTest {
         testSession.setAttribute("userEditRolesModel", sessionModel);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
         // When
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model,
                 testSession);
 
         // Then
-        verify(eventService).auditUpdateRole(any(), any(), any());
+        verify(eventService).logEvent(any());
         verify(loginService).getCurrentUser(authentication);
         Assertions.assertEquals("redirect:/admin/users/manage/" + userId, view);
     }
@@ -915,7 +920,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
@@ -928,11 +933,14 @@ class UserControllerTest {
     @Test
     public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
         UUID userId = UUID.randomUUID();
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         HttpSession session = new MockHttpSession();
-
         // When - passing null for apps (simulates no checkboxes selected)
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session);
 
         // Then - should redirect to manage user page when no apps selected
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -948,12 +956,15 @@ class UserControllerTest {
     @Test
     public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
         // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         UUID userId = UUID.randomUUID();
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
-
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
 
         // Then - should redirect to manage user page when empty apps list
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -1099,7 +1110,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, testSession);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, authentication, testSession);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
@@ -1185,20 +1196,37 @@ class UserControllerTest {
     @Test
     void updateUserOffices_shouldUpdateOfficesAndRedirect() throws IOException {
         // Given
-        String userId = "user123";
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("office1", "office2"));
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
+        OfficeModel of1 = new OfficeModel();
+        of1.setId("office1");
+        of1.setName("Office 1");
+        OfficeModel of2 = new OfficeModel();
+        of2.setId("office2");
+        of2.setName("Office 2");
+        List<OfficeModel> officeData = List.of(of1, of2);
+        model.addAttribute("officeData", officeData);
         MockHttpSession testSession = new MockHttpSession();
-
+        testSession.setAttribute("editUserOfficesModel", model);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        String userId = "user123";
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
         verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
+        ArgumentCaptor<UpdateUserAuditEvent> captor = ArgumentCaptor.forClass(UpdateUserAuditEvent.class);
+        verify(eventService).logEvent(captor.capture());
+        UpdateUserAuditEvent updateUserAuditEvent = captor.getValue();
+        assertThat(updateUserAuditEvent.getField()).isEqualTo("office");
+        assertThat(updateUserAuditEvent.getChangedValues()).hasSize(2);
     }
 
     @Test
@@ -1221,10 +1249,13 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         MockHttpSession testSession = new MockHttpSession();
-
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -1253,7 +1284,7 @@ class UserControllerTest {
         testSession.setAttribute("editUserOfficesModel", sessionModel);
 
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
@@ -1372,7 +1403,10 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
                 testSession);
@@ -1384,7 +1418,7 @@ class UserControllerTest {
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
         verify(userService).updateUserRoles(userId, allSelectedRoles);
-        verify(eventService).auditUpdateRole(any(), any(), eq(allSelectedRoles));
+        verify(eventService).logEvent(any());
     }
 
     @Test
@@ -2003,10 +2037,13 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         MockHttpSession testSession = new MockHttpSession();
-
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
