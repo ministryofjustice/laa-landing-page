@@ -1,7 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.UserModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import jakarta.servlet.http.HttpSession;
@@ -32,8 +32,11 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login(Model model) {
-        model.addAttribute("user", new UserModel());
+    public String login(@RequestParam(value = "message", required = false) String message, Model model) {
+        if (message != null && message.equals("logout")) {
+            String successMessage = "You have been securely logged out";
+            model.addAttribute("successMessage", successMessage);
+        }
         return "index";
     }
 
@@ -90,5 +93,17 @@ public class LoginController {
     @GetMapping("/migrate")
     public String migrate() {
         return "migrate";
+    }
+
+    @PostMapping("/logout")
+    public RedirectView logout(Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+        loginService.logout(authentication, authClient, session);
+        return new RedirectView("/?message=logout");
+    }
+
+    @ExceptionHandler(Exception.class)
+    public RedirectView handleException(Exception ex) {
+        logger.error("Error while user login:", ex);
+        return new RedirectView("/error");
     }
 }

@@ -110,10 +110,12 @@ class ClaimEnrichmentServiceTest {
         office1 = Office.builder()
                 .id(OFFICE_ID_1)
                 .firm(firm)
+                .code("Office 1 Code")
                 .build();
         office2 = Office.builder()
                 .id(OFFICE_ID_2)
                 .firm(firm)
+                .code("Office 2 Code")
                 .build();
 
         AppRole appRole = AppRole.builder()
@@ -162,7 +164,7 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
-        assertEquals(List.of(OFFICE_ID_1.toString(), OFFICE_ID_2.toString()), claims.get("LAA_ACCOUNTS"));
+        assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
         
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
@@ -178,6 +180,7 @@ class ClaimEnrichmentServiceTest {
         final Office office3 = Office.builder()
                 .id(UUID.randomUUID())
                 .name("Office 3")
+                .code("Office 3 Code")
                 .firm(firm2)
                 .build();
 
@@ -216,9 +219,9 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
-        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_1.toString()));
-        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(OFFICE_ID_2.toString()));
-        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getId().toString()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office1.getCode()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office2.getCode()));
+        assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getCode()));
 
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));

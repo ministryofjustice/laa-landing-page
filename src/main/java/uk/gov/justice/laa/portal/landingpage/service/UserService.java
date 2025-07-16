@@ -1,24 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,20 +13,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.Invitation;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -61,6 +37,26 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * userService
@@ -69,11 +65,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 public class UserService {
 
     private static final int BATCH_SIZE = 20;
+    /**
+     * The number of pages to load in advance when doing user pagination
+     */
+    private static final int PAGES_TO_PRELOAD = 5;
     private final OfficeRepository officeRepository;
-
-    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
-    private String redirectUri;
-
     private final GraphServiceClient graphClient;
     private final EntraUserRepository entraUserRepository;
     private final AppRepository appRepository;
@@ -81,7 +77,11 @@ public class UserService {
     private final ModelMapper mapper;
     private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
+    Logger logger = LoggerFactory.getLogger(this.getClass());
+    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
+    private String redirectUri;
 
     /**
      * The number of pages to load in advance when doing user pagination
@@ -89,10 +89,11 @@ public class UserService {
     private static final int PAGES_TO_PRELOAD = 5;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository,
-            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-            NotificationService notificationService, OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList, UserProfileRepository userProfileRepository) {
+                       EntraUserRepository entraUserRepository,
+                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       NotificationService notificationService, OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient,
+                       UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -101,10 +102,17 @@ public class UserService {
         this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
+        this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
     }
 
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
+        List<List<T>> partitions = new ArrayList<>();
+        for (int i = 0; i < inputList.size(); i += size) {
+            partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
+        }
+        return partitions;
+    }
 
     /**
      * Returns all Users from Entra
@@ -141,6 +149,7 @@ public class UserService {
         if (userProfile.isPresent()) {
             userProfile.get().setAppRoles(new HashSet<>(roles));
             entraUserRepository.saveAndFlush(user);
+            techServicesClient.updateRoleAssignment(user.getId());
         } else {
             logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
         }
@@ -192,7 +201,7 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
-            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
+                                                      List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
         Page<EntraUser> pageOfUsers;
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
@@ -289,14 +298,6 @@ public class UserService {
         }
     }
 
-    static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
-        List<List<T>> partitions = new ArrayList<>();
-        for (int i = 0; i < inputList.size(); i += size) {
-            partitions.add(inputList.subList(i, Math.min(i + size, inputList.size())));
-        }
-        return partitions;
-    }
-
     public List<AppDto> getApps() {
         return appRepository.findAll().stream()
                 .map(app -> mapper.map(app, AppDto.class))
@@ -331,8 +332,8 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(User user, List<String> roles, List<String> selectedOffices, FirmDto firm,
-            boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
+                                boolean isFirmAdmin, String createdBy) {
 
         // Make sure the user is trying to be assigned valid app roles for their user
         // type.
@@ -345,40 +346,29 @@ public class UserService {
         if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
             logger.error(
                     "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
-                    user.getGivenName() + " " + user.getSurname());
+                    user.getFirstName() + " " + user.getLastName());
             throw new RuntimeException("User creation blocked");
         }
-        User invitedUser = inviteUser(user);
-        assert invitedUser != null;
+
+        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user, appRoles);
+        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
+
+        if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
+            user.setEntraOid(createdUser.getId());
+        } else {
+            throw new RuntimeException("User creation failed");
+        }
 
         return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
     }
 
-    private User inviteUser(User user) {
-        Invitation invitation = new Invitation();
-        invitation.setInvitedUserEmailAddress(user.getMail());
-        invitation.setInviteRedirectUrl(redirectUri);
-        invitation.setInvitedUserType("Guest");
-        invitation.setSendInvitationMessage(false);
-        invitation.setInvitedUserDisplayName(user.getGivenName() + " " + user.getSurname());
-        Invitation result = graphClient.invitations().post(invitation);
-
-        // Send invitation email
-        assert result != null;
-        notificationService.notifyCreateUser(invitation.getInvitedUserDisplayName(), user.getMail(),
-                result.getInviteRedeemUrl());
-
-        return result.getInvitedUser();
-    }
-
-    private EntraUser persistNewUser(User newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-            boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
+    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
+                                     boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        entraUser.setEntraOid(newUser.getMail());
         Firm firm = mapper.map(firmDto, Firm.class);
         List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
-        Set<Office> offices = new HashSet<Office>(officeRepository.findOfficeByFirm_IdIn(officeIds));
+        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .appRoles(new HashSet<>(appRoles))
@@ -391,6 +381,7 @@ public class UserService {
                 .entraUser(entraUser)
                 .build();
 
+        entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser.setCreatedBy(createdBy);
@@ -564,7 +555,7 @@ public class UserService {
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()
-                .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
     }

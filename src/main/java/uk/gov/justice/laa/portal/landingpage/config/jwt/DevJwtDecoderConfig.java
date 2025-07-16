@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.config.jwt;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -21,6 +22,7 @@ public class DevJwtDecoderConfig {
      * This should NOT be used in production
      */
     @Bean("testJwtDecoder")
+    @Primary
     public JwtDecoder jwtDecoder() {
         return token -> {
             try {
