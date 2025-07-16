@@ -117,6 +117,7 @@ public class TechServicesClient {
             String accessToken = getAccessToken();
 
             Set<String> securityGroups = validAppRoles == null ? HashSet.newHashSet(1) : validAppRoles.stream()
+                    .filter(appRole -> Objects.nonNull(appRole.getApp().getSecurityGroupOid()))
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
 
@@ -127,7 +128,6 @@ public class TechServicesClient {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
-                    .companyName("Test Company")
                     .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
                     .requiredGroups(securityGroups).build();
 
