@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -49,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
@@ -57,6 +59,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 
 /**
@@ -79,6 +82,7 @@ public class UserService {
     private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
+    private final UserProfileRepository userProfileRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -87,7 +91,8 @@ public class UserService {
             EntraUserRepository entraUserRepository,
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
             NotificationService notificationService, OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient,
+            UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -97,6 +102,7 @@ public class UserService {
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
+        this.userProfileRepository = userProfileRepository;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -162,6 +168,11 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<UserProfileDto> getUserProfileById(String userId) {
+        return userProfileRepository.findById(UUID.fromString(userId))
+                .map(user -> mapper.map(user, UserProfileDto.class));
+    }
+
     public Optional<UserType> getUserTypeByUserId(String userId) {
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalEntraUser.isPresent()) {
@@ -184,19 +195,28 @@ public class UserService {
         return dateTime.format(formatter);
     }
 
-    private PaginatedUsers getPageOfUsers(Supplier<Page<EntraUser>> pageSupplier) {
-        Page<EntraUser> userPage = pageSupplier.get();
+    private PaginatedUsers getPageOfUsers(Supplier<Page<UserProfile>> pageSupplier) {
+        Page<UserProfile> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
-        paginatedUsers.setUsers(userPage.stream().map(user -> mapper.map(user, EntraUserDto.class)).toList());
+        paginatedUsers.setUsers(userPage.stream().map(this::mapUserProfileToDto).toList());
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
+    }
+
+    private UserProfileDto mapUserProfileToDto(UserProfile userProfile) {
+        UserProfileDto dto = mapper.map(userProfile, UserProfileDto.class);
+        // Ensure the nested EntraUser is properly mapped
+        if (userProfile.getEntraUser() != null) {
+            dto.setEntraUser(mapper.map(userProfile.getEntraUser(), EntraUserDto.class));
+        }
+        return dto;
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
             List<UUID> firmList, int page, int pageSize, String sort, String direction) {
         List<UserType> types;
-        Page<EntraUser> pageOfUsers;
+        Page<UserProfile> pageOfUsers;
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         if (Objects.isNull(firmList)) {
             if (isFirmAdmin) {
@@ -207,9 +227,9 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypes(types, pageRequest);
+                pageOfUsers = userProfileRepository.findByUserTypes(types, pageRequest);
             } else {
-                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
+                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
                         searchTerm, types, pageRequest);
             }
         } else {
@@ -219,9 +239,9 @@ public class UserService {
                 types = UserType.EXTERNAL_TYPES;
             }
             if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
+                pageOfUsers = userProfileRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
             } else {
-                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
+                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
                         searchTerm, types, firmList, pageRequest);
             }
         }
@@ -230,7 +250,7 @@ public class UserService {
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
+            return Sort.by(Sort.Order.asc("userProfileStatus"), Sort.Order.desc("createdDate"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -239,10 +259,10 @@ public class UserService {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
         return switch (field.toUpperCase()) {
-            case "FIRSTNAME" -> Sort.by(order, "firstName");
-            case "LASTNAME" -> Sort.by(order, "lastName");
-            case "EMAIL" -> Sort.by(order, "email");
-            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
+            case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
+            case "EMAIL" -> Sort.by(order, "entraUser.email");
+            case "USERSTATUS" -> Sort.by(order, "entraUser.userStatus");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }
@@ -353,10 +373,10 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
+        return persistNewUser(user, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
     }
 
-    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices,
+    private EntraUser persistNewUser(EntraUserDto newUser, List<String> selectedOffices,
             FirmDto firmDto,
             boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
@@ -379,8 +399,7 @@ public class UserService {
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser.setCreatedBy(createdBy);
-        entraUser.setCreatedDate(LocalDateTime.now());
+        // Audit fields are automatically set by Spring Data JPA auditing
         return entraUserRepository.saveAndFlush(entraUser);
     }
 
@@ -614,11 +633,12 @@ public class UserService {
 
     public boolean isAccessGranted(String userId) {
         // Get user profile by userId
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
+            UserProfile user = optionalUser.get();
             // Check if the user has access granted
-            return user.getUserProfiles().stream().anyMatch(UserProfile::isAccessGranted);
+            return user.getUserProfileStatus() == UserProfileStatus.COMPLETE;
+
         } else {
             logger.warn("User with id {} not found. Could not check access.", userId);
             return false;

@@ -54,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -146,7 +147,7 @@ class UserControllerTest {
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
-        mockPaginatedUsers.setUsers(List.of(new EntraUserDto(), new EntraUserDto()));
+        mockPaginatedUsers.setUsers(List.of(new UserProfileDto(), new UserProfileDto()));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());

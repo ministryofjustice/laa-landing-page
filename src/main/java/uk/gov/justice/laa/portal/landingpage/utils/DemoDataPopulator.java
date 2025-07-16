@@ -28,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -116,7 +117,7 @@ public class DemoDataPopulator {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     protected EntraUser buildEntraUser(User user) {
@@ -129,7 +130,7 @@ public class DemoDataPopulator {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     protected String getSurname(User user) {
@@ -185,9 +186,9 @@ public class DemoDataPopulator {
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser).activeProfile(true)
-                .accessGranted(true)
+                .userProfileStatus(UserProfileStatus.PENDING)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     @EventListener

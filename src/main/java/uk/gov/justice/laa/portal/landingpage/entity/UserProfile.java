@@ -45,9 +45,6 @@ public class UserProfile extends AuditableEntity {
     @Column(name = "active_profile", nullable = false)
     private boolean activeProfile;
 
-    @Column(name = "access_granted", nullable = false)
-    private boolean accessGranted;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", nullable = false, length = 255)
     @NotNull(message = "User type must be provided")
@@ -80,5 +77,10 @@ public class UserProfile extends AuditableEntity {
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 255)
+    @NotNull(message = "User profile status must be provided")
+    private UserProfileStatus userProfileStatus;
 
 }

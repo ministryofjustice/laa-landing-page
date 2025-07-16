@@ -45,9 +45,9 @@
                         </div>
                     </form>
                 </div>
-                <div id="event-name-hint" class="govuk-hint">
+                <!-- <div id="event-name-hint" class="govuk-hint">
                     Last logged in <span th:text="${user.lastLoggedIn}"></span>
-                </div>
+                </div> -->
                 <div class="govuk-tabs" data-module="govuk-tabs">
                     <h2 class="govuk-tabs__title">
                         Contents
@@ -72,7 +72,7 @@
                     <div class="govuk-tabs__panel" id="user-details">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
-                                <h2 class="govuk-summary-card__title" th:text="${user.email}">
+                                <h2 class="govuk-summary-card__title" th:text="${user.entraUser.email}">
                                 </h2>
                                 <!-- <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
@@ -86,13 +86,14 @@
                                         <dt class="govuk-summary-list__key">
                                             First name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.entraUser.firstName}">
+                                        </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             Last name
                                         </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                     </div>
                                 </dl>
                             </div>

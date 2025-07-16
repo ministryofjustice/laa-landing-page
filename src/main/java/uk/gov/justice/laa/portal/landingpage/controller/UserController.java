@@ -31,12 +31,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
-import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -163,10 +164,15 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     public String manageUser(@PathVariable String id, Model model) {
-        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
-        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
-        Boolean isAccessGranted = userService.isAccessGranted(id);
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+        List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
+                .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                .collect(Collectors.toList());
+        List<Office> userOffices = optionalUser.get().getOffices().stream()
+                .map(officeData -> mapper.map(officeData, Office.class))
+                .collect(Collectors.toList());
+        Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -477,7 +483,8 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedRoles, selectedOffices, selectedFirm,
                     isFirmAdmin, currentUserDto.getName());
-            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, displayRoles, selectedOfficesDisplay, selectedFirm.getName());
+            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
+                    displayRoles, selectedOfficesDisplay, selectedFirm.getName());
             eventService.logEvent(createUserAuditEvent);
 
             String successMessage = user.getFirstName() + " " + user.getLastName()
@@ -547,10 +554,10 @@ public class UserController {
     /**
      * Update user details
      * 
-     * @param id              User ID
+     * @param id                  User ID
      * @param editUserDetailsForm User details form
-     * @param result          Binding result for validation errors
-     * @param session         HttpSession to store user details
+     * @param result              Binding result for validation errors
+     * @param session             HttpSession to store user details
      * @return Redirect to user management page
      * @throws IOException              If an error occurs during user update
      * @throws IllegalArgumentException If the user ID is invalid or not found
@@ -611,7 +618,8 @@ public class UserController {
             userService.updateUserRoles(id, new ArrayList<>());
             EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto, List.of(), "apps");
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto,
+                    List.of(), "apps");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -761,7 +769,8 @@ public class UserController {
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             userService.updateUserRoles(id, allSelectedRoles);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user, allSelectedRoles, "role");
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user, allSelectedRoles,
+                    "role");
             eventService.logEvent(updateUserAuditEvent);
             return "redirect:/admin/users/manage/" + id;
         } else {
@@ -907,7 +916,8 @@ public class UserController {
         userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto, selectOfficesDisplay, "office");
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto,
+                selectOfficesDisplay, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
