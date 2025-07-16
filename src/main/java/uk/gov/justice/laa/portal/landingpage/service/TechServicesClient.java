@@ -127,6 +127,7 @@ public class TechServicesClient {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
+                    .companyName("Test Company")
                     .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
                     .requiredGroups(securityGroups).build();
 
