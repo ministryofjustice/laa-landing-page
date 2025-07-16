@@ -119,6 +119,8 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
+        boolean allowCreateUser = userService.isUserCreationAllowed(entraUser);
+        model.addAttribute("allowCreateUser", allowCreateUser);
 
         return "users";
     }

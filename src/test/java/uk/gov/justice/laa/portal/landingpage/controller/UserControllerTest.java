@@ -1456,6 +1456,7 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmail(eq(null), eq(false), eq(true), anyList(), eq(1), eq(10), eq(null),
                 eq(null)))
                 .thenReturn(paginatedUsers);
+        when(userService.isUserCreationAllowed(any(EntraUser.class))).thenReturn(false);
 
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
@@ -1466,6 +1467,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("internal")).isEqualTo(false);
         assertThat(model.getAttribute("showFirmAdmins")).isEqualTo(true);
+        assertThat(model.getAttribute("allowCreateUser")).isEqualTo(false);
         verify(firmService).getUserFirms(externalUser);
     }
 
@@ -1481,6 +1483,7 @@ class UserControllerTest {
         when(userService.isInternal(internalUser)).thenReturn(true);
         when(userService.getPageOfUsersByNameOrEmail(eq("admin"), eq(true), eq(false), isNull(), eq(1), eq(10), isNull(), isNull()))
                 .thenReturn(paginatedUsers);
+        when(userService.isUserCreationAllowed(any(EntraUser.class))).thenReturn(true);
 
         // When
         String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, model, session, authentication);
@@ -1489,6 +1492,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("usertype")).isEqualTo("internal");
         assertThat(model.getAttribute("internal")).isEqualTo(true);
+        assertThat(model.getAttribute("allowCreateUser")).isEqualTo(true);
     }
 
     @Test

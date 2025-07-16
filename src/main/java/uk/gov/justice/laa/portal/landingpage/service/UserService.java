@@ -163,14 +163,17 @@ public class UserService {
     public Optional<UserType> getUserTypeByUserId(String userId) {
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalEntraUser.isPresent()) {
-            EntraUser user = optionalEntraUser.get();
-            return user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .map(UserProfile::getUserType)
-                    .findFirst();
+            return getUserTypeByEntraUser(optionalEntraUser.get());
         } else {
             return Optional.empty();
         }
+    }
+
+    public Optional<UserType> getUserTypeByEntraUser(EntraUser user) {
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getUserType)
+                .findFirst();
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -607,5 +610,10 @@ public class UserService {
                 .filter(UserProfile::isActiveProfile)
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
+    }
+
+    public boolean isUserCreationAllowed(EntraUser entraUser) {
+        Optional<UserType> userType =  getUserTypeByEntraUser(entraUser);
+        return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
     }
 }
