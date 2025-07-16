@@ -605,4 +605,21 @@ public class UserService {
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
     }
+
+    public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
+        boolean foundFirm = false;
+        for (UserProfile userProfile : entraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firmId)) {
+                userProfile.setActiveProfile(true);
+                foundFirm = true;
+            } else {
+                userProfile.setActiveProfile(false);
+            }
+        }
+        if (!foundFirm) {
+            logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
+            throw new IOException("Firm not found for firm ID: " + firmId);
+        }
+        entraUserRepository.saveAndFlush(entraUser);
+    }
 }

@@ -1,8 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -17,6 +21,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /***
  * Controller for handling login-related requests.
@@ -26,9 +36,13 @@ public class LoginController {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
     private final LoginService loginService;
+    private final UserService userService;
+    private final FirmService firmService;
 
-    public LoginController(LoginService loginService) {
+    public LoginController(LoginService loginService, UserService userService, FirmService firmService) {
         this.loginService = loginService;
+        this.userService = userService;
+        this.firmService = firmService;
     }
 
     @GetMapping("/")
@@ -106,4 +120,29 @@ public class LoginController {
         logger.error("Error while user login:", ex);
         return new RedirectView("/error");
     }
+
+    @PostMapping("/switchfirm")
+    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication,
+                                   HttpSession session,
+                                   @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
+        userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
+        loginService.logout(authentication, authClient, session);
+        return new RedirectView("/?message=logout");
+    }
+
+    @GetMapping("/switchfirm")
+    public String userFirmsPage(Model model, Authentication authentication) {
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        List<FirmDto> firmDtoList = firmService.getUserFirms(entraUser);
+        for (FirmDto firmDto : firmDtoList) {
+            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
+            if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
+                firmDto.setName(firmDto.getName() + " - Active");
+            }
+        }
+        model.addAttribute("firmDtoList", firmDtoList);
+        return "switch-firm";
+    }
+
 }
