@@ -52,6 +52,7 @@ public class ClaimEnrichmentService {
 
             // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .anyMatch(appRole ->
                             //TODO: Update Data Model to compare by ID as name may not be unique
@@ -66,6 +67,7 @@ public class ClaimEnrichmentService {
 
             // 4. Get user roles for this app from the database
             List<String> userRoles = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .filter(profile -> profile.getAppRoles() != null)
                     .flatMap(profile -> profile.getAppRoles().stream())
                     .filter(role ->
@@ -83,6 +85,7 @@ public class ClaimEnrichmentService {
 
             //5. Get Office codes associated to the user
             List<String> officeIds = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .filter(profile -> profile.getFirm() != null)
                     .map(UserProfile::getFirm)
                     .map(Firm::getId)
@@ -93,10 +96,12 @@ public class ClaimEnrichmentService {
                     .collect(Collectors.toList());
 
             boolean isInternalUser = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
             
             if (!isInternalUser) {
                 boolean hasFirm = entraUser.getUserProfiles().stream()
+                        .filter(UserProfile::isActiveProfile)
                         .anyMatch(profile -> profile.getFirm() != null);
 
                 if (!hasFirm) {

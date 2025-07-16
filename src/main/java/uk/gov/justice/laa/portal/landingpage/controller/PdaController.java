@@ -9,13 +9,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
@@ -88,7 +86,8 @@ public class PdaController {
         UUID myFirmId = office.getFirm().getId();
         if (!userService.isInternal(entraUser)) {
             boolean isMyOffice = entraUser.getUserProfiles()
-                    .stream().anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));
+                    .stream().filter(UserProfile::isActiveProfile)
+                    .anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));
             if (!isMyOffice) {
                 log.debug("Access denied for office id: {}, user: {}", id, entraUser.getEntraOid());
                 return "redirect:/pda/offices";

@@ -124,6 +124,7 @@ class ClaimEnrichmentServiceTest {
                 .build();
 
         UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
                 .firm(firm)
                 .appRoles(Set.of(appRole))
                 .build();
@@ -184,7 +185,7 @@ class ClaimEnrichmentServiceTest {
                 .firm(firm2)
                 .build();
 
-        UserProfile profile1 = UserProfile.builder()
+        UserProfile profile1 = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
                 .firm(firm)
                 .build();
@@ -197,7 +198,6 @@ class ClaimEnrichmentServiceTest {
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(firm2Id))).thenReturn(List.of(office3));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -224,7 +224,6 @@ class ClaimEnrichmentServiceTest {
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getCode()));
 
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
-        verify(officeRepository).findOfficeByFirm_IdIn(List.of(firm2Id));
     }
 
     @Test
@@ -235,7 +234,7 @@ class ClaimEnrichmentServiceTest {
                 .app(app)
                 .build();
         // Internal users don't have firms
-        UserProfile userProfile = UserProfile.builder()
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(internalRole))
                 .firm(null)
                 .userType(UserType.INTERNAL)
@@ -334,7 +333,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_ExternalUserWithNoFirmMapping() {
         // Arrange
-        UserProfile userProfile = UserProfile.builder()
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
                 .firm(null)
                 .build();
@@ -355,7 +354,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaimThrowsException_ExternalUserWithNoFirm() {
         // Arrange
-        UserProfile userProfile = UserProfile.builder()
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
                 .firm(null)
                 .build();

@@ -61,7 +61,7 @@ class FirmServiceTest {
 
     @Test
     void getUserFirms() {
-        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().name("F1").build()).build();
         Set<UserProfile> userProfiles = Set.of(up1);
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         List<FirmDto> firms = firmService.getUserFirms(entraUser);
@@ -75,7 +75,7 @@ class FirmServiceTest {
         UUID userId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
         Firm firm = Firm.builder().id(firmId).name("Test Firm").build();
-        UserProfile userProfile = UserProfile.builder().firm(firm).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).firm(firm).build();
         Set<UserProfile> userProfiles = Set.of(userProfile);
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
 
