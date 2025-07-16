@@ -1,38 +1,38 @@
-name: Promote Main into Test
+# name: Promote Main into Test
 
-on:
-  workflow_dispatch:
+# on:
+#   workflow_dispatch:
 
-permissions:
-  contents: write
+# permissions:
+#   contents: write
 
-jobs:
-  merge:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Test
-        uses: actions/checkout@v4
-        with:
-          ref: test
-          fetch-depth: 0
+# jobs:
+#   merge:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Test
+#         uses: actions/checkout@v4
+#         with:
+#           ref: test
+#           fetch-depth: 0
       
-      - name: Configure Git User
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+#       - name: Configure Git User
+#         run: |
+#           git config user.name "github-actions[bot]"
+#           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge into Test
-        run: |
-          git pull origin test
-          git fetch origin main
-          git merge origin/main --no-ff --no-edit
+#       - name: Merge into Test
+#         run: |
+#           git pull origin test
+#           git fetch origin main
+#           git merge origin/main --no-ff --no-edit
 
-          if git status | grep -q "Unmerged paths"; then
-            echo "Merge Conflict. Please resolve manually"
-            git merge --abort
-            exit 1
-          fi
+#           if git status | grep -q "Unmerged paths"; then
+#             echo "Merge Conflict. Please resolve manually"
+#             git merge --abort
+#             exit 1
+#           fi
           
-      - name: Push to test
-        run: |
-          git push origin test
+#       - name: Push to test
+#         run: |
+#           git push origin test
