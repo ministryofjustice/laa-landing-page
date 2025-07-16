@@ -366,10 +366,10 @@ class UserControllerTest {
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
         userDetailsForm.setFirmId("firmId");
-        userDetailsForm.setIsFirmAdmin(false);
+        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         HttpSession session = new MockHttpSession();
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "firmId", session, model);
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
         EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
         assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
@@ -377,8 +377,9 @@ class UserControllerTest {
         assertThat(sessionUser.getEmail()).isEqualTo("email");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
-        assertThat((Boolean) session.getAttribute("isFirmAdmin")).isFalse();
+        UserType selectedUserType = (UserType) session.getAttribute("userType");
+        assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
     }
 
     @Test
@@ -394,19 +395,19 @@ class UserControllerTest {
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
         userDetailsForm.setFirmId("newFirm");
-        userDetailsForm.setIsFirmAdmin(true);
+        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, "newFirm", session, model);
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
         EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
         assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/services");
-        boolean firmAdmin = (Boolean) session.getAttribute("isFirmAdmin");
-        assertThat(firmAdmin).isTrue();
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
         String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
         assertThat(selectedFirmName).isEqualTo("Test Firm");
+        UserType selectedUserType = (UserType) session.getAttribute("userType");
+        assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
     }
 
     @Test
@@ -620,34 +621,19 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswersGet() {
         HttpSession session = new MockHttpSession();
-        List<String> selectedApps = List.of("app1");
-        session.setAttribute("apps", selectedApps);
-        AppRoleDto userRole = new AppRoleDto();
-        userRole.setId("app1-tester");
-        userRole.setName("tester");
-        AppDto app1 = new AppDto();
-        app1.setId("app1");
-        userRole.setApp(app1);
-        AppRoleDto userRole2 = new AppRoleDto();
-        userRole2.setId("app1-dev");
-        userRole2.setName("dev");
-        userRole2.setApp(app1);
-        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps)))
-                .thenReturn(List.of(userRole, userRole2));
-        List<String> selectedRoles = List.of("app1-dev");
-        session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("officeData", new OfficeData());
+        FirmDto selectedFirm = new FirmDto();
+        UUID firmId = UUID.randomUUID();
+        selectedFirm.setId(firmId);
+        selectedFirm.setName("Test Firm");
+        session.setAttribute("firm", selectedFirm);
+        UserType selectedUserType = UserType.EXTERNAL_SINGLE_FIRM;
+        session.setAttribute("userType", selectedUserType);
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNotNull();
-        Map<String, List<AppRoleViewModel>> cyaRoles = (Map<String, List<AppRoleViewModel>>) model
-                .getAttribute("roles");
-
-        assertThat(cyaRoles.get("app1").getFirst().getId()).isEqualTo("app1-dev");
         assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
-        assertThat(session.getAttribute("displayRoles")).isNotNull();
+        assertThat(model.getAttribute("firm")).isEqualTo(selectedFirm);
+        assertThat(model.getAttribute("userType")).isEqualTo(selectedUserType);
     }
 
     @Test
@@ -658,52 +644,10 @@ class UserControllerTest {
     }
 
     @Test
-    void addUserCheckAnswersGet_multipleRoles() {
-        HttpSession session = new MockHttpSession();
-        List<String> selectedApps = List.of("app1");
-        session.setAttribute("apps", selectedApps);
-        AppRoleDto userRole = new AppRoleDto();
-        userRole.setId("app1-tester");
-        userRole.setName("tester");
-        AppDto app1 = new AppDto();
-        app1.setId("app1");
-        userRole.setApp(app1);
-        AppRoleDto userRole2 = new AppRoleDto();
-        userRole2.setId("app1-dev");
-        userRole2.setName("dev");
-        userRole2.setApp(app1);
-        when(userService.getAllAvailableRolesForApps(eq(selectedApps))).thenReturn(List.of(userRole, userRole2));
-        List<String> selectedRoles = List.of("app1-dev", "app1-tester");
-        session.setAttribute("roles", selectedRoles);
-        session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("officeData", new OfficeData());
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setName("tester");
-        userController.getUserCheckAnswers(model, session);
-
-        assertThat(session.getAttribute("displayRoles")).isNotNull();
-    }
-
-    @Test
     void addUserCheckAnswersGetFirmAdmin() {
         HttpSession session = new MockHttpSession();
-        List<String> selectedApps = List.of("app1");
-        session.setAttribute("apps", selectedApps);
-        AppRoleDto userRole = new AppRoleDto();
-        userRole.setId("app1-tester");
-        AppDto app1 = new AppDto();
-        app1.setId("app1");
-        userRole.setApp(app1);
-        AppRoleDto userRole2 = new AppRoleDto();
-        userRole2.setId("app1-dev");
-        userRole2.setApp(app1);
-        Mockito.lenient().when(userService.getAllAvailableRolesForApps(eq(selectedApps)))
-                .thenReturn(List.of(userRole, userRole2));
-        List<String> selectedRoles = List.of("app1-dev");
-        session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("isFirmAdmin", true);
+        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
@@ -725,6 +669,7 @@ class UserControllerTest {
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
+        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
@@ -737,28 +682,17 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
-        List<String> roles = List.of("dev", "tester");
-        session.setAttribute("roles", roles);
-        session.setAttribute("displayRoles", "dev, tester");
-        List<String> selectedApps = List.of("app1");
-        session.setAttribute("apps", selectedApps);
-        OfficeData officeData = new OfficeData();
-        officeData.setSelectedOfficesDisplay(List.of("of1"));
-        officeData.setSelectedOffices(List.of("of1Id"));
-        session.setAttribute("officeData", officeData);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
-        session.setAttribute("isFirmAdmin", false);
+        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(any(), any(), any(), any(), eq(false), any())).thenReturn(entraUser);
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(entraUser);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
-        assertThat(session.getAttribute("roles")).isNull();
-        assertThat(session.getAttribute("apps")).isNull();
-        assertThat(session.getAttribute("officeData")).isNull();
         assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("userType")).isNull();
         verify(eventService).logEvent(any());
     }
 
@@ -769,6 +703,7 @@ class UserControllerTest {
         session.setAttribute("roles", roles);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
+        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
@@ -1673,7 +1608,7 @@ class UserControllerTest {
 
         final Model model = new ExtendedModelMap();
         UserDetailsForm form = new UserDetailsForm();
-        String view = userController.postUser(form, result, null, session, model);
+        String view = userController.postUser(form, result, session, model);
 
         assertThat(view).isEqualTo("add-user-details");
         assertThat(model.getAttribute("firms")).isNotNull();
@@ -1690,16 +1625,16 @@ class UserControllerTest {
         form.setLastName("B");
         form.setEmail("a@b.com");
         form.setFirmId("firmId");
-        form.setIsFirmAdmin(true);
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
 
         final Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
 
-        String view = userController.postUser(form, result, "true", session, model);
+        String view = userController.postUser(form, result, session, model);
 
-        assertThat(view).isEqualTo("redirect:/admin/user/create/services");
+        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(session.getAttribute("firm")).isNotNull();
-        assertThat(session.getAttribute("isFirmAdmin")).isEqualTo(true);
+        assertThat(session.getAttribute("userType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
     }
 
     @Test
@@ -1866,29 +1801,17 @@ class UserControllerTest {
 
     @Test
     void getUserCheckAnswers_shouldAddAttributesToModel() {
-        AppRoleDto role = new AppRoleDto();
-        role.setId("role1");
-        AppDto app = new AppDto();
-        app.setId("app1");
-        role.setApp(app);
-        List<String> selectedApps = List.of("app1");
-        when(userService.getAllAvailableRolesForApps(selectedApps)).thenReturn(List.of(role));
         HttpSession session = new MockHttpSession();
-        session.setAttribute("apps", selectedApps);
-        session.setAttribute("roles", List.of("role1"));
         session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("isFirmAdmin", true);
+        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
 
         String view = userController.getUserCheckAnswers(model, session);
 
         assertThat(view).isEqualTo("add-user-check-answers");
-        assertThat(model.getAttribute("roles")).isNotNull();
         assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("officeData")).isNotNull();
         assertThat(model.getAttribute("firm")).isNotNull();
-        assertThat(model.getAttribute("isFirmAdmin")).isEqualTo(true);
+        assertThat(model.getAttribute("userType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
     }
 
     @Test
@@ -1896,6 +1819,7 @@ class UserControllerTest {
         MockHttpSession mockSession = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
+        mockSession.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -1903,7 +1827,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(eq(user), anyList(), anyList(), any(FirmDto.class), eq(false), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester")))
                 .thenReturn(entraUser);
 
         // When
@@ -1911,8 +1835,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
-        verify(userService).createUser(eq(user), eq(new ArrayList<>()), eq(new ArrayList<>()),
-                any(FirmDto.class), eq(false), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester"));
     }
 
     @Test
@@ -2117,7 +2040,7 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
         // When
-        userController.postUser(userDetailsForm, bindingResult, null, testSession, model);
+        userController.postUser(userDetailsForm, bindingResult, testSession, model);
 
         // Then
         verify(bindingResult).rejectValue("email", "error.email", "Email address already exists");

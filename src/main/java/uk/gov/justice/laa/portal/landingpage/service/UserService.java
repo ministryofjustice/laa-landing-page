@@ -327,25 +327,10 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
-                                boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(EntraUserDto user, FirmDto firm,
+                                UserType userType, String createdBy) {
 
-        // Make sure the user is trying to be assigned valid app roles for their user
-        // type.
-        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
-                .collect(Collectors.toList()));
-        // TODO: Change this logic to include internal users when we support internal
-        // user creation.
-        List<AppRole> validAppRoles = appRoleRepository
-                .findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
-        if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
-            logger.error(
-                    "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
-                    user.getFirstName() + " " + user.getLastName());
-            throw new RuntimeException("User creation blocked");
-        }
-
-        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user, appRoles);
+        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
@@ -354,23 +339,18 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
+        return persistNewUser(user, firm, userType, createdBy);
     }
 
-    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-                                     boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
+    private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
+                                     UserType userType, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
-        List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
-        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .appRoles(new HashSet<>(appRoles))
-                // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(userType)
                 .createdDate(LocalDateTime.now())
-                .offices(offices)
                 .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)

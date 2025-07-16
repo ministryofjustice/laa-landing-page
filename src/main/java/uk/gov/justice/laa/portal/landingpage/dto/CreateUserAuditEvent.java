@@ -2,27 +2,26 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 
 public class CreateUserAuditEvent extends AuditEvent {
     private final EntraUser user;
-    private final String displayRoles;
     private final String selectedFirm;
-    private final List<String> selectedOfficesDisplay;
+    private final UserType userType;
 
     private static final String CREATE_USER_TEMPLATE = """
-            New user %s created, user id %s, with role %s, office %s, firm %s
+            New user %s created, user id %s, with firm %s and user type %s
             """;
 
     public CreateUserAuditEvent(CurrentUserDto currentUserDto, EntraUser user,
-                                String displayRoles, List<String> selectedOfficesDisplay, String selectedFirm) {
+                                String selectedFirm, UserType userType) {
         this.userId = currentUserDto.getUserId();
         this.userName = currentUserDto.getName();
         this.user = user;
-        this.displayRoles = displayRoles;
         this.selectedFirm = selectedFirm;
-        this.selectedOfficesDisplay = selectedOfficesDisplay;
+        this.userType = userType;
     }
 
     @Override
@@ -33,7 +32,6 @@ public class CreateUserAuditEvent extends AuditEvent {
     @Override
     public String getDescription() {
         String userName = user.getFirstName() + " " + user.getLastName();
-        String offices = String.join(", ", selectedOfficesDisplay);
-        return String.format(CREATE_USER_TEMPLATE, userName, user.getId(), displayRoles, offices, selectedFirm);
+        return String.format(CREATE_USER_TEMPLATE, userName, user.getId(), selectedFirm, userType.getFriendlyName());
     }
 }
