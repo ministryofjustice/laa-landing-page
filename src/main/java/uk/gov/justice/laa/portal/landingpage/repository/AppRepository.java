@@ -12,4 +12,6 @@ public interface AppRepository extends JpaRepository<App, UUID> {
     Optional<App> findByName(String name);
 
     Optional<App> findByEntraAppIdOrName(String entraAppOid, String name);
+
+    Optional<App> findByEntraAppId(String entraAppOid);
 }

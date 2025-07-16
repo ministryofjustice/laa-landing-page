@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,6 +50,7 @@ class ClaimEnrichmentServiceTest {
     private static final String USER_EMAIL = "test@example.com";
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String APP_ID = "123e4567-e89b-12d3-a456-426614174000";
+    private static final String ENTRA_APP_ID = "EntraAppID";
     private static final String APP_NAME = "Test App";
     private static final String EXTERNAL_ROLE = "USER_ROLE";
     private static final String INTERNAL_ROLE = "INTERNAL";
@@ -81,6 +83,7 @@ class ClaimEnrichmentServiceTest {
 
         EntraServicePrincipalDto clientServicePrincipal = EntraServicePrincipalDto.builder()
                 .appDisplayName(APP_NAME)
+                .appId(ENTRA_APP_ID)
                 .build();
 
         EntraAuthenticationContext authContext = EntraAuthenticationContext.builder()
@@ -99,6 +102,7 @@ class ClaimEnrichmentServiceTest {
 
         app = App.builder()
                 .id(UUID.fromString(APP_ID))
+                .entraAppId(ENTRA_APP_ID)
                 .name(APP_NAME)
                 .build();
 
@@ -141,7 +145,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaim_Success() {
         // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
         // Act
@@ -196,7 +200,7 @@ class ClaimEnrichmentServiceTest {
         entraUser.setUserProfiles(Set.of(profile1, profile2));
 
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
         // Act
@@ -242,7 +246,7 @@ class ClaimEnrichmentServiceTest {
         entraUser.setUserProfiles(Set.of(userProfile));
 
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -287,7 +291,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaimThrowsException_AppNotFound() {
         // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.empty());
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.empty());
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -303,7 +307,7 @@ class ClaimEnrichmentServiceTest {
         // Arrange
         entraUser.setUserProfiles(Collections.emptySet());
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -318,7 +322,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaimThrowsException_ExternalUserWithFirmButNoOffices() {
         // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
         when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(Collections.emptyList());
 
         // Act & Assert
@@ -340,7 +344,7 @@ class ClaimEnrichmentServiceTest {
         entraUser.setUserProfiles(Set.of(userProfile));
 
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
@@ -361,7 +365,7 @@ class ClaimEnrichmentServiceTest {
         entraUser.setUserProfiles(Set.of(userProfile));
 
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByName(APP_NAME)).thenReturn(Optional.of(app));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
         // Act & Assert
         ClaimEnrichmentException exception = assertThrows(
