@@ -26,8 +26,6 @@ import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,25 +43,74 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class SecurityConfigTest {
 
-    @TestConfiguration
-    static class OauthClientTestConfig {
-        @Bean
-        public ClientRegistrationRepository clientRegistrationRepository() {
-            return new CustomRepository();
-        }
+    @Test
+    void adminEndpointsRequireAdminRole() throws Exception {
+        // Without admin role - should be redirected
+        mockMvc.perform(get("/admin/dashboard"))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().is3xxRedirection());
 
-        public static class CustomRepository implements ClientRegistrationRepository {
-            private final Map<String, ClientRegistration> registrations = new HashMap<>();
+        // With admin role - should be allowed
+        mockMvc.perform(get("/admin/dashboard")
+                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("admin"));
 
-            public CustomRepository() {
-                // Empty repository for testing
-            }
+        // With external roles - users create should be blocked
+        mockMvc.perform(get("/admin/user/create")
+                        .with(jwt().authorities(UserType.EXTERNAL_TYPES.stream()
+                                .map(UserType::name)
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isForbidden());
 
-            @Override
-            public ClientRegistration findByRegistrationId(String registrationId) {
-                return registrations.get(registrationId);
-            }
-        }
+        // With internal role - should be allowed to create users
+        mockMvc.perform(get("/admin/user/create")
+                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("create-user"));
+
+        // With external admin roles - manage users allowed
+        mockMvc.perform(get("/admin/users/manage")
+                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM_ADMIN.name()})
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("manage-user"));
+
+        // With internal roles - manage users allowed
+        mockMvc.perform(get("/admin/users/manage")
+                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("manage-user"));
+
+        // With external std roles - do not allow manage users
+        mockMvc.perform(get("/admin/users/manage")
+                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM.name()})
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isForbidden());
+
+        // With admin role - should be allowed
+        mockMvc.perform(get("/admin/dashboard")
+                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
+                                .map(SimpleGrantedAuthority::new)
+                                .collect(Collectors.toList()))))
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(content().string("admin"));
     }
 
     @Autowired
@@ -130,21 +177,23 @@ class SecurityConfigTest {
                 .andExpect(status().is3xxRedirection());
     }
 
-    @Test
-    void adminEndpointsRequireAdminRole() throws Exception {
-        // Without admin role - should be redirected
-        mockMvc.perform(get("/admin/dashboard"))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().is3xxRedirection());
+    @TestConfiguration
+    static class OauthClientTestConfig {
+        @Bean
+        public ClientRegistrationRepository clientRegistrationRepository() {
+            return new CustomRepository();
+        }
 
-        // With admin role - should be allowed
-        mockMvc.perform(get("/admin/dashboard")
-                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList()))))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isOk())
-                .andExpect(content().string("admin"));
+        public static class CustomRepository implements ClientRegistrationRepository {
+            public CustomRepository() {
+                // Empty repository for testing
+            }
+
+            @Override
+            public ClientRegistration findByRegistrationId(String registrationId) {
+                return null;
+            }
+        }
     }
     
     @Test
