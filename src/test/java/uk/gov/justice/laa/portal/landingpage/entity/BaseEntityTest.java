@@ -29,31 +29,30 @@ public class BaseEntityTest {
     }
 
     protected Office buildTestOffice() {
-        return Office.builder().name("TestOffice").address("Address").phone("123456").build();
-    }
-
-    protected AppRegistration buildTestEntraAppRegistration() {
-        return AppRegistration.builder().name("Test app reg").build();
+        return Office.builder().name("TestOffice").code("office code").address("Address").phone("123456").build();
     }
 
     protected EntraUser buildTestEntraUser() {
         return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
                 .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
-                .userName("firstname.lastname").email("test@email.com")
+                .entraOid("entra_id").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }
 
     protected App buildTestLaaApp() {
-        return App.builder().name("Test App").build();
+        return App.builder().name("Test App").entraAppId("Entra App Id")
+                .securityGroupOid("SecGroupId").securityGroupName("SecGroup Name")
+                .build();
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role").build();
+        return AppRole.builder().name("Test App Role")
+                .roleType(RoleType.INTERNAL).build();
     }
 
     protected UserProfile buildTestLaaUserProfile() {
         return UserProfile.builder().entraUser(buildTestEntraUser())
-                .userType(UserType.INTERNAL)
+                .userType(UserType.INTERNAL).legacyUserId("legacy_user_id")
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }
 

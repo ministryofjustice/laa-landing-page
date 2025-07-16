@@ -40,7 +40,7 @@ jobs:
 
       # enable vulnerability and secret detection as well as misconfiguration detection
       - name: Run Trivy Vulnerability Scanner in Repo Mode
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37
+        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4
         with:
           scan-type: 'fs'
           scanners: misconfig,vuln,secret
@@ -79,11 +79,19 @@ jobs:
 
           # Print results for visibility in workflow logs
           echo -e "$SCAN_RESULTS"
+      
+      - name: Set SHOULD_NOTIFY
+        run: |
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
+            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
+          else
+            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
+          fi
 
       - name: Send notification to Slack
         id: slack
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
         with:
           payload: |
             {
@@ -92,7 +100,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Vulnerability Scan Report: ${{ github.event.repository.name }}"
+                    "text": "Trivy Vulnerability Scan Report: ${{ github.event.repository.name }}"
                   }
                 },
                 {
@@ -134,12 +142,21 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning"
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning \n\n This scan was run from ${{ github.ref }}."
                   }
                 }
               ]
             }
+          webhook-type: incoming-webhook
 
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      
+      - name: Fail Pipeline if Vulnerability Found
+        run: |
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
+            echo "Vulnerabilities detected — failing the job"
+            exit 1
+          else
+            echo "No vulnerabilities found."
+          fi

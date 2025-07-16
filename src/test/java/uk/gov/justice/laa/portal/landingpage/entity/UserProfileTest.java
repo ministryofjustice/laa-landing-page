@@ -39,6 +39,43 @@ class UserProfileTest extends BaseEntityTest {
     }
 
     @Test
+    public void testLaaUserProfileNullLegacyId() {
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, laaProf -> {
+        });
+
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
+
+        assertThat(violations).isEmpty();
+        assertNotNull(userProfile);
+    }
+
+    @Test
+    public void testLaaUserProfileEmptyLegacyId() {
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, laaProf -> {
+        });
+
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
+
+        assertThat(violations).isEmpty();
+        assertNotNull(userProfile);
+    }
+
+    @Test
+    public void testLaaUserProfileLegacyIdTooLong() {
+        UserProfile userProfile = buildTestLaaUserProfile();
+        update(userProfile, f -> f.setLegacyUserId("TestLegacyIdThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Legacy user ID must be less than 100 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("legacyUserId");
+    }
+
+    @Test
     public void testLaaUserProfileNullCreatedBy() {
         UserProfile userProfile = buildTestLaaUserProfile();
         update(userProfile, laaProf -> laaProf.setCreatedBy(null));

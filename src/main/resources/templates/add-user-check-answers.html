@@ -21,7 +21,6 @@
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-two-thirds-from-desktop">
-                <span class="govuk-caption-l">Firm 1 | 123455</span>
                 <h1 class="govuk-heading-l">
                     Check your answers
                 </h1>
@@ -44,7 +43,7 @@
                                         Email
                                     </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${user.mail}"></span>
+                                        <span th:text="${user.email}"></span>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -52,7 +51,7 @@
                                         First Name
                                     </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${user.givenName}"></span>
+                                        <span th:text="${user.firstName}"></span>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -60,7 +59,7 @@
                                         Last name
                                     </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${user.surname}"></span>
+                                        <span th:text="${user.lastName}"></span>
 
                                     </dd>
                                 </div>
@@ -82,7 +81,7 @@
                             </dl>
                         </div>
                     </div>
-                    <div class="govuk-summary-card">
+                    <div class="govuk-summary-card" th:if="${roles != null}">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
                                 Services
@@ -110,7 +109,7 @@
                             </dl>
                         </div>
                     </div>
-                    <div class="govuk-summary-card">
+                    <div class="govuk-summary-card" th:if="${officeData.getSelectedOfficesDisplay() != null}">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
                                 Offices
@@ -145,11 +144,16 @@
                             </dl>
                         </div>
                     </div>
+                    <h2 class="govuk-heading-m">Confirm user creation</h2>
+                    <p class="govuk-body">By submitting this, you
+                        confirm that you would like to create this user and send them an invitation to complete setting
+                        up their account.
+                    </p>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button" data-module="govuk-button" data-govuk-button-init="">
-                            Create user and send invite
-                        </button>
+                        <button type="submit" class="govuk-button">Create User</button>
+                        <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                     </div>
+
                 </form>
             </div>
         </div>

@@ -1,13 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.microsoft.graph.models.AppRole;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Set;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Model class representing Laa Applications
@@ -16,17 +14,40 @@ import java.util.Set;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LaaApplication {
-    @JsonProperty(index = 0)
-    private String id;
-    @JsonProperty(index = 1)
+public class LaaApplication implements Comparable<LaaApplication> {
+    private String name;
     private String oidGroupName;
-    @JsonProperty(index = 2)
     private String title;
-    @JsonProperty(index = 3)
     private String description;
-    @JsonProperty(index = 4)
     private String url;
-    @JsonProperty(index = 5)
-    private Set<AppRole> role;
+    private int ordinal;
+    private String laaApplicationDetails;
+    @JsonIgnore
+    private LaaApplicationDetails laaApplicationDetailsObj;
+
+    @Override
+    public int compareTo(@NotNull LaaApplication o) {
+        return ordinal - o.ordinal;
+    }
+
+    public LaaApplicationDetails getLaaApplicationDetailsObj() {
+        if (laaApplicationDetailsObj == null && laaApplicationDetails != null) {
+            String[] values = laaApplicationDetails.split("//");
+            String oid = values.length > 0 ? values[0] : "";
+            String securityGroupName = values.length > 1 ? values[1] : "";
+            String securityGroupOid = values.length > 2 ? values[2] : "";
+
+            laaApplicationDetailsObj = new LaaApplicationDetails(oid, securityGroupName, securityGroupOid);
+
+        }
+        return laaApplicationDetailsObj;
+    }
+
+    @AllArgsConstructor
+    @Data
+    public static class LaaApplicationDetails {
+        private String oid;
+        private String securityGroupName;
+        private String securityGroupOid;
+    }
 }

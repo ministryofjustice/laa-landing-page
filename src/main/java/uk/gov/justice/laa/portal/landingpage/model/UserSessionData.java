@@ -1,13 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * UserSessionData
@@ -18,10 +18,7 @@ import java.util.List;
 public class UserSessionData {
     private String name;
     private String accessToken;
-    private List<AppRoleAssignment> appRoleAssignments;
-    private List<AppRole> userAppRoles;
-    private User user;
-    private String lastLogin;
-    private List<LaaApplication> laaApplications;
-    private List<LaaApplication> userAppsAndRoles;
+    private EntraUserDto user;
+    private Set<LaaApplication> laaApplications;
+    List<UserType> userTypes;
 }

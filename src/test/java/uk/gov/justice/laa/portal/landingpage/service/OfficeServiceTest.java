@@ -1,18 +1,26 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,6 +29,11 @@ class OfficeServiceTest {
     private OfficeService officeService;
     @Mock
     private OfficeRepository officeRepository;
+
+    @BeforeEach
+    void setUp() {
+        officeService = new OfficeService(officeRepository, new MapperConfig().modelMapper());
+    }
 
     @Test
     void getOffices() {
@@ -42,5 +55,36 @@ class OfficeServiceTest {
         when(officeRepository.findOfficeByFirm_IdIn(List.of(officeId))).thenReturn(dbOffices);
         List<Office> offices = officeService.getOfficesByFirms(List.of(officeId));
         assertThat(offices).hasSize(2);
+    }
+
+    @Test
+    public void getOfficeByIdWhenOfficeIsPresent() {
+        // Given
+        when(officeRepository.findById(any())).thenReturn(Optional.of(Office.builder().build()));
+        // When
+        Office office = officeService.getOffice(UUID.randomUUID());
+        // Then
+        assertThat(office).isNotNull();
+    }
+
+    @Test
+    public void getOfficeByIdWhenOfficeIsNotPresent() {
+        // Given
+        when(officeRepository.findById(any())).thenReturn(Optional.empty());
+        // When
+        Office office = officeService.getOffice(UUID.randomUUID());
+        // Then
+        assertThat(office).isNull();
+    }
+
+    @Test
+    void getUserOffices() {
+        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(up1)).build();
+        Office office1 = Office.builder().name("Firm").build();
+        when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office1));
+        List<OfficeDto> offices = officeService.getUserOffices(entraUser);
+        assertThat(offices).hasSize(1);
+        assertThat(offices.getFirst().getName()).isEqualTo("Firm");
     }
 }

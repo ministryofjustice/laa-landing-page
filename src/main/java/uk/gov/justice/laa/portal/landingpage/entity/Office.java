@@ -24,6 +24,7 @@ import java.util.Set;
 @Entity
 @Table(name = "office", indexes = {
     @Index(name = "OfficeNameIdx", columnList = "name"),
+    @Index(name = "OfficeCodeIdx", columnList = "code"),
 })
 @Getter
 @Setter
@@ -36,6 +37,10 @@ public class Office extends BaseEntity {
     @NotBlank(message = "Office name must be provided")
     @Size(min = 1, max = 255, message = "Office name must be between 1 and 255 characters")
     private String name;
+
+    @Column(name = "code", nullable = true, length = 255, unique = true)
+    @Size(max = 255, message = "Office code must be less than 255 characters")
+    private String code;
 
     @Column(name = "address", nullable = false, length = 500)
     @NotBlank(message = "Office address must be provided")

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
+
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 
 @DataJpaTest
@@ -13,24 +13,23 @@ public class AppRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private AppRegistrationRepository appRegistrationRepository;
+    private AppRepository repository;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private AppRepository repository;
+    private AppRoleRepository appRoleRepository;
 
     @BeforeEach
     public void beforeEach() {
+        // Delete child tables first to avoid foreign key constraint violations
+        appRoleRepository.deleteAll();
         repository.deleteAll();
-        appRegistrationRepository.deleteAll();
     }
 
     @Test
     public void testSaveAndRetrieveLaaApp() {
-        AppRegistration appRegistration = buildEntraAppRegistration("App Registration");
-        appRegistrationRepository.saveAndFlush(appRegistration);
-
-        App app = buildLaaApp(appRegistration, "App1");
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+                "Security Group Name");
         repository.saveAndFlush(app);
 
         App result = repository.findById(app.getId()).orElseThrow();
@@ -38,11 +37,8 @@ public class AppRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(app.getId());
         Assertions.assertThat(result.getName()).isEqualTo("App1");
-        Assertions.assertThat(result.getAppRegistration()).isNotNull();
-
-        AppRegistration resultAppRegistration = result.getAppRegistration();
-        Assertions.assertThat(resultAppRegistration.getId()).isEqualTo(appRegistration.getId());
-        Assertions.assertThat(resultAppRegistration.getName()).isEqualTo("App Registration");
-
+        Assertions.assertThat(result.getEntraAppId()).isEqualTo("Entra App 1");
+        Assertions.assertThat(result.getSecurityGroupOid()).isEqualTo("Security Group Id");
+        Assertions.assertThat(result.getSecurityGroupName()).isEqualTo("Security Group Name");
     }
 }

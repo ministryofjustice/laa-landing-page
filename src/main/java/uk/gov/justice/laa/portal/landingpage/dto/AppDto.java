@@ -1,13 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
-import lombok.Data;
-
 import java.util.Objects;
+
+import lombok.Data;
 
 @Data
 public class AppDto {
     private String id;
     private String name;
+    private boolean selected;
 
     @Override
     public boolean equals(Object obj) {

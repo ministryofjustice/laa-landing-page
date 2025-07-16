@@ -1,10 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import com.microsoft.graph.models.AppRole;
-import com.microsoft.graph.models.AppRoleAssignment;
-import com.microsoft.graph.models.User;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +19,10 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Service class for handling login-related logic.
@@ -29,6 +31,7 @@ import java.util.List;
 public class LoginService {
 
     private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
+    private final GraphApiService graphApiService;
 
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MemberName
     @Value("${spring.security.oauth2.client.registration.azure.client-id}")
@@ -38,17 +41,15 @@ public class LoginService {
     private String AZURE_TENANT_ID;
     // CHECKSTYLE.ON: AbbreviationAsWordInName|MemberName
 
-    private final GraphApiService graphApiService;
     private final UserService userService;
 
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
 
-    public LoginService(GraphApiService graphApiService, UserService userService) {
-        this.graphApiService = graphApiService;
+    public LoginService(UserService userService, GraphApiService graphApiService) {
         this.userService = userService;
-
+        this.graphApiService = graphApiService;
     }
 
     /**
@@ -96,24 +97,58 @@ public class LoginService {
         String tokenValue = accessToken.getTokenValue();
         session.setAttribute("accessToken", tokenValue);
 
-        List<AppRoleAssignment> appRoleAssignments =
-                graphApiService.getAppRoleAssignments(tokenValue);
-        List<AppRole> userAppRoleAssignments = graphApiService.getUserAssignedApps(tokenValue);
+        EntraUserDto entraUser = userService.findUserByUserEntraId(principal.getAttribute("oid"));
 
-        User user = graphApiService.getUserProfile(tokenValue);
+        List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraOid());
 
-        LocalDateTime lastLogin = graphApiService.getLastSignInTime(tokenValue);
-        String formattedLastLogin = "N/A";
+        Set<LaaApplication> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
 
-        if (lastLogin != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-            formattedLastLogin = lastLogin.format(formatter);
+        return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);
+    }
+
+    /**
+     * Will fetch current logged-in user
+     *
+     * @param authentication   The authentication object containing user details.
+     * @return A {@link CurrentUserDto} object containing the user data
+     */
+    public CurrentUserDto getCurrentUser(Authentication authentication) {
+        if (authentication == null) {
+            return null;
         }
 
-        List<LaaApplication> managedAppRegistrations = userService.getManagedAppRegistrations();
-        List<LaaApplication> userAppsAndRoles = graphApiService.getUserAppsAndRoles(tokenValue);
+        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+        OAuth2User principal = oauthToken.getPrincipal();
 
-        return new UserSessionData(name, tokenValue, appRoleAssignments,
-                userAppRoleAssignments, user, formattedLastLogin, managedAppRegistrations, userAppsAndRoles);
+        String name = principal.getAttribute("name");
+        UUID userId = UUID.fromString(Objects.requireNonNull(principal.getAttribute("oid")));
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName(name);
+        currentUserDto.setUserId(userId);
+        return currentUserDto;
+    }
+
+    public EntraUser getCurrentEntraUser(Authentication authentication) {
+        CurrentUserDto currentUserDto = getCurrentUser(authentication);
+        EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
+        assert entraUser != null;
+        return entraUser;
+    }
+
+    public void logout(Authentication authentication,
+                       OAuth2AuthorizedClient authorizedClient,
+                       HttpSession session) {
+        if (authentication == null) {
+            return;
+        }
+
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+        if (accessToken == null || accessToken.getTokenValue() == null) {
+            logger.info("Access token is null");
+            return;
+        }
+        String tokenValue = accessToken.getTokenValue();
+        graphApiService.logoutUser(tokenValue);
+        session.invalidate();
     }
 }

@@ -3,6 +3,11 @@ plugins {
     id "io.sentry.jvm.gradle" version "5.5.0"
 }
 
+ext {
+    set('springWebMvcVersion', "6.1.13")
+    set('springDocVersion', "2.4.0")
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -25,16 +30,35 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 }
 
+sourceSets {
+    playwrightTest {
+        java {
+            srcDir 'src/playwrightTest/java'
+        }
+        resources {
+            srcDir 'src/playwrightTest/resources'
+        }
+        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+configurations {
+    playwrightImplementation.extendsFrom testImplementation
+    playwrightRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.15.0'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
 
     annotationProcessor 'org.projectlombok:lombok'
 
@@ -47,6 +71,17 @@ dependencies {
 
     // MSAL for authentication
     implementation 'com.microsoft.azure:msal4j:1.19.1'
+
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // OpenAPI / Swagger Documentation
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+
+    // Microsoft Graph SDK with Azure Identity
+    implementation 'com.azure:azure-identity:1.16.0'
+    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
+    implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
 
     // Azure Identity SDK for OAuth2 and token management
     implementation 'com.azure:azure-identity:1.16.0'
@@ -74,6 +109,7 @@ dependencies {
     testImplementation('org.testcontainers:postgresql')
     testImplementation('org.testcontainers:junit-jupiter')
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
+    testImplementation('com.microsoft.playwright:playwright:1.52.0')
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
@@ -81,6 +117,18 @@ test {
     useJUnitPlatform()
     jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
     finalizedBy jacocoTestReport // report is always generated after tests run
+}
+
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.register('playwrightTest', Test) {
+    description = 'Runs Playwright tests.'
+    group = 'verification'
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    testClassesDirs = sourceSets.playwright.output.classesDirs
+    classpath = sourceSets.playwright.runtimeClasspath
 }
 
 jacocoTestReport {

@@ -2,8 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      pageCategory=${'users'})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Users</title>
@@ -11,24 +10,31 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/home">Home</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">Users</a>
-            </li>
-        </ol>
-    </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+            aria-label="success: User added successfully" data-module="moj-alert">
+            <div>
+                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 30 30" height="30" width="30">
+                    <path
+                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                        fill="currentColor" />
+                </svg>
+            </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">Success</h2>
+                <p th:text="${successMessage}"></p>
+            </div>
+
+            <div class="moj-alert__action">
+                <button class="moj-alert__dismiss" hidden>Dismiss</button>
+            </div>
+        </div>
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
-
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
-                        <span class="govuk-caption-l">Firm | 12345</span>
-                        <h1 class="govuk-heading-xl">User Dashboard</h1>
+                        <h1 class="govuk-heading-l">Manage user access</h1>
                     </div>
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
@@ -36,7 +42,7 @@
                                 <button type="button" class="govuk-button govuk-button--secondary"
                                     data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/user/create/details';">
-                                    Create a user
+                                    Create a new user
                                 </button>
                             </div>
                         </div>
@@ -48,19 +54,18 @@
                         <form method="get" th:action="@{/admin/users}" role="search">
                             <div class="moj-search">
                                 <div class="govuk-form-group">
-                                    <label class="govuk-label moj-search__label govuk-!-font-weight-bold" for="search">
+                                    <label class="govuk-label govuk-label--m moj-search__label govuk-!-font-weight-bold"
+                                        for="search">
                                         Search users
+                                        <div id="offices-hint" class="govuk-hint govuk-!-margin-top-1">
+                                            You can search by name or email
+                                        </div>
                                     </label>
-                                    <input  class="govuk-input moj-search__input"
-                                            id="search"
-                                            name="search"
-                                            type="search"
-                                            th:value="${param.search}"
-                                            autocomplete="off">
+                                    <input class="govuk-input moj-search__input" id="search" name="search" type="search"
+                                        th:value="${param.search}" autocomplete="off">
                                 </div>
-                                <button type="submit"
-                                        class="govuk-button moj-search__button"
-                                        data-module="govuk-button">
+                                <button type="submit" class="govuk-button moj-search__button"
+                                    data-module="govuk-button">
                                     Search
                                 </button>
                             </div>
@@ -68,14 +73,37 @@
                     </div>
                 </div>
 
-                <br>
-                <form method="post" th:action="@{/admin/users/disable}">
+                <form class="govuk-form" role="form">
+                    <div class="govuk-form-group govuk-!-margin-top-3">
+                        <fieldset class="govuk-fieldset">
+                            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="show-firm-admins" name="show-firm-admins"
+                                        type="checkbox" value="true" onchange="handleShowFirmAdmins(this)"
+                                        th:checked="${param.showFirmAdmins != null}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="organisation">
+                                        Show firm admins
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <script>
+                        function handleShowFirmAdmins(checkbox) {
+                            const url = new URL(window.location.href);
+                            if (checkbox.checked) {
+                                url.searchParams.set('showFirmAdmins', 'true');
+                            } else {
+                                url.searchParams.delete('showFirmAdmins');
+                            }
+                            window.location.href = url.toString();
+                        }
+                    </script>
+                </form>
+                <form class="govuk-form-group govuk-!-margin-top-3">
                     <table class="govuk-table" data-module="moj-sortable-table" data-id-prefix="users-">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
-                                <td scope="col" class="govuk-table__header">
-                                    <span class="govuk-visually-hidden">Select user</span>
-                                </td>
                                 <th scope="col" class="govuk-table__header" aria-sort="ascending"><button type="button"
                                         data-index="0">Name</button></th>
                                 <th scope="col" class="govuk-table__header" aria-sort="none"><button type="button"
@@ -88,17 +116,7 @@
                         </thead>
 
                         <tbody class="govuk-table__body">
-                            <tr th:each="user : ${users}">
-                                <td class="govuk-table__cell govuk-checkboxes govuk-checkboxes--small"
-                                    data-module="govuk-checkboxes">
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="disable-user" name="disable-user"
-                                            type="checkbox" th:value="${user.id}" />
-                                        <label class="govuk-label govuk-checkboxes__label" for="disable-user">
-                                            <span class="govuk-visually-hidden">Select to disable user</span>
-                                        </label>
-                                    </div>
-                                </td>
+                            <tr class="govuk-table__row" th:each="user : ${users}">
                                 <td class="govuk-table__cell">
                                     <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
                                         th:text="${user.fullName}"></a>
@@ -112,7 +130,6 @@
                             </tr>
                         </tbody>
                     </table>
-                    <button type="submit">Disable selected</button>
                 </form>
                 <nav class="moj-pagination" aria-label="Pagination navigation">
                     <ul class="moj-pagination__list">
@@ -125,8 +142,10 @@
                         <th:block th:each="i : ${#numbers.sequence(1, totalPages ?: 1)}">
                             <!-- <li class="moj-pagination__item moj-pagination__item--active"> -->
                             <li class="moj-pagination__item">
-                                <a class="moj-pagination__link" th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search})}"
-                                   th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}" th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
+                                <a class="moj-pagination__link"
+                                    th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search})}"
+                                    th:aria-label="'Page ' + ${i} + ' of ' + ${totalPages}"
+                                    th:aria-current="${i == page ? 'page' : null}" th:text="${i}"></a>
                             </li>
                         </th:block>
                         <li class="moj-pagination__item  moj-pagination__item--next" th:if="${page < totalPages}">
@@ -136,8 +155,10 @@
                                     page</span></a>
                         </li>
                     </ul>
-                    <p class="moj-pagination__results">Showing <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
-                        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b> of <b>
+                    <p class="moj-pagination__results">Showing <b
+                            th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
+                        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
+                        of <b>
                             <b th:text="${totalUsers}"></b>
                         </b> results</p>
                 </nav>

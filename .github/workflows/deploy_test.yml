@@ -59,11 +59,19 @@ jobs:
       - name: Build and Push Docker Image to the container repository
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+
+          #  Tag the image per env (links with lifecycle policy of image)
+          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$ENV_NAME
+          
+          # Push the image to the ECR repository
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$ENV_NAME
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+
 
       - name: Generate Deployment Files
         run: |
@@ -72,12 +80,34 @@ jobs:
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
           POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
+          TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
+          TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
+          APP_CIVIL_APPLY_NAME: ${{ vars.APP_CIVIL_APPLY_NAME }}
+          APP_CIVIL_APPLY_DETAILS: ${{ vars.APP_CIVIL_APPLY_DETAILS }}
+          APP_CIVIL_APPLY_URL: ${{ secrets.APP_CIVIL_APPLY_URL }}
+          APP_CRIME_APPLY_NAME: ${{ vars.APP_CRIME_APPLY_NAME }}
+          APP_CRIME_APPLY_DETAILS: ${{ vars.APP_CRIME_APPLY_DETAILS }}
+          APP_CRIME_APPLY_URL: ${{ secrets.APP_CRIME_APPLY_URL }}
+          APP_PUI_NAME: ${{ vars.APP_PUI_NAME }}
+          APP_PUI_DETAILS: ${{ vars.APP_PUI_DETAILS }}
+          APP_PUI_URL: ${{ secrets.APP_PUI_URL }}
+          APP_SUBMIT_CRIME_FORM_NAME: ${{ vars.APP_SUBMIT_CRIME_FORM_NAME }}
+          APP_SUBMIT_CRIME_FORM_DETAILS: ${{ vars.APP_SUBMIT_CRIME_FORM_DETAILS }}
+          APP_SUBMIT_CRIME_FORM_URL: ${{ secrets.APP_SUBMIT_CRIME_FORM_URL }}
+          TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
+          TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
+          TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}
+          TECH_SERVICES_AZURE_CLIENT_SECRET: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_SECRET }}
+          TECH_SERVICES_TENANT_ID: ${{ secrets.TECH_SERVICES_TENANT_ID }}
+          TECH_SERVICES_BASE_URL: ${{ secrets.TECH_SERVICES_BASE_URL }}
+          APP_DEFAULT_USER_ACC_SEC_GROUP: ${{ secrets.APP_DEFAULT_USER_ACC_SEC_GROUP }}
 
       - name: Deploy to Cloud Platform
         run: |
@@ -97,7 +127,7 @@ jobs:
       - name: Generate Monitoring Deployment Files
         run: |
           rm deployments/* 2> /dev/null || true
-          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER' > deployments/prometheus.yml
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER,$ALERT_ALWAYS_ON_ENV' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
         env:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
@@ -105,6 +135,8 @@ jobs:
           ENV_NAME: ${{ vars.ENV_NAME }}
           # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
           RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
+          # Should be 'prd' only if the environment is prd, otherwise set it to an empty string. 
+          ALERT_ALWAYS_ON_ENV: ''
       
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform

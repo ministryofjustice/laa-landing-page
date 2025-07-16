@@ -4,6 +4,7 @@ import com.microsoft.graph.models.User;
 import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.PropertyMap;
+import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -18,7 +19,8 @@ public class MapperConfig {
         modelMapper.getConfiguration()
                 .setFieldMatchingEnabled(true)
                 .setSkipNullEnabled(true)
-                .setAmbiguityIgnored(true);
+                .setAmbiguityIgnored(true)
+                .setMatchingStrategy(MatchingStrategies.STRICT);
         modelMapper.addMappings(graphUserToEntraUserPropertyMap);
         addEntraUserToEntraUserDtoTypeMap(modelMapper);
         return modelMapper;
@@ -61,7 +63,7 @@ public class MapperConfig {
             }).map(source.getDisplayName(), destination.getLastName());
 
             // Other non-matching fields mapping
-            map().setUserName(source.getUserPrincipalName());
+            map().setEntraOid(source.getId());
             map().setEmail(source.getMail());
         }
     };

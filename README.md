@@ -44,7 +44,6 @@ Once exported be sure to source your latest bash profile: `source ~/.bash_profil
 #### Obtaining Client Credentials
 
 - The client secret and client ID are available in the Entra UI:
-
   - Path: App registrations > laa-portal-oidc-playground > Certificates & secrets.
 
 - If you do not have the necessary permissions to view the client ID and secret, request them from an Entra admin.
@@ -108,13 +107,11 @@ Once the environment variables are set, you can run must first start the databas
 #### Starting the Application
 
 - **IntelliJ IDEA:**
-
   1. Open the project in IntelliJ.
   2. Open the Gradle tool window (`View > Tool Windows > Gradle`).
   3. Navigate to `Tasks > application` and double-click `bootRun`.
 
 - **VSCode:**
-
   1. Open the project in VSCode
   2. Open a VSCode Terminal
   3. Ensure the `.env` environment variables are exported inside the terminal
@@ -124,7 +121,6 @@ Once the environment variables are set, you can run must first start the databas
      ```
 
 - **Command Line:**
-
   1. Navigate to the project root directory.
   2. Run the following command:
      ```sh
@@ -136,3 +132,31 @@ Once the application is running steadily, you can access the UI by navigating to
 ```
 http://localhost:8080
 ```
+
+### Snyk & Trivy Integration
+
+If a pipeline is picking up a vulnerability that you wish to add to the ignore list, then make sure to add it to either `.trivyignore` or `.snyk` rather than resolving in the UI.
+
+## Automation Playwright Test Suite
+
+**These tests are used for automation testing of LAA Landing Page using Playwright with Java**
+
+### Location:
+
+     src/playwrightTest
+
+### Configuration:
+
+    src/playwrightTest/resources/playwright.properties
+
+### Running Tests
+
+- Update url, username and password in configuration file
+- Run individual tests, classes or test suits.
+- Tests can run in headless or headed mode
+  - This can be configured using headless property in configuration file
+
+### Tests Coverage
+
+- UI of LAA Landing Page
+- Reusable logic e.g. login will be in BaseFrontEndTest class

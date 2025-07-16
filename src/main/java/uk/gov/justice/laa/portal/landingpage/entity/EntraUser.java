@@ -7,11 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
@@ -35,7 +31,7 @@ import java.util.Set;
     @Index(name = "UserFirstNameIdx", columnList = "first_name"),
     @Index(name = "UserLastNameIdx", columnList = "last_name"),
     @Index(name = "UserEmailIdx", columnList = "email"),
-    @Index(name = "UserNameIdx", columnList = "user_name"),
+    @Index(name = "UserEntraOidIdx", columnList = "entra_oid"),
     @Index(name = "UserCreatedByIdx", columnList = "created_by"),
     @Index(name = "UserCreatedDateIdx", columnList = "created_date"),
     @Index(name = "UserLastModifiedDateIdx", columnList = "last_modified_date"),
@@ -50,10 +46,10 @@ import java.util.Set;
 @Check(name = "end_date_after_start_date", constraints = "end_date > start_date")
 public class EntraUser extends AuditableEntity {
 
-    @Column(name = "user_name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Username must be provided")
-    @Size(min = 1, max = 255, message = "Username must be between 1 and 255 characters")
-    private String userName;
+    @Column(name = "entra_oid", nullable = false, length = 255, unique = true)
+    @NotBlank(message = "Entra Object ID must be provided")
+    @Size(min = 1, max = 255, message = "Entra Object ID must be between 1 and 255 characters")
+    private String entraOid;
 
     @Column(name = "first_name", nullable = false, length = 255)
     @NotBlank(message = "User first name must be provided")
@@ -80,18 +76,6 @@ public class EntraUser extends AuditableEntity {
 
     @Column(name = "end_date")
     private LocalDateTime endDate;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "user_app_registration",
-            joinColumns = @JoinColumn(name = "user_id"),
-            foreignKey = @ForeignKey(name = "FK_user_app_registration_user_id"),
-            inverseJoinColumns = @JoinColumn(name = "app_registration_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_user_app_registration_app_registration_id")
-    )
-    @ToString.Exclude
-    @JsonIgnore
-    private Set<AppRegistration> userAppRegistrations;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

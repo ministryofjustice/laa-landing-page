@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRegistration;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 
@@ -13,10 +12,6 @@ import java.util.Arrays;
 
 @DataJpaTest
 public class AppRoleRepositoryTest extends BaseRepositoryTest {
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AppRegistrationRepository appRegistrationRepository;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
@@ -29,16 +24,13 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     @BeforeEach
     public void beforeEach() {
         repository.deleteAll();
-        appRegistrationRepository.deleteAll();
         appRepository.deleteAll();
     }
 
     @Test
     public void testSaveAndRetrieveLaaAppRole() {
-        AppRegistration appRegistration = buildEntraAppRegistration("App Registration");
-        appRegistrationRepository.save(appRegistration);
-
-        App app = buildLaaApp(appRegistration, "App1");
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+                "Security Group Name");
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
@@ -60,7 +52,6 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(resultApp.getName()).isEqualTo("App1");
         Assertions.assertThat(resultApp.getAppRoles()).isNotEmpty();
         Assertions.assertThat(resultApp.getAppRoles()).containsExactlyInAnyOrder(appRole1, appRole2);
-        Assertions.assertThat(resultApp.getAppRegistration()).isNotNull();
 
     }
 }
