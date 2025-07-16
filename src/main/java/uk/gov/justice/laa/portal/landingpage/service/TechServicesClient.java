@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,7 +26,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRe
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -50,6 +49,8 @@ public class TechServicesClient {
     private String laaBusinessUnit;
     @Value("${spring.security.tech.services.credentials.scope}")
     private String accessTokenRequestScope;
+    @Value("${app.laa.default.user.access.security.group}")
+    private String defaultSecurityGroup;
 
 
     public TechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
@@ -77,26 +78,29 @@ public class TechServicesClient {
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
 
+            // Add the default security group
+            securityGroups.add(defaultSecurityGroup);
+
             UpdateSecurityGroupsRequest request = builder.requiredGroups(securityGroups).build();
 
             logger.info("Sending update security groups request to tech services: {}", request);
 
             String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraUser.getEntraOid());
 
-            ResponseEntity<String> response = restClient
+            ResponseEntity<UpdateSecurityGroupsResponse> response = restClient
                     .patch()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
-                    .toEntity(String.class);
+                    .toEntity(UpdateSecurityGroupsResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                ObjectMapper mapper = new ObjectMapper();
-                UpdateSecurityGroupsResponse respBody = mapper.readValue(response.getBody(), UpdateSecurityGroupsResponse.class);
-                logger.info("Security Groups assigned successfully for {} with {} added and {} removed",
-                        entraUser.getFirstName() + " " + entraUser.getLastName(), respBody.getGroupsAdded(), respBody.getGroupsRemoved());
+                UpdateSecurityGroupsResponse responseBody = response.getBody();
+                assert responseBody != null;
+                logger.info("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
+                        entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
             } else {
                 logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
                 throw new RuntimeException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
@@ -112,9 +116,12 @@ public class TechServicesClient {
         try {
             String accessToken = getAccessToken();
 
-            Set<String> securityGroups = validAppRoles == null ? Collections.emptySet() : validAppRoles.stream()
+            Set<String> securityGroups = validAppRoles == null ? HashSet.newHashSet(1) : validAppRoles.stream()
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
+
+            // Add the default security group
+            securityGroups.add(defaultSecurityGroup);
 
             RegisterUserRequest request = RegisterUserRequest.builder()
                     .email(user.getEmail())
@@ -128,20 +135,21 @@ public class TechServicesClient {
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
-            ResponseEntity<String> response = restClient
+            ResponseEntity<RegisterUserResponse> response = restClient
                     .post()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
-                    .toEntity(String.class);
+                    .toEntity(RegisterUserResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                ObjectMapper mapper = new ObjectMapper();
-                RegisterUserResponse registerUserResponse = mapper.readValue(response.getBody(), RegisterUserResponse.class);
-                logger.info("New User creation by Tech Services is successful for {}", user.getFirstName() + " " + user.getLastName());
-                return registerUserResponse;
+                RegisterUserResponse responseBody = response.getBody();
+                assert responseBody != null;
+                logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
+                        user.getFirstName() + " " + user.getLastName(), securityGroups);
+                return responseBody;
             } else {
                 logger.error("Failed to create new user by Tech Services for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
                 throw new RuntimeException("Failed to create new user by Tech Services for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
