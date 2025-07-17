@@ -54,17 +54,21 @@
                     </h2>
                     <ul class="govuk-tabs__list">
                         <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
-                            <a class="govuk-tabs__tab" href="#user-details">
+                            <a class="govuk-tabs__tab" th:href="${isAccessGranted} ? '#user-details' : null">
                                 User details
                             </a>
                         </li>
-                        <li class="govuk-tabs__list-item">
-                            <a class="govuk-tabs__tab" href="#services">
+                        <li class=" govuk-tabs__list-item">
+                            <a class="govuk-tabs__tab" th:href="${isAccessGranted} ? '#services' : null"
+                                th:style="${!isAccessGranted} ? 'color: #b1b4b6; cursor: not-allowed; text-decoration: none;' : ''"
+                                th:onclick="${!isAccessGranted} ? 'return false;' : ''">
                                 Services
                             </a>
                         </li>
                         <li class="govuk-tabs__list-item">
-                            <a class="govuk-tabs__tab" href="#offices">
+                            <a class="govuk-tabs__tab" th:href="${isAccessGranted} ? '#offices' : null"
+                                th:style="${!isAccessGranted} ? 'color: #b1b4b6; cursor: not-allowed; text-decoration: none;' : ''"
+                                th:onclick="${!isAccessGranted} ? 'return false;' : ''">
                                 Offices
                             </a>
                         </li>
