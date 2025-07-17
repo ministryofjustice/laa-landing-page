@@ -10,8 +10,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +27,8 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -59,5 +63,30 @@ public class AppRole extends BaseEntity {
     @Column(name = "role_type", nullable = false, length = 255)
     @NotNull(message = "App role type must be provided")
     private RoleType roleType;
+
+    @Column(name = "user_type_restriction", nullable = true, length = 255)
+    private String userTypeRestriction;
+
+    @Column(name = "description", nullable = true, length = 255)
+    private String description;
+
+    @Column(name = "authz_role")
+    private boolean authzRole;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "app_role_permission",
+            joinColumns = @JoinColumn(name = "app_role_id"),
+            foreignKey = @ForeignKey(name = "FK_app_role_permission_app_role_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"),
+            inverseForeignKey = @ForeignKey(name = "FK_app_role_permission_permission_id")
+    )
+    @ToString.Exclude
+    @JsonIgnore
+    private List<Permission> permissions;
+
+    @OneToMany(targetEntity = AppRole.class)
+    @JoinColumn(name = "id", referencedColumnName = "id")
+    private Map<String, AppRole> roleAssignments;
 
 }
