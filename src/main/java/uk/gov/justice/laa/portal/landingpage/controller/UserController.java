@@ -142,10 +142,10 @@ public class UserController {
 
     @GetMapping("/users/edit/{id}")
     public String editUser(@PathVariable String id, Model model) {
-        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isPresent()) {
-            EntraUserDto user = optionalUser.get();
-            List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId());
+            UserProfileDto user = optionalUser.get();
+            List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId().toString());
             model.addAttribute("user", user);
             model.addAttribute("roles", roles);
         }
@@ -509,11 +509,11 @@ public class UserController {
 
     @GetMapping("/users/edit/{id}/details")
     public String editUserDetails(@PathVariable String id, Model model) {
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
-        editUserDetailsForm.setFirstName(user.getFirstName());
-        editUserDetailsForm.setLastName(user.getLastName());
-        editUserDetailsForm.setEmail(user.getEmail());
+        editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
+        editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
+        editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         return "edit-user-details";
@@ -538,7 +538,7 @@ public class UserController {
             log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user details page with
             // errors
-            EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+            UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
             session.setAttribute("user", user);
             session.setAttribute("editUserDetailsForm", editUserDetailsForm);
             return "edit-user-details";
@@ -553,8 +553,8 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/apps")
     public String editUserApps(@PathVariable String id, Model model) {
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        UserType userType = userService.getUserTypeByUserId(id).orElseThrow();
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
@@ -584,9 +584,9 @@ public class UserController {
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             userService.updateUserRoles(id, new ArrayList<>());
-            EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
+            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto,
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     List.of(), "apps");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
@@ -616,7 +616,7 @@ public class UserController {
             RolesForm rolesForm,
             Model model, HttpSession session) {
 
-        final EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(() -> {
                     // If no selectedApps in session, get user's current apps
@@ -717,7 +717,7 @@ public class UserController {
             return "edit-user-roles";
         }
 
-        EntraUserDto user = userService.getEntraUserById(id).orElse(null);
+        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
@@ -737,7 +737,7 @@ public class UserController {
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             userService.updateUserRoles(id, allSelectedRoles);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user, allSelectedRoles,
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, user != null ? user.getEntraUser() : null, allSelectedRoles,
                     "role");
             eventService.logEvent(updateUserAuditEvent);
             return "redirect:/admin/users/manage/" + id;
@@ -761,7 +761,7 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/offices")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current offices
         List<Office> userOffices = userService.getUserOfficesByUserId(id);
@@ -883,8 +883,8 @@ public class UserController {
 
         userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        EntraUserDto entraUserDto = userService.getEntraUserById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUserDto,
+        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, userProfileDto != null ? userProfileDto.getEntraUser() : null,
                 selectOfficesDisplay, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model

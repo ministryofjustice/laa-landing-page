@@ -386,14 +386,10 @@ public class UserService {
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                    .collect(Collectors.toList());
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getAppRoles();
         }
         return Collections.emptyList();
     }
@@ -429,16 +425,14 @@ public class UserService {
     }
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                    .map(AppRole::getApp)
-                    .map(app -> mapper.map(app, AppDto.class))
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getAppRoles().stream()
+                    .map(AppRoleDto::getApp)
                     .collect(Collectors.toSet());
         } else {
-            logger.warn("No user found for user id {} when getting user apps", userId);
+            logger.warn("No user profile found for user id {} when getting user apps", userId);
             return Collections.emptySet();
         }
     }
@@ -564,11 +558,11 @@ public class UserService {
      * @return List of offices assigned to the user
      */
     public List<Office> getUserOfficesByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .flatMap(userProfile -> userProfile.getOffices().stream())
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getOffices().stream()
+                    .map(officeDto -> mapper.map(officeDto, Office.class))
                     .collect(Collectors.toList());
         }
         return Collections.emptyList();
@@ -582,27 +576,19 @@ public class UserService {
      * @throws IOException If an error occurs during the update
      */
     public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
+        if (optionalUserProfile.isPresent()) {
+            UserProfile userProfile = optionalUserProfile.get();
             List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
             Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
 
             // Update user profile offices
-            Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .findFirst();
-            if (userProfile.isPresent()) {
-                userProfile.get().setOffices(offices);
-                entraUserRepository.saveAndFlush(user);
-                logger.info("Successfully updated user offices for user ID: {}", userId);
-            } else {
-                logger.warn("User profile for user ID {} not found. Could not update offices.", userId);
-                throw new IOException("User profile not found for user ID: " + userId);
-            }
+            userProfile.setOffices(offices);
+            userProfileRepository.saveAndFlush(userProfile);
+            logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
-            logger.warn("User with id {} not found. Could not update offices.", userId);
-            throw new IOException("User not found for user ID: " + userId);
+            logger.warn("User profile with id {} not found. Could not update offices.", userId);
+            throw new IOException("User profile not found for user ID: " + userId);
         }
     }
 
