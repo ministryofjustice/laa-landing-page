@@ -1,0 +1,20 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<div class="govuk-summary-card" th:if="${firmDtoList != null}">
+    <div class="govuk-summary-card__title-wrapper">
+        <h2 class="govuk-summary-card__title">
+            Select Firm
+        </h2>
+    </div>
+    <div sec:authorize="isAuthenticated()" class="govuk-summary-card__content">
+        <dl class="govuk-summary-list">
+            <th:block th:each="firm : ${firmDtoList}" >
+                <div class="govuk-summary-list__row">
+                    <form th:action="@{/switchfirm}" method="post">
+                        <input type="hidden" id="firmid" name="firmid" th:value="${firm.id}">
+                        <button type="submit" th:text="${firm.getName()}"></button></form>
+                </div>
+            </th:block>
+        </dl>
+    </div>
+</div>
+</html>
