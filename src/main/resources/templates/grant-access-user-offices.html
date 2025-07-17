@@ -14,7 +14,7 @@
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    < Back to user</a>
+                    < Back</a>
             </li>
         </ol>
     </nav>
@@ -47,7 +47,7 @@
                         </h2>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">
-                        Select all that apply. This completes the access grant process.
+                        Select all that apply
                     </div>
                     <p class="govuk-error-message" th:if="${#fields.hasErrors('offices')}" th:errors="*{offices}"></p>
                     <div class="govuk-form-group govuk-!-padding-top-3"
