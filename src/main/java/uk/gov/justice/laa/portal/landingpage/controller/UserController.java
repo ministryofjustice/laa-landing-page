@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
@@ -453,7 +454,8 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedFirm,
                     userType, currentUserDto.getName());
-            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirm.getName(), userType);
+            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
+                    selectedFirm.getName(), userType);
             eventService.logEvent(createUserAuditEvent);
 
             String successMessage = user.getFirstName() + " " + user.getLastName()
@@ -919,6 +921,21 @@ public class UserController {
         // Clear any success messages
         session.removeAttribute("successMessage");
 
+        return "redirect:/admin/users/manage/" + id;
+    }
+
+    /**
+     * Grant access to a user by updating their profile status to COMPLETE
+     */
+    @PostMapping("/users/manage/{id}/grant-access")
+    public String grantUserAccess(@PathVariable String id, Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        try {
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            userService.grantAccess(id, currentUser.getName());
+        } catch (Exception e) {
+            log.error("Error granting user access", e);
+        }
         return "redirect:/admin/users/manage/" + id;
     }
 

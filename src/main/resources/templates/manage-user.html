@@ -34,7 +34,7 @@
                             class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
                     </div>
                     <form class="form" th:if="${!isAccessGranted}"
-                        th:action=" @{'/admin/users/' + ${user.id} + '/grant-access' }" method=" post">
+                        th:action="@{'/admin/users/manage/' + ${user.id} + '/grant-access'}" method="post">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
                                 <button type="submit" class="govuk-button govuk-button--primary"

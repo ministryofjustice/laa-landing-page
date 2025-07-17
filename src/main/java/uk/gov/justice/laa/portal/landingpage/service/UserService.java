@@ -627,6 +627,29 @@ public class UserService {
         }
     }
 
+    /**
+     * Grant access to a user by updating their profile status to COMPLETE
+     *
+     * @param userId The user profile ID
+     * @param currentUserName The name of the user granting access
+     * @return true if access was granted successfully, false otherwise
+     */
+    public boolean grantAccess(String userId, String currentUserName) {
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            UserProfile user = optionalUser.get();
+            user.setUserProfileStatus(UserProfileStatus.COMPLETE);
+            user.setLastModifiedBy(currentUserName);
+            user.setLastModified(LocalDateTime.now());
+            userProfileRepository.saveAndFlush(user);
+            logger.info("Access granted for user profile ID: {} by {}", userId, currentUserName);
+            return true;
+        } else {
+            logger.warn("User profile with id {} not found. Could not grant access.", userId);
+            return false;
+        }
+    }
+
     public boolean isUserCreationAllowed(EntraUser entraUser) {
         Optional<UserType> userType = getUserTypeByEntraUser(entraUser);
         return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
