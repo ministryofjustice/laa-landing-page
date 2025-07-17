@@ -18,10 +18,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     @Query("""
             SELECT ups FROM UserProfile ups
-            JOIN FETCH ups.firm f
             JOIN FETCH ups.entraUser u
+            LEFT JOIN FETCH ups.firm f
             WHERE ups.userType IN (:userTypes)
-            AND f.id IN (:firmIds)
             AND (LOWER(u.firstName) LIKE LOWER(CONCAT('%', :firstName, '%'))
             OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%'))
             OR LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')))
@@ -55,7 +54,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             @Param("firmIds") List<UUID> firmIds, Pageable pageable);
 
     @Query("SELECT ups FROM UserProfile ups " +
-            "JOIN FETCH ups.firm f " +
+            "LEFT JOIN FETCH ups.firm f " +
             "JOIN FETCH ups.entraUser u " +
             "WHERE ups.userType IN (:userTypes)")
     Page<UserProfile> findByUserTypes(List<UserType> userTypes, Pageable pageable);
