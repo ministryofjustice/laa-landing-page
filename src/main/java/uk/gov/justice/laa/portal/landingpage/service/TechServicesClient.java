@@ -112,14 +112,11 @@ public class TechServicesClient {
 
     }
 
-    public RegisterUserResponse registerNewUser(EntraUserDto user, List<AppRole> validAppRoles) {
+    public RegisterUserResponse registerNewUser(EntraUserDto user) {
         try {
             String accessToken = getAccessToken();
 
-            Set<String> securityGroups = validAppRoles == null ? HashSet.newHashSet(1) : validAppRoles.stream()
-                    .filter(appRole -> Objects.nonNull(appRole.getApp().getSecurityGroupOid()))
-                    .map(appRole -> appRole.getApp().getSecurityGroupOid())
-                    .collect(Collectors.toSet());
+            Set<String> securityGroups = new HashSet<>();
 
             // Add the default security group
             securityGroups.add(defaultSecurityGroup);

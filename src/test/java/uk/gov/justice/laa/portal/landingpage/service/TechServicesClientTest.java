@@ -247,7 +247,7 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
-        techServicesClient.registerNewUser(user, List.of(appRole));
+        techServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
@@ -275,7 +275,7 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
-        techServicesClient.registerNewUser(user, List.of(appRole));
+        techServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
@@ -295,7 +295,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                () -> techServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -324,7 +324,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                () -> techServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -356,7 +356,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user, List.of(appRole)),
+                () -> techServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);

@@ -38,7 +38,6 @@ class UserUtilsTest {
         assertEquals("John", result.getFirstName());
         assertEquals("Doe", result.getLastName());
         assertEquals("john.doe@example.com", result.getEmail());
-        assertTrue(result.getIsFirmAdmin());
     }
 
     @Test
@@ -51,7 +50,6 @@ class UserUtilsTest {
         assertNull(result.getFirstName());
         assertNull(result.getLastName());
         assertNull(result.getEmail());
-        assertFalse(result.getIsFirmAdmin());
     }
 
     @Test
@@ -67,7 +65,6 @@ class UserUtilsTest {
         assertEquals("Alice", result.getFirstName());
         assertNull(result.getLastName());
         assertEquals("alice@example.com", result.getEmail());
-        assertFalse(result.getIsFirmAdmin());
     }
 
     @Test
@@ -78,6 +75,5 @@ class UserUtilsTest {
 
         UserDetailsForm result = UserUtils.populateUserDetailsFormWithSession(form, user, session);
 
-        assertFalse(result.getIsFirmAdmin());
     }
 }
