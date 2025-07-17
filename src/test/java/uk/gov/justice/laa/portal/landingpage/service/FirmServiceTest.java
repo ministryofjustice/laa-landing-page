@@ -61,12 +61,23 @@ class FirmServiceTest {
 
     @Test
     void getUserFirms() {
-        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
-        Set<UserProfile> userProfiles = Set.of(up1);
+        UserProfile up1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().name("F1").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         List<FirmDto> firms = firmService.getUserFirms(entraUser);
         assertThat(firms).hasSize(1);
         assertThat(firms.getFirst().getName()).isEqualTo("F1");
+    }
+
+    @Test
+    void getUserAllFirms() {
+        UserProfile up1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().name("F1").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        List<FirmDto> firms = firmService.getUserAllFirms(entraUser);
+        assertThat(firms).hasSize(2);
     }
 
     @Test
@@ -75,7 +86,7 @@ class FirmServiceTest {
         UUID userId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
         Firm firm = Firm.builder().id(firmId).name("Test Firm").build();
-        UserProfile userProfile = UserProfile.builder().firm(firm).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).firm(firm).build();
         Set<UserProfile> userProfiles = Set.of(userProfile);
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
 

@@ -13,8 +13,19 @@ import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +37,10 @@ class LoginControllerTest {
 
     @Mock
     private LoginService loginService;
+    @Mock
+    private FirmService firmService;
+    @Mock
+    private UserService userService;
 
     @Mock
     private HttpSession session;
@@ -209,5 +224,45 @@ class LoginControllerTest {
 
         // Assert
         assertThat(result.getUrl()).isEqualTo("/error");
+    }
+
+    @Test
+    void switchFirm_get_active() {
+        UUID firmId = UUID.randomUUID();
+        UserProfile up = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firmId).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
+        when(firmService.getUserAllFirms(any()))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
+        Model model = new ConcurrentModel();
+        String view = controller.userFirmsPage(model, authentication);
+        assertThat(view).isEqualTo("switch-firm");
+        List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
+        assertThat(firmDtoList).hasSize(1);
+        assertThat(firmDtoList.getFirst().getName()).isEqualTo("name - Active");
+    }
+
+    @Test
+    void switchFirm_get_no_active() {
+        UUID firmId = UUID.randomUUID();
+        UserProfile up = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firmId).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
+        when(firmService.getUserAllFirms(any()))
+                .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
+        Model model = new ConcurrentModel();
+        String view = controller.userFirmsPage(model, authentication);
+        assertThat(view).isEqualTo("switch-firm");
+        List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
+        assertThat(firmDtoList).hasSize(1);
+        assertThat(firmDtoList.getFirst().getName()).isEqualTo("name");
+    }
+
+    @Test
+    void switchFirm_post() throws IOException {
+        String firmId = UUID.randomUUID().toString();
+        RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
+        verify(loginService).getCurrentEntraUser(any());
+        verify(userService).setDefaultActiveProfile(any(), any());
+        verify(loginService).logout(authentication, authClient, session);
+        assertThat(view.getUrl()).isEqualTo("/?message=logout");
     }
 }

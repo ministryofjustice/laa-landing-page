@@ -6,6 +6,7 @@ import jakarta.validation.ValidatorFactory;
 import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Set;
 
@@ -24,10 +25,10 @@ class UserDetailsFormTest {
     void validUserDetailsForm_shouldHaveNoViolations() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(true);
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("john.doe@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).isEmpty();
     }
@@ -44,7 +45,6 @@ class UserDetailsFormTest {
     void invalidEmailFormat_shouldTriggerPatternViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(false);
         form.setFirstName("Jane");
         form.setLastName("Smith");
         form.setEmail("invalid-email");
@@ -57,7 +57,6 @@ class UserDetailsFormTest {
     void invalidEmailStartingCharacterFormat_shouldTriggerPatternViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(false);
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("-john.doe@email.com");
@@ -70,7 +69,6 @@ class UserDetailsFormTest {
     void invalidEmailSuffixFormat_shouldTriggerPatternViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(false);
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("john.doe@email");
@@ -83,7 +81,6 @@ class UserDetailsFormTest {
     void tooLongEmail_shouldTriggerSizeViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(false);
         form.setFirstName("Jane");
         form.setLastName("Smith");
         form.setEmail("a".repeat(250) + "@example.com");
@@ -96,7 +93,6 @@ class UserDetailsFormTest {
     void tooLongFirstNameOrLastName_shouldTriggerSizeViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
-        form.setIsFirmAdmin(false);
         form.setFirstName("A".repeat(100));
         form.setLastName("B".repeat(100));
         form.setEmail("test@example.com");
@@ -104,5 +100,17 @@ class UserDetailsFormTest {
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("First name must not be longer than 99 characters",
                         "Last name must not be longer than 99 characters");
+    }
+
+    @Test
+    void noUserType_shouldTriggerNotNullViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("test@example.com");
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("Select a user type");
     }
 }

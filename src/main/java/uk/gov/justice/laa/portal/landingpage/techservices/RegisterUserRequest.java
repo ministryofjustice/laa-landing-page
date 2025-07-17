@@ -17,8 +17,6 @@ public class RegisterUserRequest {
     private String firstName;
     @JsonProperty("surname")
     private String lastName;
-    @JsonProperty("companyName")
-    private String companyName;
     @JsonProperty("mail")
     private String email;
     @JsonProperty("verification_method")

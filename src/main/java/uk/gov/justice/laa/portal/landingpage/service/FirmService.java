@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
@@ -37,6 +38,12 @@ public class FirmService {
 
     public List<FirmDto> getUserFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
+    }
+
+    public List<FirmDto> getUserAllFirms(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
@@ -49,6 +56,7 @@ public class FirmService {
     public List<FirmDto> getUserFirmsByUserId(String userId) {
         return entraUserRepository.findById(UUID.fromString(userId))
                 .map(entraUser -> entraUser.getUserProfiles().stream()
+                        .filter(UserProfile::isActiveProfile)
                         .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class))
                         .collect(Collectors.toList()))
                 .orElse(List.of());

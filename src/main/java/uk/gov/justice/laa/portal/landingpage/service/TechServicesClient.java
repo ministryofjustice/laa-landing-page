@@ -112,13 +112,11 @@ public class TechServicesClient {
 
     }
 
-    public RegisterUserResponse registerNewUser(EntraUserDto user, List<AppRole> validAppRoles) {
+    public RegisterUserResponse registerNewUser(EntraUserDto user) {
         try {
             String accessToken = getAccessToken();
 
-            Set<String> securityGroups = validAppRoles == null ? HashSet.newHashSet(1) : validAppRoles.stream()
-                    .map(appRole -> appRole.getApp().getSecurityGroupOid())
-                    .collect(Collectors.toSet());
+            Set<String> securityGroups = new HashSet<>();
 
             // Add the default security group
             securityGroups.add(defaultSecurityGroup);
@@ -127,7 +125,6 @@ public class TechServicesClient {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
-                    .companyName("Test Company")
                     .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
                     .requiredGroups(securityGroups).build();
 

@@ -172,14 +172,17 @@ public class UserService {
     public Optional<UserType> getUserTypeByUserId(String userId) {
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalEntraUser.isPresent()) {
-            EntraUser user = optionalEntraUser.get();
-            return user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .map(UserProfile::getUserType)
-                    .findFirst();
+            return getUserTypeByEntraUser(optionalEntraUser.get());
         } else {
             return Optional.empty();
         }
+    }
+
+    public Optional<UserType> getUserTypeByEntraUser(EntraUser user) {
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getUserType)
+                .findFirst();
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -267,7 +270,8 @@ public class UserService {
             throw new RuntimeException(String.format("User profile not found for the given entra id: %s", entraId));
         }
 
-        return user.getUserProfiles().stream().map(UserProfile::getUserType).collect(Collectors.toList());
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getUserType).collect(Collectors.toList());
 
     }
 
@@ -332,25 +336,10 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
-                                boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(EntraUserDto user, FirmDto firm,
+                                UserType userType, String createdBy) {
 
-        // Make sure the user is trying to be assigned valid app roles for their user
-        // type.
-        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
-                .collect(Collectors.toList()));
-        // TODO: Change this logic to include internal users when we support internal
-        // user creation.
-        List<AppRole> validAppRoles = appRoleRepository
-                .findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
-        if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
-            logger.error(
-                    "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
-                    user.getFirstName() + " " + user.getLastName());
-            throw new RuntimeException("User creation blocked");
-        }
-
-        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user, appRoles);
+        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
@@ -359,23 +348,18 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
+        return persistNewUser(user, firm, userType, createdBy);
     }
 
-    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-                                     boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
+    private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
+                                     UserType userType, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
-        List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
-        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .appRoles(new HashSet<>(appRoles))
-                // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(userType)
                 .createdDate(LocalDateTime.now())
-                .offices(offices)
                 .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
@@ -394,6 +378,7 @@ public class UserService {
         if (optionalUser.isPresent()) {
             EntraUser user = optionalUser.get();
             return user.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
                     .flatMap(userProfile -> userProfile.getAppRoles().stream())
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .collect(Collectors.toList());
@@ -611,8 +596,31 @@ public class UserService {
 
     public boolean isInternal(EntraUser entraUser) {
         List<UserType> userTypes = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
+    }
+
+    public boolean isUserCreationAllowed(EntraUser entraUser) {
+        Optional<UserType> userType =  getUserTypeByEntraUser(entraUser);
+        return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
+    }
+
+    public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
+        boolean foundFirm = false;
+        for (UserProfile userProfile : entraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firmId)) {
+                userProfile.setActiveProfile(true);
+                foundFirm = true;
+            } else {
+                userProfile.setActiveProfile(false);
+            }
+        }
+        if (!foundFirm) {
+            logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
+            throw new IOException("Firm not found for firm ID: " + firmId);
+        }
+        entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<UUID> getInternalUserEntraIds() {
