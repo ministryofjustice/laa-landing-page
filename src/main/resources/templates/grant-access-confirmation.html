@@ -10,14 +10,6 @@
 </head>
 
 <body>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    < Back to user</a>
-            </li>
-        </ol>
-    </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-!-width-two-thirds">
 
@@ -34,7 +26,7 @@
 
             <p class="govuk-body govuk-!-padding-top-3">You can now view the user and manage the user</p>
 
-            <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-button"
+            <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-button govuk-!-padding-top-3"
                 data-module="govuk-button">Continue</a>
         </div>
     </main>
