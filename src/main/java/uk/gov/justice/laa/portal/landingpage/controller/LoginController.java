@@ -134,7 +134,7 @@ public class LoginController {
     @GetMapping("/switchfirm")
     public String userFirmsPage(Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        List<FirmDto> firmDtoList = firmService.getUserFirms(entraUser);
+        List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
         for (FirmDto firmDto : firmDtoList) {
             UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
             if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {

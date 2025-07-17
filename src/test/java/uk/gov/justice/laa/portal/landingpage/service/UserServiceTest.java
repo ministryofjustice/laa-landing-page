@@ -38,8 +38,15 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.*;
-import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -2063,18 +2070,18 @@ class UserServiceTest {
         assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
-        @Test
-        void getGivenSort() {
-            List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
-            String sort = "aSc";
-            for (String field : fields) {
-                Sort fieldSort = userService.getSort(field, sort);
-                assertThat(fieldSort.stream().toList().getFirst().getProperty().equalsIgnoreCase(field)).isTrue();
-                assertThat(fieldSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.ASC);
-            }
-            Sort descendingSort = userService.getSort("lastName", "deSC");
-            assertThat(descendingSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.DESC);
+    @Test
+    void getGivenSort() {
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
+        String sort = "aSc";
+        for (String field : fields) {
+            Sort fieldSort = userService.getSort(field, sort);
+            assertThat(fieldSort.stream().toList().getFirst().getProperty().equalsIgnoreCase(field)).isTrue();
+            assertThat(fieldSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.ASC);
         }
+        Sort descendingSort = userService.getSort("lastName", "deSC");
+        assertThat(descendingSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
 
     @Test
     void getErrorSort() {

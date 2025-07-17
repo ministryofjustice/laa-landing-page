@@ -231,7 +231,7 @@ class LoginControllerTest {
         UUID firmId = UUID.randomUUID();
         UserProfile up = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
-        when(firmService.getUserFirms(any()))
+        when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
         Model model = new ConcurrentModel();
         String view = controller.userFirmsPage(model, authentication);
@@ -246,7 +246,7 @@ class LoginControllerTest {
         UUID firmId = UUID.randomUUID();
         UserProfile up = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
-        when(firmService.getUserFirms(any()))
+        when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
         Model model = new ConcurrentModel();
         String view = controller.userFirmsPage(model, authentication);

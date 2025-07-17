@@ -42,6 +42,11 @@ public class FirmService {
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
+    public List<FirmDto> getUserAllFirms(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
+                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
+    }
+
     /**
      * Get firms associated with a user by their ID
      * 
