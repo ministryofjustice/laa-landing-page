@@ -1,7 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.azure.core.credential.TokenRequestContext;
-import com.azure.identity.ClientSecretCredential;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,25 +21,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.RestClient;
+
+import com.azure.core.credential.TokenRequestContext;
+import com.azure.identity.ClientSecretCredential;
+
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class TechServicesClient {
 
