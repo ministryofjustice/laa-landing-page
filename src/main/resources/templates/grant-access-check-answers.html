@@ -87,7 +87,7 @@
         <form method="post" th:action="@{/admin/users/grant-access/{id}/check-answers(id=${user.id})}">
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button govuk-button--success" data-module="govuk-button">
-                    Grant access
+                    Create and send
                 </button>
                 <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">Cancel</a>
             </div>
