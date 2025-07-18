@@ -37,6 +37,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.microsoft.graph.models.User;
@@ -95,6 +96,8 @@ class UserControllerTest {
     private HttpSession session;
     @Mock
     private Authentication authentication;
+    @Mock
+    private RedirectAttributes redirectAttributes;
 
     private Model model;
 
@@ -242,16 +245,20 @@ class UserControllerTest {
         verify(userService).getPageOfUsersByNameOrEmail(eq("searchTerm"), eq(false), eq(true), anyList(), eq(1), eq(10),
                 eq("firstName"), eq("asc"));
     }
-
+    
     @Test
     void givenValidUserId_whenEditUser_thenFetchesUserAndReturnsEditView() {
-
         // Arrange
-        String userId = "user123";
-        EntraUserDto mockUser = new EntraUserDto();
-        mockUser.setId(userId);
-        mockUser.setFullName("Test User");
-        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        UserProfileDto mockUser = new UserProfileDto();
+        mockUser.setId(UUID.fromString(userId));
+        // Create EntraUserDto with fullName
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        mockUser.setEntraUser(entraUser);
+        
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // Act
         String viewName = userController.editUser(userId, model);
@@ -259,7 +266,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
-        verify(userService).getEntraUserById(userId);
+        verify(userService).getUserProfileById(userId);
     }
 
     @Test
@@ -267,12 +274,12 @@ class UserControllerTest {
 
         // Arrange
         String userId = "invalid-user";
-        when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
 
         // Act
         String viewName = userController.editUser(userId, model);
 
-        verify(userService).getEntraUserById(userId);
+        verify(userService).getUserProfileById(userId);
     }
 
     @Test
@@ -2237,5 +2244,553 @@ class UserControllerTest {
 
         // Assert
         assertThat(result.getUrl()).isEqualTo("/error");
+    }
+
+    // ===== GRANT ACCESS FLOW TESTS =====
+
+    @Test
+    void grantUserAccess_shouldRedirectToGrantAccessApps() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+
+        // When
+        String result = userController.grantUserAccess(userId);
+
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
+    }
+
+    @Test
+    void grantAccessEditUserApps_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440001";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> availableApps = List.of(app1, app2);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(availableApps);
+
+        // When
+        String view = userController.grantAccessEditUserApps(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-apps");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
+        assertThat(apps.get(1).isSelected()).isFalse(); // app2 should not be selected
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        List<String> selectedApps = List.of("app1", "app2");
+        MockHttpSession testSession = new MockHttpSession();
+
+        // When
+        RedirectView result = userController.grantAccessSetSelectedApps(userId, selectedApps, authentication, testSession);
+
+        // Then
+        assertThat(result.getUrl()).isEqualTo("/admin/users/grant-access/" + userId + "/roles");
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(selectedApps);
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldRedirectToManageUserWhenNoAppsSelected() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        final List<String> selectedApps = null; // No apps selected
+        final MockHttpSession testSession = new MockHttpSession();
+
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        userProfileDto.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        // When
+        RedirectView result = userController.grantAccessSetSelectedApps(userId, selectedApps, authentication, testSession);
+
+        // Then
+        assertThat(result.getUrl()).isEqualTo("/admin/users/manage/" + userId);
+        verify(userService).updateUserRoles(userId, new ArrayList<>());
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+    }
+
+    @Test
+    void grantAccessEditUserRoles_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440002";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        AppDto currentApp = new AppDto();
+        currentApp.setId("app1");
+        currentApp.setName("App 1");
+
+        AppRoleDto role1 = new AppRoleDto();
+        role1.setId("role1");
+        role1.setName("Role 1");
+        final List<AppRoleDto> roles = List.of(role1);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppId("app1")).thenReturn(roles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+
+        // When
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-roles");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(0);
+        assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(currentApp);
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+    }
+
+    @Test
+    void grantAccessEditUserRoles_shouldRedirectToManageUserWhenNoAppsAssigned() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440003";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        MockHttpSession testSession = new MockHttpSession();
+        // No apps in session, and user has no apps
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(Set.of()); // No apps
+
+        // When
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+    }
+
+    @Test
+    void grantAccessUpdateUserRoles_shouldRedirectToNextAppWhenNotLastApp() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role1"));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
+        testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        // When
+        String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model, testSession);
+
+        // Then
+        assertThat(view).startsWith("redirect:/admin/users/grant-access/");
+        assertThat(view).contains("/roles?selectedAppIndex=1");
+
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allRoles = (Map<Integer, List<String>>) testSession.getAttribute("grantAccessAllSelectedRoles");
+        assertThat(allRoles).isNotNull();
+        assertThat(allRoles.get(0)).containsExactly("role1");
+    }
+
+    @Test
+    void grantAccessUpdateUserRoles_shouldCompleteRolesAndRedirectToOfficesOnLastApp() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440004";
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role2"));
+
+        UserProfileDto user = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        user.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+
+        // Existing roles for previous app
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1"));
+        testSession.setAttribute("grantAccessAllSelectedRoles", existingRoles);
+
+        Model sessionModel = new ExtendedModelMap();
+        testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        // When - updating roles for last app (index 1)
+        String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
+        verify(userService).updateUserRoles(userId, List.of("role1", "role2"));
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+    }
+
+    @Test
+    void grantAccessUpdateUserRoles_shouldReturnToFormOnValidationErrors() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440005";
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(null); // Validation error
+
+        Model sessionModel = new ExtendedModelMap();
+        AppRoleViewModel role1 = new AppRoleViewModel();
+        role1.setId("role1");
+        role1.setSelected(true);
+        sessionModel.addAttribute("roles", List.of(role1));
+        sessionModel.addAttribute("user", new UserProfileDto());
+        sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
+        sessionModel.addAttribute("grantAccessCurrentApp", new AppDto());
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-roles");
+        @SuppressWarnings("unchecked")
+        List<AppRoleViewModel> roles = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(roles).hasSize(1);
+        assertThat(roles.get(0).isSelected()).isFalse(); // Should be deselected due to validation error
+    }
+
+    @Test
+    void grantAccessEditUserOffices_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440006";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        UUID office1Id = UUID.randomUUID();
+        UUID office2Id = UUID.randomUUID();
+        Office office1 = Office.builder().id(office1Id).name("Office 1").address("Address 1").build();
+        Office office2 = Office.builder().id(office2Id).name("Office 2").address("Address 2").build();
+
+        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        List<Office> allOffices = List.of(office1, office2);
+
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> userFirms = List.of(firmDto);
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
+
+        // When
+        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-offices");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
+
+        @SuppressWarnings("unchecked")
+        List<OfficeModel> officeData = (List<OfficeModel>) model.getAttribute("officeData");
+        assertThat(officeData).hasSize(2);
+        assertThat(officeData.get(0).isSelected()).isTrue(); // office1 should be selected
+        assertThat(officeData.get(1).isSelected()).isFalse(); // office2 should not be selected
+
+        OfficesForm form = (OfficesForm) model.getAttribute("officesForm");
+        assertThat(form.getOffices()).contains(office1Id.toString());
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNotNull();
+    }
+
+    @Test
+    void grantAccessEditUserOffices_shouldHandleAccessToAllOffices() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440007";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        UUID office1Id = UUID.randomUUID();
+        UUID office2Id = UUID.randomUUID();
+        Office office1 = Office.builder().id(office1Id).name("Office 1").address("Address 1").build();
+        Office office2 = Office.builder().id(office2Id).name("Office 2").address("Address 2").build();
+
+        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        List<Office> allOffices = List.of(office1, office2);
+
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        final List<FirmDto> userFirms = List.of(firmDto);
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
+
+        // When
+        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-offices");
+        assertThat(model.getAttribute("hasAllOffices")).isEqualTo(true);
+
+        OfficesForm form = (OfficesForm) model.getAttribute("officesForm");
+        assertThat(form.getOffices()).contains("ALL");
+    }
+
+    @Test
+    void grantAccessUpdateUserOffices_shouldUpdateOfficesAndRedirectToCheckAnswers() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440008";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(List.of("office1", "office2"));
+
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        userProfileDto.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
+        verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+        
+        // Verify session cleanup
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+    }
+
+    @Test
+    void grantAccessUpdateUserOffices_shouldHandleAllOfficesSelection() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440009";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(List.of("ALL")); // Special "ALL" value
+
+        UUID office1Id = UUID.randomUUID();
+        UUID office2Id = UUID.randomUUID();
+        Office office1 = Office.builder().id(office1Id).name("Office 1").build();
+        Office office2 = Office.builder().id(office2Id).name("Office 2").build();
+
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        final List<FirmDto> userFirms = List.of(firmDto);
+        final List<Office> allOffices = List.of(office1, office2);
+
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        userProfileDto.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
+        
+        // Should pass all office IDs to the service
+        List<String> expectedOfficeIds = List.of(office1Id.toString(), office2Id.toString());
+        verify(userService).updateUserOffices(userId, expectedOfficeIds);
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+    }
+
+    @Test
+    void grantAccessUpdateUserOffices_shouldReturnToFormOnValidationErrors() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440010";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(null); // Validation error
+
+        Model sessionModel = new ExtendedModelMap();
+        OfficeModel office1 = new OfficeModel("Office 1", "Address 1", "office1", true);
+        sessionModel.addAttribute("user", new UserProfileDto());
+        sessionModel.addAttribute("officeData", List.of(office1));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessUserOfficesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-offices");
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("officeData")).isNotNull();
+        verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
+    }
+
+    @Test
+    void grantAccessCheckAnswers_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        AppRoleDto appRole = new AppRoleDto();
+        appRole.setId("role1");
+        appRole.setName("Role 1");
+        List<AppRoleDto> userAppRoles = List.of(appRole);
+
+        Office office = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
+        List<Office> userOffices = List.of(office);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+
+        // When
+        String view = userController.grantAccessCheckAnswers(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-check-answers");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
+        assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
+    }
+
+    @Test
+    void grantAccessProcessCheckAnswers_shouldCompleteGrantAccessAndRedirectToConfirmation() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        // When
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+        verify(userService).grantAccess(userId, currentUserDto.getName());
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+        
+        String successMessage = (String) testSession.getAttribute("successMessage");
+        assertThat(successMessage).contains("Test User");
+        assertThat(successMessage).contains("has been granted access");
+        
+        // Verify session cleanup
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+    }
+
+    @Test
+    void grantAccessConfirmation_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440013";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        // When
+        String view = userController.grantAccessConfirmation(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-confirmation");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+    }
+
+    @Test
+    void cancelGrantAccess_shouldClearSessionAndRedirectToManageUser() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440014";
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
+        testSession.setAttribute("grantAccessUserRoles", List.of("role1"));
+        testSession.setAttribute("grantAccessUserRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("grantAccessAllSelectedRoles", new HashMap<>());
+        testSession.setAttribute("grantAccessUserOfficesModel", new ExtendedModelMap());
+        testSession.setAttribute("successMessage", "test message");
+
+        // When
+        String view = userController.cancelGrantAccess(userId, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
+        assertThat(testSession.getAttribute("successMessage")).isNull();
     }
 }

@@ -25,7 +25,7 @@
                     Check your answers
                 </h1>
                 <form th:action="@{/admin/users/grant-access/{id}/check-answers(id=${user.id})}" th:method="post">
-                    
+
                     <!-- Services and responsibilities section -->
                     <div class="govuk-summary-card">
                         <div class="govuk-summary-card__title-wrapper">
@@ -34,7 +34,8 @@
                             </h2>
                             <ul class="govuk-summary-card__actions">
                                 <li class="govuk-summary-card__action">
-                                    <a class="govuk-link" th:href="@{/admin/users/grant-access/{id}/roles(id=${user.id})}">Change</a>
+                                    <a class="govuk-link"
+                                        th:href="@{/admin/users/grant-access/{id}/roles(id=${user.id})}">Change</a>
                                 </li>
                             </ul>
                         </div>
@@ -63,22 +64,22 @@
                             </h2>
                             <ul class="govuk-summary-card__actions">
                                 <li class="govuk-summary-card__action">
-                                    <a class="govuk-link" th:href="@{/admin/users/grant-access/{id}/offices(id=${user.id})}">Change</a>
+                                    <a class="govuk-link"
+                                        th:href="@{/admin/users/grant-access/{id}/offices(id=${user.id})}">Manage</a>
                                 </li>
                             </ul>
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
                                 <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">
-                                        Assigned offices
-                                    </dt>
                                     <dd class="govuk-summary-list__value">
                                         <div th:each="office : ${userOffices}">
-                                            <span th:text="${office.name}"></span><br>
-                                            <span class="govuk-body-s govuk-!-font-weight-regular" th:text="${office.address}"></span>
+                                            <span th:text="${office.name}"></span>
+                                            <span th:text="${office.address}"></span>
                                         </div>
                                     </dd>
+                                    <dt class="govuk-summary-list__key govuk-visually-hidden">
+                                    </dt>
                                 </div>
                             </dl>
                             <div th:if="${userOffices == null or userOffices.isEmpty()}" class="govuk-inset-text">
@@ -90,14 +91,16 @@
                     <!-- Confirm user access grant -->
                     <h2 class="govuk-heading-m">Confirm access grant</h2>
                     <p class="govuk-body">
-                        By submitting this, you confirm that you would like to grant access to <span th:text="${user.fullName}"></span> 
+                        By submitting this, you confirm that you would like to grant access to <span
+                            th:text="${user.fullName}"></span>
                         with the services, responsibilities and offices shown above.
                     </p>
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button govuk-button--success" data-module="govuk-button">
                             Create and send
                         </button>
-                        <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">Cancel</a>
+                        <a th:href="@{'/admin/users/grant-access/' + ${user.id} + '/cancel'}"
+                            class="govuk-link">Cancel</a>
                     </div>
                 </form>
             </div>

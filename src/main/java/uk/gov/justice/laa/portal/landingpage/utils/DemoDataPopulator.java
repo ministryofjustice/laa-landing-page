@@ -235,7 +235,7 @@ public class DemoDataPopulator {
                 List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
                     assert requestConfig.queryParameters != null;
                     requestConfig.queryParameters.select = new String[] { "id", "displayName", "mail", "mobilePhone",
-                            "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
+                        "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
                     requestConfig.queryParameters.top = 10;
                 })).getValue();
 

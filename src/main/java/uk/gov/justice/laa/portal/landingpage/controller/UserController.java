@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
@@ -175,7 +174,7 @@ public class UserController {
         List<Office> userOffices = optionalUser.get().getOffices().stream()
                 .map(officeData -> mapper.map(officeData, Office.class))
                 .collect(Collectors.toList());
-        Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
+        final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -936,8 +935,7 @@ public class UserController {
      * Grant access to a user by updating their profile status to COMPLETE
      */
     @PostMapping("/users/manage/{id}/grant-access")
-    public String grantUserAccess(@PathVariable String id, Authentication authentication,
-            RedirectAttributes redirectAttributes) {
+    public String grantUserAccess(@PathVariable String id) {
         return "redirect:/admin/users/grant-access/" + id + "/apps";
     }
 
@@ -1339,6 +1337,28 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
         return "grant-access-confirmation";
+    }
+
+    /**
+     * Cancel the grant access flow and clean up session data
+     * 
+     * @param id      User ID
+     * @param session HttpSession to clear grant access data
+     * @return Redirect to user management page
+     */
+    @GetMapping("/users/grant-access/{id}/cancel")
+    public String cancelGrantAccess(@PathVariable String id, HttpSession session) {
+        // Clear all grant access related session attributes
+        session.removeAttribute("grantAccessSelectedApps");
+        session.removeAttribute("grantAccessUserRoles");
+        session.removeAttribute("grantAccessUserRolesModel");
+        session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("grantAccessUserOfficesModel");
+
+        // Clear any success messages
+        session.removeAttribute("successMessage");
+
+        return "redirect:/admin/users/manage/" + id;
     }
 
     @ExceptionHandler(Exception.class)

@@ -18,8 +18,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @ExtendWith(MockitoExtension.class)
 class FirmServiceTest {
@@ -29,13 +29,13 @@ class FirmServiceTest {
     @Mock
     private FirmRepository firmRepository;
     @Mock
-    private EntraUserRepository entraUserRepository;
+    private UserProfileRepository userProfileRepository;
 
     @BeforeEach
     void setUp() {
         firmService = new FirmService(
             firmRepository,
-            entraUserRepository,
+            userProfileRepository,
             new MapperConfig().modelMapper()
         );
     }
@@ -75,11 +75,9 @@ class FirmServiceTest {
         UUID userId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
         Firm firm = Firm.builder().id(firmId).name("Test Firm").build();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true).firm(firm).build();
-        Set<UserProfile> userProfiles = Set.of(userProfile);
-        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).firm(firm).build();
 
-        when(entraUserRepository.findById(userId)).thenReturn(java.util.Optional.of(entraUser));
+        when(userProfileRepository.findById(userId)).thenReturn(java.util.Optional.of(userProfile));
 
         // When
         List<FirmDto> firms = firmService.getUserFirmsByUserId(userId.toString());
@@ -94,7 +92,7 @@ class FirmServiceTest {
     void getUserFirmsByUserId_userNotFound() {
         // Given
         UUID userId = UUID.randomUUID();
-        when(entraUserRepository.findById(userId)).thenReturn(java.util.Optional.empty());
+        when(userProfileRepository.findById(userId)).thenReturn(java.util.Optional.empty());
 
         // When
         List<FirmDto> firms = firmService.getUserFirmsByUserId(userId.toString());
