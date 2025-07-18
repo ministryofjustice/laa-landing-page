@@ -12,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.List;
@@ -79,7 +80,7 @@ class OfficeServiceTest {
 
     @Test
     void getUserOffices() {
-        UserProfile up1 = UserProfile.builder().firm(Firm.builder().name("F1").build()).build();
+        UserProfile up1 = UserProfile.builder().userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F1").build()).build();
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(up1)).build();
         Office office1 = Office.builder().name("Firm").build();
         when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office1));

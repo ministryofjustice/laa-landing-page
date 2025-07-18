@@ -16,6 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -175,7 +176,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any()))
                 .thenReturn(EntraUser.builder()
                         .userProfiles(Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
-                                .firm(firm).build())).build());
+                                .userProfileStatus(UserProfileStatus.COMPLETE).firm(firm).build())).build());
         when(officeService.getOffice(any()))
                 .thenReturn(Office.builder().id(UUID.randomUUID()).firm(firm).build());
         Model model = new ConcurrentModel();
@@ -195,7 +196,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any()))
                 .thenReturn(EntraUser.builder()
                         .userProfiles(Set.of(UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
-                                .firm(firm1).build())).build());
+                                .userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build())).build());
         when(officeService.getOffice(any()))
                 .thenReturn(Office.builder().id(UUID.randomUUID()).firm(firm2).build());
         Model model = new ConcurrentModel();

@@ -229,6 +229,12 @@ databaseChangeLog:
                     nullable: false
                   name: user_type
                   type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  defaultValue: "PENDING"
+                  name: status
+                  type: VARCHAR(255)
             tableName: user_profile
   - changeSet:
       id: 1752020733897-7

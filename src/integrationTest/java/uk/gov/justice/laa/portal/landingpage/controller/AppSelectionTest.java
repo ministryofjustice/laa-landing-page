@@ -63,13 +63,17 @@ public class AppSelectionTest extends BaseIntegrationTest {
     @Transactional
     public void testGetEditUserAppsForUserHasCorrectProperties() throws Exception {
         EntraUser entraUser = buildTestUser();
-        entraUserRepository.saveAndFlush(entraUser);
-        this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", entraUser.getId())))
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+        
+        // Get the UserProfile from the saved EntraUser (it should be saved due to cascade)
+        UserProfile userProfile = entraUser.getUserProfiles().iterator().next();
+        
+        this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", userProfile.getId())))
                 .andExpect(status().isOk())
                 .andExpect(view().name("edit-user-apps"))
                 .andExpect(model().attributeExists("user"))
                 .andExpect(model().attributeExists("apps"))
-                .andExpect(model().attribute("user", hasProperty("id", is(entraUser.getId().toString()))));
+                .andExpect(model().attribute("user", hasProperty("id", is(userProfile.getId()))));
     }
 
     @Test
@@ -111,7 +115,8 @@ public class AppSelectionTest extends BaseIntegrationTest {
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test@test.com", "Test", "User");
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL, true);
         userProfile.setAppRoles(Set.of(appRole));
-        entraUser.setUserProfiles(Set.of(userProfile));
+        // Use a mutable set to allow Hibernate to manage the relationship properly
+        entraUser.getUserProfiles().add(userProfile);
         return entraUser;
     }
 }

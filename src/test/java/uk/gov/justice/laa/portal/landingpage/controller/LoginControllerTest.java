@@ -17,6 +17,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -229,7 +230,7 @@ class LoginControllerTest {
     @Test
     void switchFirm_get_active() {
         UUID firmId = UUID.randomUUID();
-        UserProfile up = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firmId).name("name").build()).build();
+        UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
@@ -244,7 +245,7 @@ class LoginControllerTest {
     @Test
     void switchFirm_get_no_active() {
         UUID firmId = UUID.randomUUID();
-        UserProfile up = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firmId).name("name").build()).build();
+        UserProfile up = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
