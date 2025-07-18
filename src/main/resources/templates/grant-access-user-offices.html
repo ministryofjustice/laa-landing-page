@@ -19,11 +19,6 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <a class="govuk-back-link govuk-!-margin-bottom-3"
-            th:href="@{/admin/users/grant-access/{id}/roles(id=${user.id})}">
-            Back to roles
-        </a>
-
         <form method="post" th:action="@{/admin/users/grant-access/{id}/offices(id=${user.id})}"
             th:object="${officesForm}">
             <div th:if="${#fields.hasErrors()}">

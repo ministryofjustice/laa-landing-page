@@ -20,7 +20,6 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-
         <form method="post" th:action="@{/admin/users/grant-access/{id}/roles(id=${user.id})}" th:object="${rolesForm}">
             <input type="hidden" name="selectedAppIndex" th:value="${grantAccessSelectedAppIndex}">
 
