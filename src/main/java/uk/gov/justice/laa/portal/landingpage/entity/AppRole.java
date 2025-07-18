@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -12,6 +13,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -59,5 +61,29 @@ public class AppRole extends BaseEntity {
     @Column(name = "role_type", nullable = false, length = 255)
     @NotNull(message = "App role type must be provided")
     private RoleType roleType;
+
+    @Convert(converter = UserTypesConverter.class)
+    @Column(name = "user_type_restriction", nullable = true, length = 255)
+    private Set<UserType> userTypeRestriction;
+
+    @Column(name = "description", nullable = true, length = 255)
+    private String description;
+
+    @Column(name = "authz_role")
+    private boolean authzRole;
+
+    @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @ToString.Exclude
+    @JsonIgnore
+    @Builder.Default
+    private Set<Permission> permissions = new HashSet<>();
+
+    @OneToMany(mappedBy = "assigningRole")
+    @ToString.Exclude
+    private Set<RoleAssignment> assigningRoles;
+
+    @OneToMany(mappedBy = "assignableRole")
+    @ToString.Exclude
+    private Set<RoleAssignment> assignableRoles;
 
 }
