@@ -93,8 +93,6 @@ class UserServiceTest {
     @Mock
     private EntraUserRepository mockEntraUserRepository;
     @Mock
-    private NotificationService mockNotificationService;
-    @Mock
     private AppRepository mockAppRepository;
     @Mock
     private AppRoleRepository mockAppRoleRepository;
@@ -111,7 +109,6 @@ class UserServiceTest {
                 mockAppRepository,
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
-                mockNotificationService,
                 mockOfficeRepository,
                 laaApplicationsList,
                 techServicesClient);

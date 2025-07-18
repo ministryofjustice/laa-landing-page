@@ -23,6 +23,7 @@ public class RegisterUserResponse {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
     public static class CreatedUser {
         @JsonProperty("id")
         private String id;

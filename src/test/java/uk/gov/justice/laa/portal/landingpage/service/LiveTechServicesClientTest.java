@@ -41,7 +41,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRe
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,7 +54,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class TechServicesClientTest {
+public class LiveTechServicesClientTest {
 
     private ListAppender<ILoggingEvent> logAppender;
     @Mock
@@ -67,7 +66,7 @@ public class TechServicesClientTest {
     @Mock
     private CacheManager cacheManager;
     @InjectMocks
-    private TechServicesClient techServicesClient;
+    private LiveTechServicesClient liveTechServicesClient;
     @Mock
     private RestClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock
@@ -79,12 +78,12 @@ public class TechServicesClientTest {
 
     @BeforeEach
     public void setup() {
-        Logger logger = (Logger) LoggerFactory.getLogger(TechServicesClient.class);
+        Logger logger = (Logger) LoggerFactory.getLogger(LiveTechServicesClient.class);
         logAppender = new ListAppender<>();
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
-        ReflectionTestUtils.setField(techServicesClient, "accessTokenRequestScope", "scope");
+        ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
     }
 
     @Test
@@ -109,7 +108,7 @@ public class TechServicesClientTest {
                 .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
-        techServicesClient.updateRoleAssignment(userId);
+        liveTechServicesClient.updateRoleAssignment(userId);
 
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
@@ -126,7 +125,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.updateRoleAssignment(userId),
+                () -> liveTechServicesClient.updateRoleAssignment(userId),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -148,7 +147,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.updateRoleAssignment(userId),
+                () -> liveTechServicesClient.updateRoleAssignment(userId),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -178,7 +177,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.updateRoleAssignment(userId),
+                () -> liveTechServicesClient.updateRoleAssignment(userId),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -213,7 +212,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.updateRoleAssignment(userId),
+                () -> liveTechServicesClient.updateRoleAssignment(userId),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -247,7 +246,7 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
-        techServicesClient.registerNewUser(user);
+        liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
@@ -275,7 +274,7 @@ public class TechServicesClientTest {
         App app = App.builder().securityGroupOid("securityGroupOid").build();
         AppRole appRole = AppRole.builder().name("name").app(app).build();
 
-        techServicesClient.registerNewUser(user);
+        liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
@@ -295,7 +294,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user),
+                () -> liveTechServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -324,7 +323,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user),
+                () -> liveTechServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
@@ -356,7 +355,7 @@ public class TechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> techServicesClient.registerNewUser(user),
+                () -> liveTechServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
