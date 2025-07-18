@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -61,8 +62,8 @@ class FirmServiceTest {
 
     @Test
     void getUserFirms() {
-        UserProfile up1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().name("F1").build()).build();
-        UserProfile up2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().name("F2").build()).build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F1").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
         Set<UserProfile> userProfiles = Set.of(up1, up2);
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         List<FirmDto> firms = firmService.getUserFirms(entraUser);
@@ -72,8 +73,8 @@ class FirmServiceTest {
 
     @Test
     void getUserAllFirms() {
-        UserProfile up1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().name("F1").build()).build();
-        UserProfile up2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().name("F2").build()).build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F1").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
         Set<UserProfile> userProfiles = Set.of(up1, up2);
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         List<FirmDto> firms = firmService.getUserAllFirms(entraUser);
@@ -86,7 +87,7 @@ class FirmServiceTest {
         UUID userId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
         Firm firm = Firm.builder().id(firmId).name("Test Firm").build();
-        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).firm(firm).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(firm).build();
 
         when(userProfileRepository.findById(userId)).thenReturn(java.util.Optional.of(userProfile));
 
