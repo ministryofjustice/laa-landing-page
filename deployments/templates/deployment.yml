@@ -60,6 +60,8 @@ spec:
               value: "${TEST_DATA_ADMIN_PRINCIPALS}"
             - name: TEST_DATA_NON_ADMIN_PRINCIPALS
               value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
+            - name: TEST_DATA_INTERNAL_PRINCIPALS
+              value: "${TEST_DATA_INTERNAL_PRINCIPALS}"
             - name: APP_CIVIL_APPLY_NAME
               value: "${APP_CIVIL_APPLY_NAME}"
             - name: APP_CIVIL_APPLY_DETAILS
