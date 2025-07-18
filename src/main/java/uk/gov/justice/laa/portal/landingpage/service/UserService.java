@@ -619,27 +619,27 @@ public class UserService {
 
     public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
         List<EntraUser> entraUsers = new ArrayList<>();
-        String CREATED_BY = "INTERNAL_USER_SYNC";
+        String createdBy = "INTERNAL_USER_SYNC";
         for (EntraUserDto user : entraUserDtos) {
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder()
                     .activeProfile(true)
                     .userType(UserType.INTERNAL)
                     .createdDate(LocalDateTime.now())
-                    .createdBy(CREATED_BY)
+                    .createdBy(createdBy)
                     .entraUser(entraUser)
                     .build();
 
             entraUser.setEntraOid(user.getEntraOid());
             entraUser.setUserProfiles(Set.of(userProfile));
             entraUser.setUserStatus(UserStatus.ACTIVE);
-            entraUser.setCreatedBy(CREATED_BY);
+            entraUser.setCreatedBy(createdBy);
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
             //todo: security group to access authz app
         }
         return persistNewInternalUser(entraUsers);
-}
+    }
 
     private int persistNewInternalUser(List<EntraUser> newUsers) {
         int usersPersisted = 0;
