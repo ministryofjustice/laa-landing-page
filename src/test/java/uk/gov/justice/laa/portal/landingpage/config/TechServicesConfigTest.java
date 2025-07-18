@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.service.DoNothingTechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,10 +45,11 @@ public class TechServicesConfigTest {
     @Test
     void techServicesConfig_shouldCreateTechServicesNotifierInstance() {
         RestClient client = techServicesConfig.restClient("http://localhost");
-        TechServicesClient techServicesClient = techServicesConfig.techServicesClient(clientSecretCredential, client,
+        TechServicesClient techServicesClient = techServicesConfig.liveTechServicesClient(clientSecretCredential, client,
                 entraUserRepository, cacheManager, jwtDecoder);
 
         assertThat(techServicesClient).isNotNull();
+        assertThat(techServicesClient).isInstanceOf(TechServicesClient.class);
     }
 
     @Test
@@ -63,6 +65,14 @@ public class TechServicesConfigTest {
         JwtDecoder jwtDecoder = techServicesConfig.jwtDecoderForTokenExpiry();
 
         assertThat(jwtDecoder).isNotNull();
+    }
+
+    @Test
+    void techServicesConfig_shouldCreateDoNothingTechServicesNotifierInstance() {
+        TechServicesClient techServicesClient = techServicesConfig.doNothingTechServicesClient();
+
+        assertThat(techServicesClient).isNotNull();
+        assertThat(techServicesClient).isInstanceOf(DoNothingTechServicesClient.class);
     }
 
 }
