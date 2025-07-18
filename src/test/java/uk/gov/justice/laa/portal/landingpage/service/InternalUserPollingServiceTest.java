@@ -14,12 +14,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class InternalUserPollingServiceTest {
 
@@ -90,12 +95,12 @@ class InternalUserPollingServiceTest {
 
     @Test
     void shouldNotCreateNewUsers_whenResponseHasNoUserInstances() {
-        DirectoryObject notAUser1 = new DirectoryObject();
-        notAUser1.setId(UUID.randomUUID().toString());
-        DirectoryObject notAUser2 = new DirectoryObject();
-        notAUser2.setId(UUID.randomUUID().toString());
+        DirectoryObject notUser1 = new DirectoryObject();
+        notUser1.setId(UUID.randomUUID().toString());
+        DirectoryObject notUser2 = new DirectoryObject();
+        notUser2.setId(UUID.randomUUID().toString());
         DirectoryObjectCollectionResponse response = new DirectoryObjectCollectionResponse();
-        response.setValue(List.of(notAUser1, notAUser2));
+        response.setValue(List.of(notUser1, notUser2));
         when(graphServiceClient.groups().byGroupId(anyString()).members().get()).thenReturn(response);
         when(userService.getInternalUserEntraIds()).thenReturn(List.of(UUID.randomUUID()));
 
@@ -104,10 +109,10 @@ class InternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldCreateNewUsers_whenResponseAUser() {
+    void shouldCreateNewUsers_whenResponseIsUser() {
         UUID newId = UUID.randomUUID();
-        DirectoryObject notAUser = new DirectoryObject();
-        notAUser.setId(UUID.randomUUID().toString());
+        DirectoryObject notUser = new DirectoryObject();
+        notUser.setId(UUID.randomUUID().toString());
         User user = new User();
         user.setId(newId.toString());
         user.setMail("user@example.com");
@@ -115,7 +120,7 @@ class InternalUserPollingServiceTest {
         user.setGivenName("Jane");
         user.setDisplayName("Jane Smith");
         DirectoryObjectCollectionResponse response = new DirectoryObjectCollectionResponse();
-        response.setValue(List.of(notAUser, user));
+        response.setValue(List.of(notUser, user));
         when(graphServiceClient.groups().byGroupId(anyString()).members().get()).thenReturn(response);
         when(userService.getInternalUserEntraIds()).thenReturn(List.of(UUID.randomUUID()));
 
