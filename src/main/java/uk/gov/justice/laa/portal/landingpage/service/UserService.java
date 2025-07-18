@@ -83,11 +83,6 @@ public class UserService {
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
-    /**
-     * The number of pages to load in advance when doing user pagination
-     */
-    private static final int PAGES_TO_PRELOAD = 5;
-
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
                        EntraUserRepository entraUserRepository,
                        AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
@@ -334,6 +329,49 @@ public class UserService {
                 .flatMap(app -> app.getAppRoles().stream())
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toList());
+    }
+
+    public List<EntraUser> createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        if (!entraUserDtos.isEmpty()) {
+            List<EntraUser> entraUsers = new ArrayList<>();
+            for (EntraUserDto user : entraUserDtos) {
+                EntraUser entraUser = mapper.map(user, EntraUser.class);
+                UserProfile userProfile = UserProfile.builder()
+                        .activeProfile(true)
+                        .userType(UserType.INTERNAL)
+                        .createdDate(LocalDateTime.now())
+                        .createdBy("poller")
+                        .entraUser(entraUser)
+                        .build();
+
+                entraUser.setEntraOid(user.getEntraOid());
+                entraUser.setUserProfiles(Set.of(userProfile));
+                entraUser.setUserStatus(UserStatus.ACTIVE);
+                entraUser.setCreatedBy("poller");
+                entraUser.setCreatedDate(LocalDateTime.now());
+                entraUsers.add(entraUser);
+                //todo: security group to access authz app
+            }
+            return persistNewUser(entraUsers);
+        }
+        return null;
+    }
+
+    private List<EntraUser> persistNewUser(List<EntraUser> newUsers) {
+        ArrayList<EntraUser> list = new ArrayList<>();
+        try {
+            for (EntraUser newUser : newUsers) {
+                logger.info("Adding new internal user id: {} name: {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName());
+                list.add(entraUserRepository.saveAndFlush(newUser));
+                logger.info("User {} added", newUser.getEntraOid());
+            }
+        } catch (Exception e) {
+            logger.error("Unexpected error when adding user {}", e.getMessage());
+        }
+        return list;
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,

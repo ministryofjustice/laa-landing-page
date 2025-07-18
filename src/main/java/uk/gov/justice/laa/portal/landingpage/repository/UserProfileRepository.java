@@ -15,7 +15,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     @Query(
             """
-            SELECT DISTINCT u.id FROM EntraUser u
+            SELECT DISTINCT u.entraOid FROM EntraUser u
             JOIN u.userProfiles ups
             WHERE ups.userType IN (:userType)
             """)
