@@ -13,12 +13,14 @@ public class UserDetailsForm {
     @NotEmpty(message = "Select a firm")
     private String firmId;
 
-    @Size(max = 99, message = "First name must not be longer than 99 characters")
+    @Size(min = 2, max = 99, message = "First name must be between 2-99 characters")
     @NotEmpty(message = "Enter a first name")
+    @Pattern(regexp = "^[A-Za-z]*", message = "First name must not contain numbers or special characters")
     private String firstName;
 
-    @Size(max = 99, message = "Last name must not be longer than 99 characters")
+    @Size(min = 2, max = 99, message = "Last name must be between 2-99 characters")
     @NotEmpty(message = "Enter a last name")
+    @Pattern(regexp = "^[A-Za-z-]*", message = "Last name must not contain numbers or special characters")
     private String lastName;
 
     @Size(max = 254, message = "Email must not be longer than 254 characters")
