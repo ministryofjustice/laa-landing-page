@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
@@ -68,6 +67,9 @@ public class DemoDataPopulator {
 
     @Value("${app.test.nonadmin.userPrincipals}")
     private Set<String> nonAdminUserPrincipals;
+
+    @Value("${app.test.internal.userPrincipals}")
+    private Set<String> internalUserPrincipals;
 
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
@@ -191,6 +193,16 @@ public class DemoDataPopulator {
                 .build();
     }
 
+    private UserType getUserType(String userPrincipal) {
+        if (adminUserPrincipals.contains(userPrincipal)) {
+            return UserType.EXTERNAL_SINGLE_FIRM_ADMIN;
+        } else if (internalUserPrincipals.contains(userPrincipal)) {
+            return UserType.INTERNAL;
+        } else {
+            return UserType.EXTERNAL_SINGLE_FIRM;
+        }
+    }
+
     @EventListener
     public void appReady(ApplicationReadyEvent event) {
         if (populateDummyData) {
@@ -218,24 +230,10 @@ public class DemoDataPopulator {
                 firm2.getOffices().addAll(Set.of(office3, office4, office5));
                 officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
 
-                List<Application> applications = Objects
-                        .requireNonNull(graphServiceClient.applications().get(requestConfig -> {
-                            assert requestConfig.queryParameters != null;
-                            requestConfig.queryParameters.select = new String[] { "id", "appId", "displayName" };
-                            requestConfig.queryParameters.top = 10;
-                        })).getValue();
-                assert applications != null;
-
-                Set<String> appNames = new HashSet<>();
-
-                for (Application app : applications) {
-                    appNames.add(app.getDisplayName());
-                }
-
                 List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
                     assert requestConfig.queryParameters != null;
                     requestConfig.queryParameters.select = new String[] { "id", "displayName", "mail", "mobilePhone",
-                        "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
+                            "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
                     requestConfig.queryParameters.top = 10;
                 })).getValue();
 
@@ -248,29 +246,10 @@ public class DemoDataPopulator {
 
                 entraUserRepository.saveAll(entraUsers);
 
-                List<App> laaApps = new ArrayList<>();
-
-                for (String appName : appNames) {
-                    laaApps.add(buildLaaApp(null, appName));
-                }
-
-                laaAppRepository.saveAll(laaApps);
-
-                List<AppRole> appRoles = new ArrayList<>();
-                for (App app : laaApps) {
-                    appRoles.add(
-                            buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
-                    appRoles.add(
-                            buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
-                }
-
-                laaAppRoleRepository.saveAll(appRoles);
-
                 List<UserProfile> userProfiles = new ArrayList<>();
 
                 for (EntraUser entraUser : entraUsers) {
                     UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-                    userProfile.getAppRoles().addAll(appRoles);
                     userProfile.setFirm(firm1);
                     userProfiles.add(userProfile);
                 }
@@ -333,6 +312,7 @@ public class DemoDataPopulator {
         Set<String> userPrinciples = new HashSet<>();
         userPrinciples.addAll(adminUserPrincipals == null ? Collections.emptySet() : adminUserPrincipals);
         userPrinciples.addAll(nonAdminUserPrincipals == null ? Collections.emptySet() : nonAdminUserPrincipals);
+        userPrinciples.addAll(internalUserPrincipals == null ? Collections.emptySet() : internalUserPrincipals);
         List<AppRole> appRoles = laaAppRoleRepository.findAll();
         if (adminUserPrincipals != null) {
             for (String userPrincipal : userPrinciples) {
@@ -348,11 +328,12 @@ public class DemoDataPopulator {
                     boolean isNewUser = entraUser.getId() == null;
                     entraUserRepository.save(entraUser);
                     if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
-                        UserProfile userProfile = buildLaaUserProfile(entraUser,
-                                adminUserPrincipals.contains(userPrincipal) ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN
-                                        : UserType.EXTERNAL_SINGLE_FIRM);
+                        UserType userType = getUserType(userPrincipal);
+                        UserProfile userProfile = buildLaaUserProfile(entraUser, userType);
                         userProfile.getAppRoles().addAll(appRoles);
-                        userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
+                        if (userType != UserType.INTERNAL) {
+                            userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
+                        }
                         laaUserProfileRepository.save(userProfile);
                     }
                 } catch (Exception e) {
@@ -364,7 +345,5 @@ public class DemoDataPopulator {
                 }
             }
         }
-
     }
-
 }
