@@ -4,6 +4,7 @@ import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.DoNothingTechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.LiveTechServicesClient;
 
 @Configuration
 public class TechServicesConfig {
@@ -45,12 +48,26 @@ public class TechServicesConfig {
     }
 
     @Bean
-    public TechServicesClient techServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
-                                                 EntraUserRepository entraUserRepository, CacheManager cacheManager,
-                                                 @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder) {
-        return new TechServicesClient(clientSecretCredential, restClient, entraUserRepository, cacheManager, jwtDecoder);
+    @ConditionalOnProperty(
+            value = "app.enable.tech.services.call",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public TechServicesClient liveTechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
+                                                     EntraUserRepository entraUserRepository, CacheManager cacheManager,
+                                                     @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder) {
+        return new LiveTechServicesClient(clientSecretCredential, restClient, entraUserRepository, cacheManager, jwtDecoder);
     }
 
+    @Bean
+    @ConditionalOnProperty(
+            value = "app.enable.tech.services.call",
+            havingValue = "false",
+            matchIfMissing = false
+    )
+    public TechServicesClient doNothingTechServicesClient() {
+        return new DoNothingTechServicesClient();
+    }
 
     @Bean("tokenExpiryJwtDecoder")
     public JwtDecoder jwtDecoderForTokenExpiry() {
