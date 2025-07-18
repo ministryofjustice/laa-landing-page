@@ -63,6 +63,18 @@ class UserProfileTest extends BaseEntityTest {
     }
 
     @Test
+    public void testLaaUserProfileLegacyIdGenerated() {
+        UserProfile userProfile = buildTestLaaUserProfile();
+        userProfile.setLegacyUserId(null);
+
+        assertThat(userProfile.getLegacyUserId()).isNull();
+
+        userProfile.prePersist();
+
+        assertThat(userProfile.getLegacyUserId()).isNotNull();
+    }
+
+    @Test
     public void testLaaUserProfileNullCreatedBy() {
         UserProfile userProfile = buildTestLaaUserProfile();
         update(userProfile, laaProf -> laaProf.setCreatedBy(null));
