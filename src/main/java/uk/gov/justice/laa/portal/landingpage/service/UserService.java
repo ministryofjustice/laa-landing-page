@@ -75,7 +75,6 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
@@ -86,15 +85,15 @@ public class UserService {
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
                        EntraUserRepository entraUserRepository,
                        AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient,
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient,
                        UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
-        this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
