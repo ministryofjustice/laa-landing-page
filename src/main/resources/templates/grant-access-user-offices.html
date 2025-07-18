@@ -13,8 +13,9 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    < Back</a>
+                <a class="govuk-back-link govuk-!-margin-bottom-3"
+                    th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">
+                    Back</a>
             </li>
         </ol>
     </nav>

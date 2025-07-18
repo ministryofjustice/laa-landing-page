@@ -1308,12 +1308,7 @@ public class UserController {
                     List.of("Access granted"),
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
-
-            // Set success message for confirmation page
-            String successMessage = userProfileDto.getFullName()
-                    + " has been granted access to the system with the selected services, roles and offices.";
-            session.setAttribute("successMessage", successMessage);
-
+            
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
