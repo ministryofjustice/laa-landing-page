@@ -15,7 +15,7 @@ public class InternalUserPolling {
     @Value("${internal.user.polling.enabled}")
     private boolean pollingEnabled;
 
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRateString = "${internal.user.polling.interval}")
     public void poll() {
         if (pollingEnabled) {
             internalUserPollingService.pollForNewUsers();

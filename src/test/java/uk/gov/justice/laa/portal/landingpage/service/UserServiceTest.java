@@ -2157,18 +2157,19 @@ class UserServiceTest {
         });
 
         // Act
-        userService.createInternalPolledUser(dtos);
+        int actual = userService.createInternalPolledUser(dtos);
 
         // Assert
         verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+        assertThat(actual).isEqualTo(2);
     }
 
     @Test
     void shouldSkipCreatingInternalUser_whenNoNewUsers() {
         // Act
-        List<EntraUser> result = userService.createInternalPolledUser(List.of());
+        int actual = userService.createInternalPolledUser(List.of());
         // Assert
-        assertThat(result).isNull();
+        assertThat(actual).isEqualTo(0);
     }
 }
 

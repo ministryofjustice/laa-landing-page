@@ -54,8 +54,8 @@ public class InternalUserPollingService {
         List<EntraUserDto> entraUserDtoList = extractEntraUserDtos(newUsers);
         if (!entraUserDtoList.isEmpty()) {
             logger.info("Inserting {} new internal users.", entraUserDtoList.size());
-            userService.createInternalPolledUser(entraUserDtoList);
-            logger.info("Inserted {} new internal users.", entraUserDtoList.size());
+            int savedUserCount = userService.createInternalPolledUser(entraUserDtoList);
+            logger.info("Inserted {} new internal users.", savedUserCount);
         } else {
             logger.info("No valid User objects found among new users.");
         }

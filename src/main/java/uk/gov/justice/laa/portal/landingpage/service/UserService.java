@@ -618,47 +618,50 @@ public class UserService {
         entraUserRepository.saveAndFlush(entraUser);
     }
 
-    public List<EntraUser> createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
-        if (!entraUserDtos.isEmpty()) {
-            List<EntraUser> entraUsers = new ArrayList<>();
-            for (EntraUserDto user : entraUserDtos) {
-                EntraUser entraUser = mapper.map(user, EntraUser.class);
-                UserProfile userProfile = UserProfile.builder()
-                        .activeProfile(true)
-                        .userType(UserType.INTERNAL)
-                        .createdDate(LocalDateTime.now())
-                        .createdBy("poller")
-                        .entraUser(entraUser)
-                        .build();
+    public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        List<EntraUser> entraUsers = new ArrayList<>();
+        String CREATED_BY = "INTERNAL_USER_SYNC";
+        for (EntraUserDto user : entraUserDtos) {
+            EntraUser entraUser = mapper.map(user, EntraUser.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(CREATED_BY)
+                    .entraUser(entraUser)
+                    .build();
 
-                entraUser.setEntraOid(user.getEntraOid());
-                entraUser.setUserProfiles(Set.of(userProfile));
-                entraUser.setUserStatus(UserStatus.ACTIVE);
-                entraUser.setCreatedBy("poller");
-                entraUser.setCreatedDate(LocalDateTime.now());
-                entraUsers.add(entraUser);
-                //todo: security group to access authz app
-            }
-            return persistNewInternalUser(entraUsers);
+            entraUser.setEntraOid(user.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setCreatedBy(CREATED_BY);
+            entraUser.setCreatedDate(LocalDateTime.now());
+            entraUsers.add(entraUser);
+            //todo: security group to access authz app
         }
-        return null;
-    }
+        return persistNewInternalUser(entraUsers);
+}
 
-    private List<EntraUser> persistNewInternalUser(List<EntraUser> newUsers) {
-        ArrayList<EntraUser> list = new ArrayList<>();
-        try {
-            for (EntraUser newUser : newUsers) {
+    private int persistNewInternalUser(List<EntraUser> newUsers) {
+        int usersPersisted = 0;
+        for (EntraUser newUser : newUsers) {
+            try {
                 logger.info("Adding new internal user id: {} name: {} {}",
                         newUser.getEntraOid(),
                         newUser.getFirstName(),
                         newUser.getLastName());
-                list.add(entraUserRepository.saveAndFlush(newUser));
+                entraUserRepository.saveAndFlush(newUser);
+                usersPersisted++;
                 logger.info("User {} added", newUser.getEntraOid());
+            } catch (Exception e) {
+                logger.error("Unexpected error when adding user id: {} name: {} {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName(),
+                        e.getMessage());
             }
-        } catch (Exception e) {
-            logger.error("Unexpected error when adding user {}", e.getMessage());
         }
-        return list;
+        return usersPersisted;
     }
 
     public List<UUID> getInternalUserEntraIds() {
