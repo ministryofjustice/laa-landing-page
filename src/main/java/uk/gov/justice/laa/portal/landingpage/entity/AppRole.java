@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -10,7 +11,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -27,8 +27,6 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -64,8 +62,9 @@ public class AppRole extends BaseEntity {
     @NotNull(message = "App role type must be provided")
     private RoleType roleType;
 
+    @Convert(converter = UserTypesConverter.class)
     @Column(name = "user_type_restriction", nullable = true, length = 255)
-    private String userTypeRestriction;
+    private Set<UserType> userTypeRestriction;
 
     @Column(name = "description", nullable = true, length = 255)
     private String description;
@@ -73,20 +72,18 @@ public class AppRole extends BaseEntity {
     @Column(name = "authz_role")
     private boolean authzRole;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "app_role_permission",
-            joinColumns = @JoinColumn(name = "app_role_id"),
-            foreignKey = @ForeignKey(name = "FK_app_role_permission_app_role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id"),
-            inverseForeignKey = @ForeignKey(name = "FK_app_role_permission_permission_id")
-    )
+    @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
     @JsonIgnore
-    private List<Permission> permissions;
+    @Builder.Default
+    private Set<Permission> permissions = new HashSet<>();
 
-    @OneToMany(targetEntity = AppRole.class)
-    @JoinColumn(name = "id", referencedColumnName = "id")
-    private Map<String, AppRole> roleAssignments;
+    @OneToMany(mappedBy = "assigningRole")
+    @ToString.Exclude
+    private Set<RoleAssignment> assigningRoles;
+
+    @OneToMany(mappedBy = "assignableRole")
+    @ToString.Exclude
+    private Set<RoleAssignment> assignableRoles;
 
 }

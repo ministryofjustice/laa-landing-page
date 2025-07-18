@@ -1,611 +1,762 @@
 databaseChangeLog:
-  - changeSet:
-      id: 1752020733897-1
+- changeSet:
+    id: 1752795541521-1
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: app_pkey
+            name: id
+            type: UUID
+        - column:
+            name: entra_app_id
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: name
+            type: VARCHAR(255)
+        - column:
+            name: security_group_name
+            type: VARCHAR(255)
+        - column:
+            name: security_group_oid
+            type: VARCHAR(255)
+        tableName: app
+- changeSet:
+    id: 1752795541521-2
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            name: authz_role
+            type: BOOLEAN
+        - column:
+            constraints:
+              nullable: false
+            name: app_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: app_role_pkey
+            name: id
+            type: UUID
+        - column:
+            name: description
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: role_type
+            type: VARCHAR(255)
+        - column:
+            name: user_type_restriction
+            type: VARCHAR(255)
+        tableName: app_role
+- changeSet:
+    id: 1752795541521-3
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: created_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            name: end_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            name: last_modified_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            name: start_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: entra_user_pkey
+            name: id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: email
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: entra_oid
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: first_name
+            type: VARCHAR(255)
+        - column:
+            name: last_modified_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: last_name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: status
+            type: VARCHAR(255)
+        tableName: entra_user
+- changeSet:
+    id: 1752795541521-4
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: firm_pkey
+            name: id
+            type: UUID
+        - column:
+            name: code
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: type
+            type: VARCHAR(255)
+        tableName: firm
+- changeSet:
+    id: 1752795541521-5
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: firm_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: office_pkey
+            name: id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+            name: address
+            type: VARCHAR(500)
+        - column:
+            name: code
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: name
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: phone
+            type: VARCHAR(255)
+        tableName: office
+- changeSet:
+    id: 1752795541521-6
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: permission_pkey
+            name: id
+            type: UUID
+        - column:
+            name: description
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: function
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: name
+            type: VARCHAR(255)
+        tableName: permission
+- changeSet:
+    id: 1752795541521-7
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: active_profile
+            type: BOOLEAN
+        - column:
+            constraints:
+              nullable: false
+            name: created_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            name: last_modified_date
+            type: TIMESTAMP WITHOUT TIME ZONE
+        - column:
+            name: entra_user_id
+            type: UUID
+        - column:
+            name: firm_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: user_profile_pkey
+            name: id
+            type: UUID
+        - column:
+            name: legacy_user_id
+            type: VARCHAR(100)
+        - column:
+            constraints:
+              nullable: false
+            name: created_by
+            type: VARCHAR(255)
+        - column:
+            name: last_modified_by
+            type: VARCHAR(255)
+        - column:
+            constraints:
+              nullable: false
+            name: user_type
+            type: VARCHAR(255)
+        tableName: user_profile
+- changeSet:
+    id: 1752795541521-8
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: entra_app_id
+        constraintName: app_entra_app_id_key
+        tableName: app
+- changeSet:
+    id: 1752795541521-9
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: name
+        constraintName: app_name_key
+        tableName: app
+- changeSet:
+    id: 1752795541521-10
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: security_group_name
+        constraintName: app_security_group_name_key
+        tableName: app
+- changeSet:
+    id: 1752795541521-11
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: security_group_oid
+        constraintName: app_security_group_oid_key
+        tableName: app
+- changeSet:
+    id: 1752795541521-12
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: name
+        constraintName: app_role_name_key
+        tableName: app_role
+- changeSet:
+    id: 1752795541521-13
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: first_name
+        indexName: userfirstnameidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-14
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: last_name
+        indexName: userlastnameidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-15
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: created_by
+        indexName: usercreatedbyidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-16
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: created_date
+        indexName: usercreateddateidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-17
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: last_modified_date
+        indexName: userlastmodifieddateidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-18
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: last_modified_by
+        indexName: userlastmodifiedbyidx
+        tableName: entra_user
+        using: btree
+- changeSet:
+    id: 1752795541521-19
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: email
+        constraintName: entra_user_email_key
+        tableName: entra_user
+- changeSet:
+    id: 1752795541521-20
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: entra_oid
+        constraintName: entra_user_entra_oid_key
+        tableName: entra_user
+- changeSet:
+    id: 1752795541521-21
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: code
+        constraintName: firm_code_key
+        tableName: firm
+- changeSet:
+    id: 1752795541521-22
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: name
+        constraintName: firm_name_key
+        tableName: firm
+- changeSet:
+    id: 1752795541521-23
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: code
+        constraintName: office_code_key
+        tableName: office
+- changeSet:
+    id: 1752795541521-24
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: name
+        constraintName: office_name_key
+        tableName: office
+- changeSet:
+    id: 1752795541521-25
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: function
+        constraintName: permission_function_key
+        tableName: permission
+- changeSet:
+    id: 1752795541521-26
+    author: suresh.kavali (generated)
+    changes:
+    - addUniqueConstraint:
+        columnNames: name
+        constraintName: permission_name_key
+        tableName: permission
+- changeSet:
+    id: 1752795541521-27
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: created_by
+        indexName: userprofilecreatedbyidx
+        tableName: user_profile
+        using: btree
+- changeSet:
+    id: 1752795541521-28
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: created_date
+        indexName: userprofilecreateddateidx
+        tableName: user_profile
+        using: btree
+- changeSet:
+    id: 1752795541521-29
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: last_modified_date
+        indexName: userprofilelastmodifieddateidx
+        tableName: user_profile
+        using: btree
+- changeSet:
+    id: 1752795541521-30
+    author: suresh.kavali (generated)
+    changes:
+    - createIndex:
+        columns:
+        - column:
+            name: last_modified_by
+        indexName: userprofilelastmodifiedbyidx
+        tableName: user_profile
+        using: btree
+- changeSet:
+    id: 1752795541521-31
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: role_assignment_pkey
+            name: assignable_role_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: role_assignment_pkey
+            name: assigning_role_id
+            type: UUID
+        tableName: role_assignment
+- changeSet:
+    id: 1752795541521-32
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: app_role_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+            name: permission_id
+            type: UUID
+        tableName: role_permission
+- changeSet:
+    id: 1752795541521-33
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: user_profile_app_role_pkey
+            name: app_role_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: user_profile_app_role_pkey
+            name: user_profile_id
+            type: UUID
+        tableName: user_profile_app_role
+- changeSet:
+    id: 1752795541521-34
+    author: suresh.kavali (generated)
+    changes:
+    - createTable:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: user_profile_office_pkey
+            name: office_id
+            type: UUID
+        - column:
+            constraints:
+              nullable: false
+              primaryKey: true
+              primaryKeyName: user_profile_office_pkey
+            name: user_profile_id
+            type: UUID
+        tableName: user_profile_office
+- changeSet:
+    id: 1752795541521-35
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: app_id
+        baseTableName: app_role
+        constraintName: fk_app_role_app_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: app
+        validate: true
+- changeSet:
+    id: 1752795541521-36
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: firm_id
+        baseTableName: office
+        constraintName: fk_office_firm_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: firm
+        validate: true
+- changeSet:
+    id: 1752795541521-37
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: app_role_id
+        baseTableName: role_permission
+        constraintName: fk_permission_app_role_app_role_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: app_role
+        validate: true
+- changeSet:
+    id: 1752795541521-38
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: permission_id
+        baseTableName: role_permission
+        constraintName: fk_permission_app_role_permission_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: permission
+        validate: true
+- changeSet:
+    id: 1752795541521-39
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: app_role_id
+        baseTableName: user_profile_app_role
+        constraintName: fk_user_profile_app_role_app_role_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: app_role
+        validate: true
+- changeSet:
+    id: 1752795541521-40
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: user_profile_id
+        baseTableName: user_profile_app_role
+        constraintName: fk_user_profile_app_role_user_profile_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: user_profile
+        validate: true
+- changeSet:
+    id: 1752795541521-41
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: firm_id
+        baseTableName: user_profile
+        constraintName: fk_user_profile_firm_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: firm
+        validate: true
+- changeSet:
+    id: 1752795541521-42
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: office_id
+        baseTableName: user_profile_office
+        constraintName: fk_user_profile_office_office_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: office
+        validate: true
+- changeSet:
+    id: 1752795541521-43
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: user_profile_id
+        baseTableName: user_profile_office
+        constraintName: fk_user_profile_office_user_profile_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: user_profile
+        validate: true
+- changeSet:
+    id: 1752795541521-44
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: entra_user_id
+        baseTableName: user_profile
+        constraintName: fk_user_profile_user_id
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: entra_user
+        validate: true
+- changeSet:
+    id: 1752795541521-45
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: assignable_role_id
+        baseTableName: role_assignment
+        constraintName: fkinkufwdifl4xw55uexx0avmid
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: app_role
+        validate: true
+- changeSet:
+    id: 1752795541521-46
+    author: suresh.kavali (generated)
+    changes:
+    - addForeignKeyConstraint:
+        baseColumnNames: assigning_role_id
+        baseTableName: role_assignment
+        constraintName: fksq2gkf49sdafy34jxa1rh1ya6
+        deferrable: false
+        initiallyDeferred: false
+        onDelete: NO ACTION
+        onUpdate: NO ACTION
+        referencedColumnNames: id
+        referencedTableName: app_role
+        validate: true
+- changeSet:
+      id: 1752795541521-47
       author: system
       changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: app_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  name: entra_app_id
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: name
-                  type: VARCHAR(255)
-              - column:
-                  name: security_group_name
-                  type: VARCHAR(255)
-              - column:
-                  name: security_group_oid
-                  type: VARCHAR(255)
-            tableName: app
-  - changeSet:
-      id: 1752020733897-2
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: app_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: app_role_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                  name: name
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: role_type
-                  type: VARCHAR(255)
-            tableName: app_role
-  - changeSet:
-      id: 1752020733897-3
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: created_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: end_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: last_modified_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: start_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: entra_user_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: email
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: entra_oid
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: first_name
-                  type: VARCHAR(255)
-              - column:
-                  name: last_modified_by
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: last_name
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: status
-                  type: VARCHAR(255)
-            tableName: entra_user
-  - changeSet:
-      id: 1752020733897-4
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: firm_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  name: code
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: name
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: type
-                  type: VARCHAR(255)
-            tableName: firm
-  - changeSet:
-      id: 1752020733897-5
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: firm_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: office_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                  name: address
-                  type: VARCHAR(500)
-              - column:
-                  name: code
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: name
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: phone
-                  type: VARCHAR(255)
-            tableName: office
-  - changeSet:
-      id: 1752020733897-6
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: active_profile
-                  type: BOOLEAN
-              - column:
-                  constraints:
-                    nullable: false
-                  name: created_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: last_modified_date
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: entra_user_id
-                  type: UUID
-              - column:
-                  name: firm_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: user_profile_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  name: legacy_user_id
-                  type: VARCHAR(100)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: created_by
-                  type: VARCHAR(255)
-              - column:
-                  name: last_modified_by
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: user_type
-                  type: VARCHAR(255)
-            tableName: user_profile
-  - changeSet:
-      id: 1752020733897-7
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: entra_app_id
-            constraintName: app_entra_app_id_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-8
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: name
-            constraintName: app_name_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-9
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: security_group_name
-            constraintName: app_security_group_name_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-10
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: security_group_oid
-            constraintName: app_security_group_oid_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-11
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: name
-            constraintName: app_role_name_key
-            tableName: app_role
-  - changeSet:
-      id: 1752020733897-12
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: first_name
-            indexName: userfirstnameidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-13
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: last_name
-            indexName: userlastnameidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-14
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: created_by
-            indexName: usercreatedbyidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-15
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: created_date
-            indexName: usercreateddateidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-16
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: last_modified_date
-            indexName: userlastmodifieddateidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-17
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: last_modified_by
-            indexName: userlastmodifiedbyidx
-            tableName: entra_user
-            using: btree
-  - changeSet:
-      id: 1752020733897-18
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: email
-            constraintName: entra_user_email_key
-            tableName: entra_user
-  - changeSet:
-      id: 1752020733897-19
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: entra_oid
-            constraintName: entra_user_entra_oid_key
-            tableName: entra_user
-  - changeSet:
-      id: 1752020733897-20
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: code
-            constraintName: firm_code_key
-            tableName: firm
-  - changeSet:
-      id: 1752020733897-21
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: name
-            constraintName: firm_name_key
-            tableName: firm
-  - changeSet:
-      id: 1752020733897-22
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: code
-            constraintName: office_code_key
-            tableName: office
-  - changeSet:
-      id: 1752020733897-23
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: name
-            constraintName: office_name_key
-            tableName: office
-  - changeSet:
-      id: 1752020733897-24
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: created_by
-            indexName: userprofilecreatedbyidx
-            tableName: user_profile
-            using: btree
-  - changeSet:
-      id: 1752020733897-25
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: created_date
-            indexName: userprofilecreateddateidx
-            tableName: user_profile
-            using: btree
-  - changeSet:
-      id: 1752020733897-26
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: last_modified_date
-            indexName: userprofilelastmodifieddateidx
-            tableName: user_profile
-            using: btree
-  - changeSet:
-      id: 1752020733897-27
-      author: system
-      changes:
-        - createIndex:
-            columns:
-              - column:
-                  name: last_modified_by
-            indexName: userprofilelastmodifiedbyidx
-            tableName: user_profile
-            using: btree
-  - changeSet:
-      id: 1752020733897-28
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: user_profile_app_role_pkey
-                  name: app_role_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: user_profile_app_role_pkey
-                  name: user_profile_id
-                  type: UUID
-            tableName: user_profile_app_role
-  - changeSet:
-      id: 1752020733897-29
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: user_profile_office_pkey
-                  name: office_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: user_profile_office_pkey
-                  name: user_profile_id
-                  type: UUID
-            tableName: user_profile_office
-  - changeSet:
-      id: 1752020733897-30
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: app_id
-            baseTableName: app_role
-            constraintName: fk_app_role_app_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: app
-            validate: true
-  - changeSet:
-      id: 1752020733897-31
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: firm_id
-            baseTableName: office
-            constraintName: fk_office_firm_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: firm
-            validate: true
-  - changeSet:
-      id: 1752020733897-32
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: app_role_id
-            baseTableName: user_profile_app_role
-            constraintName: fk_user_profile_app_role_app_role_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: app_role
-            validate: true
-  - changeSet:
-      id: 1752020733897-33
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: user_profile_id
-            baseTableName: user_profile_app_role
-            constraintName: fk_user_profile_app_role_user_profile_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: user_profile
-            validate: true
-  - changeSet:
-      id: 1752020733897-34
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: firm_id
-            baseTableName: user_profile
-            constraintName: fk_user_profile_firm_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: firm
-            validate: true
-  - changeSet:
-      id: 1752020733897-35
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: office_id
-            baseTableName: user_profile_office
-            constraintName: fk_user_profile_office_office_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: office
-            validate: true
-  - changeSet:
-      id: 1752020733897-36
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: user_profile_id
-            baseTableName: user_profile_office
-            constraintName: fk_user_profile_office_user_profile_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: user_profile
-            validate: true
-  - changeSet:
-      id: 1752020733897-37
-      author: system
-      changes:
-        - addForeignKeyConstraint:
-            baseColumnNames: entra_user_id
-            baseTableName: user_profile
-            constraintName: fk_user_profile_user_id
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: NO ACTION
-            onUpdate: NO ACTION
-            referencedColumnNames: id
-            referencedTableName: entra_user
-            validate: true
-  - changeSet:
-      id: 1752020733897-38
-      author: system
-      changes:
-        - sql:
-            dbms: postgresql
-            sql: "ALTER TABLE user_profile ADD CONSTRAINT firm_not_null_for_non_internal_users_only CHECK ((firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL'))"
-        - sql:
-            dbms: postgresql
-            sql: "ALTER TABLE entra_user ADD CONSTRAINT end_date_after_start_date CHECK (end_date > start_date)"
-        - sql:
-            dbms: postgresql
-            sql: "CREATE UNIQUE INDEX one_active_profile_per_user ON user_profile(entra_user_id) WHERE active_profile = true"
-        - sql:
-            dbms: postgresql
-            sql: "CREATE UNIQUE INDEX one_profile_per_non_multi_firm_user ON user_profile(entra_user_id) WHERE user_type != 'EXTERNAL_MULTI_FIRM'"
-        - sql:
-            dbms: postgresql
-            sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
+          - sql:
+                dbms: postgresql
+                sql: "ALTER TABLE user_profile ADD CONSTRAINT firm_not_null_for_non_internal_users_only CHECK ((firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL'))"
+          - sql:
+                dbms: postgresql
+                sql: "ALTER TABLE entra_user ADD CONSTRAINT end_date_after_start_date CHECK (end_date > start_date)"
+          - sql:
+                dbms: postgresql
+                sql: "CREATE UNIQUE INDEX one_active_profile_per_user ON user_profile(entra_user_id) WHERE active_profile = true"
+          - sql:
+                dbms: postgresql
+                sql: "CREATE UNIQUE INDEX one_profile_per_non_multi_firm_user ON user_profile(entra_user_id) WHERE user_type != 'EXTERNAL_MULTI_FIRM'"
+          - sql:
+                dbms: postgresql
+                sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
+
