@@ -331,49 +331,6 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<EntraUser> createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
-        if (!entraUserDtos.isEmpty()) {
-            List<EntraUser> entraUsers = new ArrayList<>();
-            for (EntraUserDto user : entraUserDtos) {
-                EntraUser entraUser = mapper.map(user, EntraUser.class);
-                UserProfile userProfile = UserProfile.builder()
-                        .activeProfile(true)
-                        .userType(UserType.INTERNAL)
-                        .createdDate(LocalDateTime.now())
-                        .createdBy("poller")
-                        .entraUser(entraUser)
-                        .build();
-
-                entraUser.setEntraOid(user.getEntraOid());
-                entraUser.setUserProfiles(Set.of(userProfile));
-                entraUser.setUserStatus(UserStatus.ACTIVE);
-                entraUser.setCreatedBy("poller");
-                entraUser.setCreatedDate(LocalDateTime.now());
-                entraUsers.add(entraUser);
-                //todo: security group to access authz app
-            }
-            return persistNewUser(entraUsers);
-        }
-        return null;
-    }
-
-    private List<EntraUser> persistNewUser(List<EntraUser> newUsers) {
-        ArrayList<EntraUser> list = new ArrayList<>();
-        try {
-            for (EntraUser newUser : newUsers) {
-                logger.info("Adding new internal user id: {} name: {} {}",
-                        newUser.getEntraOid(),
-                        newUser.getFirstName(),
-                        newUser.getLastName());
-                list.add(entraUserRepository.saveAndFlush(newUser));
-                logger.info("User {} added", newUser.getEntraOid());
-            }
-        } catch (Exception e) {
-            logger.error("Unexpected error when adding user {}", e.getMessage());
-        }
-        return list;
-    }
-
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
                                 UserType userType, String createdBy) {
 
@@ -659,6 +616,49 @@ public class UserService {
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
         entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public List<EntraUser> createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        if (!entraUserDtos.isEmpty()) {
+            List<EntraUser> entraUsers = new ArrayList<>();
+            for (EntraUserDto user : entraUserDtos) {
+                EntraUser entraUser = mapper.map(user, EntraUser.class);
+                UserProfile userProfile = UserProfile.builder()
+                        .activeProfile(true)
+                        .userType(UserType.INTERNAL)
+                        .createdDate(LocalDateTime.now())
+                        .createdBy("poller")
+                        .entraUser(entraUser)
+                        .build();
+
+                entraUser.setEntraOid(user.getEntraOid());
+                entraUser.setUserProfiles(Set.of(userProfile));
+                entraUser.setUserStatus(UserStatus.ACTIVE);
+                entraUser.setCreatedBy("poller");
+                entraUser.setCreatedDate(LocalDateTime.now());
+                entraUsers.add(entraUser);
+                //todo: security group to access authz app
+            }
+            return persistNewInternalUser(entraUsers);
+        }
+        return null;
+    }
+
+    private List<EntraUser> persistNewInternalUser(List<EntraUser> newUsers) {
+        ArrayList<EntraUser> list = new ArrayList<>();
+        try {
+            for (EntraUser newUser : newUsers) {
+                logger.info("Adding new internal user id: {} name: {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName());
+                list.add(entraUserRepository.saveAndFlush(newUser));
+                logger.info("User {} added", newUser.getEntraOid());
+            }
+        } catch (Exception e) {
+            logger.error("Unexpected error when adding user {}", e.getMessage());
+        }
+        return list;
     }
 
     public List<UUID> getInternalUserEntraIds() {
