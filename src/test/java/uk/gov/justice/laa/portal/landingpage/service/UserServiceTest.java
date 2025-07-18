@@ -2169,4 +2169,178 @@ class UserServiceTest {
         assertThrows(IOException.class,
                 () -> userService.setDefaultActiveProfile(entraUser, firm3Id));
     }
+
+    @Test
+    void isAccessGranted_returnsTrue_whenUserProfileStatusIsComplete() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .build();
+        when(mockUserProfileRepository.findById(UUID.fromString(userId)))
+                .thenReturn(Optional.of(userProfile));
+
+        // When
+        boolean result = userService.isAccessGranted(userId);
+
+        // Then
+        assertThat(result).isTrue();
+        verify(mockUserProfileRepository).findById(UUID.fromString(userId));
+    }
+
+    @Test
+    void isAccessGranted_returnsFalse_whenUserProfileStatusIsNotComplete() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .userProfileStatus(UserProfileStatus.PENDING)
+                .build();
+        when(mockUserProfileRepository.findById(UUID.fromString(userId)))
+                .thenReturn(Optional.of(userProfile));
+
+        // When
+        boolean result = userService.isAccessGranted(userId);
+
+        // Then
+        assertThat(result).isFalse();
+        verify(mockUserProfileRepository).findById(UUID.fromString(userId));
+    }
+
+    @Test
+    void isAccessGranted_returnsFalse_whenUserProfileNotFound() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        when(mockUserProfileRepository.findById(UUID.fromString(userId)))
+                .thenReturn(Optional.empty());
+
+        // When
+        boolean result = userService.isAccessGranted(userId);
+
+        // Then
+        assertThat(result).isFalse();
+        verify(mockUserProfileRepository).findById(UUID.fromString(userId));
+    }
+
+    @Test
+    void grantAccess_returnsTrue_whenUserProfileExists() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        String currentUserName = "admin";
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .userProfileStatus(UserProfileStatus.PENDING)
+                .build();
+        when(mockUserProfileRepository.findById(UUID.fromString(userId)))
+                .thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.saveAndFlush(any(UserProfile.class)))
+                .thenReturn(userProfile);
+
+        // When
+        boolean result = userService.grantAccess(userId, currentUserName);
+
+        // Then
+        assertThat(result).isTrue();
+        assertThat(userProfile.getUserProfileStatus()).isEqualTo(UserProfileStatus.COMPLETE);
+        assertThat(userProfile.getLastModifiedBy()).isEqualTo(currentUserName);
+        assertThat(userProfile.getLastModified()).isNotNull();
+        verify(mockUserProfileRepository).findById(UUID.fromString(userId));
+        verify(mockUserProfileRepository).saveAndFlush(userProfile);
+    }
+
+    @Test
+    void grantAccess_returnsFalse_whenUserProfileNotFound() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        String currentUserName = "admin";
+        when(mockUserProfileRepository.findById(UUID.fromString(userId)))
+                .thenReturn(Optional.empty());
+
+        // When
+        boolean result = userService.grantAccess(userId, currentUserName);
+
+        // Then
+        assertThat(result).isFalse();
+        verify(mockUserProfileRepository).findById(UUID.fromString(userId));
+        verify(mockUserProfileRepository, times(0)).saveAndFlush(any(UserProfile.class));
+    }
+
+    @Test
+    void getAppsByRoleType_throughGetAppsByUserType_internal() {
+        // Given
+        AppRole appRole1 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.INTERNAL)
+                .app(App.builder().id(UUID.randomUUID()).name("Internal App").build())
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+                .thenReturn(List.of(appRole1, appRole2));
+
+        // When
+        List<AppDto> result = userService.getAppsByUserType(UserType.INTERNAL);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.stream().map(AppDto::getName))
+                .containsExactlyInAnyOrder("Internal App", "Common App");
+        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+    }
+
+    @Test
+    void getAppsByRoleType_throughGetAppsByUserType_external() {
+        // Given
+        AppRole appRole1 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.EXTERNAL)
+                .app(App.builder().id(UUID.randomUUID()).name("External App").build())
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+                .thenReturn(List.of(appRole1, appRole2));
+
+        // When
+        List<AppDto> result = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.stream().map(AppDto::getName))
+                .containsExactlyInAnyOrder("External App", "Common App");
+        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+    }
+
+    @Test
+    void getAppsByRoleType_removingDuplicateApps() {
+        // Given - Same app appears in multiple roles
+        App sharedApp = App.builder().id(UUID.randomUUID()).name("Shared App").build();
+        AppRole appRole1 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.INTERNAL)
+                .app(sharedApp)
+                .build();
+        AppRole appRole2 = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .app(sharedApp)
+                .build();
+        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+                .thenReturn(List.of(appRole1, appRole2));
+
+        // When
+        List<AppDto> result = userService.getAppsByUserType(UserType.INTERNAL);
+
+        // Then - Should only appear once due to distinct()
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Shared App");
+        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+    }
 }
