@@ -63,16 +63,15 @@ class UserProfileTest extends BaseEntityTest {
     }
 
     @Test
-    public void testLaaUserProfileLegacyIdTooLong() {
+    public void testLaaUserProfileLegacyIdGenerated() {
         UserProfile userProfile = buildTestLaaUserProfile();
-        update(userProfile, f -> f.setLegacyUserId("TestLegacyIdThatIsTooLong".repeat(15)));
+        userProfile.setLegacyUserId(null);
 
-        Set<ConstraintViolation<UserProfile>> violations = validator.validate(userProfile);
+        assertThat(userProfile.getLegacyUserId()).isNull();
 
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Legacy user ID must be less than 100 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("legacyUserId");
+        userProfile.prePersist();
+
+        assertThat(userProfile.getLegacyUserId()).isNotNull();
     }
 
     @Test
