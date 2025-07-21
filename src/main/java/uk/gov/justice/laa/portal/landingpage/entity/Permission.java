@@ -37,7 +37,7 @@ public class Permission extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
-    @Column(name = "function", nullable = false, length = 255, unique = true)
+    @Column(name = "function", nullable = false, length = 255, unique = false)
     @Size(max = 255, message = "Permission function must be less than 255 characters")
     private String function;
 

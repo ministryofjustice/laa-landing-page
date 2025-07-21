@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -78,12 +79,14 @@ public class AppRole extends BaseEntity {
     @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
 
-    @OneToMany(mappedBy = "assigningRole")
+    @OneToMany(mappedBy = "assigningRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
-    private Set<RoleAssignment> assigningRoles;
+    @JsonManagedReference("assigning-role")
+    private Set<RoleAssignment> assigningRoles = new HashSet<>();
 
-    @OneToMany(mappedBy = "assignableRole")
+    @OneToMany(mappedBy = "assignableRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
-    private Set<RoleAssignment> assignableRoles;
+    @JsonManagedReference("assignable-role")
+    private Set<RoleAssignment> assignableRoles = new HashSet<>();
 
 }
