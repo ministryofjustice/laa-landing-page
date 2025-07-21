@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
@@ -18,6 +20,14 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRepository appRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private RoleAssignmentRepository roleAssignmentRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private PermissionRepository permissionRepository;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
@@ -81,6 +91,41 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getUserTypeRestriction())
                 .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
 
+    }
+
+    @Test
+    public void testSaveAndRetrieveLaaAppRoleWithPermissionsAndRoleAssignment() {
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+                "Security Group Name");
+        appRepository.saveAndFlush(app);
+
+        AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
+        AppRole appRole2 = buildLaaAppRole(app, "App Role 2");
+        app.getAppRoles().add(appRole1);
+        app.getAppRoles().add(appRole2);
+        repository.saveAllAndFlush(Arrays.asList(appRole1, appRole2));
+
+        RoleAssignment roleAssignment = RoleAssignment.builder().assignableRole(appRole2).assigningRole(appRole1).build();
+        roleAssignmentRepository.saveAndFlush(roleAssignment);
+
+        Permission rolePermission = Permission.builder().name("Role Permission").description("Role Permission Description")
+                .function("allow-all").appRoles(Set.of(appRole1, appRole2)).build();
+        permissionRepository.save(rolePermission);
+
+        appRole1.getAssignableRoles().add(roleAssignment);
+        appRole2.getAssigningRoles().add(roleAssignment);
+        repository.saveAllAndFlush(Arrays.asList(appRole1, appRole2));
+
+        AppRole result = repository.findById(appRole1.getId()).orElseThrow();
+
+        Assertions.assertThat(result.getId()).isEqualTo(appRole1.getId());
+        Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
+        Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
+        Assertions.assertThat(result.getUserTypeRestriction()).hasSize(1);
+        Assertions.assertThat(result.getUserTypeRestriction().stream().findFirst().get()).isEqualTo(UserType.INTERNAL);
+        Assertions.assertThat(result.getAssignableRoles()).isNotNull();
+        Assertions.assertThat(result.getAssignableRoles()).hasSize(1);
+        Assertions.assertThat(result.getAssignableRoles().stream().findFirst().get()).isInstanceOf(RoleAssignment.class);
     }
 
 }

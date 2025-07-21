@@ -19,7 +19,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "permission", indexes = {
@@ -54,6 +54,6 @@ public class Permission extends BaseEntity {
     )
     @ToString.Exclude
     @JsonIgnore
-    private List<AppRole> appRoles;
+    private Set<AppRole> appRoles;
 
 }
