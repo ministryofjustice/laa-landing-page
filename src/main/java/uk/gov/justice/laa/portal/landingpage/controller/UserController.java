@@ -39,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -637,7 +638,16 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex));
+        UserType userType = userService.getUserTypeByUserId(id).orElse(UserType.EXTERNAL_SINGLE_FIRM);
+        boolean isInternalUser = UserType.INTERNAL_TYPES.contains(userType);
+        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex))
+                .stream().filter(appRoleDto -> {
+                    if (isInternalUser) {
+                        return true;
+                    } else {
+                        return !appRoleDto.getRoleType().equals(RoleType.INTERNAL);
+                    }
+                }).toList();
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
