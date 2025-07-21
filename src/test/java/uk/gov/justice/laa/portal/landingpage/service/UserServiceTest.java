@@ -1078,12 +1078,12 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUserRoles_updatesRoles_whenUserAndProfileExist() {
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole1() {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).build();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL_AND_EXTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1097,6 +1097,69 @@ class UserServiceTest {
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(user);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole2() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_internalRole() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_error() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).isEmpty();
     }
 
     @Test
@@ -1966,7 +2029,7 @@ class UserServiceTest {
         void updateUserRoles_handlesEmptyRolesList() {
             // Arrange
             UUID userId = UUID.randomUUID();
-            UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
+            UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
             EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
