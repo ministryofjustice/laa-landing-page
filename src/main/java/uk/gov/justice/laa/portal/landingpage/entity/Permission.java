@@ -34,14 +34,17 @@ public class Permission extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 255, unique = true)
     @NotBlank(message = "Permission name must be provided")
-    @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
+    @Size(min = 1, max = 255, message = "Permission name must be between 1 and 255 characters")
     private String name;
 
     @Column(name = "function", nullable = false, length = 255, unique = false)
-    @Size(max = 255, message = "Permission function must be less than 255 characters")
+    @NotBlank(message = "Permission function must be provided")
+    @Size(max = 255, message = "Permission function must be between 1 and 255 characters")
     private String function;
 
     @Column(name = "description", nullable = true, length = 255)
+    @NotBlank(message = "Permission description must be provided")
+    @Size(max = 255, message = "Permission description must be between 1 and 255 characters")
     private String description;
 
     @ManyToMany(fetch = FetchType.LAZY)

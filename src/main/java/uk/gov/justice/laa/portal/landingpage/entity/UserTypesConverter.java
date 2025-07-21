@@ -23,7 +23,7 @@ public class UserTypesConverter implements AttributeConverter<Set<UserType>, Str
 
     @Override
     public Set<UserType> convertToEntityAttribute(String string) {
-        if (string == null) {
+        if (string == null || string.isEmpty()) {
             return Set.of();
         }
 

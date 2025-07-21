@@ -6,6 +6,7 @@ import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class BaseEntityTest {
@@ -48,6 +49,11 @@ public class BaseEntityTest {
     protected AppRole buildTestLaaAppRole() {
         return AppRole.builder().name("Test App Role")
                 .roleType(RoleType.INTERNAL).build();
+    }
+
+    protected Permission buildTestPermission(Set<AppRole> appRoles) {
+        return Permission.builder().name("Test Permission").description("description")
+                .function("function").appRoles(appRoles).build();
     }
 
     protected UserProfile buildTestLaaUserProfile() {

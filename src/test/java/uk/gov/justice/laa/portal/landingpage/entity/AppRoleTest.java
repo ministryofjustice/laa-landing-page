@@ -66,6 +66,34 @@ public class AppRoleTest extends BaseEntityTest {
     }
 
     @Test
+    public void testLaaAppRoleDescriptionEmpty() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setDescription(""));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role description must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
+
+    }
+
+    @Test
+    public void testLaaAppRoleDescriptionTooLong() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setDescription("TestAppRoleNameThatIsTooLong".repeat(20)));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role description must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
+
+    }
+
+    @Test
     public void testAppRoleTypeExternal() {
         AppRole appRole = buildTestLaaAppRole();
         update(appRole, f -> f.setRoleType(RoleType.EXTERNAL));
