@@ -82,11 +82,13 @@ public class AppRole extends BaseEntity {
     @OneToMany(mappedBy = "assigningRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
     @JsonManagedReference("assigning-role")
+    @Builder.Default
     private Set<RoleAssignment> assigningRoles = new HashSet<>();
 
     @OneToMany(mappedBy = "assignableRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
     @JsonManagedReference("assignable-role")
+    @Builder.Default
     private Set<RoleAssignment> assignableRoles = new HashSet<>();
 
 }

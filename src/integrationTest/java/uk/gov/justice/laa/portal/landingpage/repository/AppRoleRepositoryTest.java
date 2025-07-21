@@ -7,8 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
+import java.util.Set;
 
 @DataJpaTest
 public class AppRoleRepositoryTest extends BaseRepositoryTest {
@@ -44,6 +46,10 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
         Assertions.assertThat(result.getId()).isEqualTo(appRole1.getId());
         Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
+        Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
+        Assertions.assertThat(result.getUserTypeRestriction()).hasSize(1);
+        Assertions.assertThat(result.getUserTypeRestriction().stream().findFirst().get()).isEqualTo(UserType.INTERNAL);
+
         Assertions.assertThat(result.getApp()).isNotNull();
 
         App resultApp = result.getApp();
@@ -54,4 +60,27 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(resultApp.getAppRoles()).containsExactlyInAnyOrder(appRole1, appRole2);
 
     }
+
+    @Test
+    public void testSaveAndRetrieveLaaAppRoleMultipleUserTypeRestriction() {
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+                "Security Group Name");
+        appRepository.saveAndFlush(app);
+
+        AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
+        appRole1.getUserTypeRestriction().add(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        repository.saveAndFlush(appRole1);
+
+
+        AppRole result = repository.findById(appRole1.getId()).orElseThrow();
+
+        Assertions.assertThat(result.getId()).isEqualTo(appRole1.getId());
+        Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
+        Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
+        Assertions.assertThat(result.getUserTypeRestriction()).hasSize(2);
+        Assertions.assertThat(result.getUserTypeRestriction())
+                .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
+
+    }
+
 }
