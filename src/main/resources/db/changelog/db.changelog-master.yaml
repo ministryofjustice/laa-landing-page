@@ -1,7 +1,7 @@
 databaseChangeLog:
 - changeSet:
     id: 1752795541521-1
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -29,7 +29,7 @@ databaseChangeLog:
         tableName: app
 - changeSet:
     id: 1752795541521-2
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -67,7 +67,7 @@ databaseChangeLog:
         tableName: app_role
 - changeSet:
     id: 1752795541521-3
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -128,7 +128,7 @@ databaseChangeLog:
         tableName: entra_user
 - changeSet:
     id: 1752795541521-4
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -155,7 +155,7 @@ databaseChangeLog:
         tableName: firm
 - changeSet:
     id: 1752795541521-5
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -192,7 +192,7 @@ databaseChangeLog:
         tableName: office
 - changeSet:
     id: 1752795541521-6
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -219,7 +219,7 @@ databaseChangeLog:
         tableName: permission
 - changeSet:
     id: 1752795541521-7
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -251,7 +251,7 @@ databaseChangeLog:
             type: UUID
         - column:
             name: legacy_user_id
-            type: VARCHAR(100)
+            type: UUID
         - column:
             constraints:
               nullable: false
@@ -268,7 +268,7 @@ databaseChangeLog:
         tableName: user_profile
 - changeSet:
     id: 1752795541521-8
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -289,7 +289,7 @@ databaseChangeLog:
         tableName: role_assignment
 - changeSet:
     id: 1752795541521-9
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: entra_app_id
@@ -297,7 +297,7 @@ databaseChangeLog:
         tableName: app
 - changeSet:
     id: 1752795541521-10
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: name
@@ -305,7 +305,7 @@ databaseChangeLog:
         tableName: app
 - changeSet:
     id: 1752795541521-11
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: security_group_name
@@ -313,7 +313,7 @@ databaseChangeLog:
         tableName: app
 - changeSet:
     id: 1752795541521-12
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: security_group_oid
@@ -321,7 +321,7 @@ databaseChangeLog:
         tableName: app
 - changeSet:
     id: 1752795541521-13
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: name
@@ -329,7 +329,7 @@ databaseChangeLog:
         tableName: app_role
 - changeSet:
     id: 1752795541521-14
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -340,7 +340,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-15
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -351,7 +351,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-16
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -362,7 +362,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-17
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -373,7 +373,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-18
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -384,7 +384,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-19
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -395,7 +395,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-20
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: email
@@ -403,7 +403,7 @@ databaseChangeLog:
         tableName: entra_user
 - changeSet:
     id: 1752795541521-21
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: entra_oid
@@ -411,7 +411,7 @@ databaseChangeLog:
         tableName: entra_user
 - changeSet:
     id: 1752795541521-22
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: code
@@ -419,7 +419,7 @@ databaseChangeLog:
         tableName: firm
 - changeSet:
     id: 1752795541521-23
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: name
@@ -427,7 +427,7 @@ databaseChangeLog:
         tableName: firm
 - changeSet:
     id: 1752795541521-24
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: code
@@ -435,7 +435,7 @@ databaseChangeLog:
         tableName: office
 - changeSet:
     id: 1752795541521-25
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: name
@@ -443,7 +443,7 @@ databaseChangeLog:
         tableName: office
 - changeSet:
     id: 1752795541521-26
-    author: system (generated)
+    author: system
     changes:
     - addUniqueConstraint:
         columnNames: name
@@ -451,7 +451,7 @@ databaseChangeLog:
         tableName: permission
 - changeSet:
     id: 1752795541521-27
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -462,7 +462,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-28
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -473,7 +473,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-29
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -484,7 +484,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-30
-    author: system (generated)
+    author: system
     changes:
     - createIndex:
         columns:
@@ -495,7 +495,7 @@ databaseChangeLog:
         using: btree
 - changeSet:
     id: 1752795541521-31
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -512,7 +512,7 @@ databaseChangeLog:
         tableName: role_permission
 - changeSet:
     id: 1752795541521-32
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -533,7 +533,7 @@ databaseChangeLog:
         tableName: user_profile_app_role
 - changeSet:
     id: 1752795541521-33
-    author: system (generated)
+    author: system
     changes:
     - createTable:
         columns:
@@ -554,7 +554,7 @@ databaseChangeLog:
         tableName: user_profile_office
 - changeSet:
     id: 1752795541521-34
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: app_id
@@ -569,7 +569,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-35
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: firm_id
@@ -584,7 +584,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-36
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: app_role_id
@@ -599,7 +599,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-37
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: permission_id
@@ -614,7 +614,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-38
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: app_role_id
@@ -629,7 +629,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-39
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: user_profile_id
@@ -644,7 +644,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-40
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: firm_id
@@ -659,7 +659,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-41
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: office_id
@@ -674,7 +674,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-42
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: user_profile_id
@@ -689,7 +689,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-43
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: entra_user_id
@@ -704,7 +704,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-44
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: assignable_role_id
@@ -719,7 +719,7 @@ databaseChangeLog:
         validate: true
 - changeSet:
     id: 1752795541521-45
-    author: system (generated)
+    author: system
     changes:
     - addForeignKeyConstraint:
         baseColumnNames: assigning_role_id

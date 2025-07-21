@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeAll;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class BaseEntityTest {
@@ -58,7 +59,7 @@ public class BaseEntityTest {
 
     protected UserProfile buildTestLaaUserProfile() {
         return UserProfile.builder().entraUser(buildTestEntraUser())
-                .userType(UserType.INTERNAL).legacyUserId("legacy_user_id")
+                .userType(UserType.INTERNAL).legacyUserId(UUID.randomUUID())
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }
 
