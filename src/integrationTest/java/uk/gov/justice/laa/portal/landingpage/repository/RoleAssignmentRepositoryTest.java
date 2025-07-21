@@ -39,7 +39,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void roleAssignmentAndRetrieval(){
+    public void roleAssignmentAndRetrieval() {
         // Arrange
         App app = App.builder().name("app").build();
         appRepository.save(app);
@@ -65,7 +65,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void roleAssignmentDoNotAllowSelfAssignableRole(){
+    public void roleAssignmentDoNotAllowSelfAssignableRole() {
         // Arrange
         App app = App.builder().name("app").build();
         appRepository.save(app);

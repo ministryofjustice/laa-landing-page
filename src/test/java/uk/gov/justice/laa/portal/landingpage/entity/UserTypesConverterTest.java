@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,7 +33,7 @@ public class UserTypesConverterTest {
 
         result = converter.convertToDatabaseColumn(Set.of(UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM));
         Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result).isEqualTo("INTERNAL,EXTERNAL_SINGLE_FIRM");
+        Assertions.assertThat(result.split(",")).containsAll(List.of("INTERNAL", "EXTERNAL_SINGLE_FIRM"));
     }
 
     @Test
