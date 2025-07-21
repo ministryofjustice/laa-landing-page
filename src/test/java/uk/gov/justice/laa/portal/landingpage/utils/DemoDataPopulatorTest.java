@@ -1,7 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.applications.ApplicationsRequestBuilder;
-import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
@@ -17,6 +15,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -60,9 +60,6 @@ class DemoDataPopulatorTest {
     private ApplicationReadyEvent applicationReadyEvent;
 
     @Mock
-    private ApplicationCollectionResponse mockApplicationCollectionResponse;
-
-    @Mock
     private GraphServiceClient graphServiceClient;
 
     @InjectMocks
@@ -99,21 +96,6 @@ class DemoDataPopulatorTest {
     @Test
     void populateDummyDataWithMockUser() {
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
-
-        //Setup
-        Application app1 = new Application();
-        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
-        app1.setDisplayName("App One");
-
-        Application app2 = new Application();
-        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
-        app2.setDisplayName("App Two");
-
-        // Mocked response from Graph API
-        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(graphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get(any())).thenReturn(mockApplicationCollectionResponse);
 
         User user = new User();
         UserCollectionResponse userCollectionResponse = mock(UserCollectionResponse.class, RETURNS_DEEP_STUBS);
@@ -172,21 +154,6 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabled() {
-        //Setup
-        Application app1 = new Application();
-        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
-        app1.setDisplayName("App One");
-
-        Application app2 = new Application();
-        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
-        app2.setDisplayName("App Two");
-
-        // Mocked response from Graph API
-        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(graphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get(any())).thenReturn(mockApplicationCollectionResponse);
-
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
 
@@ -196,22 +163,7 @@ class DemoDataPopulatorTest {
     }
 
     @Test
-    void populateDummyDataEnabledWithAdditionalAllUsers() {
-        //Setup
-        Application app1 = new Application();
-        app1.setAppId("698815d2-5760-4fd0-bdef-54c683e91b26");
-        app1.setDisplayName("App One");
-
-        Application app2 = new Application();
-        app2.setAppId("f27a5c75-a33b-4290-becf-9e4f0c14a1eb");
-        app2.setDisplayName("App Two");
-
-        // Mocked response from Graph API
-        when(mockApplicationCollectionResponse.getValue()).thenReturn(List.of(app1, app2));
-        ApplicationsRequestBuilder applicationsRequestBuilder = mock(ApplicationsRequestBuilder.class);
-        when(graphServiceClient.applications()).thenReturn(applicationsRequestBuilder);
-        when(applicationsRequestBuilder.get(any())).thenReturn(mockApplicationCollectionResponse);
-
+    void populateDummyDataEnabledWithAdditionalUsers() {
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
 
@@ -220,6 +172,21 @@ class DemoDataPopulatorTest {
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
+    }
+
+    @Test
+    void populateDummyDataEnabledWithAdditionalAppsAndUsers() {
+        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
+        ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
+        ReflectionTestUtils.setField(demoDataPopulator, "internalUserPrincipals", Set.of("testinternaluser@email.com:1234"));
+        demoDataPopulator.appReady(applicationReadyEvent);
+        verifyMockCalls(1);
+        Mockito.verify(laaAppRepository, Mockito.times(4)).save(Mockito.any(App.class));
+        Mockito.verify(laaAppRoleRepository, Mockito.times(8)).save(Mockito.any(AppRole.class));
     }
 
     @Test
@@ -347,8 +314,6 @@ class DemoDataPopulatorTest {
         Mockito.verify(firmRepository, Mockito.times(times)).saveAll(Mockito.anyList());
         Mockito.verify(officeRepository, Mockito.times(times)).saveAll(Mockito.anyList());
         Mockito.verify(entraUserRepository, Mockito.times(times)).saveAll(Mockito.anyList());
-        Mockito.verify(laaAppRepository, Mockito.times(times)).saveAll(Mockito.anyList());
-        Mockito.verify(laaAppRoleRepository, Mockito.times(times)).saveAll(Mockito.anyList());
         Mockito.verify(laaUserProfileRepository, Mockito.times(times)).saveAll(Mockito.anyList());
     }
 }

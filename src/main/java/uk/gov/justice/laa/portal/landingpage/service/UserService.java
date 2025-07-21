@@ -74,7 +74,6 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
     Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -84,14 +83,14 @@ public class UserService {
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
                        EntraUserRepository entraUserRepository,
                        AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
-        this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
@@ -603,5 +602,22 @@ public class UserService {
     public boolean isUserCreationAllowed(EntraUser entraUser) {
         Optional<UserType> userType =  getUserTypeByEntraUser(entraUser);
         return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
+    }
+
+    public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
+        boolean foundFirm = false;
+        for (UserProfile userProfile : entraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firmId)) {
+                userProfile.setActiveProfile(true);
+                foundFirm = true;
+            } else {
+                userProfile.setActiveProfile(false);
+            }
+        }
+        if (!foundFirm) {
+            logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
+            throw new IOException("Firm not found for firm ID: " + firmId);
+        }
+        entraUserRepository.saveAndFlush(entraUser);
     }
 }
