@@ -58,7 +58,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
-
+        Assertions.assertThat(result.getLegacyUserId()).isNotNull();
     }
 
     @Test
