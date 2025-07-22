@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 
 import java.io.IOException;
@@ -76,6 +77,7 @@ public class UserService {
     private final ModelMapper mapper;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
+    private final UserProfileRepository userProfileRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -85,7 +87,8 @@ public class UserService {
                        AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
                        OfficeRepository officeRepository,
                        LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-                       TechServicesClient techServicesClient) {
+                       TechServicesClient techServicesClient,
+                       UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -94,6 +97,7 @@ public class UserService {
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
+        this.userProfileRepository = userProfileRepository;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -615,5 +619,55 @@ public class UserService {
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
         entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        List<EntraUser> entraUsers = new ArrayList<>();
+        String createdBy = "INTERNAL_USER_SYNC";
+        for (EntraUserDto user : entraUserDtos) {
+            EntraUser entraUser = mapper.map(user, EntraUser.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .entraUser(entraUser)
+                    .build();
+
+            entraUser.setEntraOid(user.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setCreatedBy(createdBy);
+            entraUser.setCreatedDate(LocalDateTime.now());
+            entraUsers.add(entraUser);
+            //todo: security group to access authz app
+        }
+        return persistNewInternalUser(entraUsers);
+    }
+
+    private int persistNewInternalUser(List<EntraUser> newUsers) {
+        int usersPersisted = 0;
+        for (EntraUser newUser : newUsers) {
+            try {
+                logger.info("Adding new internal user id: {} name: {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName());
+                entraUserRepository.saveAndFlush(newUser);
+                usersPersisted++;
+                logger.info("User {} added", newUser.getEntraOid());
+            } catch (Exception e) {
+                logger.error("Unexpected error when adding user id: {} name: {} {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName(),
+                        e.getMessage());
+            }
+        }
+        return usersPersisted;
+    }
+
+    public List<UUID> getInternalUserEntraIds() {
+        return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
 }
