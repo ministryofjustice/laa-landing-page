@@ -139,8 +139,8 @@ jobs:
           ENV_NAME: ${{ vars.ENV_NAME }}
           # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
           RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
-          # Should be 'prd' only if the environment is prd, otherwise set it to an empty string. 
-          ALERT_ALWAYS_ON_ENV: ''
+          # Should be 'prd' only if the environment is prd, otherwise set it to an random string. 
+          ALERT_ALWAYS_ON_ENV: 'null'
       
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform
