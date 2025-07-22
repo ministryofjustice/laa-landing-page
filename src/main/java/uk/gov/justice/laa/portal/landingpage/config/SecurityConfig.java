@@ -111,13 +111,6 @@ public class SecurityConfig {
             .loginPage("/oauth2/authorization/azure")
             .defaultSuccessUrl("/home", true)
             .permitAll()
-        ).logout(logout -> logout
-            .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
-            .logoutSuccessUrl("/")
-            .clearAuthentication(true)
-            .deleteCookies("JSESSIONID")
-            .invalidateHttpSession(true)
-            .permitAll()
         ).csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         );

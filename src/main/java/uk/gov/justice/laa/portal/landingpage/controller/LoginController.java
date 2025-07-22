@@ -109,7 +109,7 @@ public class LoginController {
         return "migrate";
     }
 
-    @PostMapping("/logout")
+    @PostMapping("/signout")
     public RedirectView logout(Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
         loginService.logout(authentication, authClient, session);
         return new RedirectView("/?message=logout");
