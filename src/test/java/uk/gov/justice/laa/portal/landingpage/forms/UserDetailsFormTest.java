@@ -178,6 +178,18 @@ class UserDetailsFormTest {
     }
 
     @Test
+    void specialCharacterAtTheStartOfName_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName(" Mary Jane");
+        form.setLastName("-O'Neil");
+        form.setEmail("test@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations.size()).isEqualTo(2);
+    }
+
+    @Test
     void noUserType_shouldTriggerNotNullViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirmId("firm1");
