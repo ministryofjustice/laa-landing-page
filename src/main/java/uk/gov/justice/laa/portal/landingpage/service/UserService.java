@@ -138,13 +138,9 @@ public class UserService {
                 .findFirst();
         if (userProfile.isPresent()) {
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.get().getUserType());
-            roles = roles.stream().filter(appRole -> {
-                if (isInternal) {
-                    return true;
-                } else {
-                    return !appRole.getRoleType().equals(RoleType.INTERNAL);
-                }
-            }).toList();
+            roles = roles.stream()
+                    .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
+                    .toList();
             userProfile.get().setAppRoles(new HashSet<>(roles));
             entraUserRepository.saveAndFlush(user);
             techServicesClient.updateRoleAssignment(user.getId());
