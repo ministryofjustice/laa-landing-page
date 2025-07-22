@@ -58,7 +58,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy_sarif_files
-          category: trivy
 
       # post vulns to slack
       - name: Vulnerability Description Extraction and Print (Multiple Files)
