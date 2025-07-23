@@ -1115,54 +1115,30 @@ class UserServiceTest {
         userProfile.setEntraUser(user);
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
-        verify(mockEntraUserRepository, times(1)).saveAndFlush(user);
+        verify(mockUserProfileRepository, times(1)).saveAndFlush(userProfile);
     }
 
     @Test
     void updateUserRoles_logsWarning_whenUserNotFound() {
         // Arrange
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        UUID userId = UUID.randomUUID();
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+        UUID userProfileId = UUID.randomUUID();
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(UUID.randomUUID().toString()));
+        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()));
 
         // Assert
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User with id");
-    }
-
-    @Test
-    void updateUserProfileRoles_logsWarning_whenNoactiveProfile() {
-        // Arrange
-        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        UUID userId = UUID.randomUUID();
-        EntraUser user = EntraUser.builder().id(userId)
-                .userProfiles(Set.of(UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).build())).build();
-
-        // Act (call private method via reflection)
-        try {
-            var method = UserService.class.getDeclaredMethod("updateUserProfileRoles", EntraUser.class, List.class);
-            method.setAccessible(true);
-            method.invoke(userService, user, List.of());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // Assert
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
-        assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User profile for user ID");
+        assertThat(warningLogs.getFirst().getFormattedMessage()).contains("User profile with id");
     }
 
     @Test
@@ -2011,15 +1987,14 @@ class UserServiceTest {
             userProfile.setEntraUser(user);
 
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
-            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+            when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
             // Act
             userService.updateUserRoles(userId.toString(), Collections.emptyList());
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
-            verify(mockEntraUserRepository).saveAndFlush(user);
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
         @Test

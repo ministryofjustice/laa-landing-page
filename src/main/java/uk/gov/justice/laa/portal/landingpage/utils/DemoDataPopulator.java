@@ -188,7 +188,7 @@ public class DemoDataPopulator {
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser).activeProfile(true)
-                .userProfileStatus(UserProfileStatus.PENDING)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
                 .build();
     }

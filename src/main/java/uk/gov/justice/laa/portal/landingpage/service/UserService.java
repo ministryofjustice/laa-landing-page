@@ -124,31 +124,17 @@ public class UserService {
         return response != null ? response.getValue() : Collections.emptyList();
     }
 
-    public void updateUserRoles(String userId, List<String> selectedRoles) {
+    public void updateUserRoles(String userProfileId, List<String> selectedRoles) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            updateUserProfileRoles(user, roles);
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isPresent()) {
+            UserProfile userProfile = optionalUserProfile.get();
+            userProfile.setAppRoles(new HashSet<>(roles));
+            userProfileRepository.saveAndFlush(userProfile);
         } else {
-            logger.warn("User with id {} not found. Could not update roles.", userId);
-        }
-    }
-
-    private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
-        Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                // Set to default profile for now, will need to receive a user profile from
-                // front end at some point.
-                .filter(UserProfile::isActiveProfile)
-                .findFirst();
-        if (userProfile.isPresent()) {
-            userProfile.get().setAppRoles(new HashSet<>(roles));
-            entraUserRepository.saveAndFlush(user);
-            techServicesClient.updateRoleAssignment(user.getId());
-        } else {
-            logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
+            logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
     }
 
@@ -374,6 +360,7 @@ public class UserService {
                 .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
+                .userProfileStatus(UserProfileStatus.PENDING)
                 .build();
 
         entraUser.setEntraOid(newUser.getEntraOid());

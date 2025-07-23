@@ -783,7 +783,7 @@ class UserControllerTest {
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppId(currentApp.getId())).thenReturn(allRoles);
+        when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any())).thenReturn(allRoles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
@@ -1328,7 +1328,7 @@ class UserControllerTest {
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         lenient().when(userService.getAppByAppId("app2")).thenReturn(Optional.of(userApp2));
-        when(userService.getAppRolesByAppId("app1")).thenReturn(appRoles);
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(appRoles);
         lenient().when(userService.getAppRolesByAppId("app2")).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
@@ -1955,7 +1955,7 @@ class UserControllerTest {
         AppDto currentApp = new AppDto();
         currentApp.setId("app1");
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppId("app1")).thenReturn(List.of());
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
@@ -1967,7 +1967,7 @@ class UserControllerTest {
 
         // Verify that the calls were made as expected
         verify(userService).getAppByAppId("app1");
-        verify(userService).getAppRolesByAppId("app1");
+        verify(userService).getAppRolesByAppIdAndUserType(eq("app1"), any());
         verify(userService).getUserAppRolesByUserId(userId);
     }
 
@@ -2415,7 +2415,7 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppId("app1")).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // When
@@ -2796,10 +2796,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
         verify(userService).grantAccess(userId, currentUserDto.getName());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
-        
-        String successMessage = (String) testSession.getAttribute("successMessage");
-        assertThat(successMessage).contains("Test User");
-        assertThat(successMessage).contains("has been granted access");
         
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();

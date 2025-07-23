@@ -649,7 +649,7 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex));
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -1034,7 +1034,7 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex));
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
