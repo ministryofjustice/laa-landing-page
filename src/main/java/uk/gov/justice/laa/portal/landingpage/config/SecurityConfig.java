@@ -29,9 +29,11 @@ import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService
 public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
+    private final CustomLogoutHandler logoutHandler;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
+        this.logoutHandler = logoutHandler;
     }
 
     @Bean
@@ -110,6 +112,14 @@ public class SecurityConfig {
             )
             .loginPage("/oauth2/authorization/azure")
             .defaultSuccessUrl("/home", true)
+            .permitAll()
+        ).logout(logout -> logout
+            .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
+            .addLogoutHandler(logoutHandler)
+            .logoutSuccessUrl("/?message=logout")
+            .clearAuthentication(true)
+            .deleteCookies("JSESSIONID")
+            .invalidateHttpSession(true)
             .permitAll()
         ).csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())

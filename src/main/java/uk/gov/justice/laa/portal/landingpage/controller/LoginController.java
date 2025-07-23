@@ -109,12 +109,6 @@ public class LoginController {
         return "migrate";
     }
 
-    @PostMapping("/signout")
-    public RedirectView logout(Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
-        loginService.logout(authentication, authClient, session);
-        return new RedirectView("/?message=logout");
-    }
-
     @ExceptionHandler(Exception.class)
     public RedirectView handleException(Exception ex) {
         logger.error("Error while user login:", ex);
@@ -127,7 +121,8 @@ public class LoginController {
                                    @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        loginService.logout(authentication, authClient, session);
+        loginService.logout(authentication, authClient);
+        session.invalidate();
         return new RedirectView("/?message=logout");
     }
 

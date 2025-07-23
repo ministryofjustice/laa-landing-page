@@ -124,10 +124,12 @@ class SecurityConfigTest {
 
     @MockitoBean
     private AuthzOidcUserDetailsService authzOidcUserDetailsService;
+    @MockitoBean
+    private CustomLogoutHandler logoutHandler;
 
     @Test
     void passwordEncoderBeanCreation() {
-        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService, logoutHandler);
         PasswordEncoder passwordEncoder = securityConfig.passwordEncoder();
 
         assertThat(passwordEncoder).isInstanceOf(BCryptPasswordEncoder.class);
@@ -135,7 +137,7 @@ class SecurityConfigTest {
 
     @Test
     void jwtAuthenticationConverterBeanCreation() {
-        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService, logoutHandler);
         JwtAuthenticationConverter converter = securityConfig.jwtAuthenticationConverter();
 
         assertThat(converter).isNotNull();
