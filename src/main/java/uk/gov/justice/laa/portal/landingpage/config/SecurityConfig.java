@@ -19,6 +19,7 @@ import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
+import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 
 /**
  * Security configuration for the application

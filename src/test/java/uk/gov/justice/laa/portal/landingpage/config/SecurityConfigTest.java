@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
+import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Arrays;

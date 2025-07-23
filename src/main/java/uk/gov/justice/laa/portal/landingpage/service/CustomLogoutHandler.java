@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.config;
+package uk.gov.justice.laa.portal.landingpage.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -8,7 +8,6 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 
 @Service

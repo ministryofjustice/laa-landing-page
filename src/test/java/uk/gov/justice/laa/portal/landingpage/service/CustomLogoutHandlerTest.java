@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.config;
+package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +12,6 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 import java.util.List;
 import java.util.Map;
