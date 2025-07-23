@@ -142,9 +142,14 @@ public class UserService {
                 .findFirst();
         if (userProfile.isPresent()) {
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.get().getUserType());
+            int before = roles.size();
             roles = roles.stream()
                     .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
                     .toList();
+            int after = roles.size();
+            if (after < before) {
+                logger.warn("Attempt to assign internal role user ID {}.", user.getId());
+            }
             userProfile.get().setAppRoles(new HashSet<>(roles));
             entraUserRepository.saveAndFlush(user);
             techServicesClient.updateRoleAssignment(user.getId());
