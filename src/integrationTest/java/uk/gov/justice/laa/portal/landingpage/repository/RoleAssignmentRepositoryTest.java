@@ -44,8 +44,8 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         App app = App.builder().name("app").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2));
 
         // Act
@@ -70,7 +70,8 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         App app = App.builder().name("app").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL)
+                .description("appRole1").app(app).build();
         appRoleRepository.save(appRole1);
 
         RoleAssignment roleAssignment = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole1).build();

@@ -69,6 +69,7 @@ public class AppRole extends BaseEntity {
     private Set<UserType> userTypeRestriction;
 
     @Column(name = "description", nullable = false, length = 255)
+    @NotBlank(message = "Application role description must be provided")
     @Size(min = 1, max = 255, message = "Application role description must be between 1 and 255 characters")
     private String description;
 

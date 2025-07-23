@@ -48,7 +48,7 @@ public class BaseEntityTest {
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role")
+        return AppRole.builder().name("Test App Role").description("App Role Description")
                 .roleType(RoleType.INTERNAL).build();
     }
 

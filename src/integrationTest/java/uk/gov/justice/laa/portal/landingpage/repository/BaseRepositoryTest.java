@@ -59,7 +59,7 @@ public class BaseRepositoryTest {
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
-        return AppRole.builder().name(name).roleType(RoleType.INTERNAL)
+        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).description(name)
                 .userTypeRestriction(new HashSet<>(List.of(UserType.INTERNAL))).app(app).build();
     }
 

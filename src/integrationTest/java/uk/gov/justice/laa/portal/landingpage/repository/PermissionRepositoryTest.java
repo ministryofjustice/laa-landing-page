@@ -41,8 +41,10 @@ public class PermissionRepositoryTest extends BaseRepositoryTest {
         App app = App.builder().name("App with permissions").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL)
+                .app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL)
+                .app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2));
 
         // Act
