@@ -17,15 +17,19 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
+
+import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_profile", indexes = {
@@ -50,9 +54,8 @@ public class UserProfile extends AuditableEntity {
     @NotNull(message = "User type must be provided")
     private UserType userType;
 
-    @Column(name = "legacy_user_id", nullable = true, length = 100)
-    @Size(max = 100, message = "Legacy user ID must be less than 100 characters")
-    private String legacyUserId;
+    @Column(name = "legacy_user_id", nullable = true)
+    private UUID legacyUserId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_user_profile_user_id"))
@@ -67,20 +70,20 @@ public class UserProfile extends AuditableEntity {
     private Firm firm;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "user_profile_office", 
-            joinColumns = @JoinColumn(name = "user_profile_id"), 
-            foreignKey = @ForeignKey(name = "FK_user_profile_office_user_profile_id"), 
-            inverseJoinColumns = @JoinColumn(name = "office_id"), 
+    @JoinTable(name = "user_profile_office",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            foreignKey = @ForeignKey(name = "FK_user_profile_office_user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "office_id"),
             inverseForeignKey = @ForeignKey(name = "FK_user_profile_office_office_id"))
     @ToString.Exclude
     @JsonIgnore
     private Set<Office> offices;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "user_profile_app_role", 
-            joinColumns = @JoinColumn(name = "user_profile_id"), 
-            foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"), 
-            inverseJoinColumns = @JoinColumn(name = "app_role_id"), 
+    @JoinTable(name = "user_profile_app_role",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "app_role_id"),
             inverseForeignKey = @ForeignKey(name = "FK_user_profile_app_role_app_role_id"))
     @ToString.Exclude
     @JsonIgnore
@@ -90,5 +93,12 @@ public class UserProfile extends AuditableEntity {
     @Column(name = "status", nullable = false, length = 255)
     @NotNull(message = "User profile status must be provided")
     private UserProfileStatus userProfileStatus;
+
+    @PrePersist
+    public void prePersist() {
+        if (legacyUserId == null) {
+            legacyUserId = UUID.randomUUID();
+        }
+    }
 
 }

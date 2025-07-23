@@ -13,6 +13,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -56,7 +58,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
         Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
         Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
-
+        Assertions.assertThat(result.getLegacyUserId()).isNotNull();
     }
 
     @Test
@@ -223,4 +225,35 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     }
 
+    @Test
+    void shouldReturnCorrectInternalUser_whenSearchingByInternalUserType() {
+        UUID expectedOid = UUID.randomUUID();
+        EntraUser entraUser = buildEntraUser(expectedOid.toString(), "test12@email.com", "First Name12", "Last Name12");
+        entraUserRepository.save(entraUser);
+
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        entraUser.getUserProfiles().add(userProfile);
+
+        repository.saveAndFlush(userProfile);
+
+        List<UUID> result = repository.findByUserTypes(UserType.INTERNAL);
+        Assertions.assertThat(result).containsExactly(UUID.fromString(entraUser.getEntraOid()));
+    }
+
+    @Test
+    void shouldReturnNoUsers_whenSearchingByInternalUserType() {
+        UUID expectedOid = UUID.randomUUID();
+        Firm firm = buildFirm("Firm1", "Firm Code 1");
+        firmRepository.save(firm);
+        EntraUser entraUser = buildEntraUser(expectedOid.toString(), "test6@email.com", "First Name6", "Last Name6");
+        entraUserRepository.save(entraUser);
+
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        userProfile.setFirm(firm);
+        entraUser.getUserProfiles().add(userProfile);
+        repository.saveAndFlush(userProfile);
+
+        List<UUID> result = repository.findByUserTypes(UserType.INTERNAL);
+        Assertions.assertThat(result).isEmpty();
+    }
 }

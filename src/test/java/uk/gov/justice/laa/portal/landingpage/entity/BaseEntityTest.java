@@ -6,6 +6,7 @@ import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class BaseEntityTest {
@@ -52,7 +53,7 @@ public class BaseEntityTest {
 
     protected UserProfile buildTestLaaUserProfile() {
         return UserProfile.builder().entraUser(buildTestEntraUser())
-                .userType(UserType.INTERNAL).legacyUserId("legacy_user_id")
+                .userType(UserType.INTERNAL).legacyUserId(UUID.randomUUID())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }

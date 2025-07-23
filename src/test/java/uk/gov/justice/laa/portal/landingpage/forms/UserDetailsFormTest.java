@@ -98,8 +98,95 @@ class UserDetailsFormTest {
         form.setEmail("test@example.com");
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
-                .contains("First name must not be longer than 99 characters",
-                        "Last name must not be longer than 99 characters");
+                .contains("First name must be between 2-99 characters",
+                        "Last name must be between 2-99 characters");
+    }
+
+    @Test
+    void tooShortFirstNameOrLastName_shouldTriggerSizeViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("A");
+        form.setLastName("B");
+        form.setEmail("test@example.com");
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("First name must be between 2-99 characters",
+                        "Last name must be between 2-99 characters");
+    }
+
+    @Test
+    void firstNameOrLastNameWithNumbers_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("Jan3");
+        form.setLastName("Sm1th");
+        form.setEmail("test@example.com");
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("First name must not contain numbers or special characters",
+                        "Last name must not contain numbers or special characters");
+    }
+
+    @Test
+    void firstNameOrLastNameWithSpecialCharacters_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("J@ne");
+        form.setLastName("Sm!th");
+        form.setEmail("test@example.com");
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("First name must not contain numbers or special characters",
+                        "Last name must not contain numbers or special characters");
+    }
+
+    @Test
+    void doubleBarrelledLastName_shouldNotTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("Jane");
+        form.setLastName("Anderson-Smith");
+        form.setEmail("test@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations.size()).isEqualTo(0);
+    }
+
+    @Test
+    void quoteLastName_shouldNotTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("Mary-Jane");
+        form.setLastName("O'Neil");
+        form.setEmail("test@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations.size()).isEqualTo(0);
+    }
+
+    @Test
+    void spaceInFirstName_shouldNotTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName("Mary Jane");
+        form.setLastName("O'Neil");
+        form.setEmail("test@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations.size()).isEqualTo(0);
+    }
+
+    @Test
+    void specialCharacterAtTheStartOrEndOfName_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirmId("firm1");
+        form.setFirstName(" Mary Jane");
+        form.setLastName("O'Neil-");
+        form.setEmail("test@example.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations.size()).isEqualTo(2);
     }
 
     @Test

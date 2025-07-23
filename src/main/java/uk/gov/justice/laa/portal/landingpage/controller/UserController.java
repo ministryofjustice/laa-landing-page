@@ -40,6 +40,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -140,6 +141,7 @@ public class UserController {
     }
 
     @GetMapping("/users/edit/{id}")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUser(@PathVariable String id, Model model) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isPresent()) {
@@ -165,6 +167,7 @@ public class UserController {
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
+    @PreAuthorize("@accessControlService.canAccessUser(#id)")
     public String manageUser(@PathVariable String id, Model model) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
@@ -1308,7 +1311,7 @@ public class UserController {
                     List.of("Access granted"),
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
-            
+
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
@@ -1336,7 +1339,7 @@ public class UserController {
 
     /**
      * Cancel the grant access flow and clean up session data
-     * 
+     *
      * @param id      User ID
      * @param session HttpSession to clear grant access data
      * @return Redirect to user management page

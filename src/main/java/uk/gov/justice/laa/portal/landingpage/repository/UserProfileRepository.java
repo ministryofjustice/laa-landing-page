@@ -13,6 +13,9 @@ import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.util.List;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+
 @Repository
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
 
@@ -68,4 +71,12 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findByUserTypesAndFirms(@Param("userTypes") List<UserType> userTypes,
             @Param("firmIds") List<UUID> firmIds, Pageable pageable);
+
+    @Query(
+            """
+            SELECT DISTINCT u.entraOid FROM EntraUser u
+            JOIN u.userProfiles ups
+            WHERE ups.userType IN (:userType)
+            """)
+    List<UUID> findByUserTypes(@Param("userType") UserType userType);
 }

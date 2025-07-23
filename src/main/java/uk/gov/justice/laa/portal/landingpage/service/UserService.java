@@ -135,6 +135,31 @@ public class UserService {
             userProfileRepository.saveAndFlush(userProfile);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
+            logger.warn("User with id {} not found. Could not update roles.", userId);
+        }
+    }
+
+    private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
+        Optional<UserProfile> userProfile = user.getUserProfiles().stream()
+                // Set to default profile for now, will need to receive a user profile from
+                // front end at some point.
+                .filter(UserProfile::isActiveProfile)
+                .findFirst();
+        if (userProfile.isPresent()) {
+            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.get().getUserType());
+            int before = roles.size();
+            roles = roles.stream()
+                    .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
+                    .toList();
+            int after = roles.size();
+            if (after < before) {
+                logger.warn("Attempt to assign internal role user ID {}.", user.getId());
+            }
+            userProfile.get().setAppRoles(new HashSet<>(roles));
+            entraUserRepository.saveAndFlush(user);
+            techServicesClient.updateRoleAssignment(user.getId());
+        } else {
+            logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
         }
     }
 
@@ -641,5 +666,55 @@ public class UserService {
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
         entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        List<EntraUser> entraUsers = new ArrayList<>();
+        String createdBy = "INTERNAL_USER_SYNC";
+        for (EntraUserDto user : entraUserDtos) {
+            EntraUser entraUser = mapper.map(user, EntraUser.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .entraUser(entraUser)
+                    .build();
+
+            entraUser.setEntraOid(user.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setCreatedBy(createdBy);
+            entraUser.setCreatedDate(LocalDateTime.now());
+            entraUsers.add(entraUser);
+            //todo: security group to access authz app
+        }
+        return persistNewInternalUser(entraUsers);
+    }
+
+    private int persistNewInternalUser(List<EntraUser> newUsers) {
+        int usersPersisted = 0;
+        for (EntraUser newUser : newUsers) {
+            try {
+                logger.info("Adding new internal user id: {} name: {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName());
+                entraUserRepository.saveAndFlush(newUser);
+                usersPersisted++;
+                logger.info("User {} added", newUser.getEntraOid());
+            } catch (Exception e) {
+                logger.error("Unexpected error when adding user id: {} name: {} {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName(),
+                        e.getMessage());
+            }
+        }
+        return usersPersisted;
+    }
+
+    public List<UUID> getInternalUserEntraIds() {
+        return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
 }

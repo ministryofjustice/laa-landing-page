@@ -215,7 +215,7 @@ databaseChangeLog:
                   type: UUID
               - column:
                   name: legacy_user_id
-                  type: VARCHAR(100)
+                  type: UUID
               - column:
                   constraints:
                     nullable: false
