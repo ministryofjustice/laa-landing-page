@@ -803,8 +803,9 @@ class UserControllerTest {
         // Given
         final String userId = "12345";
         // Setup test user call
-        EntraUserDto testUser = new EntraUserDto();
-        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
+        UserProfileDto testUserProfile = new UserProfileDto();
+        testUserProfile.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
@@ -829,7 +830,6 @@ class UserControllerTest {
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allRoles);
-        when(userService.getUserTypeByUserId(any())).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM));
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
 
@@ -843,8 +843,9 @@ class UserControllerTest {
         // Given
         final String userId = "12345";
         // Setup test user call
-        EntraUserDto testUser = new EntraUserDto();
-        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
+        UserProfileDto testUserProfile = new UserProfileDto();
+        testUserProfile.setUserType(UserType.INTERNAL);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
@@ -872,7 +873,6 @@ class UserControllerTest {
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.INTERNAL)).thenReturn(allRoles);
-        when(userService.getUserTypeByUserId(any())).thenReturn(Optional.of(UserType.INTERNAL));
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
 

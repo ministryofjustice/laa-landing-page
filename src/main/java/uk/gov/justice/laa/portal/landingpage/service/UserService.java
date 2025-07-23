@@ -131,35 +131,19 @@ public class UserService {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
-            userProfile.setAppRoles(new HashSet<>(roles));
-            userProfileRepository.saveAndFlush(userProfile);
-        } else {
-            logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
-            logger.warn("User with id {} not found. Could not update roles.", userId);
-        }
-    }
-
-    private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
-        Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                // Set to default profile for now, will need to receive a user profile from
-                // front end at some point.
-                .filter(UserProfile::isActiveProfile)
-                .findFirst();
-        if (userProfile.isPresent()) {
-            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.get().getUserType());
+            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             roles = roles.stream()
                     .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
                     .toList();
             int after = roles.size();
             if (after < before) {
-                logger.warn("Attempt to assign internal role user ID {}.", user.getId());
+                logger.warn("Attempt to assign internal role user ID {}.", userProfile.getEntraUser().getId());
             }
-            userProfile.get().setAppRoles(new HashSet<>(roles));
-            entraUserRepository.saveAndFlush(user);
-            techServicesClient.updateRoleAssignment(user.getId());
+            userProfile.setAppRoles(new HashSet<>(roles));
+            userProfileRepository.saveAndFlush(userProfile);
         } else {
-            logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
+            logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
     }
 

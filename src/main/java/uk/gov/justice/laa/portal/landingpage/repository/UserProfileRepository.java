@@ -62,6 +62,14 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             + "WHERE ups.userType IN (:userTypes)")
     Page<UserProfile> findByUserTypes(List<UserType> userTypes, Pageable pageable);
 
+    @Query(
+            """
+            SELECT DISTINCT u.entraOid FROM EntraUser u
+            JOIN u.userProfiles ups
+            WHERE ups.userType IN (:userType)
+            """)
+    List<UUID> findByUserTypes(@Param("userType") UserType userType);
+
     @Query("""
             SELECT ups FROM UserProfile ups
             JOIN FETCH ups.firm f
@@ -71,12 +79,4 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findByUserTypesAndFirms(@Param("userTypes") List<UserType> userTypes,
             @Param("firmIds") List<UUID> firmIds, Pageable pageable);
-
-    @Query(
-            """
-            SELECT DISTINCT u.entraOid FROM EntraUser u
-            JOIN u.userProfiles ups
-            WHERE ups.userType IN (:userType)
-            """)
-    List<UUID> findByUserTypes(@Param("userType") UserType userType);
 }

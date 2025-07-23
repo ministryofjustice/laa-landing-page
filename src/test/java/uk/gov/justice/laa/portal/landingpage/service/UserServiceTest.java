@@ -1128,19 +1128,18 @@ class UserServiceTest {
     @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole2() {
         // Arrange
-        UUID userId = UUID.randomUUID();
+        UUID userProfileId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_MULTI_FIRM).build();
-        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        EntraUser user = EntraUser.builder().id(userProfileId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()));
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1157,8 +1156,7 @@ class UserServiceTest {
         userProfile.setEntraUser(user);
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
@@ -1178,8 +1176,7 @@ class UserServiceTest {
         userProfile.setEntraUser(user);
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
@@ -2381,12 +2378,11 @@ class UserServiceTest {
         assertThat(result.get(0).getName()).isEqualTo("Shared App");
         verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
     }
-}
 
     @Test
     void shouldReturnInteralUserIds() {
         List<UUID> expectedIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-        when(userProfileRepository.findByUserTypes(UserType.INTERNAL)).thenReturn(expectedIds);
+        when(mockUserProfileRepository.findByUserTypes(UserType.INTERNAL)).thenReturn(expectedIds);
 
         List<UUID> result = userService.getInternalUserEntraIds();
 
