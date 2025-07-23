@@ -240,4 +240,11 @@ class SecurityConfigTest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void logoutRedirectsToHomePage() throws Exception {
+        mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?message=logout"));
+    }
 }
