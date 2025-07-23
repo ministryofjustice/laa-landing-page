@@ -56,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -750,12 +751,16 @@ class UserControllerTest {
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
+        testRole1.setRoleType(RoleType.EXTERNAL);
         AppRoleDto testRole2 = new AppRoleDto();
         testRole2.setId("testAppRoleId2");
+        testRole2.setRoleType(RoleType.EXTERNAL);
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
+        testRole3.setRoleType(RoleType.EXTERNAL);
         AppRoleDto testRole4 = new AppRoleDto();
         testRole4.setId("testUserAppRoleId");
+        testRole4.setRoleType(RoleType.EXTERNAL);
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
         currentApp.setName("testAppName");
@@ -764,7 +769,7 @@ class UserControllerTest {
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppId(currentApp.getId())).thenReturn(allRoles);
+        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allRoles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
@@ -772,6 +777,89 @@ class UserControllerTest {
         // Then
         Assertions.assertEquals("edit-user-roles", view);
         Assertions.assertSame(model.getAttribute("user"), testUser);
+    }
+
+    @Test
+    public void testEditUserRoles_view_external_user() {
+        // Given
+        final String userId = "12345";
+        // Setup test user call
+        EntraUserDto testUser = new EntraUserDto();
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
+        // Setup test user roles
+        AppRoleDto testUserRole = new AppRoleDto();
+        testUserRole.setId("testUserAppRoleId");
+        List<AppRoleDto> testUserRoles = List.of(testUserRole);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
+        // Setup all available roles
+        AppRoleDto testRole1 = new AppRoleDto();
+        testRole1.setId("testAppRoleId1");
+        testRole1.setRoleType(RoleType.EXTERNAL);
+        AppRoleDto testRole2 = new AppRoleDto();
+        testRole2.setId("testAppRoleId2");
+        testRole2.setRoleType(RoleType.EXTERNAL);
+        AppRoleDto testRole3 = new AppRoleDto();
+        testRole3.setId("testAppRoleId3");
+        testRole3.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
+        AppDto currentApp = new AppDto();
+        currentApp.setId("testAppId");
+        currentApp.setName("testAppName");
+        List<String> selectedApps = List.of(currentApp.getId());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", selectedApps);
+        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
+        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allRoles);
+        when(userService.getUserTypeByUserId(any())).thenReturn(Optional.of(UserType.EXTERNAL_SINGLE_FIRM));
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+
+        // Then
+        List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
+        Assertions.assertEquals(appRoleViewModels.size(), 3);
+    }
+
+    @Test
+    public void testEditUserRoles_view_internal_user() {
+        // Given
+        final String userId = "12345";
+        // Setup test user call
+        EntraUserDto testUser = new EntraUserDto();
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(testUser));
+        // Setup test user roles
+        AppRoleDto testUserRole = new AppRoleDto();
+        testUserRole.setId("testUserAppRoleId");
+        List<AppRoleDto> testUserRoles = List.of(testUserRole);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
+        // Setup all available roles
+        AppRoleDto testRole1 = new AppRoleDto();
+        testRole1.setId("testAppRoleId1");
+        testRole1.setRoleType(RoleType.EXTERNAL);
+        AppRoleDto testRole2 = new AppRoleDto();
+        testRole2.setId("testAppRoleId2");
+        testRole2.setRoleType(RoleType.EXTERNAL);
+        AppRoleDto testRole3 = new AppRoleDto();
+        testRole3.setId("testAppRoleId3");
+        testRole3.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
+        AppRoleDto testRole4 = new AppRoleDto();
+        testRole4.setId("testUserAppRoleId");
+        testRole4.setRoleType(RoleType.INTERNAL);
+        AppDto currentApp = new AppDto();
+        currentApp.setId("testAppId");
+        currentApp.setName("testAppName");
+        List<String> selectedApps = List.of(currentApp.getId());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", selectedApps);
+        List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
+        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.INTERNAL)).thenReturn(allRoles);
+        when(userService.getUserTypeByUserId(any())).thenReturn(Optional.of(UserType.INTERNAL));
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+
+        // Then
+        List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
+        Assertions.assertEquals(appRoleViewModels.size(), 4);
     }
 
     @Test
@@ -1270,13 +1358,15 @@ class UserControllerTest {
         currentApp.setId("app1");
         currentApp.setName("App 1");
 
-        List<AppRoleDto> appRoles = List.of(new AppRoleDto());
+        AppRoleDto role = new AppRoleDto();
+        role.setRoleType(RoleType.EXTERNAL);
+        List<AppRoleDto> appRoles = List.of(role);
 
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         lenient().when(userService.getAppByAppId("app2")).thenReturn(Optional.of(userApp2));
-        when(userService.getAppRolesByAppId("app1")).thenReturn(appRoles);
+        when(userService.getAppRolesByAppIdAndUserType("app1", UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(appRoles);
         lenient().when(userService.getAppRolesByAppId("app2")).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
@@ -1897,7 +1987,7 @@ class UserControllerTest {
         AppDto currentApp = new AppDto();
         currentApp.setId("app1");
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppId("app1")).thenReturn(List.of());
+        when(userService.getAppRolesByAppIdAndUserType("app1", UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
@@ -1909,7 +1999,7 @@ class UserControllerTest {
 
         // Verify that the calls were made as expected
         verify(userService).getAppByAppId("app1");
-        verify(userService).getAppRolesByAppId("app1");
+        verify(userService).getAppRolesByAppIdAndUserType("app1", UserType.EXTERNAL_SINGLE_FIRM);
         verify(userService).getUserAppRolesByUserId(userId);
     }
 
