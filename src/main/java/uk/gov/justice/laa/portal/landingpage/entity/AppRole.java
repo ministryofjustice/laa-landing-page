@@ -26,6 +26,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -67,11 +68,12 @@ public class AppRole extends BaseEntity {
     @Column(name = "user_type_restriction", nullable = true, length = 255)
     private Set<UserType> userTypeRestriction;
 
-    @Column(name = "description", nullable = true, length = 255)
+    @Column(name = "description", nullable = false, length = 255)
     @Size(min = 1, max = 255, message = "Application role description must be between 1 and 255 characters")
     private String description;
 
-    @Column(name = "authz_role")
+    @Column(name = "authz_role", nullable = false)
+    @ColumnDefault("false")
     private boolean authzRole;
 
     @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
