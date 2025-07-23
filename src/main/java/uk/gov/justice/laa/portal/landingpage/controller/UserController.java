@@ -139,6 +139,7 @@ public class UserController {
     }
 
     @GetMapping("/users/edit/{id}")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUser(@PathVariable String id, Model model) {
         Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         if (optionalUser.isPresent()) {
@@ -164,6 +165,7 @@ public class UserController {
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
+    @PreAuthorize("@accessControlService.canAccessUser(#id)")
     public String manageUser(@PathVariable String id, Model model) {
         Optional<EntraUserDto> optionalUser = userService.getEntraUserById(id);
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
