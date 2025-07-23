@@ -3,47 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
@@ -59,6 +18,20 @@ import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
 import okhttp3.Request;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -68,6 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -79,8 +53,35 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -94,8 +95,6 @@ class UserServiceTest {
     @Mock
     private EntraUserRepository mockEntraUserRepository;
     @Mock
-    private NotificationService mockNotificationService;
-    @Mock
     private AppRepository mockAppRepository;
     @Mock
     private AppRoleRepository mockAppRoleRepository;
@@ -103,6 +102,8 @@ class UserServiceTest {
     private OfficeRepository mockOfficeRepository;
     @Mock
     private TechServicesClient techServicesClient;
+    @Mock
+    private UserProfileRepository userProfileRepository;
 
     @BeforeEach
     void setUp() {
@@ -112,10 +113,10 @@ class UserServiceTest {
                 mockAppRepository,
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
-                mockNotificationService,
                 mockOfficeRepository,
                 laaApplicationsList,
-                techServicesClient);
+                techServicesClient,
+                userProfileRepository);
     }
 
     @Test
@@ -199,38 +200,16 @@ class UserServiceTest {
 
     @Test
     void createUser() {
-        // post user
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        User user = new User();
-        when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        // get roles
-        UUID appId = UUID.randomUUID();
-        UUID appRoleId = UUID.randomUUID();
-        App app = App.builder()
-                .id(appId)
-                .name("appDisplayName")
-                .build();
-        AppRole appRole = AppRole.builder()
-                .id(appRoleId)
-                .name("appRoleDisplayName")
-                .app(app)
-                .build();
-        app.setAppRoles(Set.of(appRole));
         // assign role
         UUID userId = UUID.randomUUID();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
-        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
-        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
-        userService.updateUserRoles(userId.toString(), List.of(appRole.getId().toString()));
         RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
         RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
-        when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
         when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
         List<String> roles = new ArrayList<>();
@@ -240,39 +219,18 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, roles, new ArrayList<>(), firm, false, "admin");
-        verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
-        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class), anyList());
+        userService.createUser(entraUserDto, firm, UserType.EXTERNAL_SINGLE_FIRM, "admin");
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
     }
 
     @Test
     void createUserWithPopulatedDisplayName() {
-        // post user
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        User user = new User();
-        user.setDisplayName("Test User");
-        when(mockGraphServiceClient.users().post(any())).thenReturn(user);
-        // get roles
-        UUID appId = UUID.randomUUID();
-        UUID appRoleId = UUID.randomUUID();
-        App app = App.builder()
-                .id(appId)
-                .name("appDisplayName")
-                .build();
-        AppRole appRole = AppRole.builder()
-                .id(appRoleId)
-                .name("appRoleDisplayName")
-                .app(app)
-                .build();
-        app.setAppRoles(Set.of(appRole));
         // assign role
         UUID userId = UUID.randomUUID();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(entraUser);
-        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of(appRole));
         List<EntraUser> savedUsers = new ArrayList<>();
         when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
             savedUsers.add(invocation.getArgument(0));
@@ -282,7 +240,7 @@ class UserServiceTest {
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
         RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
-        when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
@@ -291,35 +249,15 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, roles, new ArrayList<>(), firm, false, "admin");
+        userService.createUser(entraUserDto, firm, UserType.EXTERNAL_SINGLE_FIRM, "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
-        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class), anyList());
-    }
-
-    @Test
-    public void testUserCreationIsBlockedWhenAppRolesAreNotValid() {
-        UUID appRoleId = UUID.randomUUID();
-        AppRole appRole = AppRole.builder()
-                .id(appRoleId)
-                .name("appRoleDisplayName")
-                .build();
-        EntraUserDto user = new EntraUserDto();
-        user.setFirstName("Test");
-        user.setLastName("User");
-        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-        when(mockAppRoleRepository.findByRoleTypeIn(any())).thenReturn(List.of());
-
-        List<String> roles = new ArrayList<>();
-        roles.add(UUID.randomUUID().toString());
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.createUser(user, roles, new ArrayList<>(), null, false, "admin"));
-        assertThat(ex).hasMessageContaining("User creation blocked");
-        verify(mockEntraUserRepository, times(0)).saveAndFlush(any());
+        assertThat(savedUser.getUserProfiles().iterator().next().getUserType()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
     }
 
     @Test
@@ -1463,6 +1401,21 @@ class UserServiceTest {
         assertThat(userService.isInternal(entraUser)).isFalse();
     }
 
+    @Test
+    void isUserCreationAllowed_Ok() {
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isUserCreationAllowed(entraUser)).isTrue();
+    }
+
+    @Test
+    void isUserCreationAllowed_Failed() {
+        Set<UserProfile> userProfiles = Set
+                .of(UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build());
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        assertThat(userService.isUserCreationAllowed(entraUser)).isFalse();
+    }
+
     @Nested
     class UpdateUserDetailsTests {
 
@@ -1937,14 +1890,6 @@ class UserServiceTest {
             user.setFirstName("John");
             user.setLastName("Doe");
 
-            UUID roleId = UUID.randomUUID();
-            AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
-            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
-            when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(appRole));
-            UUID officeId = UUID.randomUUID();
-            Office office = Office.builder().id(officeId).build();
-            when(mockOfficeRepository.findAllById(any())).thenReturn(List.of(office));
-
             EntraUser savedUser = EntraUser.builder().build();
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
 
@@ -1952,18 +1897,16 @@ class UserServiceTest {
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
             RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
-            when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
-            List<String> roles = List.of(roleId.toString());
-            List<String> offices = List.of(officeId.toString());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            EntraUser result = userService.createUser(user, roles, offices, firmDto, true, "admin");
+            EntraUser result = userService.createUser(user, firmDto, UserType.EXTERNAL_SINGLE_FIRM, "admin");
 
             // Assert
             assertThat(result).isNotNull();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
-            verify(techServicesClient).registerNewUser(any(EntraUserDto.class), anyList());
+            verify(techServicesClient).registerNewUser(any(EntraUserDto.class));
         }
 
         @Test
@@ -1972,10 +1915,6 @@ class UserServiceTest {
             EntraUserDto user = new EntraUserDto();
             user.setEmail("test@example.com");
 
-            when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
-            when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(Collections.emptyList());
-            when(mockOfficeRepository.findAllById(any())).thenReturn(Collections.emptyList());
-
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
 
@@ -1983,12 +1922,12 @@ class UserServiceTest {
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
             RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
-            when(techServicesClient.registerNewUser(any(EntraUserDto.class), anyList())).thenReturn(registerUserResponse);
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            userService.createUser(user, Collections.emptyList(), Collections.emptyList(), firmDto, false, "admin");
+            userService.createUser(user, firmDto, UserType.EXTERNAL_SINGLE_FIRM, "admin");
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
@@ -2115,38 +2054,119 @@ class UserServiceTest {
             assertThat(result).isFalse();
         }
 
-        @Test
-        void getDefaultSort() {
-            Sort nullSort = userService.getSort(null, null);
-            assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-            assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-            assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
-
-            Sort emptySort = userService.getSort("", null);
-            assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
-            assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
-            assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
-        }
-
-        @Test
-        void getGivenSort() {
-            List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
-            String sort = "aSc";
-            for (String field : fields) {
-                Sort fieldSort = userService.getSort(field, sort);
-                assertThat(fieldSort.stream().toList().get(0).getProperty().equalsIgnoreCase(field)).isTrue();
-                assertThat(fieldSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-            }
-            Sort descendingSort = userService.getSort("lastName", "deSC");
-            assertThat(descendingSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
-        }
-
-        @Test
-        void getErrorSort() {
-            assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
-        }
-
     } // End of EdgeCaseTests nested class
+
+    @Test
+    void getDefaultSort() {
+        Sort nullSort = userService.getSort(null, null);
+        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+
+        Sort emptySort = userService.getSort("", null);
+        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userStatus");
+        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("createdDate");
+        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getGivenSort() {
+        List<String> fields = List.of("firstName", "lastName", "email", "eMAIl", "lAstName", "USERSTATUS");
+        String sort = "aSc";
+        for (String field : fields) {
+            Sort fieldSort = userService.getSort(field, sort);
+            assertThat(fieldSort.stream().toList().getFirst().getProperty().equalsIgnoreCase(field)).isTrue();
+            assertThat(fieldSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.ASC);
+        }
+        Sort descendingSort = userService.getSort("lastName", "deSC");
+        assertThat(descendingSort.stream().toList().getFirst().getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void getErrorSort() {
+        assertThrows(IllegalArgumentException.class, () -> userService.getSort("error", null));
+    }
+
+    @Test
+    void setDefaultActiveProfile_switch_firm() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
+        ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+        userService.setDefaultActiveProfile(entraUser, firm2Id);
+        verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+        EntraUser updatedEntraUser = captor.getValue();
+        for (UserProfile userProfile : updatedEntraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firm1Id)) {
+                assertThat(userProfile.isActiveProfile()).isFalse();
+            } else {
+                assertThat(userProfile.isActiveProfile()).isTrue();
+                assertThat(userProfile.getFirm().getId()).isEqualTo(firm2Id);
+            }
+        }
+    }
+
+    @Test
+    void setDefaultActiveProfile_no_firm() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UUID firm3Id = UUID.randomUUID();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
+        assertThrows(IOException.class,
+                () -> userService.setDefaultActiveProfile(entraUser, firm3Id));
+    }
+
+    @Test
+    void shouldReturnInteralUserIds() {
+        List<UUID> expectedIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        when(userProfileRepository.findByUserTypes(UserType.INTERNAL)).thenReturn(expectedIds);
+
+        List<UUID> result = userService.getInternalUserEntraIds();
+
+        assertThat(result).isEqualTo(expectedIds);
+    }
+
+    @Test
+    void shouldSaveNewInternalUser() {
+        // Arrange
+        EntraUserDto dto1 = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("user1@example.com")
+                .firstName("User1")
+                .lastName("Test1").build();
+        EntraUserDto dto2 = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("user2@example.com")
+                .firstName("User2")
+                .lastName("Test2").build();
+        List<EntraUserDto> dtos = List.of(dto1, dto2);
+
+        List<EntraUser> savedUsers = new ArrayList<>();
+        when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
+            savedUsers.add(invocation.getArgument(0));
+            return invocation.getArgument(0);
+        });
+
+        // Act
+        int actual = userService.createInternalPolledUser(dtos);
+
+        // Assert
+        verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+        assertThat(actual).isEqualTo(2);
+    }
+
+    @Test
+    void shouldSkipCreatingInternalUser_whenNoNewUsers() {
+        // Act
+        int actual = userService.createInternalPolledUser(List.of());
+        // Assert
+        assertThat(actual).isEqualTo(0);
+    }
 }
+

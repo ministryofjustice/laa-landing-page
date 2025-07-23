@@ -51,16 +51,6 @@
                                     th:selected="${firm.id == selectedFirm?.id}"></option>
                             </div>
                         </select>
-                        <div class="govuk-checkboxes govuk-checkboxes--small govuk-!-margin-top-3"
-                            data-module="govuk-checkboxes">
-                            <div class="govuk-checkboxes__item">
-                                <input class="govuk-checkboxes__input" id="isFirmAdmin" name="isFirmAdmin"
-                                    type="checkbox" value="true" th:checked="*{isFirmAdmin}" />
-                                <label class="govuk-label govuk-checkboxes__label" for="isFirmAdmin">
-                                    Firm Admin
-                                </label>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div class="govuk-form-group"

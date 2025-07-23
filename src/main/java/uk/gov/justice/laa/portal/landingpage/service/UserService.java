@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 
 import java.io.IOException;
@@ -74,9 +75,9 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final NotificationService notificationService;
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
+    private final UserProfileRepository userProfileRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -84,17 +85,19 @@ public class UserService {
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
                        EntraUserRepository entraUserRepository,
                        AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       NotificationService notificationService, OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList, TechServicesClient techServicesClient) {
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient,
+                       UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
-        this.notificationService = notificationService;
         this.officeRepository = officeRepository;
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
+        this.userProfileRepository = userProfileRepository;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -163,14 +166,17 @@ public class UserService {
     public Optional<UserType> getUserTypeByUserId(String userId) {
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalEntraUser.isPresent()) {
-            EntraUser user = optionalEntraUser.get();
-            return user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .map(UserProfile::getUserType)
-                    .findFirst();
+            return getUserTypeByEntraUser(optionalEntraUser.get());
         } else {
             return Optional.empty();
         }
+    }
+
+    public Optional<UserType> getUserTypeByEntraUser(EntraUser user) {
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getUserType)
+                .findFirst();
     }
 
     public String formatLastSignInDateTime(OffsetDateTime dateTime) {
@@ -324,25 +330,10 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public EntraUser createUser(EntraUserDto user, List<String> roles, List<String> selectedOffices, FirmDto firm,
-                                boolean isFirmAdmin, String createdBy) {
+    public EntraUser createUser(EntraUserDto user, FirmDto firm,
+                                UserType userType, String createdBy) {
 
-        // Make sure the user is trying to be assigned valid app roles for their user
-        // type.
-        List<AppRole> appRoles = appRoleRepository.findAllById(roles.stream().map(UUID::fromString)
-                .collect(Collectors.toList()));
-        // TODO: Change this logic to include internal users when we support internal
-        // user creation.
-        List<AppRole> validAppRoles = appRoleRepository
-                .findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
-        if (!new HashSet<>(validAppRoles).containsAll(appRoles)) {
-            logger.error(
-                    "User creation blocked for user {}. User tried to assign roles to which they should not have access.",
-                    user.getFirstName() + " " + user.getLastName());
-            throw new RuntimeException("User creation blocked");
-        }
-
-        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user, appRoles);
+        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
@@ -351,23 +342,18 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, roles, selectedOffices, firm, isFirmAdmin, createdBy, appRoles);
+        return persistNewUser(user, firm, userType, createdBy);
     }
 
-    private EntraUser persistNewUser(EntraUserDto newUser, List<String> roles, List<String> selectedOffices, FirmDto firmDto,
-                                     boolean isFirmAdmin, String createdBy, List<AppRole> appRoles) {
+    private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
+                                     UserType userType, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
-        List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
-        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .appRoles(new HashSet<>(appRoles))
-                // TODO: Set this dynamically once we have usertype selection on the front end
-                .userType(isFirmAdmin ? UserType.EXTERNAL_SINGLE_FIRM_ADMIN : UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(userType)
                 .createdDate(LocalDateTime.now())
-                .offices(offices)
                 .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
@@ -607,5 +593,77 @@ public class UserService {
                 .filter(UserProfile::isActiveProfile)
                 .map(UserProfile::getUserType).toList();
         return userTypes.contains(UserType.INTERNAL);
+    }
+
+    public boolean isUserCreationAllowed(EntraUser entraUser) {
+        Optional<UserType> userType =  getUserTypeByEntraUser(entraUser);
+        return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
+    }
+
+    public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
+        boolean foundFirm = false;
+        for (UserProfile userProfile : entraUser.getUserProfiles()) {
+            if (userProfile.getFirm().getId().equals(firmId)) {
+                userProfile.setActiveProfile(true);
+                foundFirm = true;
+            } else {
+                userProfile.setActiveProfile(false);
+            }
+        }
+        if (!foundFirm) {
+            logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
+            throw new IOException("Firm not found for firm ID: " + firmId);
+        }
+        entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
+        List<EntraUser> entraUsers = new ArrayList<>();
+        String createdBy = "INTERNAL_USER_SYNC";
+        for (EntraUserDto user : entraUserDtos) {
+            EntraUser entraUser = mapper.map(user, EntraUser.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .entraUser(entraUser)
+                    .build();
+
+            entraUser.setEntraOid(user.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            entraUser.setCreatedBy(createdBy);
+            entraUser.setCreatedDate(LocalDateTime.now());
+            entraUsers.add(entraUser);
+            //todo: security group to access authz app
+        }
+        return persistNewInternalUser(entraUsers);
+    }
+
+    private int persistNewInternalUser(List<EntraUser> newUsers) {
+        int usersPersisted = 0;
+        for (EntraUser newUser : newUsers) {
+            try {
+                logger.info("Adding new internal user id: {} name: {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName());
+                entraUserRepository.saveAndFlush(newUser);
+                usersPersisted++;
+                logger.info("User {} added", newUser.getEntraOid());
+            } catch (Exception e) {
+                logger.error("Unexpected error when adding user id: {} name: {} {} {}",
+                        newUser.getEntraOid(),
+                        newUser.getFirstName(),
+                        newUser.getLastName(),
+                        e.getMessage());
+            }
+        }
+        return usersPersisted;
+    }
+
+    public List<UUID> getInternalUserEntraIds() {
+        return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
 }
