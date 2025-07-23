@@ -639,10 +639,7 @@ public class UserController {
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         UserType userType = userService.getUserTypeByUserId(id).orElse(UserType.EXTERNAL_SINGLE_FIRM);
-        boolean isInternalUser = UserType.INTERNAL_TYPES.contains(userType);
-        List<AppRoleDto> roles = userService.getAppRolesByAppId(selectedApps.get(currentSelectedAppIndex)).stream()
-                .filter(appRoleDto -> (isInternalUser || !appRoleDto.getRoleType().equals(RoleType.INTERNAL)))
-                .toList();
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), userType);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
