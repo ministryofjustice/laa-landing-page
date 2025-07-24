@@ -58,7 +58,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
         Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
         Assertions.assertThat(result.getUserTypeRestriction()).hasSize(1);
-        Assertions.assertThat(result.getUserTypeRestriction().stream().findFirst().get()).isEqualTo(UserType.INTERNAL);
+        Assertions.assertThat(result.getUserTypeRestriction()[0]).isEqualTo(UserType.INTERNAL);
 
         Assertions.assertThat(result.getApp()).isNotNull();
 
@@ -78,7 +78,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
-        appRole1.getUserTypeRestriction().add(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        appRole1.setUserTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN});
         repository.saveAndFlush(appRole1);
 
 
@@ -122,7 +122,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
         Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
         Assertions.assertThat(result.getUserTypeRestriction()).hasSize(1);
-        Assertions.assertThat(result.getUserTypeRestriction().stream().findFirst().get()).isEqualTo(UserType.INTERNAL);
+        Assertions.assertThat(result.getUserTypeRestriction()[0]).isEqualTo(UserType.INTERNAL);
         Assertions.assertThat(result.getAssignableRoles()).isNotNull();
         Assertions.assertThat(result.getAssignableRoles()).hasSize(1);
         Assertions.assertThat(result.getAssignableRoles().stream().findFirst().get()).isInstanceOf(RoleAssignment.class);

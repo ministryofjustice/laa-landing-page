@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -27,6 +26,8 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -64,9 +65,10 @@ public class AppRole extends BaseEntity {
     @NotNull(message = "App role type must be provided")
     private RoleType roleType;
 
-    @Convert(converter = UserTypesConverter.class)
-    @Column(name = "user_type_restriction", nullable = true, length = 255)
-    private Set<UserType> userTypeRestriction;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_type_restriction", nullable = true, columnDefinition = "text[]")
+    private UserType[] userTypeRestriction;
 
     @Column(name = "description", nullable = false, length = 255)
     @NotBlank(message = "Application role description must be provided")

@@ -18,7 +18,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.UUID;
 
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -60,7 +59,7 @@ public class BaseRepositoryTest {
 
     protected AppRole buildLaaAppRole(App app, String name) {
         return AppRole.builder().name(name).roleType(RoleType.INTERNAL).description(name)
-                .userTypeRestriction(new HashSet<>(List.of(UserType.INTERNAL))).app(app).build();
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
