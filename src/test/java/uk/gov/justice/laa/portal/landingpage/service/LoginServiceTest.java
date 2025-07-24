@@ -224,7 +224,7 @@ class LoginServiceTest {
     void logout_whenAuthenticationIsNull_doNothing() {
 
         // Arrange & Act
-        loginService.logout(null, authorizedClient, session);
+        loginService.logout(null, authorizedClient);
 
         // Assert
         verify(graphApiService, never()).logoutUser(anyString());
@@ -234,7 +234,7 @@ class LoginServiceTest {
     void logout_whenAccessTokenIsNull_doNothing() {
         // Arrange & Act
         when(authorizedClient.getAccessToken()).thenReturn(null);
-        loginService.logout(oauthToken, authorizedClient, session);
+        loginService.logout(oauthToken, authorizedClient);
 
         // Assert
         verify(graphApiService, never()).logoutUser(anyString());
@@ -245,10 +245,9 @@ class LoginServiceTest {
         // Arrange & Act
         when(authorizedClient.getAccessToken()).thenReturn(accessToken);
         when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
-        loginService.logout(oauthToken, authorizedClient, session);
+        loginService.logout(oauthToken, authorizedClient);
 
         // Assert
         verify(graphApiService).logoutUser(anyString());
-        verify(session).invalidate();
     }
 }
