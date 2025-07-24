@@ -5,9 +5,28 @@ metadata:
 spec:
   template:
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
       containers:
         - name: liquibase
           image: liquibase/liquibase
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              memory: "1200Mi"
+              cpu: "300m"
+            limits:
+              memory: "3000Mi"
+              cpu: "1"
           env:
             - name: POSTGRES_DB_NAME
               valueFrom:
