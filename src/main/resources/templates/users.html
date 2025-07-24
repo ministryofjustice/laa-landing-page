@@ -121,11 +121,15 @@
                                     <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
                                         th:text="${user.fullName}"></a>
                                 </td>
-                                <td class="govuk-table__cell" th:text="${user.email}"></td>
+                                <td class="govuk-table__cell" th:text="${user.entraUser.email}"></td>
                                 <td class="govuk-table__cell">
-                                    <span style="white-space: nowrap;" th:text="${user.lastLoggedIn}"></span>
+                                    <span style="white-space: nowrap;" th:text="${user.entraUser.lastLoggedIn}"></span>
                                 </td>
-                                <td class="govuk-table__cell"> <span class="moj-badge moj-badge--green">Active</span>
+                                <td class="govuk-table__cell">
+                                    <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
+                                        class="govuk-tag govuk-tag--yellow" style="font-size: 12px; padding: 2px 6px;">PENDING</span>
+                                    <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
+                                        class="govuk-tag govuk-tag--green" style="font-size: 12px; padding: 2px 6px;">COMPLETE</span>
                                 </td>
                             </tr>
                         </tbody>
