@@ -150,3 +150,9 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
                   key: rds_instance_endpoint
+            - name: POLLING_ENABLED
+              value: "${POLLING_ENABLED}"
+            - name: POLLING_INTERVAL
+              value: "${POLLING_INTERVAL}"
+            - name: POLLING_GROUP_ID
+              value: "${POLLING_GROUP_ID}"

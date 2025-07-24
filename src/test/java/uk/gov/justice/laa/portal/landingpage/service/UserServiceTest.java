@@ -53,6 +53,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -101,6 +102,8 @@ class UserServiceTest {
     private OfficeRepository mockOfficeRepository;
     @Mock
     private TechServicesClient techServicesClient;
+    @Mock
+    private UserProfileRepository userProfileRepository;
 
     @BeforeEach
     void setUp() {
@@ -112,7 +115,8 @@ class UserServiceTest {
                 new MapperConfig().modelMapper(),
                 mockOfficeRepository,
                 laaApplicationsList,
-                techServicesClient);
+                techServicesClient,
+                userProfileRepository);
     }
 
     @Test
@@ -1076,12 +1080,12 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUserRoles_updatesRoles_whenUserAndProfileExist() {
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole1() {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).build();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL_AND_EXTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1095,6 +1099,69 @@ class UserServiceTest {
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(user);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_externalRole2() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_internalRole() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenUserAndProfileExist_error() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(mockEntraUserRepository.saveAndFlush(user)).thenReturn(user);
+
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).isEmpty();
     }
 
     @Test
@@ -1964,7 +2031,7 @@ class UserServiceTest {
         void updateUserRoles_handlesEmptyRolesList() {
             // Arrange
             UUID userId = UUID.randomUUID();
-            UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
+            UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
             EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
@@ -2117,4 +2184,52 @@ class UserServiceTest {
         assertThrows(IOException.class,
                 () -> userService.setDefaultActiveProfile(entraUser, firm3Id));
     }
+
+    @Test
+    void shouldReturnInteralUserIds() {
+        List<UUID> expectedIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        when(userProfileRepository.findByUserTypes(UserType.INTERNAL)).thenReturn(expectedIds);
+
+        List<UUID> result = userService.getInternalUserEntraIds();
+
+        assertThat(result).isEqualTo(expectedIds);
+    }
+
+    @Test
+    void shouldSaveNewInternalUser() {
+        // Arrange
+        EntraUserDto dto1 = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("user1@example.com")
+                .firstName("User1")
+                .lastName("Test1").build();
+        EntraUserDto dto2 = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("user2@example.com")
+                .firstName("User2")
+                .lastName("Test2").build();
+        List<EntraUserDto> dtos = List.of(dto1, dto2);
+
+        List<EntraUser> savedUsers = new ArrayList<>();
+        when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
+            savedUsers.add(invocation.getArgument(0));
+            return invocation.getArgument(0);
+        });
+
+        // Act
+        int actual = userService.createInternalPolledUser(dtos);
+
+        // Assert
+        verify(mockEntraUserRepository, times(2)).saveAndFlush(any());
+        assertThat(actual).isEqualTo(2);
+    }
+
+    @Test
+    void shouldSkipCreatingInternalUser_whenNoNewUsers() {
+        // Act
+        int actual = userService.createInternalPolledUser(List.of());
+        // Assert
+        assertThat(actual).isEqualTo(0);
+    }
 }
+
