@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: laa-landing-page-liquibase-tag-${VERSION//./-}  # Optional: version-safe name
+spec:
+  template:
+    spec:
+      containers:
+        - name: liquibase
+          image: liquibase/liquibase
+          env:
+            - name: POSTGRES_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_name
+            - name: POSTGRES_DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_address
+            - name: POSTGRES_DB_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_endpoint
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_password
+          command: ["liquibase"]
+          args:
+            [
+              "--changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml",
+              "--url=jdbc:postgresql://$POSTGRES_DB_ADDRESS:$POSTGRES_DB_ENDPOINT/$POSTGRES_DB_NAME",
+              "--username=$(POSTGRES_USERNAME)",
+              "--password=$(POSTGRES_PASSWORD)",
+              "tag",
+              "${VERSION}"
+            ]
+      restartPolicy: Never
+  backoffLimit: 1

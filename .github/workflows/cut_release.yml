@@ -80,3 +80,11 @@ jobs:
             Version v${{ env.NEW_VERSION }} released from `${{ github.event.inputs.push_to }}` branch.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag database via Kubernetes Job
+        run: |
+          envsubst < deployments/templates/liquibase-tag-job.yaml > liquibase-tag-job-rendered.yaml
+          kubectl apply -f liquibase-tag-job-rendered.yaml
+        env:
+          VERSION: v${{ env.NEW_VERSION }}
+
