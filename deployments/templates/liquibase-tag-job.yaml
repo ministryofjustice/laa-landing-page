@@ -10,7 +10,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: liquibase
-          image: liquibase/liquibase
+          image: liquibase/liquibase:4.27.0
           securityContext:
             runAsUser: 1000
             runAsNonRoot: true
