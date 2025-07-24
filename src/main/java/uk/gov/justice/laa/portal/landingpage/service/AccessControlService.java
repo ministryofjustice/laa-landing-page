@@ -1,8 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 
@@ -17,6 +20,8 @@ public class AccessControlService {
     private final FirmService firmService;
 
     private final LoginService loginService;
+
+    private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
     public AccessControlService(UserService userService, LoginService loginService, FirmService firmService) {
         this.userService = userService;
@@ -37,7 +42,12 @@ public class AccessControlService {
 
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(userId);
 
-        return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
+        boolean canAccess = userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
+        if (!canAccess) {
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userId);
+        }
+        return canAccess;
     }
 
     public boolean canEditUser(String userId) {
