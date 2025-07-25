@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
+import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Arrays;
@@ -124,10 +125,12 @@ class SecurityConfigTest {
 
     @MockitoBean
     private AuthzOidcUserDetailsService authzOidcUserDetailsService;
+    @MockitoBean
+    private CustomLogoutHandler logoutHandler;
 
     @Test
     void passwordEncoderBeanCreation() {
-        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService, logoutHandler);
         PasswordEncoder passwordEncoder = securityConfig.passwordEncoder();
 
         assertThat(passwordEncoder).isInstanceOf(BCryptPasswordEncoder.class);
@@ -135,7 +138,7 @@ class SecurityConfigTest {
 
     @Test
     void jwtAuthenticationConverterBeanCreation() {
-        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService);
+        SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService, logoutHandler);
         JwtAuthenticationConverter converter = securityConfig.jwtAuthenticationConverter();
 
         assertThat(converter).isNotNull();
@@ -243,6 +246,6 @@ class SecurityConfigTest {
     void logoutRedirectsToHomePage() throws Exception {
         mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
+                .andExpect(redirectedUrl("/?message=logout"));
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
+import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 
 /**
  * Security configuration for the application
@@ -31,9 +32,11 @@ import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService
 public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
+    private final CustomLogoutHandler logoutHandler;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
+        this.logoutHandler = logoutHandler;
     }
 
     @Bean
@@ -115,7 +118,8 @@ public class SecurityConfig {
             .permitAll()
         ).logout(logout -> logout
             .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
-            .logoutSuccessUrl("/")
+            .addLogoutHandler(logoutHandler)
+            .logoutSuccessUrl("/?message=logout")
             .clearAuthentication(true)
             .deleteCookies("JSESSIONID")
             .invalidateHttpSession(true)
