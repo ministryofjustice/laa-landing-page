@@ -58,7 +58,8 @@ public class BaseRepositoryTest {
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
-        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).app(app).build();
+        return AppRole.builder().name(name).roleType(RoleType.INTERNAL).description(name)
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
