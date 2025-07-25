@@ -14,9 +14,9 @@ on:
       push_to:
         description: 'Which branch to push the release to?'
         required: true
-        default: 'test'
         type: choice
         options:
+          - main
           - test
           - prd
 
