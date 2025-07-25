@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -102,9 +103,13 @@ public class AccessControlServiceTest {
                 .entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.getUserProfiles().add(userProfile);
 
+        CurrentUserDto entraUserDto = new CurrentUserDto();
+        entraUserDto.setName("test");
+
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
         FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         Mockito.when(firmService.getUserFirmsByUserId(userId.toString())).thenReturn(List.of(firmDto2));
 
@@ -131,7 +136,9 @@ public class AccessControlServiceTest {
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         Mockito.when(firmService.getUserFirmsByUserId(userId.toString())).thenReturn(Collections.emptyList());
-
+        CurrentUserDto entraUserDto = new CurrentUserDto();
+        entraUserDto.setName("test");
+        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
 
         boolean result = accessControlService.canAccessUser(userId.toString());
         Assertions.assertThat(result).isFalse();
@@ -197,17 +204,20 @@ public class AccessControlServiceTest {
         entraUser.getUserProfiles().add(userProfile);
 
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
-        FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
+        CurrentUserDto entraUserDto = new CurrentUserDto();
+        entraUserDto.setName("test");
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(firmService.getUserFirmsByUserId(userId.toString())).thenReturn(List.of(firmDto2));
+        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(AccessControlService.class);
 
         boolean result = accessControlService.canEditUser(userId.toString());
         Assertions.assertThat(result).isFalse();
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertEquals(1, infoLogs.size());
-        assertTrue(infoLogs.get(0).toString().contains("does not have permission to access"));
+        assertTrue(infoLogs.get(0).toString().contains("User test does not have permission to access"));
     }
 
 }
