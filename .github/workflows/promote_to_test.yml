@@ -32,7 +32,58 @@ jobs:
             git merge --abort
             exit 1
           fi
+
+      - name: Get current version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          echo "Current version is $CURRENT_VERSION"
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Bump patch version
+        id: bump_patch
+        run: |
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version is $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+          sed -i "s/^version=.*/version=$NEW_VERSION/" gradle.properties
+          git add gradle.properties
+          git commit -m "chore: release v$NEW_VERSION"
+          git tag "v$NEW_VERSION"
           
       - name: Push to test
         run: |
           git push origin test
+          git push origin "v$NEW_VERSION"
+      
+      - name: Extract version from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          TAG="v$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG=$TAG" >> $GITHUB_ENV
+      
+      - name: Check if tag already exists
+        run: |
+          git fetch --tags
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping tag creation."
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.NEW_VERSION }}
+          name: Release v${{ env.NEW_VERSION }}
+          body: |
+            Patch release from promote to test.
+            Merged main into test and bumped version to v${{ env.NEW_VERSION }}.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
