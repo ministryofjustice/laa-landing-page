@@ -136,8 +136,7 @@ public class LoginService {
     }
 
     public void logout(Authentication authentication,
-                       OAuth2AuthorizedClient authorizedClient,
-                       HttpSession session) {
+                       OAuth2AuthorizedClient authorizedClient) {
         if (authentication == null) {
             return;
         }
@@ -149,6 +148,5 @@ public class LoginService {
         }
         String tokenValue = accessToken.getTokenValue();
         graphApiService.logoutUser(tokenValue);
-        session.invalidate();
     }
 }
