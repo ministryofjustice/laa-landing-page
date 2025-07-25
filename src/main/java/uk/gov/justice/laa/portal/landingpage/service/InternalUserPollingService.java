@@ -41,7 +41,26 @@ public class InternalUserPollingService {
             return;
         }
 
-        List<DirectoryObject> allUsers = response.getValue();
+        List<DirectoryObject> allUsers = new ArrayList<>(response.getValue());
+        String nextLink = response.getOdataNextLink();
+        int page = 1;
+        while (nextLink != null) {
+            response = graphClient
+                    .groups()
+                    .byGroupId(pollingGroupId)
+                    .members()
+                    .withUrl(nextLink)
+                    .get();
+
+            if (response != null && response.getValue() != null) {
+                allUsers.addAll(response.getValue());
+                nextLink = response.getOdataNextLink();
+                page++;
+                logger.info("Page {} of users retrieved and added to list of users from entra group", page);
+            } else  {
+                break;
+            }
+        }
         List<DirectoryObject> newUsers = allUsers.stream()
                 .filter(u -> !existingUserOids.contains(UUID.fromString(u.getId())))
                 .toList();

@@ -94,6 +94,49 @@ class InternalUserPollingServiceTest {
     }
 
     @Test
+    void shouldCreateNewUsers_whenNewUsersFound_paginated() {
+        UUID existingId = UUID.randomUUID();
+        UUID newId = UUID.randomUUID();
+        when(userService.getInternalUserEntraIds()).thenReturn(List.of(existingId));
+        User newUser = new User();
+        newUser.setId(newId.toString());
+        newUser.setMail("test@example.com");
+        newUser.setSurname("Doe");
+        newUser.setGivenName("John");
+        newUser.setDisplayName("John Doe");
+        User newUser2 = new User();
+        newUser2.setId(newId.toString());
+        newUser2.setMail("test2@example.com");
+        newUser2.setSurname("Doe");
+        newUser2.setGivenName("Jane");
+        newUser2.setDisplayName("Jane Doe");
+        List<DirectoryObject> directoryObjects = List.of(newUser);
+        DirectoryObjectCollectionResponse response = new DirectoryObjectCollectionResponse();
+        response.setOdataNextLink("page2");
+        response.setValue(directoryObjects);
+
+        List<DirectoryObject> directoryObjects2 = List.of(newUser2);
+        DirectoryObjectCollectionResponse page2Response = new DirectoryObjectCollectionResponse();
+        page2Response.setValue(directoryObjects2);
+
+        when(graphServiceClient.groups().byGroupId(anyString()).members().get()).thenReturn(response);
+        when(graphServiceClient.groups().byGroupId(anyString()).members().withUrl(anyString()).get()).thenReturn(page2Response);
+
+        internalUserPollingService.pollForNewUsers();
+        ArgumentCaptor<List<EntraUserDto>> captor = ArgumentCaptor.forClass(List.class);
+        verify(userService).createInternalPolledUser(captor.capture());
+        List<EntraUserDto> dtos = captor.getValue();
+        assertEquals(2, dtos.size());
+        assertEquals(newId.toString(), dtos.get(0).getEntraOid());
+        assertEquals("test@example.com", dtos.get(0).getEmail());
+        assertEquals("John", dtos.get(0).getFirstName());
+        assertEquals("Doe", dtos.get(0).getLastName());
+        assertEquals("test2@example.com", dtos.get(1).getEmail());
+        assertEquals("Jane", dtos.get(1).getFirstName());
+        assertEquals("Doe", dtos.get(1).getLastName());
+    }
+
+    @Test
     void shouldNotCreateNewUsers_whenResponseHasNoUserInstances() {
         DirectoryObject notUser1 = new DirectoryObject();
         notUser1.setId(UUID.randomUUID().toString());
