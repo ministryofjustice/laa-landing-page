@@ -41,7 +41,7 @@ public class InternalUserPollingService {
             return;
         }
 
-        List<DirectoryObject> allUsers = response.getValue();
+        List<DirectoryObject> allUsers = new ArrayList<>(response.getValue());
         String nextLink = response.getOdataNextLink();
         int page = 1;
         while (nextLink != null) {
