@@ -40,7 +40,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -511,6 +510,7 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
@@ -534,6 +534,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
             @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
             HttpSession session) throws IOException {
@@ -555,6 +556,7 @@ public class UserController {
      * Retrieves available apps for user and their currently assigned apps.
      */
     @GetMapping("/users/edit/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -574,6 +576,7 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             Authentication authentication,
@@ -615,6 +618,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user retrieval
      */
     @GetMapping("/users/edit/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
@@ -689,6 +693,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user role update
      */
     @PostMapping("/users/edit/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
@@ -767,6 +772,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @GetMapping("/users/edit/{id}/offices")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -828,6 +834,7 @@ public class UserController {
      * @throws IOException If an error occurs during user office update
      */
     @PostMapping("/users/edit/{id}/offices")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Authentication authentication,

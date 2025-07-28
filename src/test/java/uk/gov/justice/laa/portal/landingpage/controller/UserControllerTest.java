@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
@@ -2935,5 +2937,26 @@ class UserControllerTest {
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
         assertThat(testSession.getAttribute("successMessage")).isNull();
+    }
+    
+    @Test
+    void has_accessControl() throws NoSuchMethodException {
+        Class clazz = UserController.class;
+        List<String> canEditMethods = List.of("editUser", "editUserDetails",
+                "updateUserDetails", "editUserApps", "setSelectedAppsEdit",
+                "editUserRoles", "updateUserRoles", "editUserOffices", "updateUserOffices");
+        List<String> canAcessMethods = List.of("manageUser");
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+            if (canEditMethods.contains(method.getName())) {
+                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
+                assertThat(anno.value()).isEqualTo("@accessControlService.canEditUser(#id)");
+                continue;
+            }
+            if (canAcessMethods.contains(method.getName())) {
+                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
+                assertThat(anno.value()).isEqualTo("@accessControlService.canAccessUser(#id)");
+            }
+        }
     }
 }
