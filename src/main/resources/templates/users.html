@@ -104,35 +104,35 @@
                     <table class="govuk-table" data-module="moj-sortable-table">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header" 
-                                    th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}" 
+                                <th scope="col" class="govuk-table__header"
+                                    th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                     data-sort="firstName">
-                                    <a class="govuk-link govuk-link--no-underline" 
-                                       th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
+                                    <a class="govuk-link govuk-link--no-underline"
+                                        th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
                                         Name
                                     </a>
                                 </th>
-                                <th scope="col" class="govuk-table__header" 
-                                    th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}" 
+                                <th scope="col" class="govuk-table__header"
+                                    th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                     data-sort="email">
-                                    <a class="govuk-link govuk-link--no-underline" 
+                                    <a class="govuk-link govuk-link--no-underline"
                                        th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
                                         Email
                                     </a>
                                 </th>
-                                <th scope="col" class="govuk-table__header" 
-                                    th:aria-sort="${sort == 'lastLoggedIn' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}" 
+                                <th scope="col" class="govuk-table__header"
+                                    th:aria-sort="${sort == 'lastLoggedIn' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                     data-sort="lastLoggedIn">
-                                    <a class="govuk-link govuk-link--no-underline" 
-                                       th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='lastLoggedIn', direction=${sort == 'lastLoggedIn' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
+                                    <a class="govuk-link govuk-link--no-underline"
+                                        th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='lastLoggedIn', direction=${sort == 'lastLoggedIn' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
                                         Last logged in
                                     </a>
                                 </th>
-                                <th scope="col" class="govuk-table__header" 
-                                    th:aria-sort="${sort == 'userStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}" 
+                                <th scope="col" class="govuk-table__header"
+                                    th:aria-sort="${sort == 'userStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                     data-sort="userStatus">
-                                    <a class="govuk-link govuk-link--no-underline" 
-                                       th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
+                                    <a class="govuk-link govuk-link--no-underline"
+                                        th:href="@{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}">
                                         Status
                                     </a>
                                 </th>
