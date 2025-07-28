@@ -208,16 +208,6 @@ class LoginControllerTest {
     }
 
     @Test
-    void whenLogout_thenReturnsLogoutPage() {
-
-        // Arrange & Act
-        RedirectView result = controller.logout(authentication, session, authClient);
-
-        // Assert
-        assertThat(result.getUrl()).isEqualTo("/?message=logout");
-    }
-
-    @Test
     void whenHandleException_thenRedirectToErrorPage() {
 
         // Arrange & Act
@@ -263,7 +253,8 @@ class LoginControllerTest {
         RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        verify(loginService).logout(authentication, authClient, session);
+        verify(loginService).logout(authentication, authClient);
+        verify(session).invalidate();
         assertThat(view.getUrl()).isEqualTo("/?message=logout");
     }
 }

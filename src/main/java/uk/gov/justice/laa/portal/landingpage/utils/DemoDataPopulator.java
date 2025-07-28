@@ -183,7 +183,8 @@ public class DemoDataPopulator {
     }
 
     protected AppRole buildLaaAppRole(App app, String name, RoleType roleType) {
-        return AppRole.builder().name(name).roleType(roleType).app(app).build();
+        return AppRole.builder().name(name).roleType(roleType)
+                .description(name).authzRole(false).app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {

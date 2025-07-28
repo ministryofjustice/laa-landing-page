@@ -1,6 +1,49 @@
 databaseChangeLog:
   - changeSet:
-      id: 1752020733897-1
+      id: 1753390639234-1
+      author: system
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+                  name: authz_role
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: app_id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: app_role_pkey
+                  name: id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: role_type
+                  type: VARCHAR(255)
+              - column:
+                  name: user_type_restriction
+                  type: TEXT[]
+            tableName: app_role
+  - changeSet:
+      id: 1753390639234-2
       author: system
       changes:
         - createTable:
@@ -28,36 +71,7 @@ databaseChangeLog:
                   type: VARCHAR(255)
             tableName: app
   - changeSet:
-      id: 1752020733897-2
-      author: system
-      changes:
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: app_id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: app_role_pkey
-                  name: id
-                  type: UUID
-              - column:
-                  constraints:
-                    nullable: false
-                  name: name
-                  type: VARCHAR(255)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: role_type
-                  type: VARCHAR(255)
-            tableName: app_role
-  - changeSet:
-      id: 1752020733897-3
+      id: 1753390639234-3
       author: system
       changes:
         - createTable:
@@ -118,7 +132,7 @@ databaseChangeLog:
                   type: VARCHAR(255)
             tableName: entra_user
   - changeSet:
-      id: 1752020733897-4
+      id: 1753390639234-4
       author: system
       changes:
         - createTable:
@@ -145,7 +159,7 @@ databaseChangeLog:
                   type: VARCHAR(255)
             tableName: firm
   - changeSet:
-      id: 1752020733897-5
+      id: 1753390639234-5
       author: system
       changes:
         - createTable:
@@ -182,7 +196,36 @@ databaseChangeLog:
                   type: VARCHAR(255)
             tableName: office
   - changeSet:
-      id: 1752020733897-6
+      id: 1753390639234-6
+      author: system
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: permission_pkey
+                  name: id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: function
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+            tableName: permission
+  - changeSet:
+      id: 1753390639234-7
       author: system
       changes:
         - createTable:
@@ -235,41 +278,30 @@ databaseChangeLog:
                   defaultValue: "PENDING"
                   name: status
                   type: VARCHAR(255)
-            tableName: user_profile
+                  tableName: user_profile
   - changeSet:
-      id: 1752020733897-7
+      id: 1753390639234-8
       author: system
       changes:
-        - addUniqueConstraint:
-            columnNames: entra_app_id
-            constraintName: app_entra_app_id_key
-            tableName: app
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: role_assignment_pkey
+                  name: assignable_role_id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: role_assignment_pkey
+                  name: assigning_role_id
+                  type: UUID
+            tableName: role_assignment
   - changeSet:
-      id: 1752020733897-8
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: name
-            constraintName: app_name_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-9
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: security_group_name
-            constraintName: app_security_group_name_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-10
-      author: system
-      changes:
-        - addUniqueConstraint:
-            columnNames: security_group_oid
-            constraintName: app_security_group_oid_key
-            tableName: app
-  - changeSet:
-      id: 1752020733897-11
+      id: 1753390639234-9
       author: system
       changes:
         - addUniqueConstraint:
@@ -277,7 +309,39 @@ databaseChangeLog:
             constraintName: app_role_name_key
             tableName: app_role
   - changeSet:
-      id: 1752020733897-12
+      id: 1753390639234-10
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: entra_app_id
+            constraintName: app_entra_app_id_key
+            tableName: app
+  - changeSet:
+      id: 1753390639234-11
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: name
+            constraintName: app_name_key
+            tableName: app
+  - changeSet:
+      id: 1753390639234-12
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: security_group_name
+            constraintName: app_security_group_name_key
+            tableName: app
+  - changeSet:
+      id: 1753390639234-13
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: security_group_oid
+            constraintName: app_security_group_oid_key
+            tableName: app
+  - changeSet:
+      id: 1753390639234-14
       author: system
       changes:
         - createIndex:
@@ -288,7 +352,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-13
+      id: 1753390639234-15
       author: system
       changes:
         - createIndex:
@@ -299,7 +363,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-14
+      id: 1753390639234-16
       author: system
       changes:
         - createIndex:
@@ -310,7 +374,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-15
+      id: 1753390639234-17
       author: system
       changes:
         - createIndex:
@@ -321,7 +385,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-16
+      id: 1753390639234-18
       author: system
       changes:
         - createIndex:
@@ -332,7 +396,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-17
+      id: 1753390639234-19
       author: system
       changes:
         - createIndex:
@@ -343,7 +407,7 @@ databaseChangeLog:
             tableName: entra_user
             using: btree
   - changeSet:
-      id: 1752020733897-18
+      id: 1753390639234-20
       author: system
       changes:
         - addUniqueConstraint:
@@ -351,7 +415,7 @@ databaseChangeLog:
             constraintName: entra_user_email_key
             tableName: entra_user
   - changeSet:
-      id: 1752020733897-19
+      id: 1753390639234-21
       author: system
       changes:
         - addUniqueConstraint:
@@ -359,7 +423,7 @@ databaseChangeLog:
             constraintName: entra_user_entra_oid_key
             tableName: entra_user
   - changeSet:
-      id: 1752020733897-20
+      id: 1753390639234-22
       author: system
       changes:
         - addUniqueConstraint:
@@ -367,7 +431,7 @@ databaseChangeLog:
             constraintName: firm_code_key
             tableName: firm
   - changeSet:
-      id: 1752020733897-21
+      id: 1753390639234-23
       author: system
       changes:
         - addUniqueConstraint:
@@ -375,7 +439,7 @@ databaseChangeLog:
             constraintName: firm_name_key
             tableName: firm
   - changeSet:
-      id: 1752020733897-22
+      id: 1753390639234-24
       author: system
       changes:
         - addUniqueConstraint:
@@ -383,7 +447,7 @@ databaseChangeLog:
             constraintName: office_code_key
             tableName: office
   - changeSet:
-      id: 1752020733897-23
+      id: 1753390639234-25
       author: system
       changes:
         - addUniqueConstraint:
@@ -391,7 +455,15 @@ databaseChangeLog:
             constraintName: office_name_key
             tableName: office
   - changeSet:
-      id: 1752020733897-24
+      id: 1753390639234-26
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: name
+            constraintName: permission_name_key
+            tableName: permission
+  - changeSet:
+      id: 1753390639234-27
       author: system
       changes:
         - createIndex:
@@ -402,7 +474,7 @@ databaseChangeLog:
             tableName: user_profile
             using: btree
   - changeSet:
-      id: 1752020733897-25
+      id: 1753390639234-28
       author: system
       changes:
         - createIndex:
@@ -413,7 +485,7 @@ databaseChangeLog:
             tableName: user_profile
             using: btree
   - changeSet:
-      id: 1752020733897-26
+      id: 1753390639234-29
       author: system
       changes:
         - createIndex:
@@ -424,7 +496,7 @@ databaseChangeLog:
             tableName: user_profile
             using: btree
   - changeSet:
-      id: 1752020733897-27
+      id: 1753390639234-30
       author: system
       changes:
         - createIndex:
@@ -435,7 +507,28 @@ databaseChangeLog:
             tableName: user_profile
             using: btree
   - changeSet:
-      id: 1752020733897-28
+      id: 1753390639234-31
+      author: system
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: role_permission_pkey
+                  name: app_role_id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: role_permission_pkey
+                  name: permission_id
+                  type: UUID
+            tableName: role_permission
+  - changeSet:
+      id: 1753390639234-32
       author: system
       changes:
         - createTable:
@@ -456,7 +549,7 @@ databaseChangeLog:
                   type: UUID
             tableName: user_profile_app_role
   - changeSet:
-      id: 1752020733897-29
+      id: 1753390639234-33
       author: system
       changes:
         - createTable:
@@ -477,7 +570,7 @@ databaseChangeLog:
                   type: UUID
             tableName: user_profile_office
   - changeSet:
-      id: 1752020733897-30
+      id: 1753390639234-34
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -492,7 +585,7 @@ databaseChangeLog:
             referencedTableName: app
             validate: true
   - changeSet:
-      id: 1752020733897-31
+      id: 1753390639234-35
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -507,7 +600,37 @@ databaseChangeLog:
             referencedTableName: firm
             validate: true
   - changeSet:
-      id: 1752020733897-32
+      id: 1753390639234-36
+      author: system
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: app_role_id
+            baseTableName: role_permission
+            constraintName: fk_permission_app_role_app_role_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: app_role
+            validate: true
+  - changeSet:
+      id: 1753390639234-37
+      author: system
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: permission_id
+            baseTableName: role_permission
+            constraintName: fk_permission_app_role_permission_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: permission
+            validate: true
+  - changeSet:
+      id: 1753390639234-38
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -522,7 +645,7 @@ databaseChangeLog:
             referencedTableName: app_role
             validate: true
   - changeSet:
-      id: 1752020733897-33
+      id: 1753390639234-39
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -537,7 +660,7 @@ databaseChangeLog:
             referencedTableName: user_profile
             validate: true
   - changeSet:
-      id: 1752020733897-34
+      id: 1753390639234-40
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -552,7 +675,7 @@ databaseChangeLog:
             referencedTableName: firm
             validate: true
   - changeSet:
-      id: 1752020733897-35
+      id: 1753390639234-41
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -567,7 +690,7 @@ databaseChangeLog:
             referencedTableName: office
             validate: true
   - changeSet:
-      id: 1752020733897-36
+      id: 1753390639234-42
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -582,7 +705,7 @@ databaseChangeLog:
             referencedTableName: user_profile
             validate: true
   - changeSet:
-      id: 1752020733897-37
+      id: 1753390639234-43
       author: system
       changes:
         - addForeignKeyConstraint:
@@ -597,7 +720,37 @@ databaseChangeLog:
             referencedTableName: entra_user
             validate: true
   - changeSet:
-      id: 1752020733897-38
+      id: 1753390639234-44
+      author: system
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: assignable_role_id
+            baseTableName: role_assignment
+            constraintName: fkinkufwdifl4xw55uexx0avmid
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: app_role
+            validate: true
+  - changeSet:
+      id: 1753390639234-45
+      author: system
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: assigning_role_id
+            baseTableName: role_assignment
+            constraintName: fksq2gkf49sdafy34jxa1rh1ya6
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: app_role
+            validate: true
+  - changeSet:
+      id: 1752795541521-46
       author: system
       changes:
         - sql:
@@ -615,3 +768,6 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_multi_firm_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL_MULTI_FIRM'"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE role_assignment ADD CONSTRAINT role_assignment_no_self_assignable CHECK (assigning_role_id <> assignable_role_id)"
