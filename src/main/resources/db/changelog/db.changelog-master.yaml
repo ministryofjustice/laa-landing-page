@@ -278,7 +278,7 @@ databaseChangeLog:
                   defaultValue: "PENDING"
                   name: status
                   type: VARCHAR(255)
-                  tableName: user_profile
+            tableName: user_profile
   - changeSet:
       id: 1753390639234-8
       author: system
