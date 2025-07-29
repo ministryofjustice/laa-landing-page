@@ -24,8 +24,6 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
         assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
-        assertThat(entraUser.getStartDate()).isNotNull();
-        assertThat(entraUser.getEndDate()).isNotNull();
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();
@@ -205,36 +203,6 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastName");
     }
 
-    @Test
-    public void testEntraUserNullStartDate() {
-        EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setStartDate(null));
-
-        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
-
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    public void testEntraUserNullEndDate() {
-        EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, entra -> entra.setEndDate(null));
-
-        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
-
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
-    public void testEntraUserStartDateAfterEndDate() {
-        EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, eu -> eu.setEndDate(LocalDateTime.now().minusYears(1)));
-        Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("End date must be after start date");
-    }
 
     @Test
     public void testEntraUserFalseInvitationAccepted() {
@@ -248,8 +216,6 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
         assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.AWAITING_USER_APPROVAL);
-        assertThat(entraUser.getStartDate()).isNotNull();
-        assertThat(entraUser.getEndDate()).isNotNull();
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();

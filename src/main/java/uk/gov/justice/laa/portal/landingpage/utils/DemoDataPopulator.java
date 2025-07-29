@@ -29,7 +29,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -113,7 +112,7 @@ public class DemoDataPopulator {
                 .entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .userStatus(UserStatus.ACTIVE)
                 .build();
     }
 
