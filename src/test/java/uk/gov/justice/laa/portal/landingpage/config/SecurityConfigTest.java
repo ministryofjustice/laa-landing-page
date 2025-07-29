@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -254,5 +256,23 @@ class SecurityConfigTest {
         mockMvc.perform(get("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?message=logout"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"127.0.0.1", "192.168.0.2", "10.0.0.1", "172.16.0.1", "::1", "192.168.0.1"})
+    void publicEndpointsAreAccessibleWhiteList(String input) throws Exception {
+
+        mockMvc.perform(get("/actuator/health")
+                        .with(request->{request.setRemoteAddr(input);return request;}))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+    }
+
+    @Test
+    void publicEndpointsAreAccessibleRemote() throws Exception {
+
+        mockMvc.perform(get("/actuator/health")
+                        .with(request->{request.setRemoteAddr("1.1.1.1");return request;}))
+                .andExpect(status().is3xxRedirection());
     }
 }
