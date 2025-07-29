@@ -314,8 +314,8 @@ class UserControllerTest {
                 .appRoles(List.of(new AppRoleDto()))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
-                        .name("Test Office")
-                        .address("Test Address")
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
                 .build();
 
@@ -1710,8 +1710,8 @@ class UserControllerTest {
                 .appRoles(List.of(new AppRoleDto()))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
-                        .name("Test Office")
-                        .address("Test Address")
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
                 .build();
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
@@ -2667,8 +2667,10 @@ class UserControllerTest {
 
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
-        Office office1 = Office.builder().id(office1Id).name("Office 1").address("Address 1").build();
-        Office office2 = Office.builder().id(office2Id).name("Office 2").address("Address 2").build();
+        Office office1 = Office.builder().id(office1Id).code("Office 1")
+                .address(Office.Address.builder().addressLine1("Address 1").build()).build();
+        Office office2 = Office.builder().id(office2Id).code("Office 2")
+                .address(Office.Address.builder().addressLine1("Address 2").build()).build();
 
         List<Office> userOffices = List.of(office1); // User has access to office1 only
         List<Office> allOffices = List.of(office1, office2);
@@ -2711,8 +2713,10 @@ class UserControllerTest {
 
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
-        Office office1 = Office.builder().id(office1Id).name("Office 1").address("Address 1").build();
-        Office office2 = Office.builder().id(office2Id).name("Office 2").address("Address 2").build();
+        Office office1 = Office.builder().id(office1Id).code("Office 1")
+                .address(Office.Address.builder().addressLine1("Address 1").build()).build();
+        Office office2 = Office.builder().id(office2Id).code("Office 2")
+                .address(Office.Address.builder().addressLine1("Address 2").build()).build();
 
         List<Office> userOffices = List.of(office1, office2); // User has access to all offices
         List<Office> allOffices = List.of(office1, office2);
@@ -2784,8 +2788,8 @@ class UserControllerTest {
 
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
-        Office office1 = Office.builder().id(office1Id).name("Office 1").build();
-        Office office2 = Office.builder().id(office2Id).name("Office 2").build();
+        Office office1 = Office.builder().id(office1Id).code("Office 1").build();
+        Office office2 = Office.builder().id(office2Id).code("Office 2").build();
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         final List<FirmDto> userFirms = List.of(firmDto);
@@ -2827,7 +2831,8 @@ class UserControllerTest {
         officesForm.setOffices(null); // Validation error
 
         Model sessionModel = new ExtendedModelMap();
-        OfficeModel office1 = new OfficeModel("Office 1", "Address 1", "office1", true);
+        OfficeModel office1 = new OfficeModel("Office 1",
+                OfficeModel.Address.builder().addressLine1("Address 1").build(), "office1", true);
         sessionModel.addAttribute("user", new UserProfileDto());
         sessionModel.addAttribute("officeData", List.of(office1));
 
@@ -2859,7 +2864,7 @@ class UserControllerTest {
         appRole.setName("Role 1");
         List<AppRoleDto> userAppRoles = List.of(appRole);
 
-        Office office = Office.builder().id(UUID.randomUUID()).name("Office 1").build();
+        Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
         List<Office> userOffices = List.of(office);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));

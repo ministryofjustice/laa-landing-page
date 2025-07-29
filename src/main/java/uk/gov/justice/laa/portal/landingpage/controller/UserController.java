@@ -1169,8 +1169,10 @@ public class UserController {
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(),
-                        office.getAddress(),
+                        office.getCode(),
+                        OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
+                                        .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                        .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -1245,7 +1247,7 @@ public class UserController {
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
             selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getName).toList();
+                    .map(Office::getCode).toList();
         } else {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession != null) {
@@ -1256,7 +1258,7 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getName());
+                            selectOfficesDisplay.add(office.getCode());
                         }
                     }
                 }

@@ -1643,8 +1643,8 @@ class UserServiceTest {
             UUID officeId2 = UUID.randomUUID();
 
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).build();
-            Office office2 = Office.builder().id(officeId2).address(address).build();
+            Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
+            Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1659,7 +1659,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(result).hasSize(2);
-            assertThat(result).extracting(Office::getName).containsExactlyInAnyOrder("Office 1", "Office 2");
+            assertThat(result).extracting(Office::getCode).containsExactlyInAnyOrder("Office 1", "Office 2");
         }
 
         @Test
@@ -1699,9 +1699,9 @@ class UserServiceTest {
             UUID officeId3 = UUID.randomUUID();
 
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).build();
-            Office office2 = Office.builder().id(officeId2).address(address).build();
-            Office office3 = Office.builder().id(officeId3).address(address).build();
+            Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
+            Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
+            Office office3 = Office.builder().id(officeId3).code("Office 3").address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1716,7 +1716,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(result).hasSize(3);
-            assertThat(result).extracting(Office::getName).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
+            assertThat(result).extracting(Office::getCode).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
         }
     }
 

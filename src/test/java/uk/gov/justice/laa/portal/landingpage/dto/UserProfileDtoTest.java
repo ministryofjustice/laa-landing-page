@@ -65,8 +65,8 @@ class UserProfileDtoTest {
         List<OfficeDto> offices = List.of(
                 OfficeDto.builder()
                         .id(UUID.randomUUID())
-                        .name("Test Office")
-                        .address("Test Address")
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("123 Test Street").build())
                         .build()
         );
         List<AppRoleDto> appRoles = List.of(
@@ -311,8 +311,8 @@ class UserProfileDtoTest {
 
         OfficeDto office = OfficeDto.builder()
                 .id(officeId)
-                .name("Complex Office")
-                .address("123 Complex Street")
+                .code("Complex Office")
+                .address(OfficeDto.AddressDto.builder().addressLine1("123 Complex Street").build())
                 .build();
 
         AppRoleDto appRole = createAppRole("complexrole", "Complex Role");
@@ -351,7 +351,7 @@ class UserProfileDtoTest {
         
         assertThat(userProfile.getOffices()).hasSize(1);
         assertThat(userProfile.getOffices().get(0)).isEqualTo(office);
-        assertThat(userProfile.getOffices().get(0).getName()).isEqualTo("Complex Office");
+        assertThat(userProfile.getOffices().get(0).getCode()).isEqualTo("Complex Office");
         
         assertThat(userProfile.getAppRoles()).hasSize(1);
         assertThat(userProfile.getAppRoles().get(0)).isEqualTo(appRole);
