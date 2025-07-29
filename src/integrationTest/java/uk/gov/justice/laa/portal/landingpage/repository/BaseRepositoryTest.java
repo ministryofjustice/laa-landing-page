@@ -41,7 +41,7 @@ public class BaseRepositoryTest {
         return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .userStatus(UserStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
