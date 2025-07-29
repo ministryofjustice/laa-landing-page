@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Access Granted</title>
+</head>
+
+<body>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-!-width-two-thirds">
+
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">
+                    Access granted
+                </h1>
+                <div class="govuk-panel__body">
+                    <span th:text="${user.fullName}"></span> all information has been added
+                </div>
+            </div>
+
+            <h2 class="govuk-heading-m govuk-!-padding-top-3">What happens next</h2>
+
+            <p class="govuk-body govuk-!-padding-top-3">You can now view the user and manage the user</p>
+
+            <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-button govuk-!-padding-top-3"
+                data-module="govuk-button">Continue</a>
+        </div>
+    </main>
+</body>
+
+</html>

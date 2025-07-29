@@ -60,6 +60,7 @@ public class BaseEntityTest {
     protected UserProfile buildTestLaaUserProfile() {
         return UserProfile.builder().entraUser(buildTestEntraUser())
                 .userType(UserType.INTERNAL).legacyUserId(UUID.randomUUID())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }
 
