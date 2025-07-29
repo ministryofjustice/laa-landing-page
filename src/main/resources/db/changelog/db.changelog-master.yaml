@@ -270,12 +270,6 @@ databaseChangeLog:
         - column:
               constraints:
                   nullable: false
-              defaultValue: "PENDING"
-              name: status
-              type: VARCHAR(255)
-        - column:
-              constraints:
-                  nullable: false
               name: user_type
               type: VARCHAR(255)
         tableName: user_profile
@@ -761,11 +755,6 @@ databaseChangeLog:
           - sql:
                 dbms: postgresql
                 sql: "alter table user_profile
-                      add constraint user_profile_status_check
-                      check ((status)::text = ANY ((ARRAY['COMPLETE'::character varying, 'PENDING'::character varying])::text[]))"
-          - sql:
-                dbms: postgresql
-                sql: "alter table user_profile
                     	add constraint firm_not_null_for_non_internal_users_only
                         check (((firm_id IS NULL) AND ((user_type)::text = 'INTERNAL'::text)) OR ((firm_id IS NOT NULL) AND ((user_type)::text <> 'INTERNAL'::text)))"
           - sql:
@@ -783,3 +772,15 @@ databaseChangeLog:
           - sql:
                 dbms: postgresql
                 sql: "ALTER TABLE role_assignment ADD CONSTRAINT role_assignment_no_self_assignable CHECK (assigning_role_id <> assignable_role_id)"
+- changeSet:
+    id: add-status-column-to-user-profile
+    author: paul.snowdon
+    changes:
+    - sql:
+        dbms: postgresql
+        sql: "ALTER TABLE user_profile ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT 'PENDING'"
+    - sql:
+        dbms: postgresql
+        sql: "alter table user_profile
+            add constraint user_profile_status_check
+            check ((status)::text = ANY ((ARRAY['COMPLETE'::character varying, 'PENDING'::character varying])::text[]))"
