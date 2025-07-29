@@ -1,0 +1,123 @@
+databaseChangeLog:
+- changeSet:
+    id: 1753829677345-1
+    author: system
+    changes:
+    - addUniqueConstraint:
+        columnNames: ccms_code
+        constraintName: app_role_ccms_code_key
+        tableName: app_role
+- changeSet:
+    id: 1753829677345-2
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: post_code
+            type: VARCHAR(8)
+        tableName: office
+- changeSet:
+    id: 1753829677345-3
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: legacy_sync
+            type: BOOLEAN
+        tableName: app_role
+- changeSet:
+    id: 1753829677345-4
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: address_line_1
+            type: VARCHAR(255)
+        tableName: office
+- changeSet:
+    id: 1753829677345-5
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            name: address_line_2
+            type: VARCHAR(255)
+        tableName: office
+- changeSet:
+    id: 1753829677345-6
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            name: ccms_code
+            type: VARCHAR(30)
+        tableName: app_role
+- changeSet:
+    id: 1753829677345-7
+    author: system
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            constraints:
+              nullable: false
+            name: city
+            type: VARCHAR(255)
+        tableName: office
+- changeSet:
+    id: 1753829677345-8
+    author: system
+    changes:
+    - dropUniqueConstraint:
+        constraintName: office_name_key
+        tableName: office
+- changeSet:
+    id: 1753829677345-9
+    author: system
+    changes:
+    - dropColumn:
+        columnName: address
+        tableName: office
+- changeSet:
+    id: 1753829677345-10
+    author: system
+    changes:
+    - dropColumn:
+        columnName: name
+        tableName: office
+- changeSet:
+    id: 1753829677345-11
+    author: system
+    changes:
+    - dropColumn:
+        columnName: phone
+        tableName: office
+- changeSet:
+    id: 1753829677345-12
+    author: system
+    changes:
+    - addNotNullConstraint:
+        columnDataType: varchar(255)
+        columnName: security_group_name
+        tableName: app
+        validate: true
+- changeSet:
+    id: 1753829677345-13
+    author: system
+    changes:
+    - addNotNullConstraint:
+        columnDataType: varchar(255)
+        columnName: security_group_oid
+        tableName: app
+        validate: true
