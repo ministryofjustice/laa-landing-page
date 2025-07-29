@@ -3,14 +3,6 @@ databaseChangeLog:
     id: 1753829677345-1
     author: system
     changes:
-    - addUniqueConstraint:
-        columnNames: ccms_code
-        constraintName: app_role_ccms_code_key
-        tableName: app_role
-- changeSet:
-    id: 1753829677345-2
-    author: system
-    changes:
     - addColumn:
         columns:
         - column:
@@ -20,7 +12,7 @@ databaseChangeLog:
             type: VARCHAR(8)
         tableName: office
 - changeSet:
-    id: 1753829677345-3
+    id: 1753829677345-2
     author: system
     changes:
     - addColumn:
@@ -32,7 +24,7 @@ databaseChangeLog:
             type: BOOLEAN
         tableName: app_role
 - changeSet:
-    id: 1753829677345-4
+    id: 1753829677345-3
     author: system
     changes:
     - addColumn:
@@ -44,7 +36,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         tableName: office
 - changeSet:
-    id: 1753829677345-5
+    id: 1753829677345-4
     author: system
     changes:
     - addColumn:
@@ -54,7 +46,7 @@ databaseChangeLog:
             type: VARCHAR(255)
         tableName: office
 - changeSet:
-    id: 1753829677345-6
+    id: 1753829677345-5
     author: system
     changes:
     - addColumn:
@@ -63,6 +55,14 @@ databaseChangeLog:
             name: ccms_code
             type: VARCHAR(30)
         tableName: app_role
+- changeSet:
+      id: 1753829677345-6
+      author: system
+      changes:
+          - addUniqueConstraint:
+                columnNames: ccms_code
+                constraintName: app_role_ccms_code_key
+                tableName: app_role
 - changeSet:
     id: 1753829677345-7
     author: system
