@@ -1,9 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.UUID;
+
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-
-import java.util.UUID;
 
 public interface TechServicesClient {
 

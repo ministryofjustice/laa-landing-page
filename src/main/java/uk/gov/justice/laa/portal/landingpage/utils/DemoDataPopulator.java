@@ -1,30 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Profile;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Component;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +9,39 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
 /**
- * The class to populate dummy data in the local db. Flag to decide whether to populate the dummy data or not and
- * what user details to user for creation can be configured in application.properties file.
+ * The class to populate dummy data in the local db. Flag to decide whether to
+ * populate the dummy data or not and
+ * what user details to user for creation can be configured in
+ * application.properties file.
  * Some data is being populated from entra to keep names consistent with entra.
  */
 @Component
@@ -94,9 +99,9 @@ public class DemoDataPopulator {
     private String appSubmitCrimeFormDetails;
 
     public DemoDataPopulator(FirmRepository firmRepository,
-                             OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
-                             AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
-                             UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
+            OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
+            AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
+            UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
         this.entraUserRepository = entraUserRepository;
@@ -114,7 +119,7 @@ public class DemoDataPopulator {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     protected EntraUser buildEntraUser(User user) {
@@ -127,7 +132,7 @@ public class DemoDataPopulator {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     protected String getSurname(User user) {
@@ -184,8 +189,9 @@ public class DemoDataPopulator {
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser).activeProfile(true)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
+                .build();
     }
 
     private UserType getUserType(String userPrincipal) {
@@ -197,7 +203,6 @@ public class DemoDataPopulator {
             return UserType.EXTERNAL_SINGLE_FIRM;
         }
     }
-
 
     @EventListener
     public void appReady(ApplicationReadyEvent event) {
@@ -212,7 +217,6 @@ public class DemoDataPopulator {
 
             Firm firm = firmRepository.findFirmByName("Firm One");
             if (firm == null) {
-
 
                 Firm firm1 = buildFirm("Firm One");
                 Firm firm2 = buildFirm("Firm Two");
@@ -229,7 +233,8 @@ public class DemoDataPopulator {
 
                 List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
                     assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.select = new String[]{"id", "displayName", "mail", "mobilePhone", "userPrincipalName", "userType", "surname", "givenName", "signInActivity"};
+                    requestConfig.queryParameters.select = new String[] { "id", "displayName", "mail", "mobilePhone",
+                        "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
                     requestConfig.queryParameters.top = 10;
                 })).getValue();
 
@@ -250,7 +255,6 @@ public class DemoDataPopulator {
                     userProfiles.add(userProfile);
                 }
 
-
                 laaUserProfileRepository.saveAll(userProfiles);
 
                 System.out.println("Dummy Data Populated!!");
@@ -262,8 +266,10 @@ public class DemoDataPopulator {
         }
 
         // Now trying to populate custom-defined apps and roles
-        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName), Pair.of(appCivilApplyDetails, appCivilApplyName),
-                Pair.of(appCrimeApplyDetails, appCrimeApplyName), Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
+        List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName),
+                Pair.of(appCivilApplyDetails, appCivilApplyName),
+                Pair.of(appCrimeApplyDetails, appCrimeApplyName),
+                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
@@ -288,19 +294,20 @@ public class DemoDataPopulator {
                 laaAppRepository.save(app);
 
                 AppRole internalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_INTERN")
-                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN", RoleType.INTERNAL));
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN",
+                                RoleType.INTERNAL));
                 AppRole externalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_EXTERN")
-                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN", RoleType.EXTERNAL));
+                        .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN",
+                                RoleType.EXTERNAL));
                 laaAppRoleRepository.save(internalRole);
                 laaAppRoleRepository.save(externalRole);
 
-
             } catch (Exception ex) {
-                System.out.println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
+                System.out
+                        .println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
                 ex.printStackTrace();
             }
         }
-
 
         // Users
         Set<String> userPrinciples = new HashSet<>();
@@ -312,11 +319,13 @@ public class DemoDataPopulator {
             for (String userPrincipal : userPrinciples) {
                 try {
                     if (!userPrincipal.contains(":")) {
-                        throw new RuntimeException("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                        throw new RuntimeException(
+                                "Invalid user principal format, the format should be <userprinciple>:<entraid>");
                     }
                     String mail = userPrincipal.split(":")[0];
                     String entraId = userPrincipal.split(":")[1];
-                    EntraUser entraUser = entraUserRepository.findByEntraOid(entraId).orElse(buildEntraUser(mail, entraId));
+                    EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
+                            .orElse(buildEntraUser(mail, entraId));
                     boolean isNewUser = entraUser.getId() == null;
                     entraUserRepository.save(entraUser);
                     if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
@@ -329,14 +338,13 @@ public class DemoDataPopulator {
                         laaUserProfileRepository.save(userProfile);
                     }
                 } catch (Exception e) {
-                    System.err.println("Unable to add user to the list of users in the database, the user may not present in entra: " + userPrincipal);
+                    System.err.println(
+                            "Unable to add user to the list of users in the database, the user may not present in entra: "
+                                    + userPrincipal);
                     e.printStackTrace();
                     System.err.println("Continuing with the list of users in the database");
                 }
             }
         }
-
-
     }
-
 }
