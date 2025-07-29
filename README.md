@@ -111,7 +111,8 @@ If there are changes made to DB structure
 1. Ensure the DB with latest changes are present, either modified DB manually or Recreate DB using Hibernate
 2. Issue the command below to generate the changelog (it requires installing liquibase locally using brew)
 
- `liquibase --driver=org.postgresql.Driver --changeLogFile=./changelog.yml --url=jdbc:postgresql://localhost:5432/portal-database --username=<<db_uname>> --password=<<db_pwd>> generateChangeLog` 
+ `liquibase --driver=org.postgresql.Driver --changeLogFile=./changelog.yml --url=jdbc:postgresql://localhost:5432/portal-database --username=<<db_uname>> --password=<<db_pwd>> generateChangeLog`
+
 3. Copy the changelog file to application resources folder (*resources/db/changelog*)
 4. Ensure custom constraints are retained along with any new constraints
 
