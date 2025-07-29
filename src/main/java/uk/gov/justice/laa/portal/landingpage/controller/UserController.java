@@ -81,13 +81,13 @@ public class UserController {
      */
     @GetMapping("/users")
     public String displayAllUsers(
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String direction,
-            @RequestParam(required = false) String usertype,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) boolean showFirmAdmins,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "sort", required = false) String sort,
+            @RequestParam(name = "direction", required = false) String direction,
+            @RequestParam(name = "usertype", required = false) String usertype,
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
@@ -656,7 +656,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -1044,7 +1045,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
