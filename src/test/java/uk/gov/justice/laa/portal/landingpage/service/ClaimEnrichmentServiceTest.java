@@ -49,6 +49,7 @@ class ClaimEnrichmentServiceTest {
 
     private static final String USER_ENTRA_ID = "entra-123";
     private static final String USER_EMAIL = "test@example.com";
+    private static final UUID LEGACY_USER_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
     private static final String APP_ID = "123e4567-e89b-12d3-a456-426614174000";
     private static final String ENTRA_APP_ID = "EntraAppID";
@@ -131,6 +132,7 @@ class ClaimEnrichmentServiceTest {
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .firm(firm)
+                .legacyUserId(LEGACY_USER_ID)
                 .appRoles(Set.of(appRole))
                 .build();
 
@@ -168,6 +170,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
+        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
@@ -192,10 +195,12 @@ class ClaimEnrichmentServiceTest {
 
         UserProfile profile1 = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .legacyUserId(LEGACY_USER_ID)
                 .firm(firm)
                 .build();
         UserProfile profile2 = UserProfile.builder()
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .legacyUserId(LEGACY_USER_ID)
                 .firm(firm2)
                 .build();
         entraUser.setUserProfiles(Set.of(profile1, profile2));
@@ -222,6 +227,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
+        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office1.getCode()));
@@ -241,6 +247,7 @@ class ClaimEnrichmentServiceTest {
         // Internal users don't have firms
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .appRoles(Set.of(internalRole))
+                .legacyUserId(LEGACY_USER_ID)
                 .firm(null)
                 .userType(UserType.INTERNAL)
                 .build();
@@ -267,6 +274,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
+        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
@@ -321,17 +329,24 @@ class ClaimEnrichmentServiceTest {
 
     @Test
     void enrichClaimThrowsException_ExternalUserWithFirmButNoOffices() {
-        // Arrange
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(Collections.emptyList());
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
-        // Act & Assert
-        ClaimEnrichmentException exception = assertThrows(
-            ClaimEnrichmentException.class,
-            () -> claimEnrichmentService.enrichClaim(request)
-        );
-        assertEquals("User has no offices assigned for this firm", exception.getMessage());
+        // Act
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        // Assert
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        Map<String, Object> claims = action.getClaims();
+
+        assertTrue(response.isSuccess());
+        assertNotNull(response.getData());
+        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
+
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
 
