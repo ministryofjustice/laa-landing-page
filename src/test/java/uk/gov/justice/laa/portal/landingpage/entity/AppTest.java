@@ -105,7 +105,10 @@ public class AppTest extends BaseEntityTest {
 
         Set<ConstraintViolation<App>> violations = validator.validate(app);
 
-        assertThat(violations).isEmpty();
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Oid must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupOid");
     }
 
     @Test
@@ -115,7 +118,10 @@ public class AppTest extends BaseEntityTest {
 
         Set<ConstraintViolation<App>> violations = validator.validate(app);
 
-        assertThat(violations).isEmpty();
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Oid must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupOid");
     }
 
     @Test
@@ -140,7 +146,10 @@ public class AppTest extends BaseEntityTest {
 
         Set<ConstraintViolation<App>> violations = validator.validate(app);
 
-        assertThat(violations).isEmpty();
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Name must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupName");
     }
 
     @Test
@@ -150,7 +159,10 @@ public class AppTest extends BaseEntityTest {
 
         Set<ConstraintViolation<App>> violations = validator.validate(app);
 
-        assertThat(violations).isEmpty();
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Name must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupName");
     }
 
     @Test

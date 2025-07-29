@@ -66,6 +66,44 @@ public class AppRoleTest extends BaseEntityTest {
     }
 
     @Test
+    public void testLaaAppRoleNullCcmsCode() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setCcmsCode(null));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    public void testLaaAppRoleEmptyCcmsCode() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setCcmsCode(""));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application role CCMS Code must be between 1 and 30 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("ccmsCode");
+    }
+
+    @Test
+    public void testLaaAppRoleCcmsCodeTooLong() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setCcmsCode("TestAppRoleNameThatIsTooLong".repeat(2)));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role CCMS Code must be between 1 and 30 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("ccmsCode");
+
+    }
+
+    @Test
     public void testAppRoleTypeExternal() {
         AppRole appRole = buildTestLaaAppRole();
         update(appRole, f -> f.setRoleType(RoleType.EXTERNAL));

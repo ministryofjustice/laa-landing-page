@@ -39,7 +39,7 @@ public class BaseRepositoryTest {
         return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
+                .userStatus(UserStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
@@ -49,7 +49,8 @@ public class BaseRepositoryTest {
     }
 
     protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
-        return Office.builder().name(name).code(officeCode).address(address).phone(phone).firm(firm).build();
+        Office.Address addr = Office.Address.builder().addressLine1(address).city("city").postcode("postcode").build();
+        return Office.builder().code(officeCode).address(addr).firm(firm).build();
     }
 
     protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {

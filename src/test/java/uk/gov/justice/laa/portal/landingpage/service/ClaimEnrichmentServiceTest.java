@@ -182,9 +182,14 @@ class ClaimEnrichmentServiceTest {
                 .id(firm2Id)
                 .build();
 
+        Office.Address address = Office.Address.builder()
+                .addressLine1("addressLine1")
+                .city("city")
+                .postcode("pst_code")
+                .build();
         final Office office3 = Office.builder()
                 .id(UUID.randomUUID())
-                .name("Office 3")
+                .address(address)
                 .code("Office 3 Code")
                 .firm(firm2)
                 .build();

@@ -1565,8 +1565,9 @@ class UserServiceTest {
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .offices(Set.of(office1, office2))
@@ -1626,9 +1627,10 @@ class UserServiceTest {
             UUID officeId2 = UUID.randomUUID();
             UUID officeId3 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
-            Office office3 = Office.builder().id(officeId3).name("Office 3").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
+            Office office3 = Office.builder().id(officeId3).address(address).build();
 
             UserProfile profile1 = UserProfile.builder().offices(Set.of(office1, office2)).build();
             UserProfile profile2 = UserProfile.builder().offices(Set.of(office3)).build();
@@ -1659,8 +1661,9 @@ class UserServiceTest {
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
 
             UserProfile userProfile = UserProfile.builder().activeProfile(true).build();
             EntraUser entraUser = EntraUser.builder()
