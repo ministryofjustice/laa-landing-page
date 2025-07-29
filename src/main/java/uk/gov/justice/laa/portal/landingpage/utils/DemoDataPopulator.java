@@ -117,19 +117,6 @@ public class DemoDataPopulator {
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
-    protected EntraUser buildEntraUser(User user) {
-        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user.getUserPrincipalName());
-        String firstName = getFirstName(user);
-        String lastName = getSurname(user);
-
-        return EntraUser.builder().email(email)
-                .entraOid(user.getId())
-                .userProfiles(HashSet.newHashSet(11))
-                .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.ACTIVE)
-                .createdDate(LocalDateTime.now()).createdBy("Test").build();
-    }
-
     protected String getSurname(User user) {
         if (user.getSurname() != null) {
             return user.getSurname();
@@ -169,9 +156,9 @@ public class DemoDataPopulator {
                 .type(FirmType.INDIVIDUAL).build();
     }
 
-    protected Office buildOffice(Firm firm, String name, String addrLine1, String city, String postCode) {
+    protected Office buildOffice(Firm firm, String code, String addrLine1, String city, String postCode) {
         Office.Address address = Office.Address.builder().addressLine1(addrLine1).city(city).postcode(postCode).build();
-        return Office.builder().address(address).firm(firm).build();
+        return Office.builder().code(code).address(address).firm(firm).build();
     }
 
     protected App buildLaaApp(String entraAppOid, String name) {
