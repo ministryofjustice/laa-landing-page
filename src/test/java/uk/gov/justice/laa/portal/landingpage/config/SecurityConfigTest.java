@@ -261,18 +261,22 @@ class SecurityConfigTest {
     @ParameterizedTest
     @ValueSource(strings = {"127.0.0.1", "192.168.0.2", "10.0.0.1", "172.16.0.1", "::1", "192.168.0.1"})
     void publicEndpointsAreAccessibleWhiteList(String input) throws Exception {
-
         mockMvc.perform(get("/actuator/health")
-                        .with(request->{request.setRemoteAddr(input);return request;}))
+                        .with(request -> {
+                            request.setRemoteAddr(input);
+                            return request;
+                        }))
                 .andExpect(status().isOk())
                 .andExpect(content().string("public"));
     }
 
     @Test
     void publicEndpointsAreAccessibleRemote() throws Exception {
-
         mockMvc.perform(get("/actuator/health")
-                        .with(request->{request.setRemoteAddr("1.1.1.1");return request;}))
+                        .with(request -> {
+                            request.setRemoteAddr("1.1.1.1");
+                            return request;
+                        }))
                 .andExpect(status().is3xxRedirection());
     }
 }
