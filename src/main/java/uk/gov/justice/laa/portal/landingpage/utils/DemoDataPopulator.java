@@ -95,8 +95,8 @@ public class DemoDataPopulator {
     private String appSubmitCrimeFormDetails;
 
     public DemoDataPopulator(FirmRepository firmRepository,
-            OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
-            AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
+                             OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
+                             AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
                              UserProfileRepository laaUserProfileRepository) {
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
@@ -263,26 +263,26 @@ public class DemoDataPopulator {
         List<AppRole> appRoles = laaAppRoleRepository.findAll();
 
         for (UserPrincipal userPrincipal : userPrinciples) {
-                try {
-                    EntraUser entraUser = entraUserRepository.findByEntraOid(userPrincipal.getEntraId())
-                            .orElse(buildEntraUser(userPrincipal.getEmail(), userPrincipal.getEntraId()));
-                    boolean isNewUser = entraUser.getId() == null;
-                    entraUserRepository.save(entraUser);
-                    if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
-                        UserProfile userProfile = buildLaaUserProfile(entraUser, userPrincipal.getUserType());
-                        userProfile.getAppRoles().addAll(appRoles);
-                        if (userProfile.getUserType() != UserType.INTERNAL) {
-                            userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
-                        }
-                        laaUserProfileRepository.save(userProfile);
+            try {
+                EntraUser entraUser = entraUserRepository.findByEntraOid(userPrincipal.getEntraId())
+                        .orElse(buildEntraUser(userPrincipal.getEmail(), userPrincipal.getEntraId()));
+                boolean isNewUser = entraUser.getId() == null;
+                entraUserRepository.save(entraUser);
+                if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
+                    UserProfile userProfile = buildLaaUserProfile(entraUser, userPrincipal.getUserType());
+                    userProfile.getAppRoles().addAll(appRoles);
+                    if (userProfile.getUserType() != UserType.INTERNAL) {
+                        userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
                     }
-                } catch (Exception e) {
-                    System.err.println(
-                            "Unable to add user to the list of users in the database, the user may not present in entra: "
-                                    + userPrincipal);
-                    e.printStackTrace();
-                    System.err.println("Continuing with the list of users in the database");
+                    laaUserProfileRepository.save(userProfile);
                 }
+            } catch (Exception e) {
+                System.err.println(
+                        "Unable to add user to the list of users in the database, the user may not present in entra: "
+                                + userPrincipal);
+                e.printStackTrace();
+                System.err.println("Continuing with the list of users in the database");
+            }
 
         }
 
