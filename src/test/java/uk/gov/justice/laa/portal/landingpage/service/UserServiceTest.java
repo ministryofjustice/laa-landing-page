@@ -579,10 +579,15 @@ class UserServiceTest {
     public void testGetUserAssignedAppsforLandingPageWhenNoUserIsPresent() {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        UUID userProfileId = UUID.randomUUID();
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).entraUser(entraUser).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
+        when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
         // Then
         assertThat(returnedApps.isEmpty()).isTrue();
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -629,6 +634,7 @@ class UserServiceTest {
                 .email("test@test.com")
                 .userProfiles(Set.of(userProfile))
                 .build();
+        when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
         List<LaaApplication> applications = Arrays.asList(
                 LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
@@ -637,7 +643,7 @@ class UserServiceTest {
         );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
         // Then
         assertThat(returnedApps).isNotNull();
@@ -1859,6 +1865,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1869,7 +1876,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
@@ -1896,6 +1903,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1903,7 +1911,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1933,6 +1941,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1942,7 +1951,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(3);
