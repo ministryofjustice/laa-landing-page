@@ -1,10 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.users.UsersRequestBuilder;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,14 +21,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
-import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,9 +51,6 @@ class DemoDataPopulatorTest {
 
     @Mock
     private ApplicationReadyEvent applicationReadyEvent;
-
-    @Mock
-    private GraphServiceClient graphServiceClient;
 
     @InjectMocks
     private DemoDataPopulator demoDataPopulator;
@@ -91,22 +81,6 @@ class DemoDataPopulatorTest {
         demoDataPopulator.appReady(applicationReadyEvent);
 
         verifyMockCalls(0);
-    }
-
-    @Test
-    void populateDummyDataWithMockUser() {
-        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
-
-        User user = new User();
-        UserCollectionResponse userCollectionResponse = mock(UserCollectionResponse.class, RETURNS_DEEP_STUBS);
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.get(any())).thenReturn(userCollectionResponse);
-        when(userCollectionResponse.getValue()).thenReturn(List.of(user));
-
-        demoDataPopulator.appReady(applicationReadyEvent);
-
-        verifyMockCalls(1);
     }
 
     @Test
@@ -154,9 +128,6 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabled() {
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
@@ -164,9 +135,6 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabledWithAdditionalUsers() {
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
@@ -176,9 +144,6 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabledWithAdditionalAppsAndUsers() {
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
@@ -313,7 +278,5 @@ class DemoDataPopulatorTest {
     private void verifyMockCalls(int times) {
         Mockito.verify(firmRepository, Mockito.times(times)).saveAll(Mockito.anyList());
         Mockito.verify(officeRepository, Mockito.times(times)).saveAll(Mockito.anyList());
-        Mockito.verify(entraUserRepository, Mockito.times(times)).saveAll(Mockito.anyList());
-        Mockito.verify(laaUserProfileRepository, Mockito.times(times)).saveAll(Mockito.anyList());
     }
 }

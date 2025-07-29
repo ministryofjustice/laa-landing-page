@@ -20,6 +20,9 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -88,23 +91,31 @@ public class ClaimEnrichmentService {
             boolean isInternalUser = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
-            
-            if (!isInternalUser) {
-                boolean hasFirm = entraUser.getUserProfiles().stream()
-                        .filter(UserProfile::isActiveProfile)
-                        .anyMatch(profile -> profile.getFirm() != null);
 
-                if (!hasFirm) {
+            if (!isInternalUser) {
+                List<Firm> firms = entraUser.getUserProfiles().stream()
+                        .filter(UserProfile::isActiveProfile)
+                        .map(UserProfile::getFirm)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                if (firms.isEmpty()) {
                     throw new ClaimEnrichmentException("User has no firm assigned");
                 }
+
+                //External user and offices are not found - fetch all offices for the user's firm
                 if (officeIds.isEmpty()) {
-                    throw new ClaimEnrichmentException("User has no offices assigned for this firm");
+                    officeIds = firms.stream()
+                            .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())
+                            .map(office -> office.getCode())
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .collect(Collectors.toList());
                 }
             }
 
-            log.info("Successfully processed claim enrichment for user: {}", userPrincipalName);
-
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(userDetails, entraUser, userRoles, officeIds);
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -120,13 +131,20 @@ public class ClaimEnrichmentService {
         }
     }
 
-    private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUserPayloadDto userDetails,
-                                                                        EntraUser entraUser,
+    private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUser entraUser,
                                                                         List<String> userRoles,
                                                                         List<String> officeIds) {
 
+        String legacyUserId = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getLegacyUserId)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .map(UUID::toString)
+                .orElse(null);
+
         Map<String, Object> claims = new HashMap<>();
-        claims.put("USER_NAME", userDetails.getDisplayName());
+        claims.put("USER_NAME", legacyUserId);
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);

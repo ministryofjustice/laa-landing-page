@@ -137,8 +137,7 @@ public class LiveTechServicesClientTest {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
                 .userProfiles(HashSet.newHashSet(11))
-                .firstName("firstName").lastName("lastName")
-                .userStatus(UserStatus.ACTIVE)
+                .firstName("firstName").lastName("lastName").userStatus(UserStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
