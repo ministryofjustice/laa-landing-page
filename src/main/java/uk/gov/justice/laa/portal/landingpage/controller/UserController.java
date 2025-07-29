@@ -459,12 +459,6 @@ public class UserController {
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                     selectedFirm.getName(), userType);
             eventService.logEvent(createUserAuditEvent);
-
-            String successMessage = user.getFirstName() + " " + user.getLastName()
-                    + " has been added to the system"
-                    + (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN ? " as a Firm Admin" : "")
-                    + ". An email invitation has been sent. They must accept the invitation to gain access.";
-            session.setAttribute("successMessage", successMessage);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
