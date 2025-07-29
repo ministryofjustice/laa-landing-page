@@ -1,20 +1,30 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.models.ApplicationCollectionResponse;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.users.UsersRequestBuilder;
+import java.util.List;
+import java.util.Set;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.users.UsersRequestBuilder;
+
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -24,16 +34,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.List;
-import java.util.Set;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DemoDataPopulatorTest {
