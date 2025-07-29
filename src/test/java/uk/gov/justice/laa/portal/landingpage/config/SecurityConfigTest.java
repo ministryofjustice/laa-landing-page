@@ -243,8 +243,15 @@ class SecurityConfigTest {
     }
 
     @Test
-    void logoutRedirectsToHomePage() throws Exception {
+    void logoutRedirectsToHomePagePost() throws Exception {
         mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?message=logout"));
+    }
+
+    @Test
+    void logoutRedirectsToHomePageGet() throws Exception {
+        mockMvc.perform(get("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?message=logout"));
     }
