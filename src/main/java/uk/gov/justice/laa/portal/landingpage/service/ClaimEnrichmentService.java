@@ -135,13 +135,11 @@ public class ClaimEnrichmentService {
                                                                         List<String> userRoles,
                                                                         List<String> officeIds) {
 
-        String legacyUserId = Optional.ofNullable(
-                entraUser.getUserProfiles().stream()
-                        .filter(UserProfile::isActiveProfile)
-                        .map(UserProfile::getLegacyUserId)
-                        .filter(Objects::nonNull)
-                        .findFirst()
-                        .orElse(null))
+        String legacyUserId = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getLegacyUserId)
+                .filter(Objects::nonNull)
+                .findFirst()
                 .map(UUID::toString)
                 .orElse(null);
 
