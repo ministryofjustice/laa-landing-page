@@ -13,6 +13,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+bootJar {
+    archiveBaseName.set("laa-landing-page")
+    archiveVersion.set("")
+    archiveClassifier.set("")
+}
+
 checkstyle {
     toolVersion = '10.21.2'
     configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")

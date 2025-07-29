@@ -9,7 +9,7 @@ VOLUME /tmp
 WORKDIR /app
 
 # Copy the JAR from the build output to the container
-COPY build/libs/laa-landing-page.jar /app/application.jar
+COPY build/libs/laa-landing-page-${VERSION}.jar /app/application.jar
 
 # Set the user to run the application
 RUN chown -R appuser:appgroup /app
