@@ -79,10 +79,10 @@ public class Office extends BaseEntity {
         @Size(min = 1, max = 255, message = "Office city must be between 1 and 255 characters")
         private String city;
 
-        @Column(name = "post_code", nullable = false, length = 8)
+        @Column(name = "post_code", nullable = false, length = 20)
         @ColumnDefault(value = "'POSTCODE'")
         @NotBlank(message = "Office postcode must be provided")
-        @Size(min = 2, max = 8, message = "Office postcode must be between 2 and 8 characters")
+        @Size(max = 20, message = "Office postcode must be between 2 and 20 characters")
         private String postcode;
 
     }
