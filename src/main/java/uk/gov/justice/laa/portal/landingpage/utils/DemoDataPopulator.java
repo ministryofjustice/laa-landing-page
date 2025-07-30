@@ -29,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -113,7 +114,7 @@ public class DemoDataPopulator {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
                 .userStatus(UserStatus.ACTIVE)
-                .build();
+                .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
     protected String getSurname(User user) {
@@ -155,8 +156,9 @@ public class DemoDataPopulator {
                 .type(FirmType.INDIVIDUAL).build();
     }
 
-    protected Office buildOffice(Firm firm, String name, String address, String phone) {
-        return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
+    protected Office buildOffice(Firm firm, String code, String addrLine1, String city, String postCode) {
+        Office.Address address = Office.Address.builder().addressLine1(addrLine1).city(city).postcode(postCode).build();
+        return Office.builder().code(code).address(address).firm(firm).build();
     }
 
     protected App buildLaaApp(String entraAppOid, String name) {
@@ -193,11 +195,11 @@ public class DemoDataPopulator {
                 Firm firm2 = buildFirm("Firm Two");
                 firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
-                Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
-                Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
-                Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
-                Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
-                Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
+                Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "city1", "12345");
+                Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "city2", "23456");
+                Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "city3", "34567");
+                Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "city4", "45678");
+                Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "city5", "56789");
                 firm1.getOffices().addAll(Set.of(office1, office2));
                 firm2.getOffices().addAll(Set.of(office3, office4, office5));
                 officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));

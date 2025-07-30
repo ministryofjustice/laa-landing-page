@@ -1,13 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Path;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class OfficeTest extends BaseEntityTest {
@@ -20,50 +20,10 @@ public class OfficeTest extends BaseEntityTest {
 
         assertThat(violations).isEmpty();
         assertNotNull(office);
-        assertEquals("TestOffice", office.getName());
-        assertThat("Address").isEqualTo(office.getAddress());
-        assertThat("123456").isEqualTo(office.getPhone());
-
-    }
-
-    @Test
-    public void testOfficeNullName() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setName(null));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office name must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
-    }
-
-    @Test
-    public void testOfficeEmptyName() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setName(""));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office name must be provided", "Office name must be between 1 and 255 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
-    }
-
-    @Test
-    public void testOfficeNameTooLong() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setName("TestOfficeNameThatIsTooLong".repeat(15)));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office name must be between 1 and 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
+        assertNotNull(office.getAddress());
+        assertThat("addressLine1").isEqualTo(office.getAddress().getAddressLine1());
+        assertThat("city").isEqualTo(office.getAddress().getCity());
+        assertThat("postcode").isEqualTo(office.getAddress().getPostcode());
 
     }
 
@@ -117,68 +77,40 @@ public class OfficeTest extends BaseEntityTest {
     @Test
     public void testOfficeEmptyAddress() {
         Office office = buildTestOffice();
-        update(office, off -> off.setAddress(""));
+        update(office, off -> off.setAddress(new Office.Address()));
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
         assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
+        assertThat(violations).hasSize(3);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office address must be provided", "Office address must be between 1 and 500 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("address");
+        assertThat(messages).hasSameElementsAs(Set.of("Office address line 1 must be provided",
+                "Office postcode must be provided", "Office city must be provided"));
+        Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
+        assertThat(volitionalPaths).contains("address.city", "address.postcode", "address.addressLine1");
     }
 
     @Test
-    public void testOfficeAddressTooLong() {
+    public void testOfficeAddressDetailsTooLong() {
         Office office = buildTestOffice();
-        update(office, off -> off.setAddress("OfficeAddress".repeat(51)));
+        Office.Address address = Office.Address.builder()
+                .addressLine1("OfficeAddress1".repeat(51))
+                .addressLine2("OfficeAddress".repeat(51))
+                .city("OfficeAddress".repeat(51))
+                .postcode("OfficeAddress")
+                .build();
+        update(office, off -> off.setAddress(address));
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
         assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office address must be between 1 and 500 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("address");
-    }
-
-    @Test
-    public void testOfficeNullPhone() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setPhone(null));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office phone number must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("phone");
-    }
-
-    @Test
-    public void testOfficeEmptyPhone() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setPhone(""));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
+        assertThat(violations).hasSize(4);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office phone number must be provided", "Office phone number must be between 1 and 255 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("phone");
-    }
-
-    @Test
-    public void testOfficePhoneTooLong() {
-        Office office = buildTestOffice();
-        update(office, off -> off.setPhone("123456".repeat(51)));
-
-        Set<ConstraintViolation<Office>> violations = validator.validate(office);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office phone number must be between 1 and 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("phone");
+        assertThat(messages).hasSameElementsAs(Set.of("Office address must be between 1 and 255 characters",
+                "Office address line 2 must be between 1 and 255 characters",
+                "Office city must be between 1 and 255 characters", "Office postcode must be between 2 and 8 characters"));
+        Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
+        assertThat(volitionalPaths).contains("address.city", "address.postcode", "address.addressLine2", "address.addressLine1");
     }
 
 }

@@ -82,10 +82,16 @@ class OfficeServiceTest {
     void getUserOffices() {
         UserProfile up1 = UserProfile.builder().userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F1").build()).build();
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(up1)).build();
-        Office office1 = Office.builder().name("Firm").build();
+        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("post_code").build();
+        Office office1 = Office.builder().code("firm_code").address(address).build();
         when(officeRepository.findOfficeByFirm_IdIn(any())).thenReturn(List.of(office1));
         List<OfficeDto> offices = officeService.getUserOffices(entraUser);
         assertThat(offices).hasSize(1);
-        assertThat(offices.getFirst().getName()).isEqualTo("Firm");
+        assertThat(offices.getFirst().getCode()).isEqualTo("firm_code");
+        assertThat(offices.getFirst().getAddress()).isNotNull();
+        OfficeDto.AddressDto addressDto = offices.getFirst().getAddress();
+        assertThat(addressDto.getAddressLine1()).isEqualTo("addressLine1");
+        assertThat(addressDto.getCity()).isEqualTo("city");
+        assertThat(addressDto.getPostcode()).isEqualTo("post_code");
     }
 }
