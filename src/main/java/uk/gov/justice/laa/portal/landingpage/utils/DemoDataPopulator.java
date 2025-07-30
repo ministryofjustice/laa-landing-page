@@ -94,6 +94,12 @@ public class DemoDataPopulator {
     @Value("${app.submit.crime.form.details}")
     private String appSubmitCrimeFormDetails;
 
+    @Value("${app.ccms.account.link.name}")
+    private String ccmsAccountLinkName;
+
+    @Value("${app.ccms.account.link.details}")
+    private String ccmsAccountLinkDetails;
+
     public DemoDataPopulator(FirmRepository firmRepository,
                              OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
                              AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
@@ -215,7 +221,8 @@ public class DemoDataPopulator {
         List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName),
                 Pair.of(appCivilApplyDetails, appCivilApplyName),
                 Pair.of(appCrimeApplyDetails, appCrimeApplyName),
-                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
+                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName),
+                Pair.of(ccmsAccountLinkDetails, ccmsAccountLinkName));
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
