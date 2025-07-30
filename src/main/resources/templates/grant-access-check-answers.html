@@ -69,7 +69,10 @@
                             <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
                                 <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${office.name}"></span>, <span th:text="${office.address}"></span>
+                                        <span th:text="${office.code}"></span>, <span th:text="${office.address.addressLine1}"></span>,
+                                        <span th:text="${office.address.addressLine2}"></span>,
+                                        <span th:text="${office.address.city}"></span>,
+                                        <span th:text="${office.address.postcode}"></span>
                                     </dd>
                                     <dt class="govuk-summary-list__key govuk-visually-hidden"></dt>
                                 </div>
