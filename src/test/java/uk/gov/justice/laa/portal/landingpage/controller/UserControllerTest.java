@@ -1196,10 +1196,13 @@ class UserControllerTest {
 
         Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
         Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
         List<Office> allOffices = List.of(office1, office2);
 
-        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        List<OfficeDto> userOffices = List.of(office1Dto);
 
         // Mock user firms for the new firmService call
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -1240,10 +1243,16 @@ class UserControllerTest {
 
         Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
         Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office2Dto = OfficeDto.builder().id(office2.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         List<Office> allOffices = List.of(office1, office2);
 
-        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
 
         // Mock user firms for the new firmService call
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -2362,8 +2371,14 @@ class UserControllerTest {
         Office office1 = Office.builder().id(office1Id).address(address).build();
         Office office2 = Office.builder().id(office2Id).address(address).build();
         Office office3 = Office.builder().id(office3Id).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
+        OfficeDto office3Dto = OfficeDto.builder().id(office3.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
 
-        List<Office> userOffices = List.of(office1, office3); // User has access to 2 out of 3 offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office3Dto); // User has access to 2 out of 3 offices
         List<Office> allOffices = List.of(office1, office2, office3);
 
         // Mock user firms for the new firmService call
@@ -2671,8 +2686,11 @@ class UserControllerTest {
                 .address(Office.Address.builder().addressLine1("Address 1").build()).build();
         Office office2 = Office.builder().id(office2Id).code("Office 2")
                 .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1())
+                        .build()).build();
 
-        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        List<OfficeDto> userOffices = List.of(office1Dto); // User has access to office1 only
         List<Office> allOffices = List.of(office1, office2);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -2717,8 +2735,12 @@ class UserControllerTest {
                 .address(Office.Address.builder().addressLine1("Address 1").build()).build();
         Office office2 = Office.builder().id(office2Id).code("Office 2")
                 .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1()).build()).build();
+        OfficeDto office2Dto = OfficeDto.builder().id(office2.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office2.getAddress().getAddressLine1()).build()).build();
 
-        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
         List<Office> allOffices = List.of(office1, office2);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -2865,7 +2887,8 @@ class UserControllerTest {
         List<AppRoleDto> userAppRoles = List.of(appRole);
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
-        List<Office> userOffices = List.of(office);
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
+        List<OfficeDto> userOffices = List.of(officeDto);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
