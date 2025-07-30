@@ -226,8 +226,8 @@ public class DemoDataPopulator {
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
-            if (appDetailPair.getRight() == null ||
-                    (appDetailPair.getLeft() != null && appDetailPair.getLeft().equals("unconfigured"))) {
+            if (appDetailPair.getRight() == null
+                    || (appDetailPair.getLeft() != null && appDetailPair.getLeft().equals("unconfigured"))) {
                 return;
             }
 
