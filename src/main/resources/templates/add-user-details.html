@@ -51,7 +51,7 @@
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
                         th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
-                
+
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="firstName">
@@ -64,7 +64,6 @@
                         th:value="*{firstName}" id="firstName"
                         th:aria-describedby="${#fields.hasErrors('firstName')} ? 'firstName-error' : null" />
                 </div>
-                
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('lastName')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="lastName">
@@ -77,11 +76,8 @@
                         th:value="*{lastName}" id="lastName"
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
-
-                </div>
-
                 <div class="govuk-form-group"
-                     th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
+                    th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
                     <fieldset class="govuk-fieldset">
                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
                             User type
@@ -91,11 +87,10 @@
                         </div>
                         <div class="govuk-radios">
                             <div th:each="userType : ${userTypes}" class="govuk-radios__item">
-                                <input class="govuk-radios__input" th:id="${'userType-' + userType}" 
-                                       name="userType" type="radio" th:value="${userType}"
-                                       th:checked="${userType == selectedUserType}">
-                                <label class="govuk-label govuk-radios__label" th:for="${'userType-' + userType}" 
-                                       th:text="${userType.friendlyName}">
+                                <input class="govuk-radios__input" th:id="${'userType-' + userType}" name="userType"
+                                    type="radio" th:value="${userType}" th:checked="${userType == selectedUserType}">
+                                <label class="govuk-label govuk-radios__label" th:for="${'userType-' + userType}"
+                                    th:text="${userType.friendlyName}">
                                 </label>
                             </div>
                         </div>
@@ -104,7 +99,7 @@
 
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a href="/admin/user/create/cancel"  class="govuk-link">Cancel</a>
+                    <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </fieldset>
