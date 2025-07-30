@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
@@ -224,7 +225,7 @@ public class UserController {
         session.setAttribute("user", user);
 
         // Add selected userType to session
-        session.setAttribute("userType", userDetailsForm.getUserType());
+        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -263,6 +264,24 @@ public class UserController {
         return "add-user-firm";
     }
 
+    @GetMapping("/user/create/firm/search")
+    @ResponseBody
+    public List<Map<String, String>> searchFirms(@RequestParam("q") String query) {
+        List<FirmDto> firms = firmService.getFirms();
+        
+        return firms.stream()
+                .filter(firm -> firm.getName().toLowerCase().contains(query.toLowerCase()))
+                .limit(10) // Limit results to prevent overwhelming the UI
+                .map(firm -> {
+                    Map<String, String> firmData = new HashMap<>();
+                    firmData.put("id", firm.getId().toString());
+                    firmData.put("name", firm.getName());
+                    firmData.put("number", ""); // Placeholder for firm number if available
+                    return firmData;
+                })
+                .collect(Collectors.toList());
+    }
+
     @PostMapping("/user/create/firm")
     public String postUserFirm(@Valid FirmSearchForm firmSearchForm, BindingResult result,
             HttpSession session, Model model) {
@@ -274,22 +293,34 @@ public class UserController {
             return "add-user-firm";
         }
 
-        // For now, this is a basic implementation that assumes the firm search
-        // finds a firm. In a real implementation, you would search for firms
-        // and allow the user to select from a list of matches.
-        
-        // TODO: Implement actual firm search logic
-        // For now, we'll simulate selecting the first firm that matches the search
-        List<FirmDto> firms = firmService.getFirms();
-        FirmDto selectedFirm = firms.stream()
-                .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
-                .findFirst()
-                .orElse(firms.get(0)); // Default to first firm if no match found
+        // Check if a specific firm was selected
+        if (firmSearchForm.getSelectedFirmId() != null && !firmSearchForm.getSelectedFirmId().isEmpty()) {
+            try {
+                UUID firmId = UUID.fromString(firmSearchForm.getSelectedFirmId());
+                FirmDto selectedFirm = firmService.getFirm(firmId.toString());
+                session.setAttribute("firm", selectedFirm);
+            } catch (Exception e) {
+                log.error("Error retrieving selected firm: {}", e.getMessage());
+                result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
+                return "add-user-firm";
+            }
+        } else {
+            // Fallback: search by name if no specific firm was selected
+            List<FirmDto> firms = firmService.getFirms();
+            FirmDto selectedFirm = firms.stream()
+                    .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (selectedFirm == null) {
+                result.rejectValue("firmSearch", "error.firm", "No firm found with that name. Please select from the dropdown.");
+                return "add-user-firm";
+            }
+            
+            session.setAttribute("firm", selectedFirm);
+        }
 
-        // Store the selected firm in session
-        session.setAttribute("firm", selectedFirm);
         session.setAttribute("firmSearchTerm", firmSearchForm.getFirmSearch());
-
         return "redirect:/admin/user/create/check-answers";
     }
 
@@ -478,7 +509,7 @@ public class UserController {
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
 
-        UserType userType = (UserType) session.getAttribute("userType");
+        UserType userType = (UserType) session.getAttribute("selectedUserType");
         model.addAttribute("userType", userType);
         return "add-user-check-answers";
     }
@@ -489,7 +520,7 @@ public class UserController {
     public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
-        UserType userType = getObjectFromHttpSession(session, "userType", UserType.class).orElseThrow();
+        UserType userType = getObjectFromHttpSession(session, "selectedUserType", UserType.class).orElseThrow();
 
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
@@ -505,7 +536,7 @@ public class UserController {
         }
 
         session.removeAttribute("firm");
-        session.removeAttribute("userType");
+        session.removeAttribute("selectedUserType");
 
         return "redirect:/admin/user/create/confirmation";
     }
@@ -528,6 +559,7 @@ public class UserController {
         session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("selectedFirm");
+        session.removeAttribute("selectedUserType");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
         session.removeAttribute("roles");

@@ -45,13 +45,20 @@
                 <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
                     <p th:each="err : ${#fields.errors('firmSearch')}" th:text="${err}"></p>
                 </div>
-                <input class="govuk-input govuk-!-width-two-thirds" 
-                       name="firmSearch" 
-                       type="text"
-                       th:value="*{firmSearch}" 
-                       id="firmSearch"
-                       autocomplete="off"
-                       th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" />
+                <div class="firm-search-container" style="position: relative;">
+                    <input class="govuk-input govuk-!-width-two-thirds" 
+                           name="firmSearch" 
+                           type="text"
+                           th:value="*{firmSearch}" 
+                           id="firmSearch"
+                           autocomplete="off"
+                           placeholder="Type to search for a firm..."
+                           th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" />
+                    <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
+                    <div id="firmSearchResults" class="firm-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #0b0c0c; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000;">
+                        <!-- Search results will be populated here via JavaScript -->
+                    </div>
+                </div>
             </div>
 
             <div class="govuk-button-group">
@@ -60,6 +67,135 @@
             </div>
         </form>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const firmSearchInput = document.getElementById('firmSearch');
+            const firmSearchResults = document.getElementById('firmSearchResults');
+            const selectedFirmIdInput = document.getElementById('selectedFirmId');
+            let searchTimeout;
+            let selectedIndex = -1;
+
+            // Handle input changes
+            firmSearchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                if (query.length < 1) {
+                    firmSearchResults.style.display = 'none';
+                    selectedFirmIdInput.value = '';
+                    return;
+                }
+
+                // Debounce search requests
+                searchTimeout = setTimeout(() => {
+                    searchFirms(query);
+                }, 300);
+            });
+
+            // Handle keyboard navigation
+            firmSearchInput.addEventListener('keydown', function(e) {
+                const items = firmSearchResults.querySelectorAll('.firm-search-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateSelection(items);
+                } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                } else if (e.key === 'Escape') {
+                    firmSearchResults.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+
+            // Hide results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!firmSearchInput.contains(e.target) && !firmSearchResults.contains(e.target)) {
+                    firmSearchResults.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+
+            function searchFirms(query) {
+                fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    displayResults(data);
+                })
+                .catch(error => {
+                    console.error('Error searching firms:', error);
+                    firmSearchResults.style.display = 'none';
+                });
+            }
+
+            function displayResults(firms) {
+                firmSearchResults.innerHTML = '';
+                selectedIndex = -1;
+
+                if (firms.length === 0) {
+                    firmSearchResults.innerHTML = '<div class="firm-search-item" style="padding: 8px 12px; color: #6f777b;">No firms found</div>';
+                    firmSearchResults.style.display = 'block';
+                    return;
+                }
+
+                firms.forEach((firm, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'firm-search-item';
+                    item.style.cssText = 'padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #b1b4b6;';
+                    item.innerHTML = `<strong>${escapeHtml(firm.name)}</strong><br><small style="color: #6f777b;">${escapeHtml(firm.number || 'No number available')}</small>`;
+                    
+                    item.addEventListener('click', function() {
+                        selectFirm(firm);
+                    });
+
+                    item.addEventListener('mouseenter', function() {
+                        selectedIndex = index;
+                        updateSelection(firmSearchResults.querySelectorAll('.firm-search-item'));
+                    });
+
+                    firmSearchResults.appendChild(item);
+                });
+
+                firmSearchResults.style.display = 'block';
+            }
+
+            function selectFirm(firm) {
+                firmSearchInput.value = firm.name;
+                selectedFirmIdInput.value = firm.id;
+                firmSearchResults.style.display = 'none';
+                selectedIndex = -1;
+            }
+
+            function updateSelection(items) {
+                items.forEach((item, index) => {
+                    if (index === selectedIndex) {
+                        item.style.backgroundColor = '#1d70b8';
+                        item.style.color = 'white';
+                    } else {
+                        item.style.backgroundColor = '';
+                        item.style.color = '';
+                    }
+                });
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        });
+    </script>
 </body>
 
 </html>
