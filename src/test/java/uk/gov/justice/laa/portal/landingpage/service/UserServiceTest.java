@@ -66,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -1655,11 +1656,11 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
-            assertThat(result).extracting(Office::getCode).containsExactlyInAnyOrder("Office 1", "Office 2");
+            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2");
         }
 
         @Test
@@ -1669,7 +1670,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1684,7 +1685,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1712,11 +1713,11 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).hasSize(3);
-            assertThat(result).extracting(Office::getCode).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
+            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
         }
     }
 

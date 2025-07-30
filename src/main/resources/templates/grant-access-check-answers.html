@@ -40,7 +40,8 @@
                                     <dt class="govuk-summary-list__key" th:text="${appRole.app.name}">App Name</dt>
                                     <dd class="govuk-summary-list__value" th:text="${appRole.name}">Role Name</dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Edit</a>
+                                        <a class="govuk-link"
+                                            th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Edit</a>
                                         |
                                         <a class="govuk-link" href="#">Remove</a>
                                     </dd>
@@ -69,7 +70,11 @@
                             <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
                                 <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${office.name}"></span>, <span th:text="${office.address}"></span>
+                                        <span th:text="${office.address.addressLine1}"></span>,
+                                        <span th:text="${office.address.addressLine2}"></span>,
+                                        <span th:text="${office.address.city}"></span>,
+                                        <span th:text="${office.address.postcode}"></span>
+                                        (<span th:text="${office.code}"></span>)
                                     </dd>
                                     <dt class="govuk-summary-list__key govuk-visually-hidden"></dt>
                                 </div>
