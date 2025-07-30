@@ -378,7 +378,9 @@ public class UserController {
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         List<Office> offices = officeService.getOfficesByFirms(List.of(selectedFirm.getId()));
         List<OfficeModel> officeData = offices.stream()
-                .map(office -> new OfficeModel(office.getName(), office.getAddress(),
+                .map(office -> new OfficeModel(office.getCode(),
+                        new OfficeModel.Address(office.getAddress().getAddressLine1(),
+                                office.getAddress().getAddressLine2(), office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -417,7 +419,7 @@ public class UserController {
         for (Office office : offices) {
             if (Objects.nonNull(selectedOffices)
                     && selectedOffices.contains(office.getId().toString())) {
-                selectedDisplayNames.add(office.getName());
+                selectedDisplayNames.add(office.getCode());
             }
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
@@ -794,8 +796,9 @@ public class UserController {
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(),
-                        office.getAddress(),
+                        office.getCode(),
+                        new OfficeModel.Address(office.getAddress().getAddressLine1(), office.getAddress().getAddressLine2(),
+                                office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -879,7 +882,7 @@ public class UserController {
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
             selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getName).toList();
+                    .map(Office::getCode).toList();
         } else {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
@@ -890,7 +893,7 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getName());
+                            selectOfficesDisplay.add(office.getCode());
                         }
                     }
                 }
@@ -1166,8 +1169,10 @@ public class UserController {
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(),
-                        office.getAddress(),
+                        office.getCode(),
+                        OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
+                                        .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                        .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -1242,7 +1247,7 @@ public class UserController {
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
             selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getName).toList();
+                    .map(Office::getCode).toList();
         } else {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession != null) {
@@ -1253,7 +1258,7 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getName());
+                            selectOfficesDisplay.add(office.getCode());
                         }
                     }
                 }

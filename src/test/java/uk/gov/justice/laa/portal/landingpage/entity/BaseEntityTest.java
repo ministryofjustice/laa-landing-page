@@ -31,7 +31,8 @@ public class BaseEntityTest {
     }
 
     protected Office buildTestOffice() {
-        return Office.builder().name("TestOffice").code("office code").address("Address").phone("123456").build();
+        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("postcode").build();
+        return Office.builder().code("office code").address(address).build();
     }
 
     protected EntraUser buildTestEntraUser() {
@@ -47,7 +48,7 @@ public class BaseEntityTest {
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role").description("App Role Description")
+        return AppRole.builder().name("Test App Role").ccmsCode("ccms_code").description("App Role Description")
                 .roleType(RoleType.INTERNAL).build();
     }
 

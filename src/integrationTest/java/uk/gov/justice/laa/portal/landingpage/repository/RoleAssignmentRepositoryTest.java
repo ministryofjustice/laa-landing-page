@@ -41,7 +41,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void roleAssignmentAndRetrieval() {
         // Arrange
-        App app = App.builder().name("app").build();
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
@@ -67,7 +67,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void roleAssignmentDoNotAllowSelfAssignableRole() {
         // Arrange
-        App app = App.builder().name("app").build();
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL)

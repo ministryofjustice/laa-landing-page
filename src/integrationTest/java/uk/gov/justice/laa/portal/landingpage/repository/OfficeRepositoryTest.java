@@ -49,7 +49,6 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
 
         Assertions.assertThat(result).isNotNull();
         Assertions.assertThat(result.getId()).isEqualTo(office2.getId());
-        Assertions.assertThat(result.getName()).isEqualTo("Office2");
         Assertions.assertThat(result.getCode()).isEqualTo("Office Code 2");
         Assertions.assertThat(result.getFirm()).isNotNull();
 

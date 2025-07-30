@@ -203,7 +203,6 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("lastName");
     }
 
-
     @Test
     public void testEntraUserFalseInvitationAccepted() {
         EntraUser entraUser = buildTestEntraUser();
