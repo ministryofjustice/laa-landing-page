@@ -36,7 +36,6 @@ public class BaseEntityTest {
 
     protected EntraUser buildTestEntraUser() {
         return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
-                .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
                 .entraOid("entra_id").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }

@@ -156,6 +156,23 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public Optional<UserProfileDto> getActiveProfileByUserId(String userId) {
+        EntraUser user = entraUserRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user user id: {}", userId);
+                    return new RuntimeException(
+                            String.format("User not found for the given user user id: %s", userId));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user id: {}", userId);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", userId));
+        }
+
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .map(userProfile -> mapper.map(userProfile, UserProfileDto.class));
+    }
+
     public Optional<EntraUserDto> getEntraUserById(String userId) {
         return entraUserRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, EntraUserDto.class));
@@ -504,7 +521,14 @@ public class UserService {
     }
 
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
-        Set<AppDto> userApps = getUserAppsByUserId(id);
+        Optional<UserProfileDto> userProfile =  getActiveProfileByUserId(id);
+
+        if (userProfile.isEmpty()) {
+            logger.error("Active user profile not found for user: {}", id);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", id));
+        }
+
+        Set<AppDto> userApps = getUserAppsByUserId(String.valueOf(userProfile.get().getId()));
 
         return getUserAssignedApps(userApps);
     }
