@@ -45,6 +45,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -189,11 +190,7 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
         }
-        List<FirmDto> firms = firmService.getFirms();
-        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
-        model.addAttribute("firms", firms);
-        model.addAttribute("selectedFirm", selectedFirm);
         model.addAttribute("userTypes", List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN, UserType.EXTERNAL_SINGLE_FIRM));
         model.addAttribute("selectedUserType", selectedUserType);
         // If user is already in session, populate the form with existing user details
@@ -237,20 +234,62 @@ public class UserController {
                 return "redirect:/admin/user/create/details";
             }
 
-            model.addAttribute("firms", modelFromSession.getAttribute("firms"));
-            model.addAttribute("selectedFirm", modelFromSession.getAttribute("selectedFirm"));
             model.addAttribute("userTypes", modelFromSession.getAttribute("userTypes"));
             model.addAttribute("selectedUserType", userDetailsForm.getUserType());
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-details";
         }
 
-        // Set firm and admin status
-        FirmDto firm = firmService.getFirm(userDetailsForm.getFirmId());
-        session.setAttribute("firm", firm);
-
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
+        return "redirect:/admin/user/create/firm";
+    }
+
+    @GetMapping("/user/create/firm")
+    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
+        // Clear any previous firm selection
+        session.removeAttribute("firm");
+        session.removeAttribute("selectedFirm");
+
+        // If firmSearchForm is already populated from session (e.g., validation
+        // errors), keep it
+        FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+        if (existingForm != null) {
+            firmSearchForm = existingForm;
+            session.removeAttribute("firmSearchForm");
+        }
+
+        model.addAttribute("firmSearchForm", firmSearchForm);
+        return "add-user-firm";
+    }
+
+    @PostMapping("/user/create/firm")
+    public String postUserFirm(@Valid FirmSearchForm firmSearchForm, BindingResult result,
+            HttpSession session, Model model) {
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
+            // Store the form in session to preserve input on redirect
+            session.setAttribute("firmSearchForm", firmSearchForm);
+            return "add-user-firm";
+        }
+
+        // For now, this is a basic implementation that assumes the firm search
+        // finds a firm. In a real implementation, you would search for firms
+        // and allow the user to select from a list of matches.
+        
+        // TODO: Implement actual firm search logic
+        // For now, we'll simulate selecting the first firm that matches the search
+        List<FirmDto> firms = firmService.getFirms();
+        FirmDto selectedFirm = firms.stream()
+                .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                .findFirst()
+                .orElse(firms.get(0)); // Default to first firm if no match found
+
+        // Store the selected firm in session
+        session.setAttribute("firm", selectedFirm);
+        session.setAttribute("firmSearchTerm", firmSearchForm.getFirmSearch());
+
         return "redirect:/admin/user/create/check-answers";
     }
 
@@ -379,7 +418,8 @@ public class UserController {
         List<OfficeModel> officeData = offices.stream()
                 .map(office -> new OfficeModel(office.getCode(),
                         new OfficeModel.Address(office.getAddress().getAddressLine1(),
-                                office.getAddress().getAddressLine2(), office.getAddress().getCity(), office.getAddress().getPostcode()),
+                                office.getAddress().getAddressLine2(), office.getAddress().getCity(),
+                                office.getAddress().getPostcode()),
                         office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -487,10 +527,13 @@ public class UserController {
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
         session.removeAttribute("firm");
+        session.removeAttribute("selectedFirm");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
         session.removeAttribute("roles");
         session.removeAttribute("officeData");
+        session.removeAttribute("firmSearchForm");
+        session.removeAttribute("firmSearchTerm");
         return "redirect:/admin/users";
     }
 
@@ -791,7 +834,8 @@ public class UserController {
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
-                        new OfficeModel.Address(office.getAddress().getAddressLine1(), office.getAddress().getAddressLine2(),
+                        new OfficeModel.Address(office.getAddress().getAddressLine1(),
+                                office.getAddress().getAddressLine2(),
                                 office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
@@ -1166,8 +1210,8 @@ public class UserController {
                 .map(office -> new OfficeModel(
                         office.getCode(),
                         OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
-                                        .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
-                                        .postcode(office.getAddress().getPostcode()).build(),
+                                .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());

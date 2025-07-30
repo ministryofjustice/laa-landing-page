@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Select the user's firm</title>
+</head>
+
+<body>
+    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/user/create/details">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <form th:action="@{/admin/user/create/firm}" th:method="post" th:object="${firmSearchForm}">
+            <div th:if="${#fields.hasErrors()}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                    aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <h1 class="govuk-heading-l">Select the user's firm</h1>
+            
+            <div class="govuk-form-group"
+                th:classappend="${#fields.hasErrors('firmSearch')} ? 'govuk-form-group--error'">
+                <label class="govuk-label" for="firmSearch">
+                    Start typing a firm and select from the list of options
+                </label>
+                <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
+                    <p th:each="err : ${#fields.errors('firmSearch')}" th:text="${err}"></p>
+                </div>
+                <input class="govuk-input govuk-!-width-two-thirds" 
+                       name="firmSearch" 
+                       type="text"
+                       th:value="*{firmSearch}" 
+                       id="firmSearch"
+                       autocomplete="off"
+                       th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" />
+            </div>
+
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+            </div>
+        </form>
+    </main>
+</body>
+
+</html>

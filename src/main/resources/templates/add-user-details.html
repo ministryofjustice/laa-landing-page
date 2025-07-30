@@ -78,23 +78,6 @@
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
 
-                <div class="govuk-!-margin-bottom-3">
-                    <div class="govuk-form-group"
-                        th:classappend="${#fields.hasErrors('firmId')} ? 'govuk-form-group--error'">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
-                            Firm name
-                        </label>
-                        <div th:if="${#fields.hasErrors('firmId')}" class="govuk-error-message">
-                            <p th:each="err : ${#fields.errors('firmId')}" th:text="${err}"></p>
-                        </div>
-                        <select class="govuk-select" id="firmId" name="firmId">
-                            <option value="" disabled selected th:if="${selectedFirm == null}">Choose firm</option>
-                            <div th:each="firm : ${firms}">
-                                <option th:value="${firm.id}" th:text="${firm.name}"
-                                    th:selected="${firm.id == selectedFirm?.id}"></option>
-                            </div>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="govuk-form-group"
