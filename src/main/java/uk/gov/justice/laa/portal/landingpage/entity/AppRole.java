@@ -53,6 +53,7 @@ public class AppRole extends BaseEntity {
     private String ccmsCode;
 
     @Column(name = "legacy_sync", nullable = false)
+    @ColumnDefault("false")
     @NotNull(message = "Application role legacy sync flag must be provided")
     private boolean lagacySync;
 

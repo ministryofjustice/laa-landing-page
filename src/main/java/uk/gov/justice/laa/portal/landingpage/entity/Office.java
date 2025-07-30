@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Set;
 
@@ -63,6 +64,7 @@ public class Office extends BaseEntity {
     public static class Address {
 
         @Column(name = "address_line_1", nullable = false, length = 255)
+        @ColumnDefault(value = "'ADDRESS LINE 1'")
         @NotBlank(message = "Office address line 1 must be provided")
         @Size(min = 1, max = 255, message = "Office address must be between 1 and 255 characters")
         private String addressLine1;
@@ -72,11 +74,13 @@ public class Office extends BaseEntity {
         private String addressLine2;
 
         @Column(name = "city", nullable = false, length = 255)
+        @ColumnDefault(value = "'CITY'")
         @NotBlank(message = "Office city must be provided")
         @Size(min = 1, max = 255, message = "Office city must be between 1 and 255 characters")
         private String city;
 
         @Column(name = "post_code", nullable = false, length = 8)
+        @ColumnDefault(value = "'POSTCODE'")
         @NotBlank(message = "Office postcode must be provided")
         @Size(min = 2, max = 8, message = "Office postcode must be between 2 and 8 characters")
         private String postcode;
