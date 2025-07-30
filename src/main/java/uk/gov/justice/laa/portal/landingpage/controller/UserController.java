@@ -81,13 +81,13 @@ public class UserController {
      */
     @GetMapping("/users")
     public String displayAllUsers(
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String direction,
-            @RequestParam(required = false) String usertype,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) boolean showFirmAdmins,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "sort", required = false) String sort,
+            @RequestParam(name = "direction", required = false) String direction,
+            @RequestParam(name = "usertype", required = false) String usertype,
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
@@ -461,12 +461,6 @@ public class UserController {
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                     selectedFirm.getName(), userType);
             eventService.logEvent(createUserAuditEvent);
-
-            String successMessage = user.getFirstName() + " " + user.getLastName()
-                    + " has been added to the system"
-                    + (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN ? " as a Firm Admin" : "")
-                    + ". An email invitation has been sent. They must accept the invitation to gain access.";
-            session.setAttribute("successMessage", successMessage);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
@@ -658,7 +652,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -1047,7 +1042,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
