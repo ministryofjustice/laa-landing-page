@@ -97,7 +97,7 @@ public class OfficeTest extends BaseEntityTest {
                 .addressLine1("OfficeAddress1".repeat(51))
                 .addressLine2("OfficeAddress".repeat(51))
                 .city("OfficeAddress".repeat(51))
-                .postcode("OfficeAddress")
+                .postcode("OfficeAddressmorethan20characters")
                 .build();
         update(office, off -> off.setAddress(address));
 
@@ -108,7 +108,7 @@ public class OfficeTest extends BaseEntityTest {
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
         assertThat(messages).hasSameElementsAs(Set.of("Office address must be between 1 and 255 characters",
                 "Office address line 2 must be between 1 and 255 characters",
-                "Office city must be between 1 and 255 characters", "Office postcode must be between 2 and 8 characters"));
+                "Office city must be between 1 and 255 characters", "Office postcode must be between 2 and 20 characters"));
         Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
         assertThat(volitionalPaths).contains("address.city", "address.postcode", "address.addressLine2", "address.addressLine1");
     }

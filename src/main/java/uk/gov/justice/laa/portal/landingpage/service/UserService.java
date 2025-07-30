@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -575,13 +576,11 @@ public class UserService {
      * @param userId The user ID
      * @return List of offices assigned to the user
      */
-    public List<Office> getUserOfficesByUserId(String userId) {
+    public List<OfficeDto> getUserOfficesByUserId(String userId) {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
         if (optionalUserProfile.isPresent()) {
             UserProfileDto userProfile = optionalUserProfile.get();
-            return userProfile.getOffices().stream()
-                    .map(officeDto -> mapper.map(officeDto, Office.class))
-                    .collect(Collectors.toList());
+            return userProfile.getOffices();
         }
         return Collections.emptyList();
     }
