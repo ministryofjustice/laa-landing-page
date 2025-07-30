@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -173,9 +174,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
                 .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
                 .collect(Collectors.toList());
-        List<Office> userOffices = optionalUser.get().getOffices().stream()
-                .map(officeData -> mapper.map(officeData, Office.class))
-                .collect(Collectors.toList());
+        List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
@@ -774,7 +773,7 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -1148,7 +1147,7 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -1290,7 +1289,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
