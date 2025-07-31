@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,8 +16,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
+
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -93,7 +94,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests((authorize) -> authorize
             .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(UserType.ADMIN_TYPES)
-            .requestMatchers("admin/user/**")
+            .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(UserType.USER_CREATION_TYPES)
             .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
             ).permitAll()

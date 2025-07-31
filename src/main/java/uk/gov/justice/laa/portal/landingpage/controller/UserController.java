@@ -266,11 +266,30 @@ public class UserController {
 
     @GetMapping("/user/create/firm/search")
     @ResponseBody
-    public List<Map<String, String>> searchFirms(@RequestParam("q") String query) {
+    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+        log.debug("Searching firms with query: '{}'", query);
         List<FirmDto> firms = firmService.getFirms();
+        log.debug("Total firms available: {}", firms.size());
         
-        return firms.stream()
-                .filter(firm -> firm.getName().toLowerCase().contains(query.toLowerCase()))
+        // If query is empty or whitespace, return all firms
+        if (query == null || query.trim().isEmpty()) {
+            List<Map<String, String>> result = firms.stream()
+                    .limit(10) // Limit results to prevent overwhelming the UI
+                    .map(firm -> {
+                        Map<String, String> firmData = new HashMap<>();
+                        firmData.put("id", firm.getId().toString());
+                        firmData.put("name", firm.getName());
+                        firmData.put("number", ""); // Placeholder for firm number if available
+                        return firmData;
+                    })
+                    .collect(Collectors.toList());
+            log.debug("Returning {} firms for empty query", result.size());
+            return result;
+        }
+        
+        // Filter firms based on query
+        List<Map<String, String>> result = firms.stream()
+                .filter(firm -> firm.getName().toLowerCase().contains(query.toLowerCase().trim()))
                 .limit(10) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
@@ -280,6 +299,8 @@ public class UserController {
                     return firmData;
                 })
                 .collect(Collectors.toList());
+        log.debug("Returning {} firms for query '{}'", result.size(), query);
+        return result;
     }
 
     @PostMapping("/user/create/firm")

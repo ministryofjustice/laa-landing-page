@@ -45,19 +45,37 @@
                 <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
                     <p th:each="err : ${#fields.errors('firmSearch')}" th:text="${err}"></p>
                 </div>
-                <div class="firm-search-container" style="position: relative;">
-                    <input class="govuk-input govuk-!-width-two-thirds" 
-                           name="firmSearch" 
-                           type="text"
-                           th:value="*{firmSearch}" 
-                           id="firmSearch"
-                           autocomplete="off"
-                           placeholder="Type to search for a firm..."
-                           th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" />
-                    <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
-                    <div id="firmSearchResults" class="firm-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #0b0c0c; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000;">
-                        <!-- Search results will be populated here via JavaScript -->
+                <div class="autocomplete__wrapper">
+                    <div class="autocomplete__status" style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin-bottom: -1px; margin-right: -1px; overflow: hidden; padding: 0px; position: absolute; white-space: nowrap; width: 1px;">
+                        <div id="firmSearch__status--A" role="status" aria-atomic="true" aria-live="polite"></div>
+                        <div id="firmSearch__status--B" role="status" aria-atomic="true" aria-live="polite"></div>
                     </div>
+                    <div style="position: relative; display: inline-block; width: 66.66%;">
+                        <input aria-expanded="false" 
+                               aria-controls="firmSearch__listbox" 
+                               aria-autocomplete="list" 
+                               autocomplete="off" 
+                               class="autocomplete__input autocomplete__input--default govuk-input" 
+                               id="firmSearch" 
+                               name="firmSearch" 
+                               placeholder="Type to search for a firm..." 
+                               type="text" 
+                               role="combobox"
+                               th:value="*{firmSearch}"
+                               th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" 
+                               style="width: 100%; padding-right: 40px;" />
+                        <div id="firmSearchSpinner" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;">
+                            <div style="border: 2px solid #f3f3f3; border-top: 2px solid #1d70b8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite;"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
+                    <ul aria-labelledby="firmSearch" 
+                        id="firmSearch__listbox" 
+                        role="listbox" 
+                        class="autocomplete__menu autocomplete__menu--inline autocomplete__menu--hidden">
+                        <!-- Search results will be populated here via JavaScript -->
+                    </ul>
+                    <span id="firmSearch__assistiveHint" style="display: none;">When autocomplete results are available use up and down arrows to review and enter to select. Touch device users, explore by touch or with swipe gestures.</span>
                 </div>
             </div>
 
@@ -66,136 +84,245 @@
                 <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
             </div>
         </form>
-    </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const firmSearchInput = document.getElementById('firmSearch');
-            const firmSearchResults = document.getElementById('firmSearchResults');
-            const selectedFirmIdInput = document.getElementById('selectedFirmId');
-            let searchTimeout;
-            let selectedIndex = -1;
-
-            // Handle input changes
-            firmSearchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                const query = this.value.trim();
-                
-                if (query.length < 1) {
-                    firmSearchResults.style.display = 'none';
-                    selectedFirmIdInput.value = '';
-                    return;
-                }
-
-                // Debounce search requests
-                searchTimeout = setTimeout(() => {
-                    searchFirms(query);
-                }, 300);
-            });
-
-            // Handle keyboard navigation
-            firmSearchInput.addEventListener('keydown', function(e) {
-                const items = firmSearchResults.querySelectorAll('.firm-search-item');
-                
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                    updateSelection(items);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    selectedIndex = Math.max(selectedIndex - 1, -1);
-                    updateSelection(items);
-                } else if (e.key === 'Enter' && selectedIndex >= 0) {
-                    e.preventDefault();
-                    items[selectedIndex].click();
-                } else if (e.key === 'Escape') {
-                    firmSearchResults.style.display = 'none';
-                    selectedIndex = -1;
-                }
-            });
-
-            // Hide results when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!firmSearchInput.contains(e.target) && !firmSearchResults.contains(e.target)) {
-                    firmSearchResults.style.display = 'none';
-                    selectedIndex = -1;
-                }
-            });
-
-            function searchFirms(query) {
-                fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    displayResults(data);
-                })
-                .catch(error => {
-                    console.error('Error searching firms:', error);
-                    firmSearchResults.style.display = 'none';
-                });
+        
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
             }
-
-            function displayResults(firms) {
-                firmSearchResults.innerHTML = '';
-                selectedIndex = -1;
-
-                if (firms.length === 0) {
-                    firmSearchResults.innerHTML = '<div class="firm-search-item" style="padding: 8px 12px; color: #6f777b;">No firms found</div>';
-                    firmSearchResults.style.display = 'block';
+        </style>
+        
+        <script>
+            console.log('Script loaded and executing');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM content loaded');
+                const firmSearchInput = document.getElementById('firmSearch');
+                const firmSearchListbox = document.getElementById('firmSearch__listbox');
+                const selectedFirmIdInput = document.getElementById('selectedFirmId');
+                const statusA = document.getElementById('firmSearch__status--A');
+                const statusB = document.getElementById('firmSearch__status--B');
+                const assistiveHint = document.getElementById('firmSearch__assistiveHint');
+                const searchSpinner = document.getElementById('firmSearchSpinner');
+                
+                console.log('Elements found:', {
+                    firmSearchInput: !!firmSearchInput,
+                    firmSearchListbox: !!firmSearchListbox,
+                    selectedFirmIdInput: !!selectedFirmIdInput,
+                    searchSpinner: !!searchSpinner
+                });
+                
+                if (!firmSearchInput) {
+                    console.error('firmSearchInput element not found!');
                     return;
                 }
+                
+                let searchTimeout;
+                let selectedIndex = -1;
+                let currentStatusElement = statusA;
 
-                firms.forEach((firm, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'firm-search-item';
-                    item.style.cssText = 'padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #b1b4b6;';
-                    item.innerHTML = `<strong>${escapeHtml(firm.name)}</strong><br><small style="color: #6f777b;">${escapeHtml(firm.number || 'No number available')}</small>`;
+                // Show assistive hint when input is focused
+                firmSearchInput.addEventListener('focus', function() {
+                    assistiveHint.style.display = 'block';
+                });
+
+                // Handle input changes
+                firmSearchInput.addEventListener('input', function() {
+                    console.log('Input event fired, value:', this.value);
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
                     
-                    item.addEventListener('click', function() {
-                        selectFirm(firm);
-                    });
+                    if (query.length < 1) {
+                        console.log('Query too short, hiding results');
+                        hideResults();
+                        hideSpinner();
+                        selectedFirmIdInput.value = '';
+                        return;
+                    }
 
-                    item.addEventListener('mouseenter', function() {
-                        selectedIndex = index;
-                        updateSelection(firmSearchResults.querySelectorAll('.firm-search-item'));
-                    });
-
-                    firmSearchResults.appendChild(item);
+                    console.log('Setting timeout for search with query:', query);
+                    // Debounce search requests
+                    searchTimeout = setTimeout(() => {
+                        console.log('Timeout fired, calling searchFirms');
+                        searchFirms(query);
+                    }, 300);
                 });
 
-                firmSearchResults.style.display = 'block';
-            }
-
-            function selectFirm(firm) {
-                firmSearchInput.value = firm.name;
-                selectedFirmIdInput.value = firm.id;
-                firmSearchResults.style.display = 'none';
-                selectedIndex = -1;
-            }
-
-            function updateSelection(items) {
-                items.forEach((item, index) => {
-                    if (index === selectedIndex) {
-                        item.style.backgroundColor = '#1d70b8';
-                        item.style.color = 'white';
-                    } else {
-                        item.style.backgroundColor = '';
-                        item.style.color = '';
+                // Handle keyboard navigation
+                firmSearchInput.addEventListener('keydown', function(e) {
+                    const items = firmSearchListbox.querySelectorAll('.autocomplete__option');
+                    
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items);
+                        updateStatus(`${selectedIndex + 1} of ${items.length}`);
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection(items);
+                        if (selectedIndex >= 0) {
+                            updateStatus(`${selectedIndex + 1} of ${items.length}`);
+                        }
+                    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                        e.preventDefault();
+                        items[selectedIndex].click();
+                    } else if (e.key === 'Escape') {
+                        hideResults();
                     }
                 });
-            }
 
-            function escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-        });
-    </script>
-</body>
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!firmSearchInput.contains(e.target) && !firmSearchListbox.contains(e.target)) {
+                        hideResults();
+                    }
+                });
 
-</html>
+                function searchFirms(query) {
+                    updateStatus('Searching...');
+                    showSpinner();
+                    
+                    console.log('Making request to:', `/admin/user/create/firm/search?q=${encodeURIComponent(query)}`);
+                    
+                    fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                    })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        console.log('Response headers:', response.headers);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Search results:', data);
+                        hideSpinner();
+                        displayResults(data);
+                    })
+                    .catch(error => {
+                        console.error('Error searching firms:', error);
+                        hideSpinner();
+                        hideResults();
+                        updateStatus('Search failed: ' + error.message);
+                    });
+                }
+
+                function displayResults(firms) {
+                    firmSearchListbox.innerHTML = '';
+                    selectedIndex = -1;
+
+                    if (firms.length === 0) {
+                        const noResultsItem = document.createElement('li');
+                        noResultsItem.className = 'autocomplete__option';
+                        noResultsItem.textContent = 'No firms found';
+                        noResultsItem.setAttribute('role', 'option');
+                        noResultsItem.setAttribute('aria-selected', 'false');
+                        noResultsItem.style.color = '#6f777b';
+                        firmSearchListbox.appendChild(noResultsItem);
+                        
+                        showResults();
+                        updateStatus('No results found');
+                        return;
+                    }
+
+                    firms.forEach((firm, index) => {
+                        const item = document.createElement('li');
+                        item.className = `autocomplete__option${index % 2 === 1 ? ' autocomplete__option--odd' : ''}`;
+                        item.setAttribute('aria-selected', 'false');
+                        item.setAttribute('role', 'option');
+                        item.setAttribute('tabindex', '-1');
+                        item.setAttribute('id', `firmSearch__option--${index}`);
+                        item.setAttribute('aria-posinset', index + 1);
+                        item.setAttribute('aria-setsize', firms.length);
+                        
+                        item.innerHTML = `<strong>${escapeHtml(firm.name)}</strong><br><small style="color: #6f777b;">${escapeHtml(firm.number || 'No number available')}</small>`;
+                        
+                        item.addEventListener('click', function() {
+                            selectFirm(firm);
+                        });
+
+                        item.addEventListener('mouseenter', function() {
+                            selectedIndex = index;
+                            updateSelection(firmSearchListbox.querySelectorAll('.autocomplete__option'));
+                        });
+
+                        firmSearchListbox.appendChild(item);
+                    });
+
+                    showResults();
+                    updateStatus(`${firms.length} result${firms.length === 1 ? '' : 's'} available`);
+                }
+
+                function selectFirm(firm) {
+                    firmSearchInput.value = firm.name;
+                    selectedFirmIdInput.value = firm.id;
+                    hideResults();
+                    updateStatus(`${firm.name} selected`);
+                }
+
+                function updateSelection(items) {
+                    items.forEach((item, index) => {
+                        if (index === selectedIndex) {
+                            item.setAttribute('aria-selected', 'true');
+                            item.style.backgroundColor = '#1d70b8';
+                            item.style.color = 'white';
+                            
+                            // Scroll into view if needed
+                            item.scrollIntoView({ block: 'nearest' });
+                        } else {
+                            item.setAttribute('aria-selected', 'false');
+                            item.style.backgroundColor = '';
+                            item.style.color = '';
+                        }
+                    });
+                }
+
+                function showResults() {
+                    firmSearchListbox.classList.remove('autocomplete__menu--hidden');
+                    firmSearchInput.setAttribute('aria-expanded', 'true');
+                }
+
+                function hideResults() {
+                    firmSearchListbox.classList.add('autocomplete__menu--hidden');
+                    firmSearchInput.setAttribute('aria-expanded', 'false');
+                    selectedIndex = -1;
+                    assistiveHint.style.display = 'none';
+                }
+
+                function showSpinner() {
+                    console.log('Showing spinner');
+                    if (searchSpinner) {
+                        searchSpinner.style.display = 'block';
+                    } else {
+                        console.error('searchSpinner element not found');
+                    }
+                }
+
+                function hideSpinner() {
+                    console.log('Hiding spinner');
+                    if (searchSpinner) {
+                        searchSpinner.style.display = 'none';
+                    } else {
+                        console.error('searchSpinner element not found');
+                    }
+                }
+
+                function updateStatus(message) {
+                    // Alternate between status elements for better screen reader support
+                    currentStatusElement = currentStatusElement === statusA ? statusB : statusA;
+                    currentStatusElement.textContent = message;
+                }
+
+                function escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+            });
+        </script>
+    </main>
