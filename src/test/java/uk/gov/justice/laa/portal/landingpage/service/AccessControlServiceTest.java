@@ -232,11 +232,11 @@ public class AccessControlServiceTest {
                 .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.getUserProfiles().add(userProfile);
 
-        FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
         Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));

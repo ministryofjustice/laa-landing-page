@@ -2999,19 +2999,23 @@ class UserControllerTest {
             // Methods with more complicated permissions
             if ("editUserDetails".equals(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)");
+                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)"
+                        + " && @accessControlService.canEditUser(#id)");
             }
             if ("updateUserDetails".equals(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)");
+                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)"
+                        + " && @accessControlService.canEditUser(#id)");
             }
             if ("editUserOffices".equals(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)");
+                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
+                       + " && @accessControlService.canEditUser(#id)");
             }
             if ("updateUserOffices".equals(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)");
+                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
+                        + " && @accessControlService.canEditUser(#id)");
             }
         }
     }
