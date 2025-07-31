@@ -686,6 +686,7 @@ public class UserService {
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder()
                     .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
                     .userType(UserType.INTERNAL)
                     .createdDate(LocalDateTime.now())
                     .createdBy(createdBy)
