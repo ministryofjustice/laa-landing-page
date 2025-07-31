@@ -78,14 +78,12 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
-      # Ingress two is a test if you see it please remove it
       - name: Generate Deployment Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
-          cat deployments/templates/ingress-two.yml | envsubst > deployments/ingress-two.yml.yml
         env:
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           IMAGE_TAG: ${{ github.sha }}
@@ -93,7 +91,7 @@ jobs:
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
-          POPULATE_DUMMY_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
+          POPULATE_TEST_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
           TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
           TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
           TEST_DATA_INTERNAL_PRINCIPALS: ${{ secrets.TEST_DATA_INTERNAL_PRINCIPALS }}
