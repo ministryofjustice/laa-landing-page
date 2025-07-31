@@ -117,7 +117,7 @@ public class SecurityConfig {
             .defaultSuccessUrl("/home", true)
             .permitAll()
         ).logout(logout -> logout
-            .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "POST"))
+            .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
             .addLogoutHandler(logoutHandler)
             .logoutSuccessUrl("/?message=logout")
             .clearAuthentication(true)

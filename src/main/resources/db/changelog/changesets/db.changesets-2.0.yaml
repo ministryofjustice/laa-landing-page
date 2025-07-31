@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1753804959927-1
+      author: system
+      changes:
+        - dropColumn:
+            columnName: end_date
+            tableName: entra_user
+  - changeSet:
+      id: 1753804959927-2
+      author: system
+      changes:
+        - dropColumn:
+            columnName: start_date
+            tableName: entra_user

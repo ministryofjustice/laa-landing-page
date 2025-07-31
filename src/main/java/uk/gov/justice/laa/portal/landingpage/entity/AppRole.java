@@ -48,6 +48,15 @@ public class AppRole extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
+    @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
+    @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
+    private String ccmsCode;
+
+    @Column(name = "legacy_sync", nullable = false)
+    @ColumnDefault("false")
+    @NotNull(message = "Application role legacy sync flag must be provided")
+    private boolean lagacySync;
+
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude

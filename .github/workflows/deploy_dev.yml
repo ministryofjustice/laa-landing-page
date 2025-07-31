@@ -78,12 +78,14 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
+      # Ingress two is a test if you see it please remove it
       - name: Generate Deployment Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+          cat deployments/templates/ingress-two.yml | envsubst > deployments/ingress-two.yml.yml
         env:
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           IMAGE_TAG: ${{ github.sha }}
@@ -107,6 +109,9 @@ jobs:
           APP_SUBMIT_CRIME_FORM_NAME: ${{ vars.APP_SUBMIT_CRIME_FORM_NAME }}
           APP_SUBMIT_CRIME_FORM_DETAILS: ${{ vars.APP_SUBMIT_CRIME_FORM_DETAILS }}
           APP_SUBMIT_CRIME_FORM_URL: ${{ secrets.APP_SUBMIT_CRIME_FORM_URL }}
+          APP_CCMS_ACCOUNT_LINK_NAME: ${{ vars.APP_CCMS_ACCOUNT_LINK_NAME }}
+          APP_CCMS_ACCOUNT_LINK_DETAILS: ${{ vars.APP_CCMS_ACCOUNT_LINK_DETAILS }}
+          APP_CCMS_ACCOUNT_LINK_URL: ${{ secrets.APP_CCMS_ACCOUNT_LINK_URL }}
           TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
           TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
           TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}

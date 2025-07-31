@@ -38,7 +38,8 @@ public class PermissionRepositoryTest extends BaseRepositoryTest {
     @Test
     public void roleAssignmentAndRetrieval() {
         // Arrange
-        App app = App.builder().name("App with permissions").build();
+        App app = App.builder().name("App with permissions").securityGroupName("sec_group")
+                .securityGroupOid("sec_group_oid").build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL)
