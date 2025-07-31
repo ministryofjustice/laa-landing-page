@@ -54,7 +54,7 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "${LOG_LEVEL}"
-            - name: POPULATE_DUMMY_DATA
+            - name: POPULATE_TEST_DATA
               value: "${POPULATE_DUMMY_DATA}"
             - name: TEST_DATA_ADMIN_PRINCIPALS
               value: "${TEST_DATA_ADMIN_PRINCIPALS}"
