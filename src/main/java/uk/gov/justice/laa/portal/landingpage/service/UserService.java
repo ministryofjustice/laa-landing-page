@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -154,6 +155,23 @@ public class UserService {
                 .filter(obj -> obj instanceof DirectoryRole)
                 .map(obj -> (DirectoryRole) obj)
                 .collect(Collectors.toList());
+    }
+
+    public Optional<UserProfileDto> getActiveProfileByUserId(String userId) {
+        EntraUser user = entraUserRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user user id: {}", userId);
+                    return new RuntimeException(
+                            String.format("User not found for the given user user id: %s", userId));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user id: {}", userId);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", userId));
+        }
+
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .map(userProfile -> mapper.map(userProfile, UserProfileDto.class));
     }
 
     public Optional<EntraUserDto> getEntraUserById(String userId) {
@@ -504,7 +522,14 @@ public class UserService {
     }
 
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
-        Set<AppDto> userApps = getUserAppsByUserId(id);
+        Optional<UserProfileDto> userProfile =  getActiveProfileByUserId(id);
+
+        if (userProfile.isEmpty()) {
+            logger.error("Active user profile not found for user: {}", id);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", id));
+        }
+
+        Set<AppDto> userApps = getUserAppsByUserId(String.valueOf(userProfile.get().getId()));
 
         return getUserAssignedApps(userApps);
     }
@@ -551,13 +576,11 @@ public class UserService {
      * @param userId The user ID
      * @return List of offices assigned to the user
      */
-    public List<Office> getUserOfficesByUserId(String userId) {
+    public List<OfficeDto> getUserOfficesByUserId(String userId) {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
         if (optionalUserProfile.isPresent()) {
             UserProfileDto userProfile = optionalUserProfile.get();
-            return userProfile.getOffices().stream()
-                    .map(officeDto -> mapper.map(officeDto, Office.class))
-                    .collect(Collectors.toList());
+            return userProfile.getOffices();
         }
         return Collections.emptyList();
     }

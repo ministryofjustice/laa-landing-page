@@ -66,6 +66,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -579,13 +581,37 @@ class UserServiceTest {
     public void testGetUserAssignedAppsforLandingPageWhenNoUserIsPresent() {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        UUID userProfileId = UUID.randomUUID();
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).entraUser(entraUser).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
+        when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
         // Then
         assertThat(returnedApps.isEmpty()).isTrue();
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        assertThat(warningLogs.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testGetUserAssignedAppsforLandingPageWhenNoActiveProfile() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(false).entraUser(entraUser).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
+
+        // When & Then
+        RuntimeException exception = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.getUserAssignedAppsforLandingPage(userId.toString()));
+        assertThat(exception.getMessage()).contains("User profile not found for the given user id");
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(warningLogs.size()).isEqualTo(1);
     }
 
@@ -629,6 +655,7 @@ class UserServiceTest {
                 .email("test@test.com")
                 .userProfiles(Set.of(userProfile))
                 .build();
+        when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
         List<LaaApplication> applications = Arrays.asList(
                 LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
@@ -637,7 +664,7 @@ class UserServiceTest {
         );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
         // Then
         assertThat(returnedApps).isNotNull();
@@ -647,6 +674,56 @@ class UserServiceTest {
         assertThat(resultApp1.getName()).isEqualTo("Test App 1");
         LaaApplication resultApp2 = iterator.next();
         assertThat(resultApp2.getName()).isEqualTo("Test App 2");
+    }
+
+    @Test
+    public void getActiveProfileByUserId() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).entraUser(entraUser).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
+        // When
+        Optional<UserProfileDto> result = userService.getActiveProfileByUserId(userId.toString());
+        // Then
+        assertThat(result.isEmpty()).isFalse();
+        UserProfileDto userProfileDto = result.get();
+        assertThat(userProfileDto.getId()).isEqualTo(userId);
+    }
+
+    @Test
+    public void getActiveProfileByUserIdNoEntraUser() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+
+        when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+        // When & Then
+        RuntimeException exception = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.getActiveProfileByUserId(userId.toString()));
+        assertThat(exception.getMessage()).contains("User not found for the given user user id:");
+
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
+        assertThat(warningLogs.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void getActiveProfileByUserIdNoUserProfile() {
+        // Given
+        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+
+        when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
+
+        // When & Then
+        RuntimeException exception = Assertions.assertThrows(RuntimeException.class,
+                () -> userService.getActiveProfileByUserId(userId.toString()));
+        assertThat(exception.getMessage()).contains("User profile not found for the given user id:");
+        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
+        assertThat(warningLogs.size()).isEqualTo(1);
     }
 
     @Nested
@@ -1566,8 +1643,9 @@ class UserServiceTest {
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
+            Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1578,11 +1656,11 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
-            assertThat(result).extracting(Office::getName).containsExactlyInAnyOrder("Office 1", "Office 2");
+            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2");
         }
 
         @Test
@@ -1592,7 +1670,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1607,7 +1685,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1621,9 +1699,10 @@ class UserServiceTest {
             UUID officeId2 = UUID.randomUUID();
             UUID officeId3 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
-            Office office3 = Office.builder().id(officeId3).name("Office 3").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
+            Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
+            Office office3 = Office.builder().id(officeId3).code("Office 3").address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1634,11 +1713,11 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            List<Office> result = userService.getUserOfficesByUserId(userProfileId.toString());
+            List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
 
             // Assert
             assertThat(result).hasSize(3);
-            assertThat(result).extracting(Office::getName).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
+            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
         }
     }
 
@@ -1653,8 +1732,9 @@ class UserServiceTest {
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
-            Office office1 = Office.builder().id(officeId1).name("Office 1").build();
-            Office office2 = Office.builder().id(officeId2).name("Office 2").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1859,6 +1939,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1869,7 +1950,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
@@ -1896,6 +1977,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1903,7 +1985,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1933,6 +2015,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile))
                     .build();
 
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<LaaApplication> configuredApps = List.of(
@@ -1942,7 +2025,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(userProfileId.toString());
+            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(3);

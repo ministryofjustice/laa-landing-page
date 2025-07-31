@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -81,13 +82,13 @@ public class UserController {
      */
     @GetMapping("/users")
     public String displayAllUsers(
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String direction,
-            @RequestParam(required = false) String usertype,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) boolean showFirmAdmins,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "sort", required = false) String sort,
+            @RequestParam(name = "direction", required = false) String direction,
+            @RequestParam(name = "usertype", required = false) String usertype,
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
@@ -173,9 +174,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
                 .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
                 .collect(Collectors.toList());
-        List<Office> userOffices = optionalUser.get().getOffices().stream()
-                .map(officeData -> mapper.map(officeData, Office.class))
-                .collect(Collectors.toList());
+        List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
@@ -378,7 +377,9 @@ public class UserController {
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         List<Office> offices = officeService.getOfficesByFirms(List.of(selectedFirm.getId()));
         List<OfficeModel> officeData = offices.stream()
-                .map(office -> new OfficeModel(office.getName(), office.getAddress(),
+                .map(office -> new OfficeModel(office.getCode(),
+                        new OfficeModel.Address(office.getAddress().getAddressLine1(),
+                                office.getAddress().getAddressLine2(), office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(), Objects.nonNull(selectedOfficeData.getSelectedOffices())
                                 && selectedOfficeData.getSelectedOffices().contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -417,7 +418,7 @@ public class UserController {
         for (Office office : offices) {
             if (Objects.nonNull(selectedOffices)
                     && selectedOffices.contains(office.getId().toString())) {
-                selectedDisplayNames.add(office.getName());
+                selectedDisplayNames.add(office.getCode());
             }
         }
         officeData.setSelectedOfficesDisplay(selectedDisplayNames);
@@ -459,12 +460,6 @@ public class UserController {
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                     selectedFirm.getName(), userType);
             eventService.logEvent(createUserAuditEvent);
-
-            String successMessage = user.getFirstName() + " " + user.getLastName()
-                    + " has been added to the system"
-                    + (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN ? " as a Firm Admin" : "")
-                    + ". An email invitation has been sent. They must accept the invitation to gain access.";
-            session.setAttribute("successMessage", successMessage);
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
@@ -656,7 +651,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -777,7 +773,7 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -794,8 +790,9 @@ public class UserController {
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(),
-                        office.getAddress(),
+                        office.getCode(),
+                        new OfficeModel.Address(office.getAddress().getAddressLine1(), office.getAddress().getAddressLine2(),
+                                office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -879,7 +876,7 @@ public class UserController {
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
             selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getName).toList();
+                    .map(Office::getCode).toList();
         } else {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
@@ -890,7 +887,7 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getName());
+                            selectOfficesDisplay.add(office.getCode());
                         }
                     }
                 }
@@ -1044,7 +1041,8 @@ public class UserController {
         }
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex), user.getUserType());
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -1149,7 +1147,7 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -1166,8 +1164,10 @@ public class UserController {
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
-                        office.getName(),
-                        office.getAddress(),
+                        office.getCode(),
+                        OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
+                                        .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                        .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -1242,7 +1242,7 @@ public class UserController {
                     .map(office -> office.getId().toString())
                     .collect(Collectors.toList());
             selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getName).toList();
+                    .map(Office::getCode).toList();
         } else {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession != null) {
@@ -1253,7 +1253,7 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getName());
+                            selectOfficesDisplay.add(office.getCode());
                         }
                     }
                 }
@@ -1289,7 +1289,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
 
         // Get user's current offices
-        List<Office> userOffices = userService.getUserOfficesByUserId(id);
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);

@@ -15,19 +15,25 @@
 
             <div class="govuk-panel govuk-panel--confirmation">
                 <h1 class="govuk-panel__title">
-                    Access granted
+                    Access updated
                 </h1>
                 <div class="govuk-panel__body">
-                    <span th:text="${user.fullName}"></span> all information has been added
+                    for <span th:text="${user.fullName}"></span>
                 </div>
             </div>
 
-            <h2 class="govuk-heading-m govuk-!-padding-top-3">What happens next</h2>
+            <h2 class="govuk-heading-m">What happens next</h2>
 
-            <p class="govuk-body govuk-!-padding-top-3">You can now view the user and manage the user</p>
+            <p class="govuk-body">You can:</p>
+            <ul class="govuk-list govuk-list--bullet">
+                <li><a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">manage access</a></li>
+                <li><a th:href="@{/admin/user/create/details}" class="govuk-link">create new user</a></li>
+            </ul>
 
-            <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-button govuk-!-padding-top-3"
-                data-module="govuk-button">Continue</a>
+            <div class="govuk-!-padding-top-6">
+                <a th:href="@{/admin/users}" class="govuk-button" data-module="govuk-button">Go back to Manage your
+                    users</a>
+            </div>
         </div>
     </main>
 </body>

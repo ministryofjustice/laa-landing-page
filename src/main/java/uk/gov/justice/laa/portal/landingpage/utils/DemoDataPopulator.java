@@ -1,24 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
+import com.microsoft.graph.models.User;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -36,6 +28,12 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * The class to populate dummy data in the local db. Flag to decide whether to
@@ -59,8 +57,6 @@ public class DemoDataPopulator {
     private final AppRoleRepository laaAppRoleRepository;
 
     private final UserProfileRepository laaUserProfileRepository;
-
-    private final GraphServiceClient graphServiceClient;
 
     @Value("${app.test.admin.userPrincipals}")
     private Set<String> adminUserPrincipals;
@@ -98,17 +94,22 @@ public class DemoDataPopulator {
     @Value("${app.submit.crime.form.details}")
     private String appSubmitCrimeFormDetails;
 
+    @Value("${app.ccms.account.link.name}")
+    private String ccmsAccountLinkName;
+
+    @Value("${app.ccms.account.link.details}")
+    private String ccmsAccountLinkDetails;
+
     public DemoDataPopulator(FirmRepository firmRepository,
-            OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
-            AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
-            UserProfileRepository laaUserProfileRepository, GraphServiceClient graphServiceClient) {
+                             OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
+                             AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
+                             UserProfileRepository laaUserProfileRepository) {
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
         this.entraUserRepository = entraUserRepository;
         this.laaAppRepository = laaAppRepository;
         this.laaAppRoleRepository = laaAppRoleRepository;
         this.laaUserProfileRepository = laaUserProfileRepository;
-        this.graphServiceClient = graphServiceClient;
     }
 
     protected EntraUser buildEntraUser(String userPrincipal, String entraId) {
@@ -118,21 +119,8 @@ public class DemoDataPopulator {
                 .entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(email).lastName("LastName")
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .build();
-    }
-
-    protected EntraUser buildEntraUser(User user) {
-        String email = user.getMail() != null ? user.getMail() : getEmailFromUserPrinciple(user.getUserPrincipalName());
-        String firstName = getFirstName(user);
-        String lastName = getSurname(user);
-
-        return EntraUser.builder().email(email)
-                .entraOid(user.getId())
-                .userProfiles(HashSet.newHashSet(11))
-                .firstName(firstName).lastName(lastName)
-                .userStatus(UserStatus.ACTIVE).startDate(LocalDateTime.now())
-                .build();
+                .userStatus(UserStatus.ACTIVE)
+                .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
     protected String getSurname(User user) {
@@ -174,8 +162,9 @@ public class DemoDataPopulator {
                 .type(FirmType.INDIVIDUAL).build();
     }
 
-    protected Office buildOffice(Firm firm, String name, String address, String phone) {
-        return Office.builder().name(name).address(address).phone(phone).firm(firm).build();
+    protected Office buildOffice(Firm firm, String code, String addrLine1, String city, String postCode) {
+        Office.Address address = Office.Address.builder().addressLine1(addrLine1).city(city).postcode(postCode).build();
+        return Office.builder().code(code).address(address).firm(firm).build();
     }
 
     protected App buildLaaApp(String entraAppOid, String name) {
@@ -192,16 +181,6 @@ public class DemoDataPopulator {
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
                 .build();
-    }
-
-    private UserType getUserType(String userPrincipal) {
-        if (adminUserPrincipals.contains(userPrincipal)) {
-            return UserType.EXTERNAL_SINGLE_FIRM_ADMIN;
-        } else if (internalUserPrincipals.contains(userPrincipal)) {
-            return UserType.INTERNAL;
-        } else {
-            return UserType.EXTERNAL_SINGLE_FIRM;
-        }
     }
 
     @EventListener
@@ -222,42 +201,15 @@ public class DemoDataPopulator {
                 Firm firm2 = buildFirm("Firm Two");
                 firmRepository.saveAll(Arrays.asList(firm1, firm2));
 
-                Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "12345");
-                Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "23456");
-                Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "34567");
-                Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "45678");
-                Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "56789");
+                Office office1 = buildOffice(firm1, "F1Office1", "Addr 1", "city1", "12345");
+                Office office2 = buildOffice(firm1, "F1Office2", "Addr 2", "city2", "23456");
+                Office office3 = buildOffice(firm2, "F2Office1", "Addr 3", "city3", "34567");
+                Office office4 = buildOffice(firm2, "F2Office2", "Addr 4", "city4", "45678");
+                Office office5 = buildOffice(firm2, "F2Office3", "Addr 5", "city5", "56789");
                 firm1.getOffices().addAll(Set.of(office1, office2));
                 firm2.getOffices().addAll(Set.of(office3, office4, office5));
                 officeRepository.saveAll(Arrays.asList(office1, office2, office3, office4, office5));
 
-                List<User> users = Objects.requireNonNull(graphServiceClient.users().get(requestConfig -> {
-                    assert requestConfig.queryParameters != null;
-                    requestConfig.queryParameters.select = new String[] { "id", "displayName", "mail", "mobilePhone",
-                        "userPrincipalName", "userType", "surname", "givenName", "signInActivity" };
-                    requestConfig.queryParameters.top = 10;
-                })).getValue();
-
-                List<EntraUser> entraUsers = new ArrayList<>();
-                assert users != null;
-                for (User user : users) {
-                    EntraUser entraUser = buildEntraUser(user);
-                    entraUsers.add(entraUser);
-                }
-
-                entraUserRepository.saveAll(entraUsers);
-
-                List<UserProfile> userProfiles = new ArrayList<>();
-
-                for (EntraUser entraUser : entraUsers) {
-                    UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-                    userProfile.setFirm(firm1);
-                    userProfiles.add(userProfile);
-                }
-
-                laaUserProfileRepository.saveAll(userProfiles);
-
-                System.out.println("Dummy Data Populated!!");
             }
         } catch (Exception ex) {
             System.err.println("Error populating dummy data!!");
@@ -269,11 +221,13 @@ public class DemoDataPopulator {
         List<Pair<String, String>> appDetailPairs = List.of(Pair.of(appPuiDetails, appPuiName),
                 Pair.of(appCivilApplyDetails, appCivilApplyName),
                 Pair.of(appCrimeApplyDetails, appCrimeApplyName),
-                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName));
+                Pair.of(appSubmitCrimeFormDetails, appSubmitCrimeFormName),
+                Pair.of(ccmsAccountLinkDetails, ccmsAccountLinkName));
 
         for (Pair<String, String> appDetailPair : appDetailPairs) {
 
-            if (appDetailPair.getRight() == null) {
+            if (appDetailPair.getRight() == null
+                    || (appDetailPair.getLeft() != null && appDetailPair.getLeft().equals("NONE"))) {
                 return;
             }
 
@@ -310,41 +264,72 @@ public class DemoDataPopulator {
         }
 
         // Users
-        Set<String> userPrinciples = new HashSet<>();
-        userPrinciples.addAll(adminUserPrincipals == null ? Collections.emptySet() : adminUserPrincipals);
-        userPrinciples.addAll(nonAdminUserPrincipals == null ? Collections.emptySet() : nonAdminUserPrincipals);
-        userPrinciples.addAll(internalUserPrincipals == null ? Collections.emptySet() : internalUserPrincipals);
+        Set<UserPrincipal> userPrinciples = new HashSet<>();
+        userPrinciples.addAll(getUserPrincipals(adminUserPrincipals, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
+        userPrinciples.addAll(getUserPrincipals(nonAdminUserPrincipals, UserType.EXTERNAL_SINGLE_FIRM));
+        userPrinciples.addAll(getUserPrincipals(internalUserPrincipals, UserType.INTERNAL));
+
         List<AppRole> appRoles = laaAppRoleRepository.findAll();
-        if (adminUserPrincipals != null) {
-            for (String userPrincipal : userPrinciples) {
-                try {
-                    if (!userPrincipal.contains(":")) {
-                        throw new RuntimeException(
-                                "Invalid user principal format, the format should be <userprinciple>:<entraid>");
+
+        for (UserPrincipal userPrincipal : userPrinciples) {
+            try {
+                EntraUser entraUser = entraUserRepository.findByEntraOid(userPrincipal.getEntraId())
+                        .orElse(buildEntraUser(userPrincipal.getEmail(), userPrincipal.getEntraId()));
+                boolean isNewUser = entraUser.getId() == null;
+                entraUserRepository.save(entraUser);
+                if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
+                    UserProfile userProfile = buildLaaUserProfile(entraUser, userPrincipal.getUserType());
+                    userProfile.getAppRoles().addAll(appRoles);
+                    if (userProfile.getUserType() != UserType.INTERNAL) {
+                        userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
                     }
-                    String mail = userPrincipal.split(":")[0];
-                    String entraId = userPrincipal.split(":")[1];
-                    EntraUser entraUser = entraUserRepository.findByEntraOid(entraId)
-                            .orElse(buildEntraUser(mail, entraId));
-                    boolean isNewUser = entraUser.getId() == null;
-                    entraUserRepository.save(entraUser);
-                    if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
-                        UserType userType = getUserType(userPrincipal);
-                        UserProfile userProfile = buildLaaUserProfile(entraUser, userType);
-                        userProfile.getAppRoles().addAll(appRoles);
-                        if (userType != UserType.INTERNAL) {
-                            userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
-                        }
-                        laaUserProfileRepository.save(userProfile);
-                    }
-                } catch (Exception e) {
-                    System.err.println(
-                            "Unable to add user to the list of users in the database, the user may not present in entra: "
-                                    + userPrincipal);
-                    e.printStackTrace();
-                    System.err.println("Continuing with the list of users in the database");
+                    laaUserProfileRepository.save(userProfile);
                 }
+            } catch (Exception e) {
+                System.err.println(
+                        "Unable to add user to the list of users in the database, the user may not present in entra: "
+                                + userPrincipal);
+                e.printStackTrace();
+                System.err.println("Continuing with the list of users in the database");
             }
+
         }
+
+
+        System.out.println("Dummy Data Populated!!");
+    }
+
+    private Set<UserPrincipal> getUserPrincipals(Set<String> userPrincipals, UserType userType) {
+        Set<UserPrincipal> userPrincipalSet = new HashSet<>();
+
+        if (userPrincipals == null || userPrincipals.isEmpty()) {
+            return userPrincipalSet;
+        }
+
+        for (String userPrincipal : userPrincipals) {
+            if ("NONE".equalsIgnoreCase(userPrincipal)) {
+                continue;
+            }
+
+            if (!userPrincipal.contains(":")) {
+                System.err.println("Invalid user principal format, the format should be <userprinciple>:<entraid>");
+                continue;
+            }
+
+            userPrincipalSet.add(UserPrincipal.builder().email(userPrincipal.split(":")[0])
+                    .entraId(userPrincipal.split(":")[1]).userType(userType).build());
+        }
+
+        return userPrincipalSet;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Getter
+    @Builder
+    private static class UserPrincipal {
+        private String email;
+        private String entraId;
+        private UserType userType;
     }
 }

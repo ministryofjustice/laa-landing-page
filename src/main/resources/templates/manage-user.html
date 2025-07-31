@@ -105,7 +105,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Services
                                 </h2>
-                                <ul class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Edit</a>
@@ -133,7 +133,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Edit</a>
@@ -143,8 +143,11 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
-                                        <dt class="govuk-summary-list__key" th:text="${office.name}"></dt>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address}"></dd>
+                                        <dt class="govuk-summary-list__key" th:text="${office.address.addressLine1}"></dt>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine1}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine2}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.city}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.postcode}"></dd>
                                     </div>
                                     <div th:if="${#lists.isEmpty(userOffices)}" class="govuk-summary-list__row">
                                         <dd class="govuk-summary-list__value">No offices assigned</dd>
