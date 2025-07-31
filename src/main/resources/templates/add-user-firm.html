@@ -34,48 +34,36 @@
                     </div>
                 </div>
             </div>
-            
+
             <h1 class="govuk-heading-l">Select the user's firm</h1>
-            
+
             <div class="govuk-form-group"
                 th:classappend="${#fields.hasErrors('firmSearch')} ? 'govuk-form-group--error'">
-                <label class="govuk-label" for="firmSearch">
+                <label class="govuk-label govuk-hint" for="firmSearch">
                     Start typing a firm and select from the list of options
                 </label>
                 <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
                     <p th:each="err : ${#fields.errors('firmSearch')}" th:text="${err}"></p>
                 </div>
                 <div class="autocomplete__wrapper">
-                    <div class="autocomplete__status" style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin-bottom: -1px; margin-right: -1px; overflow: hidden; padding: 0px; position: absolute; white-space: nowrap; width: 1px;">
+                    <div class="autocomplete__status"
+                        style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin-bottom: -1px; margin-right: -1px; overflow: hidden; padding: 0px; position: absolute; white-space: nowrap; width: 1px;">
                         <div id="firmSearch__status--A" role="status" aria-atomic="true" aria-live="polite"></div>
                         <div id="firmSearch__status--B" role="status" aria-atomic="true" aria-live="polite"></div>
                     </div>
                     <div style="position: relative; display: inline-block; width: 66.66%;">
-                        <input aria-expanded="false" 
-                               aria-controls="firmSearch__listbox" 
-                               aria-autocomplete="list" 
-                               autocomplete="off" 
-                               class="autocomplete__input autocomplete__input--default govuk-input" 
-                               id="firmSearch" 
-                               name="firmSearch" 
-                               placeholder="Type to search for a firm..." 
-                               type="text" 
-                               role="combobox"
-                               th:value="*{firmSearch}"
-                               th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null" 
-                               style="width: 100%; padding-right: 40px;" />
-                        <div id="firmSearchSpinner" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;">
-                            <div style="border: 2px solid #f3f3f3; border-top: 2px solid #1d70b8; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite;"></div>
-                        </div>
+                        <input aria-expanded="false" aria-controls="firmSearch__listbox" aria-autocomplete="list"
+                            autocomplete="off" class="autocomplete__input autocomplete__input--default govuk-input"
+                            id="firmSearch" name="firmSearch" placeholder="" type="text" role="combobox"
+                            th:value="*{firmSearch}"
+                            th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null"
+                            style="width: 100%; padding-right: 40px;" />
+                        <ul aria-labelledby="firmSearch" id="firmSearch__listbox" role="listbox"
+                            class="autocomplete__menu autocomplete__menu--inline autocomplete__menu--hidden">
+                            <!-- Search results will be populated here via JavaScript -->
+                        </ul>
                     </div>
                     <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
-                    <ul aria-labelledby="firmSearch" 
-                        id="firmSearch__listbox" 
-                        role="listbox" 
-                        class="autocomplete__menu autocomplete__menu--inline autocomplete__menu--hidden">
-                        <!-- Search results will be populated here via JavaScript -->
-                    </ul>
-                    <span id="firmSearch__assistiveHint" style="display: none;">When autocomplete results are available use up and down arrows to review and enter to select. Touch device users, explore by touch or with swipe gestures.</span>
                 </div>
             </div>
 
@@ -84,17 +72,130 @@
                 <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
             </div>
         </form>
-        
+
         <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
+            /* Style the autocomplete to look like a GOV.UK select dropdown */
+            .autocomplete__wrapper {
+                position: relative;
+            }
+
+            .autocomplete__menu {
+                background-color: #ffffff;
+                border: 2px solid #0b0c0c;
+                border-top: none;
+                box-sizing: border-box;
+                color: #0b0c0c;
+                font-family: "GDS Transport", arial, sans-serif;
+                font-size: 19px;
+                font-weight: 400;
+                line-height: 1.31579;
+                margin: 0;
+                max-height: 200px;
+                overflow-y: auto;
+                padding: 0;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                z-index: 100;
+                list-style: none;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            }
+
+            .autocomplete__menu--hidden {
+                display: none !important;
+            }
+
+            .autocomplete__menu--inline {
+                display: block;
+            }
+
+            .autocomplete__option {
+                background-color: #ffffff;
+                border-bottom: 1px solid #b1b4b6;
+                color: #0b0c0c;
+                cursor: pointer;
+                display: block;
+                font-size: 19px;
+                line-height: 1.31579;
+                padding: 8px 12px;
+                text-decoration: none;
+                position: relative;
+            }
+
+            .autocomplete__option:last-child {
+                border-bottom: none;
+            }
+
+            .autocomplete__option:hover,
+            .autocomplete__option[aria-selected="true"] {
+                background-color: #1d70b8;
+                color: #ffffff;
+            }
+
+            .autocomplete__option:hover strong,
+            .autocomplete__option[aria-selected="true"] strong {
+                color: #ffffff;
+            }
+
+            .autocomplete__option:hover small,
+            .autocomplete__option[aria-selected="true"] small {
+                color: #ffffff !important;
+            }
+
+            .autocomplete__option strong {
+                font-weight: 600;
+                display: block;
+                margin-bottom: 2px;
+            }
+
+            .autocomplete__option small {
+                font-size: 16px;
+                color: #505a5f;
+                display: block;
+            }
+
+            /* Make the input look consistent with GOV.UK select styling */
+            .autocomplete__input {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                background-color: #ffffff;
+                border: 2px solid #0b0c0c;
+                border-radius: 0;
+                box-sizing: border-box;
+                color: #0b0c0c;
+                font-family: "GDS Transport", arial, sans-serif;
+                font-size: 19px;
+                font-weight: 400;
+                line-height: 1.31579;
+                margin: 0;
+                padding: 5px 4px 4px;
+                width: 100%;
+            }
+
+            .autocomplete__input:focus {
+                border-color: #fd0;
+                box-shadow: inset 0 0 0 2px;
+                outline: 3px solid #fd0;
+                outline-offset: 0;
+            }
+
+            /* Remove the odd styling to make it more uniform like a select */
+            .autocomplete__option--odd {
+                background-color: #ffffff;
+            }
+
+            .autocomplete__option--odd:hover,
+            .autocomplete__option--odd[aria-selected="true"] {
+                background-color: #1d70b8;
+                color: #ffffff;
             }
         </style>
-        
+
         <script>
             console.log('Script loaded and executing');
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 console.log('DOM content loaded');
                 const firmSearchInput = document.getElementById('firmSearch');
                 const firmSearchListbox = document.getElementById('firmSearch__listbox');
@@ -102,39 +203,31 @@
                 const statusA = document.getElementById('firmSearch__status--A');
                 const statusB = document.getElementById('firmSearch__status--B');
                 const assistiveHint = document.getElementById('firmSearch__assistiveHint');
-                const searchSpinner = document.getElementById('firmSearchSpinner');
-                
-                console.log('Elements found:', {
-                    firmSearchInput: !!firmSearchInput,
-                    firmSearchListbox: !!firmSearchListbox,
-                    selectedFirmIdInput: !!selectedFirmIdInput,
-                    searchSpinner: !!searchSpinner
-                });
-                
+
+
                 if (!firmSearchInput) {
                     console.error('firmSearchInput element not found!');
                     return;
                 }
-                
+
                 let searchTimeout;
                 let selectedIndex = -1;
                 let currentStatusElement = statusA;
 
                 // Show assistive hint when input is focused
-                firmSearchInput.addEventListener('focus', function() {
+                firmSearchInput.addEventListener('focus', function () {
                     assistiveHint.style.display = 'block';
                 });
 
                 // Handle input changes
-                firmSearchInput.addEventListener('input', function() {
+                firmSearchInput.addEventListener('input', function () {
                     console.log('Input event fired, value:', this.value);
                     clearTimeout(searchTimeout);
                     const query = this.value.trim();
-                    
+
                     if (query.length < 1) {
                         console.log('Query too short, hiding results');
                         hideResults();
-                        hideSpinner();
                         selectedFirmIdInput.value = '';
                         return;
                     }
@@ -148,9 +241,9 @@
                 });
 
                 // Handle keyboard navigation
-                firmSearchInput.addEventListener('keydown', function(e) {
+                firmSearchInput.addEventListener('keydown', function (e) {
                     const items = firmSearchListbox.querySelectorAll('.autocomplete__option');
-                    
+
                     if (e.key === 'ArrowDown') {
                         e.preventDefault();
                         selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
@@ -172,7 +265,7 @@
                 });
 
                 // Hide results when clicking outside
-                document.addEventListener('click', function(e) {
+                document.addEventListener('click', function (e) {
                     if (!firmSearchInput.contains(e.target) && !firmSearchListbox.contains(e.target)) {
                         hideResults();
                     }
@@ -180,10 +273,9 @@
 
                 function searchFirms(query) {
                     updateStatus('Searching...');
-                    showSpinner();
-                    
+
                     console.log('Making request to:', `/admin/user/create/firm/search?q=${encodeURIComponent(query)}`);
-                    
+
                     fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
                         method: 'GET',
                         headers: {
@@ -191,32 +283,34 @@
                             'Accept': 'application/json'
                         },
                     })
-                    .then(response => {
-                        console.log('Response status:', response.status);
-                        console.log('Response headers:', response.headers);
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Search results:', data);
-                        hideSpinner();
-                        displayResults(data);
-                    })
-                    .catch(error => {
-                        console.error('Error searching firms:', error);
-                        hideSpinner();
-                        hideResults();
-                        updateStatus('Search failed: ' + error.message);
-                    });
+                        .then(response => {
+                            console.log('Response status:', response.status);
+                            console.log('Response headers:', response.headers);
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Search results:', data);
+                            displayResults(data);
+                        })
+                        .catch(error => {
+                            console.error('Error searching firms:', error);
+                            hideResults();
+                            updateStatus('Search failed: ' + error.message);
+                        });
                 }
 
                 function displayResults(firms) {
                     firmSearchListbox.innerHTML = '';
                     selectedIndex = -1;
 
-                    if (firms.length === 0) {
+                    // Check if we have a search query
+                    const currentQuery = firmSearchInput.value.trim();
+
+                    if (firms.length === 0 && currentQuery.length > 0) {
+                        // Only show "No firms found" if there's a search query but no results
                         const noResultsItem = document.createElement('li');
                         noResultsItem.className = 'autocomplete__option';
                         noResultsItem.textContent = 'No firms found';
@@ -224,29 +318,37 @@
                         noResultsItem.setAttribute('aria-selected', 'false');
                         noResultsItem.style.color = '#6f777b';
                         firmSearchListbox.appendChild(noResultsItem);
-                        
+
                         showResults();
                         updateStatus('No results found');
+                        return;
+                    } else if (firms.length === 0) {
+                        // If no search query, just hide results
+                        hideResults();
                         return;
                     }
 
                     firms.forEach((firm, index) => {
                         const item = document.createElement('li');
-                        item.className = `autocomplete__option${index % 2 === 1 ? ' autocomplete__option--odd' : ''}`;
+                        item.className = 'autocomplete__option';
                         item.setAttribute('aria-selected', 'false');
                         item.setAttribute('role', 'option');
                         item.setAttribute('tabindex', '-1');
                         item.setAttribute('id', `firmSearch__option--${index}`);
                         item.setAttribute('aria-posinset', index + 1);
                         item.setAttribute('aria-setsize', firms.length);
-                        
-                        item.innerHTML = `<strong>${escapeHtml(firm.name)}</strong><br><small style="color: #6f777b;">${escapeHtml(firm.number || 'No number available')}</small>`;
-                        
-                        item.addEventListener('click', function() {
+
+                        // Create a more select-like display format
+                        const firmName = escapeHtml(firm.name);
+                        const firmCode = firm.code && firm.code.trim() ? escapeHtml(firm.code) : 'No code available';
+
+                        item.innerHTML = `<strong>${firmName}</strong><small>Firm code: ${firmCode}</small>`;
+
+                        item.addEventListener('click', function () {
                             selectFirm(firm);
                         });
 
-                        item.addEventListener('mouseenter', function() {
+                        item.addEventListener('mouseenter', function () {
                             selectedIndex = index;
                             updateSelection(firmSearchListbox.querySelectorAll('.autocomplete__option'));
                         });
@@ -259,19 +361,24 @@
                 }
 
                 function selectFirm(firm) {
+                    console.log('Selecting firm:', firm.name);
                     firmSearchInput.value = firm.name;
                     selectedFirmIdInput.value = firm.id;
                     hideResults();
                     updateStatus(`${firm.name} selected`);
+                    console.log('Firm selected and dropdown should be hidden');
                 }
 
                 function updateSelection(items) {
                     items.forEach((item, index) => {
+                        // Add null check to prevent errors
+                        if (!item) return;
+                        
                         if (index === selectedIndex) {
                             item.setAttribute('aria-selected', 'true');
                             item.style.backgroundColor = '#1d70b8';
                             item.style.color = 'white';
-                            
+
                             // Scroll into view if needed
                             item.scrollIntoView({ block: 'nearest' });
                         } else {
@@ -284,32 +391,20 @@
 
                 function showResults() {
                     firmSearchListbox.classList.remove('autocomplete__menu--hidden');
+                    firmSearchListbox.classList.add('autocomplete__menu--inline');
                     firmSearchInput.setAttribute('aria-expanded', 'true');
                 }
 
                 function hideResults() {
+                    console.log('Hiding results');
                     firmSearchListbox.classList.add('autocomplete__menu--hidden');
+                    firmSearchListbox.classList.remove('autocomplete__menu--inline');
                     firmSearchInput.setAttribute('aria-expanded', 'false');
                     selectedIndex = -1;
-                    assistiveHint.style.display = 'none';
-                }
-
-                function showSpinner() {
-                    console.log('Showing spinner');
-                    if (searchSpinner) {
-                        searchSpinner.style.display = 'block';
-                    } else {
-                        console.error('searchSpinner element not found');
+                    if (assistiveHint) {
+                        assistiveHint.style.display = 'none';
                     }
-                }
-
-                function hideSpinner() {
-                    console.log('Hiding spinner');
-                    if (searchSpinner) {
-                        searchSpinner.style.display = 'none';
-                    } else {
-                        console.error('searchSpinner element not found');
-                    }
+                    console.log('Results hidden, classes:', firmSearchListbox.className);
                 }
 
                 function updateStatus(message) {

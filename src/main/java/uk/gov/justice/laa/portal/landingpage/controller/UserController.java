@@ -267,10 +267,7 @@ public class UserController {
     @GetMapping("/user/create/firm/search")
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
-        log.debug("Searching firms with query: '{}'", query);
         List<FirmDto> firms = firmService.getFirms();
-        log.debug("Total firms available: {}", firms.size());
-        
         // If query is empty or whitespace, return all firms
         if (query == null || query.trim().isEmpty()) {
             List<Map<String, String>> result = firms.stream()
@@ -279,14 +276,14 @@ public class UserController {
                         Map<String, String> firmData = new HashMap<>();
                         firmData.put("id", firm.getId().toString());
                         firmData.put("name", firm.getName());
-                        firmData.put("number", ""); // Placeholder for firm number if available
+                        firmData.put("code", firm.getCode());
                         return firmData;
                     })
                     .collect(Collectors.toList());
             log.debug("Returning {} firms for empty query", result.size());
             return result;
         }
-        
+
         // Filter firms based on query
         List<Map<String, String>> result = firms.stream()
                 .filter(firm -> firm.getName().toLowerCase().contains(query.toLowerCase().trim()))
@@ -295,7 +292,7 @@ public class UserController {
                     Map<String, String> firmData = new HashMap<>();
                     firmData.put("id", firm.getId().toString());
                     firmData.put("name", firm.getName());
-                    firmData.put("number", ""); // Placeholder for firm number if available
+                    firmData.put("code", firm.getCode());
                     return firmData;
                 })
                 .collect(Collectors.toList());
@@ -332,12 +329,13 @@ public class UserController {
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
                     .findFirst()
                     .orElse(null);
-            
+
             if (selectedFirm == null) {
-                result.rejectValue("firmSearch", "error.firm", "No firm found with that name. Please select from the dropdown.");
+                result.rejectValue("firmSearch", "error.firm",
+                        "No firm found with that name. Please select from the dropdown.");
                 return "add-user-firm";
             }
-            
+
             session.setAttribute("firm", selectedFirm);
         }
 
