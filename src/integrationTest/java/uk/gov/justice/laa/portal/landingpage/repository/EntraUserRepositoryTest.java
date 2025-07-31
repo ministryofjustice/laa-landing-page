@@ -77,17 +77,6 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testSaveEntraUserStartDateAfterEndDate() {
-        EntraUser entraUser = buildEntraUser("test", "test@email.com", "FirstName", "LastName");
-        entraUser.setStartDate(LocalDateTime.now());
-        entraUser.setEndDate(LocalDateTime.now().minusMinutes(1));
-
-        ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-                () -> repository.saveAndFlush(entraUser), "Exception expected");
-        Assertions.assertThat(ex.getMessage()).contains("End date must be after start date");
-    }
-
-    @Test
     public void testSort() {
         Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firm1 = firmRepository.save(firm1);

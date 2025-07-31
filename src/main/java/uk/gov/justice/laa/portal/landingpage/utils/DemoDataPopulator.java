@@ -304,6 +304,16 @@ public class DemoDataPopulator {
 
         }
 
+        System.out.println("Dummy Data Populated!!");
+    }
+
+    private Set<UserPrincipal> getUserPrincipals(Set<String> userPrincipals, UserType userType) {
+        Set<UserPrincipal> userPrincipalSet = new HashSet<>();
+
+        if (userPrincipals == null || userPrincipals.isEmpty()) {
+            return userPrincipalSet;
+        }
+
         for (String userPrincipal : userPrincipals) {
             if ("NONE".equalsIgnoreCase(userPrincipal)) {
                 continue;
