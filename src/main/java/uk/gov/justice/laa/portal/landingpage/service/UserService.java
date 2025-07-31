@@ -596,11 +596,15 @@ public class UserService {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
-            List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
-            Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+            if (selectedOffices.contains("ALL")) {
+                userProfile.setOffices(null);
+            } else {
+                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+                Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
 
-            // Update user profile offices
-            userProfile.setOffices(offices);
+                // Update user profile offices
+                userProfile.setOffices(offices);
+            }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {

@@ -872,17 +872,8 @@ public class UserController {
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
-        if (selectedOffices.contains("ALL")) {
+        if (!selectedOffices.contains("ALL")) {
             // If "ALL" is selected, get all available offices by firm
-            List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
-            List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
-            List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
-            selectedOffices = allOffices.stream()
-                    .map(office -> office.getId().toString())
-                    .collect(Collectors.toList());
-            selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getCode).toList();
-        } else {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1238,17 +1229,7 @@ public class UserController {
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
-        if (selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available offices by firm
-            List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
-            List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
-            List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
-            selectedOffices = allOffices.stream()
-                    .map(office -> office.getId().toString())
-                    .collect(Collectors.toList());
-            selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getCode).toList();
-        } else {
+        if (!selectedOffices.contains("ALL")) {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
