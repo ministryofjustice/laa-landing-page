@@ -61,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -672,8 +673,12 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
@@ -694,15 +699,19 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
     void addUserCheckAnswersPost() {
         HttpSession session = new MockHttpSession();
-        EntraUserDto user = new EntraUserDto();
-        session.setAttribute("user", user);
+        EntraUserDto userDto = new EntraUserDto();
+        session.setAttribute("user", userDto);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         EntraUser entraUser = EntraUser.builder().build();
@@ -710,8 +719,12 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
         assertThat(session.getAttribute("firm")).isNull();
         assertThat(session.getAttribute("userType")).isNull();
         verify(eventService).logEvent(any());
@@ -731,6 +744,7 @@ class UserControllerTest {
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("userProfile")).isNull();
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(logEvents).hasSize(1);
     }
@@ -740,8 +754,12 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
+        UserProfileDto userProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
+        session.setAttribute("userProfile", userProfile);
         String view = userController.addUserCreated(model, session);
         assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNull();
+        assertThat(model.getAttribute("userProfile")).isNotNull();
         assertThat(view).isEqualTo("add-user-created");
     }
 
@@ -1989,7 +2007,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
-        EntraUser entraUser = EntraUser.builder().build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester")))
                 .thenReturn(entraUser);
 
@@ -2018,6 +2036,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users");
         assertThat(testSession.getAttribute("user")).isNull();
+        assertThat(testSession.getAttribute("userProfile")).isNull();
         assertThat(testSession.getAttribute("firm")).isNull();
         assertThat(testSession.getAttribute("isFirmAdmin")).isNull();
         assertThat(testSession.getAttribute("apps")).isNull();
@@ -2337,6 +2356,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("userOffices")).isNotNull(); // Will be empty list, not null
     }
 
+
     @Test
     void addUserCreated_shouldRemoveUserFromSession() {
         // Given
@@ -2344,8 +2364,11 @@ class UserControllerTest {
         user.setFirstName("Test");
         user.setLastName("User");
 
+        UserProfileDto userProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", user);
+        testSession.setAttribute("userProfile", userProfile);
 
         // When
         String view = userController.addUserCreated(model, testSession);
@@ -2354,6 +2377,8 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-created");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(testSession.getAttribute("user")).isNull();
+        assertThat(testSession.getAttribute("userProfile")).isNull();
+        assertThat(model.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
