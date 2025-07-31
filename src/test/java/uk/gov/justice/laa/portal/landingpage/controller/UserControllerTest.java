@@ -1323,18 +1323,6 @@ class UserControllerTest {
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("ALL")); // Special value for "Access to all offices"
 
-        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-        Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
-        Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
-
-        // Mock firm service to return user firms
-        UUID firmId = UUID.randomUUID();
-        FirmDto firmDto = FirmDto.builder().id(firmId).name("Test Firm").build();
-        when(firmService.getUserFirmsByUserId(userId)).thenReturn(List.of(firmDto));
-
-        // Mock office service to return offices by firms
-        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
-
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -1347,8 +1335,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        // Should pass all office IDs to the service
-        List<String> expectedOfficeIds = List.of(office1.getId().toString(), office2.getId().toString());
+        // Should pass 'All' to service when option is selected
+        List<String> expectedOfficeIds = List.of("ALL");
         verify(userService).updateUserOffices(userId, expectedOfficeIds);
     }
 
@@ -2808,15 +2796,6 @@ class UserControllerTest {
         OfficesForm officesForm = new OfficesForm();
         officesForm.setOffices(List.of("ALL")); // Special "ALL" value
 
-        UUID office1Id = UUID.randomUUID();
-        UUID office2Id = UUID.randomUUID();
-        Office office1 = Office.builder().id(office1Id).code("Office 1").build();
-        Office office2 = Office.builder().id(office2Id).code("Office 2").build();
-
-        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
-        final List<FirmDto> userFirms = List.of(firmDto);
-        final List<Office> allOffices = List.of(office1, office2);
-
         UserProfileDto userProfileDto = new UserProfileDto();
         EntraUserDto entraUser = new EntraUserDto();
         userProfileDto.setEntraUser(entraUser);
@@ -2828,8 +2807,6 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
-        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
@@ -2839,8 +2816,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
 
-        // Should pass all office IDs to the service
-        List<String> expectedOfficeIds = List.of(office1Id.toString(), office2Id.toString());
+        // Should pass 'ALL' to service when option is selected
+        List<String> expectedOfficeIds = List.of("ALL");
         verify(userService).updateUserOffices(userId, expectedOfficeIds);
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }

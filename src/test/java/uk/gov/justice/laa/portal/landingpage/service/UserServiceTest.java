@@ -1725,6 +1725,36 @@ class UserServiceTest {
     class UpdateUserOfficesTests {
 
         @Test
+        void updateUserOffices_saveOrRemoveOffices_whenUserAndProfileExistAndAllOfficesChosen() throws IOException {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(entraUser);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfile);
+
+            List<String> selectedOffices = List.of("ALL");
+
+            // Act
+            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+
+            // Assert
+            assertThat(userProfile.getOffices()).isNull();
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
         void updateUserOffices_updatesOffices_whenUserAndProfileExist() throws IOException {
             // Arrange
             UUID entraUserId = UUID.randomUUID();
