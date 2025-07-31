@@ -49,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -227,39 +228,9 @@ public class UserService {
         return dto;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
-            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
-        List<UserType> types;
-        Page<UserProfile> pageOfUsers;
+    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        if (Objects.isNull(firmList)) {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else if (isInternal) {
-                types = UserType.INTERNAL_TYPES;
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = userProfileRepository.findByUserTypes(types, pageRequest);
-            } else {
-                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                        searchTerm, types, pageRequest);
-            }
-        } else {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = userProfileRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
-            } else {
-                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                        searchTerm, types, firmList, pageRequest);
-            }
-        }
-        return getPageOfUsers(() -> pageOfUsers);
+        return getPageOfUsers(() -> entraUserRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest));
     }
 
     protected Sort getSort(String field, String direction) {
@@ -380,9 +351,11 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
+        Set<AppRole> appRoles = getAuthzAppRoleByUserType(userType).map(Set::of).orElseGet(Set::of);
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .userType(userType)
+                .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
                 .firm(firm)
@@ -429,9 +402,12 @@ public class UserService {
 
         if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
             grantedAuthorities = user.getUserProfiles().stream()
-                    .map(userProfile -> userProfile.getUserType().name())
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .map(Enum::name)
                     .toList();
-
         }
         return grantedAuthorities;
     }
@@ -613,11 +589,12 @@ public class UserService {
         }
     }
 
-    public boolean isInternal(EntraUser entraUser) {
-        List<UserType> userTypes = entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getUserType).toList();
-        return userTypes.contains(UserType.INTERNAL);
+    public boolean isInternal(String userId) {
+        return isInternal(UUID.fromString(userId));
+    }
+
+    public boolean isInternal(UUID userId) {
+        return getUserPermissionsByUserId(userId).contains(Permission.VIEW_INTERNAL_USER);
     }
 
     public boolean isAccessGranted(String userId) {
@@ -724,6 +701,31 @@ public class UserService {
             }
         }
         return usersPersisted;
+    }
+
+    private Optional<AppRole> getAuthzAppRoleByUserType(UserType userType) {
+        if (userType.getAuthzRoleName() != null) {
+            return appRoleRepository.findByName(userType.getAuthzRoleName()).filter(AppRole::isAuthzRole);
+        }
+        return Optional.empty();
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(String userId) {
+        return getUserPermissionsByUserId(UUID.fromString(userId));
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(UUID userId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(userId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .collect(Collectors.toSet());
+        }
+        return Collections.emptySet();
     }
 
     public List<UUID> getInternalUserEntraIds() {

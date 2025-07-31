@@ -41,6 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -50,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -76,32 +78,46 @@ public class UserController {
     private final EventService eventService;
     private final FirmService firmService;
     private final ModelMapper mapper;
+    private final AccessControlService accessControlService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
      */
     @GetMapping("/users")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
     public String displayAllUsers(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "sort", required = false) String sort,
             @RequestParam(name = "direction", required = false) String direction,
             @RequestParam(name = "usertype", required = false) String usertype,
-            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        boolean internal = userService.isInternal(entraUser);
-        if (!internal) {
-            List<UUID> userFirms = firmService.getUserFirms(entraUser).stream().map(FirmDto::getId).toList();
-            paginatedUsers = getPageOfUsersForExternal(userFirms, search, showFirmAdmins, page, size, sort, direction);
+        boolean internal = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean canSeeAllUsers = internal && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        List<Permission> permissions = new ArrayList<>();
+        if (showFirmAdmins) {
+            permissions.add(Permission.CREATE_EXTERNAL_USER);
+        }
+        if (canSeeAllUsers) {
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, page, size, sort, direction);
+        } else if (internal) {
+            permissions.add(Permission.VIEW_INTERNAL_USER);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, page, size, sort, direction);
         } else {
-            if (Objects.isNull(usertype)) {
-                usertype = "external";
+            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+            if (optionalFirm.isPresent()) {
+                FirmDto firm = optionalFirm.get();
+                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, firm.getId(), page, size, sort, direction);
+            } else {
+                // Shouldn't happen, but return nothing if external user has no firm
+                paginatedUsers = new PaginatedUsers();
             }
-            paginatedUsers = getPageOfUsersForInternal(usertype, search, showFirmAdmins, page, size, sort, direction);
         }
 
         String successMessage = (String) session.getAttribute("successMessage");
@@ -121,23 +137,10 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        boolean allowCreateUser = userService.isUserCreationAllowed(entraUser);
+        boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
 
         return "users";
-    }
-
-    protected PaginatedUsers getPageOfUsersForExternal(List<UUID> userFirms, String searchTerm, boolean showFirmAdmins,
-            int page, int size, String sort, String direction) {
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, false, showFirmAdmins, userFirms, page, size, sort,
-                direction);
-    }
-
-    protected PaginatedUsers getPageOfUsersForInternal(String userType, String searchTerm, boolean showFirmAdmins,
-            int page, int size, String sort, String direction) {
-        boolean isInternal = !userType.equals("external");
-        return userService.getPageOfUsersByNameOrEmail(searchTerm, isInternal, showFirmAdmins, null, page, size, sort,
-                direction);
     }
 
     @GetMapping("/users/edit/{id}")
@@ -184,6 +187,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/details")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
@@ -207,6 +211,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/details")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String postUser(
             @Valid UserDetailsForm userDetailsForm, BindingResult result,
             HttpSession session, Model model) {
@@ -255,6 +260,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/services")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String selectUserApps(ApplicationsForm applicationsForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         // TODO: Make this use the selected user type rather than a hard-coded type. Our
@@ -273,6 +279,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/services")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String setSelectedApps(ApplicationsForm applicationsForm, Model model,
             HttpSession session) {
         if (applicationsForm.getApps() == null || applicationsForm.getApps().isEmpty()) {
@@ -284,6 +291,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/roles")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
@@ -320,6 +328,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/roles")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String setSelectedRoles(@Valid RolesForm rolesForm, BindingResult result,
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
@@ -370,6 +379,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String offices(OfficesForm officesForm, HttpSession session, Model model) {
         OfficeData selectedOfficeData = getObjectFromHttpSession(session, "officeData", OfficeData.class)
                 .orElseGet(OfficeData::new);
@@ -394,6 +404,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String postOffices(@Valid OfficesForm officesForm, BindingResult result, Model model, HttpSession session) {
 
         if (result.hasErrors()) {
@@ -430,6 +441,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String getUserCheckAnswers(Model model, HttpSession session) {
         EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
@@ -444,8 +456,7 @@ public class UserController {
     }
 
     @PostMapping("/user/create/check-answers")
-    // @PreAuthorize("hasAuthority('SCOPE_User.ReadWrite.All') and
-    // hasAuthority('SCOPE_Directory.ReadWrite.All')")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
@@ -473,6 +484,7 @@ public class UserController {
     }
 
     @GetMapping("/user/create/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String addUserCreated(Model model, HttpSession session) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile", UserProfileDto.class);
@@ -510,7 +522,7 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
@@ -534,7 +546,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
             @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
             HttpSession session) throws IOException {
@@ -773,7 +785,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @GetMapping("/users/edit/{id}/offices")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -836,7 +848,7 @@ public class UserController {
      * @throws IOException If an error occurs during user office update
      */
     @PostMapping("/users/edit/{id}/offices")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Authentication authentication,

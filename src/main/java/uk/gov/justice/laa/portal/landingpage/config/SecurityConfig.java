@@ -17,6 +17,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -92,9 +93,9 @@ public class SecurityConfig {
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
             .requestMatchers("/admin/users/**", "/pda/**")
-                .hasAnyAuthority(UserType.ADMIN_TYPES)
+                .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
             .requestMatchers("admin/user/**")
-                .hasAnyAuthority(UserType.USER_CREATION_TYPES)
+                .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
             .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
             ).permitAll()
             .requestMatchers("/actuator/**")
