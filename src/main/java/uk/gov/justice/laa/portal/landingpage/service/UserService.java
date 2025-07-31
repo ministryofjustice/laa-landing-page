@@ -608,8 +608,8 @@ public class UserService {
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
-        logger.warn("User profile with id {} not found. Could not update offices.", userId);
-        throw new IOException("User profile not found for user ID: " + userId);
+            logger.warn("User profile with id {} not found. Could not update offices.", userId);
+            throw new IOException("User profile not found for user ID: " + userId);
         }
     }
 
