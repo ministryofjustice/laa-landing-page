@@ -28,7 +28,7 @@
             <p class="govuk-body">You can:</p>
             
             <ul class="govuk-list govuk-list--bullet">
-                <li><a th:href="@{'/admin/users/grant-access/' + ${user.id}}" class="govuk-link">add user permissions and offices</a></li>
+                <li><a th:href="@{'/admin/users/grant-access/' + ${userProfile.id}} + '/apps'" class="govuk-link">add user permissions and offices</a></li>
                 <li><a href="/admin/user/create/details" class="govuk-link">create another new user</a></li>
             </ul>
             
