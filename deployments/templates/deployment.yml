@@ -86,6 +86,12 @@ spec:
               value: "${APP_SUBMIT_CRIME_FORM_DETAILS}"
             - name: APP_SUBMIT_CRIME_FORM_URL
               value: "${APP_SUBMIT_CRIME_FORM_URL}"
+            - name: APP_CCMS_ACCOUNT_LINK_NAME
+              value: "${APP_CCMS_ACCOUNT_LINK_NAME}"
+            - name: APP_CCMS_ACCOUNT_LINK_DETAILS
+              value: "${APP_CCMS_ACCOUNT_LINK_DETAILS}"
+            - name: APP_CCMS_ACCOUNT_LINK_URL
+              value: "${APP_CCMS_ACCOUNT_LINK_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE

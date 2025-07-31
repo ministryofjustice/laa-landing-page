@@ -61,10 +61,13 @@ class DemoDataPopulatorTest {
         ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyName", "Crime Apply");
         ReflectionTestUtils.setField(demoDataPopulator, "appPuiName", "PUI");
         ReflectionTestUtils.setField(demoDataPopulator, "appSubmitCrimeFormName", "Submit a crime form");
+        ReflectionTestUtils.setField(demoDataPopulator, "ccmsAccountLinkName", "Requests to transfer CCMS cases");
         ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyDetails",
                 "crime_apply_oid//APPREG-USER-Access-LAAD-Apply-Criminal-Legal-Aid//6466b2ed-1103-4588-9c28-561ec9dafa5d");
         ReflectionTestUtils.setField(demoDataPopulator, "appCivilApplyDetails",
                 "civil_apply_oid//AppReg-User-Access-LAAD-Apply-Civil-Legal-Aid//3e3003ee-2183-4058-8279-4a557daba8c8");
+        ReflectionTestUtils.setField(demoDataPopulator, "ccmsAccountLinkDetails",
+                "ccms_account_link_oid//APPREG-User-Access-LAAD-CCMS transfer requests//8a9f8798-a581-4b75-b22b-ef1c32ca12ba");
     }
 
     @Test
@@ -150,8 +153,8 @@ class DemoDataPopulatorTest {
         ReflectionTestUtils.setField(demoDataPopulator, "internalUserPrincipals", Set.of("testinternaluser@email.com:1234"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
-        Mockito.verify(laaAppRepository, Mockito.times(4)).save(Mockito.any(App.class));
-        Mockito.verify(laaAppRoleRepository, Mockito.times(8)).save(Mockito.any(AppRole.class));
+        Mockito.verify(laaAppRepository, Mockito.times(5)).save(Mockito.any(App.class));
+        Mockito.verify(laaAppRoleRepository, Mockito.times(10)).save(Mockito.any(AppRole.class));
     }
 
     @Test
