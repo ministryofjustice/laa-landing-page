@@ -32,20 +32,20 @@
           # Add LASSIE as an app to app table
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO app (id, name, security_group_name, security_group_oid) VALUES (gen_random_uuid(), 'LASSIE', 'LASSIE', 'LASSIE')"
+              sql: "INSERT INTO app (id, name, security_group_name, security_group_oid) VALUES (gen_random_uuid(), 'Manage Your Users', 'Manage Your Users', 'Manage Your Users')"
           # Insert new internal roles into app role table linked to LASSIE app.
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'LASSIE'), gen_random_uuid(), 'Internal User Manager', 'An internal LAA user manager', 'INTERNAL', ARRAY['INTERNAL'], true)"
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Internal User Manager', 'An internal LAA user manager', 'INTERNAL', ARRAY['INTERNAL'], true)"
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'LASSIE'), gen_random_uuid(), 'External User Manager', 'An external firm user manager', 'INTERNAL_AND_EXTERNAL', ARRAY['INTERNAL', 'EXTERNAL_SINGLE_FIRM'], true)"
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Manager', 'An external firm user manager', 'INTERNAL_AND_EXTERNAL', ARRAY['INTERNAL', 'EXTERNAL_SINGLE_FIRM'], true)"
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'LASSIE'), gen_random_uuid(), 'External User Admin', 'An external firm admin', 'INTERNAL', ARRAY['INTERNAL'], true)"
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Admin', 'An external firm admin', 'INTERNAL', ARRAY['INTERNAL'], true)"
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'LASSIE'), gen_random_uuid(), 'Global Admin', 'A global administrator', 'INTERNAL', ARRAY['INTERNAL'], true)"
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Global Admin', 'A global administrator', 'INTERNAL', ARRAY['INTERNAL'], true)"
           # Internal user manager permissions.
           - sql:
               dbms: postgresql

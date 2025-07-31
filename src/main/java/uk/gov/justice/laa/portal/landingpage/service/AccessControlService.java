@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -61,8 +62,8 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<EntraUserDto> optionalAccessedUser = userService.getEntraUserById(userId);
-        if (optionalAccessedUser.isEmpty()) {
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userId);
+        if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
 
@@ -71,7 +72,7 @@ public class AccessControlService {
             return true;
         }
 
-        EntraUserDto accessedUser = optionalAccessedUser.get();
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
         boolean internalManagerCanEditInternalUser = userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId());
         if (internalManagerCanEditInternalUser) {
             return true;

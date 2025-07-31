@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -170,6 +171,7 @@ public class AccessControlServiceTest {
         UUID accessedUserId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().id(authenticatedUserId).email("test@email.com").userProfiles(HashSet.newHashSet(1)).build();
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
         Permission userPermission = Permission.EDIT_INTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
@@ -178,7 +180,7 @@ public class AccessControlServiceTest {
 
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(userService.isInternal(accessedUser.getId())).thenReturn(Boolean.TRUE);
-        Mockito.when(userService.getEntraUserById(any())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canEditUser(authenticatedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -198,6 +200,7 @@ public class AccessControlServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).email("test@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).appRoles(Set.of(appRole)).build();
         entraUser.getUserProfiles().add(userProfile);
@@ -207,7 +210,7 @@ public class AccessControlServiceTest {
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
         Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
 
 
         boolean result = accessControlService.canEditUser(accessedUserId.toString());
@@ -228,13 +231,14 @@ public class AccessControlServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).email("test@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
                 .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         entraUser.getUserProfiles().add(userProfile);
 
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
