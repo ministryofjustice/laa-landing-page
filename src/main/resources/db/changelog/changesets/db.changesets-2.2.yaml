@@ -1,0 +1,10 @@
+databaseChangeLog:
+- changeSet:
+    id: 1753886610739-1
+    author: suresh.kavali (generated)
+    changes:
+    - modifyDataType:
+        columnName: post_code
+        newDataType: varchar(20)
+        tableName: office
+
