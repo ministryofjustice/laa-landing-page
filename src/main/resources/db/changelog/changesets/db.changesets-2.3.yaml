@@ -1,0 +1,99 @@
+  databaseChangeLog:
+    - changeSet:
+        id: 1753886610740-1
+        author: niall.mcmahon
+        changes:
+          - dropColumn:
+              columnName: permission_id
+              tableName: role_permission
+    - changeSet:
+        id: 1753886610740-2
+        author: niall.mcmahon
+        changes:
+          - addColumn:
+              columns:
+                - column:
+                    constraints:
+                      nullable: false
+                    name: permission
+                    type: VARCHAR(255)
+              tableName: role_permission
+    - changeSet:
+        id: 1753886610740-3
+        author: niall.mcmahon
+        changes:
+          - dropTable:
+              tableName: permission
+    # Populate internal lassie roles and permissions.
+    - changeSet:
+        id: 1753886610740-4
+        author: niall.mcmahon
+        changes:
+          # Add LASSIE as an app to app table
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO app (id, name, security_group_name, security_group_oid) VALUES (gen_random_uuid(), 'Manage Your Users', 'Manage Your Users', 'Manage Your Users')"
+          # Insert new internal roles into app role table linked to LASSIE app.
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Internal User Manager', 'An internal LAA user manager', 'INTERNAL', ARRAY['INTERNAL'], true)"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Manager', 'An external firm user manager', 'INTERNAL_AND_EXTERNAL', ARRAY['INTERNAL', 'EXTERNAL_SINGLE_FIRM'], true)"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Admin', 'An external firm admin', 'INTERNAL', ARRAY['INTERNAL'], true)"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Global Admin', 'A global administrator', 'INTERNAL', ARRAY['INTERNAL'], true)"
+          # Internal user manager permissions.
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'VIEW_INTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'EDIT_INTERNAL_USER')"
+          # External user manager permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_EXTERNAL_USER');"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'EDIT_EXTERNAL_USER');"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'EDIT_USER_OFFICE')"
+          # External user admin permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_EXTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'CREATE_EXTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'EDIT_EXTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'EDIT_USER_OFFICE')"
+          # Global Admin permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_INTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_EXTERNAL_USER');"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'CREATE_EXTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_INTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_EXTERNAL_USER')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_USER_OFFICE')"
+
+

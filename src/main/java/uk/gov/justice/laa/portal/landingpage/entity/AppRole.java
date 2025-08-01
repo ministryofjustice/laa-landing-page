@@ -3,7 +3,9 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -88,11 +90,11 @@ public class AppRole extends BaseEntity {
     @ColumnDefault("false")
     private boolean authzRole;
 
-    @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @ToString.Exclude
-    @JsonIgnore
-    @Builder.Default
-    private Set<Permission> permissions = new HashSet<>();
+    @ElementCollection(targetClass = Permission.class, fetch = FetchType.LAZY)
+    @CollectionTable(name = "role_permission", joinColumns = @JoinColumn(name = "app_role_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permission")
+    private Set<Permission> permissions;
 
     @OneToMany(mappedBy = "assigningRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude

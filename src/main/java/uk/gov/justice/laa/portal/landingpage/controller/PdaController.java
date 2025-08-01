@@ -42,7 +42,7 @@ public class PdaController {
     public String getFirms(Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<FirmDto> list;
-        if (userService.isInternal(entraUser)) {
+        if (userService.isInternal(entraUser.getId())) {
             list = firmService.getFirms();
         } else {
             list = firmService.getUserFirms(entraUser);
@@ -54,7 +54,7 @@ public class PdaController {
     @GetMapping("/firm/{id}")
     public String getFirm(@PathVariable String id, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        if (!userService.isInternal(entraUser)) {
+        if (!userService.isInternal(entraUser.getId())) {
             boolean isMyFirm = firmService.getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
             if (!isMyFirm) {
                 log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraOid());
@@ -70,7 +70,7 @@ public class PdaController {
     public String getOffices(Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<OfficeDto> list;
-        if (userService.isInternal(entraUser)) {
+        if (userService.isInternal(entraUser.getId())) {
             list = officeService.getOffices().stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
         } else {
             list = officeService.getUserOffices(entraUser);
@@ -84,7 +84,7 @@ public class PdaController {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         Office office = officeService.getOffice(UUID.fromString(id));
         UUID myFirmId = office.getFirm().getId();
-        if (!userService.isInternal(entraUser)) {
+        if (!userService.isInternal(entraUser.getId())) {
             boolean isMyOffice = entraUser.getUserProfiles()
                     .stream().filter(UserProfile::isActiveProfile)
                     .anyMatch(userProfile -> userProfile.getFirm().getId().equals(myFirmId));

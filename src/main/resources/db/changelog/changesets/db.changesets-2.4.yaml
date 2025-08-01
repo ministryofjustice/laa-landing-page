@@ -1,0 +1,25 @@
+databaseChangeLog:
+- changeSet:
+    id: 1754039362873-1
+    author: system
+    changes:
+      - sql:
+          dbms: postgresql
+          sql: "alter table app_role
+                  add constraint app_role_role_type_check
+                  check ((role_type)::text = ANY
+                  ((ARRAY ['INTERNAL'::character varying, 'EXTERNAL'::character varying, 'INTERNAL_AND_EXTERNAL'::character varying])::text[]))"
+      - sql:
+          dbms: postgresql
+          sql: "alter table entra_user
+                  add constraint entra_user_status_check
+                  check ((status)::text = ANY
+                  ((ARRAY ['ACTIVE'::character varying, 'DEACTIVE'::character varying, 'AWAITING_USER_APPROVAL'::character varying])::text[]))"
+      - sql:
+          dbms: postgresql
+          sql: "alter table firm
+                  add constraint firm_type_check
+                  check ((type)::text = ANY
+                  ((ARRAY ['ADVOCATE'::character varying, 'CHAMBERS'::character varying, 'INDIVIDUAL'::character varying, 'LEGAL_SERVICES_PROVIDER'::character varying, 
+                  'QM_PROVIDER'::character varying, 'PARTNERSHIP'::character varying, 'LIMITED_COMPANY'::character varying, 'LLP'::character varying, 'SOLE_PRACTITIONER'::character varying, 
+                  'CHARITY'::character varying, 'GOVERNMENT_FUNDED_ORGANISATION'::character varying, 'NA'::character varying])::text[]))"

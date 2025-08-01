@@ -49,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -135,7 +136,7 @@ public class UserService {
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
+                    .filter(appRole -> appRole.isAuthzRole() || (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -227,44 +228,19 @@ public class UserService {
         return dto;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
-            List<UUID> firmList, int page, int pageSize, String sort, String direction) {
-        List<UserType> types;
-        Page<UserProfile> pageOfUsers;
+    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        if (Objects.isNull(firmList)) {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else if (isInternal) {
-                types = UserType.INTERNAL_TYPES;
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = userProfileRepository.findByUserTypes(types, pageRequest);
-            } else {
-                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                        searchTerm, types, pageRequest);
-            }
-        } else {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = userProfileRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
-            } else {
-                pageOfUsers = userProfileRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                        searchTerm, types, firmList, pageRequest);
-            }
-        }
-        return getPageOfUsers(() -> pageOfUsers);
+        Page<EntraUser> entraUserPage = entraUserRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
+        Page<UserProfile> userProfilePage = entraUserPage.map(user -> user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .orElse(null));
+        return getPageOfUsers(() -> userProfilePage);
     }
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userProfileStatus"), Sort.Order.desc("createdDate"));
+            return Sort.by(Sort.Order.asc("userProfile.userProfileStatus"), Sort.Order.desc("userProfile.createdDate"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -273,10 +249,10 @@ public class UserService {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
         return switch (field.toUpperCase()) {
-            case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
-            case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
-            case "EMAIL" -> Sort.by(order, "entraUser.email");
-            case "USERSTATUS" -> Sort.by(order, "entraUser.userStatus");
+            case "FIRSTNAME" -> Sort.by(order, "firstName");
+            case "LASTNAME" -> Sort.by(order, "lastName");
+            case "EMAIL" -> Sort.by(order, "email");
+            case "USERSTATUS" -> Sort.by(order, "userStatus");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }
@@ -380,9 +356,11 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
+        Set<AppRole> appRoles = getAuthzAppRoleByUserType(userType).map(Set::of).orElseGet(Set::of);
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .userType(userType)
+                .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
                 .firm(firm)
@@ -429,9 +407,12 @@ public class UserService {
 
         if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
             grantedAuthorities = user.getUserProfiles().stream()
-                    .map(userProfile -> userProfile.getUserType().name())
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .map(Enum::name)
                     .toList();
-
         }
         return grantedAuthorities;
     }
@@ -503,7 +484,7 @@ public class UserService {
             App app = optionalApp.get();
             RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
+                    .filter(appRole -> appRole.isAuthzRole() || appRole.getRoleType().equals(userRoleType)
                             || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .toList();
@@ -613,11 +594,12 @@ public class UserService {
         }
     }
 
-    public boolean isInternal(EntraUser entraUser) {
-        List<UserType> userTypes = entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getUserType).toList();
-        return userTypes.contains(UserType.INTERNAL);
+    public boolean isInternal(String userId) {
+        return isInternal(UUID.fromString(userId));
+    }
+
+    public boolean isInternal(UUID userId) {
+        return getUserPermissionsByUserId(userId).contains(Permission.VIEW_INTERNAL_USER);
     }
 
     public boolean isAccessGranted(String userId) {
@@ -724,6 +706,31 @@ public class UserService {
             }
         }
         return usersPersisted;
+    }
+
+    private Optional<AppRole> getAuthzAppRoleByUserType(UserType userType) {
+        if (userType.getAuthzRoleName() != null) {
+            return appRoleRepository.findByName(userType.getAuthzRoleName()).filter(AppRole::isAuthzRole);
+        }
+        return Optional.empty();
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(String userId) {
+        return getUserPermissionsByUserId(UUID.fromString(userId));
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(UUID userId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(userId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .collect(Collectors.toSet());
+        }
+        return Collections.emptySet();
     }
 
     public List<UUID> getInternalUserEntraIds() {

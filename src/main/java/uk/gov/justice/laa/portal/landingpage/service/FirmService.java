@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,14 @@ public class FirmService {
         return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
     }
 
+    public Optional<FirmDto> getUserFirm(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm)
+                .map(firm -> mapper.map(firm, FirmDto.class));
+    }
+
     public List<FirmDto> getUserFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
@@ -61,5 +70,22 @@ public class FirmService {
                     return userProfileDto.getFirm() != null ? List.of(userProfileDto.getFirm()) : List.<FirmDto>of();
                 })
                 .orElse(List.of());
+    }
+
+    /**
+     * Search for firms by name or code
+     * 
+     * @param searchTerm The search term to match against firm name or code
+     * @return List of FirmDto objects that match the search term
+     */
+    public List<FirmDto> searchFirms(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return getFirms();
+        }
+        
+        return firmRepository.findByNameOrCodeContaining(searchTerm.trim())
+                .stream()
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .collect(Collectors.toList());
     }
 }
