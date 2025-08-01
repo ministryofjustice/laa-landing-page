@@ -547,6 +547,8 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedFirm,
                     userType, currentUserDto.getName());
+            session.setAttribute("userProfile",
+                    mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                     selectedFirm.getName(), userType);
             eventService.logEvent(createUserAuditEvent);
@@ -563,13 +565,16 @@ public class UserController {
     @GetMapping("/user/create/confirmation")
     public String addUserCreated(Model model, HttpSession session) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
-        if (userOptional.isPresent()) {
+        Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile", UserProfileDto.class);
+        if (userOptional.isPresent() && userProfileOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
+            model.addAttribute("userProfile", userProfileOptional.get());
         } else {
             log.error("No user attribute was present in request. User not added to model.");
         }
         session.removeAttribute("user");
+        session.removeAttribute("userProfile");
         return "add-user-created";
     }
 
@@ -962,17 +967,8 @@ public class UserController {
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
-        if (selectedOffices.contains("ALL")) {
+        if (!selectedOffices.contains("ALL")) {
             // If "ALL" is selected, get all available offices by firm
-            List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
-            List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
-            List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
-            selectedOffices = allOffices.stream()
-                    .map(office -> office.getId().toString())
-                    .collect(Collectors.toList());
-            selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getCode).toList();
-        } else {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1328,17 +1324,7 @@ public class UserController {
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
-        if (selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available offices by firm
-            List<FirmDto> userFirms = firmService.getUserFirmsByUserId(id);
-            List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
-            List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
-            selectedOffices = allOffices.stream()
-                    .map(office -> office.getId().toString())
-                    .collect(Collectors.toList());
-            selectOfficesDisplay = allOffices.stream()
-                    .map(Office::getCode).toList();
-        } else {
+        if (!selectedOffices.contains("ALL")) {
             Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
