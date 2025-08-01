@@ -3,7 +3,10 @@ name: Deploy Test
 on:
   workflow_dispatch:
   push:
-    branches: [test]
+    branches: 
+      - test
+    tags:
+      - 'v*.*.*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
