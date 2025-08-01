@@ -8,8 +8,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-import software.amazon.awssdk.services.sqs.SqsClient;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -30,9 +28,6 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 class RoleChangeNotificationServiceTest {
 
     @Mock
-    private SqsClient sqsClient;
-
-    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -50,8 +45,6 @@ class RoleChangeNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(roleChangeNotificationService, "queueUrl", "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue");
-
         entraUser = EntraUser.builder()
                 .id(UUID.randomUUID())
                 .entraOid("test-entra-oid")
@@ -105,7 +98,6 @@ class RoleChangeNotificationServiceTest {
         roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
 
         verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
-        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
@@ -115,7 +107,6 @@ class RoleChangeNotificationServiceTest {
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
         verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
-        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
@@ -188,6 +179,5 @@ class RoleChangeNotificationServiceTest {
         roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
 
         verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
-        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 }

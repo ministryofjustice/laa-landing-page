@@ -156,7 +156,7 @@ public class UserService {
             userProfileRepository.saveAndFlush(userProfile);
 
             // TODO send message to CCMS if PUI roles are added/removed
-            roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
