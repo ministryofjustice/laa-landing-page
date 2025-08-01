@@ -2,8 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'home'},
-      navigation=~{::#navigation})}" xmlns:th="http://www.thymeleaf.org">
+      pageCategory=${'home'})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Homepage</title>
@@ -11,65 +10,42 @@
 
 <body>
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
-    <nav class="moj-sub-navigation" aria-label="Sub navigation" id="navigation">
-        <ul class="moj-sub-navigation__list">
-            <li class="moj-sub-navigation__item">
-                <a class="moj-sub-navigation__link" aria-current="page" href="#1">Services</a>
-            </li>
-
-            <li class="moj-sub-navigation__item">
-                <a class="moj-sub-navigation__link" href="#2">My account</a>
-            </li>
-
-            <li class="moj-sub-navigation__item">
-                <a class="moj-sub-navigation__link" href="#3">Help</a>
-            </li>
-        </ul>
-    </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
-                <h1 class="govuk-heading-l">
-                    <span class="govuk-caption-l">123456</span>
-                    <div>Firm name</div>
-                </h1>
+                <h1 class="govuk-heading-xl">Your legal aid services</h1>
 
-                <div th:if="${isAdminUser}">
-                    <h2 class="govuk-heading-m">Manage user access</h2>
-                    <article class="moj-ticket-panel" aria-label="Sub navigation 1">
-                        <section class="moj-ticket-panel__content moj-ticket-panel__content--blue" aria-label="Section 1">
-                            <h3 class="govuk-heading-s govuk-!-margin-bottom-2">Auth app</h3>
-                            <p class="govuk-body">New Matter Starts and manage your LAA Online Users and Contacts
-                            </p>
-                            <p class="govuk-body">
-                                <a href="/admin/users" class="govuk-link" rel="noreferrer noopener" target="_blank">Access app
-                                    (opens
-                                    in new tab)</a>
-                            </p>
-                        </section>
-                    </article>
+                <div th:if="${isAdminUser}" class="govuk-!-margin-bottom-6">
+                    <h2 class="govuk-heading-l">Admin services</h2>
+
+                    <div class="govuk-grid-row">
+                        <div class="govuk-grid-column-full">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                                <h3 class="govuk-heading-m">
+                                    <a href="/admin/users" class="govuk-link govuk-link--no-visited-state"
+                                        rel="noreferrer noopener" target="_blank">Manage your users (opens in a new
+                                        tab)</a>
+                                </h3>
+                                <p class="govuk-body">Create users and manage access and permissions</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <br>
-                <h2 class="govuk-heading-m">Services</h2>
 
-                <p class="govuk-body">Please click a link below to access the service you require. </p>
-                <div class="grid-container">
-                    <div th:each="app:${laaApplications}">
-                        <article class="moj-ticket-panel">
-                            <section
-                                class="ticket-panel-grid-item moj-ticket-panel__content moj-ticket-panel__content--blue"
-                                aria-label="Section 1">
-                                <h3 class="govuk-heading-s govuk-!-margin-bottom-2" th:text="${app.getTitle()}">
+                <h2 class="govuk-heading-l">Legal aid services</h2>
+
+                <div th:each="app : ${laaApplications}">
+                    <div class="govuk-grid-row">
+                        <div class="govuk-grid-column-full">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                                <h3 class="govuk-heading-m">
+                                    <a th:href="${app.getUrl()}" class="govuk-link govuk-link--no-visited-state"
+                                        rel="noreferrer noopener" target="_blank"
+                                        th:text="${app.getTitle() + ' (opens in a new tab)'}"></a>
                                 </h3>
                                 <p class="govuk-body" th:text="${app.getDescription()}"></p>
-                                <p class="govuk-body">
-                                    <a th:href="${app.getUrl()}" class="govuk-link" rel="noreferrer noopener"
-                                        target="_blank">Access
-                                        service (opens in new tab)</a>
-                                </p>
-                            </section>
-
-                        </article>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

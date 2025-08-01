@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -69,9 +72,9 @@ class SecurityConfigTest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isForbidden());
 
-        // With internal role - should be allowed to create users
+        // With create external user permission - should be allowed to create users
         mockMvc.perform(get("/admin/user/create")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.CREATE_EXTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
@@ -80,7 +83,7 @@ class SecurityConfigTest {
 
         // With external admin roles - manage users allowed
         mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM_ADMIN.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.EDIT_EXTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
@@ -89,24 +92,16 @@ class SecurityConfigTest {
 
         // With internal roles - manage users allowed
         mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.EDIT_INTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
                 .andExpect(content().string("manage-user"));
 
-        // With external std roles - do not allow manage users
-        mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM.name()})
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList()))))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isForbidden());
-
         // With admin role - should be allowed
         mockMvc.perform(get("/admin/dashboard")
-                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
+                        .with(jwt().authorities(Arrays.stream(Permission.ADMIN_PERMISSIONS)
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
@@ -243,9 +238,38 @@ class SecurityConfigTest {
     }
 
     @Test
-    void logoutRedirectsToHomePage() throws Exception {
+    void logoutRedirectsToHomePagePost() throws Exception {
         mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?message=logout"));
+    }
+
+    @Test
+    void logoutRedirectsToHomePageGet() throws Exception {
+        mockMvc.perform(get("/logout").with(jwt()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?message=logout"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"127.0.0.1", "192.168.0.2", "10.0.0.1", "172.16.0.1", "::1", "192.168.0.1"})
+    void publicEndpointsAreAccessibleWhiteList(String input) throws Exception {
+        mockMvc.perform(get("/actuator/health")
+                        .with(request -> {
+                            request.setRemoteAddr(input);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string("public"));
+    }
+
+    @Test
+    void publicEndpointsAreAccessibleRemote() throws Exception {
+        mockMvc.perform(get("/actuator/health")
+                        .with(request -> {
+                            request.setRemoteAddr("1.1.1.1");
+                            return request;
+                        }))
+                .andExpect(status().is3xxRedirection());
     }
 }

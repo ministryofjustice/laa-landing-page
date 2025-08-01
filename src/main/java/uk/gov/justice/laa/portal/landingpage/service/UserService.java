@@ -1,44 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import org.modelmapper.ModelMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -57,6 +18,51 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 
 /**
  * userService
@@ -83,12 +89,11 @@ public class UserService {
     private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-                       TechServicesClient techServicesClient,
-                       UserProfileRepository userProfileRepository) {
+            EntraUserRepository entraUserRepository,
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+            OfficeRepository officeRepository,
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -121,40 +126,26 @@ public class UserService {
         return response != null ? response.getValue() : Collections.emptyList();
     }
 
-    public void updateUserRoles(String userId, List<String> selectedRoles) {
+    public void updateUserRoles(String userProfileId, List<String> selectedRoles) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            updateUserProfileRoles(user, roles);
-        } else {
-            logger.warn("User with id {} not found. Could not update roles.", userId);
-        }
-    }
-
-    private void updateUserProfileRoles(EntraUser user, List<AppRole> roles) {
-        Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                // Set to default profile for now, will need to receive a user profile from
-                // front end at some point.
-                .filter(UserProfile::isActiveProfile)
-                .findFirst();
-        if (userProfile.isPresent()) {
-            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.get().getUserType());
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isPresent()) {
+            UserProfile userProfile = optionalUserProfile.get();
+            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> (isInternal || !appRole.getRoleType().equals(RoleType.INTERNAL)))
+                    .filter(appRole -> appRole.isAuthzRole() || (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
                     .toList();
             int after = roles.size();
             if (after < before) {
-                logger.warn("Attempt to assign internal role user ID {}.", user.getId());
+                logger.warn("Attempt to assign internal role user ID {}.", userProfile.getEntraUser().getId());
             }
-            userProfile.get().setAppRoles(new HashSet<>(roles));
-            entraUserRepository.saveAndFlush(user);
-            techServicesClient.updateRoleAssignment(user.getId());
+            userProfile.setAppRoles(new HashSet<>(roles));
+            userProfileRepository.saveAndFlush(userProfile);
         } else {
-            logger.warn("User profile for user ID {} not found. Could not update roles.", user.getId());
+            logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
     }
 
@@ -167,9 +158,31 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public Optional<UserProfileDto> getActiveProfileByUserId(String userId) {
+        EntraUser user = entraUserRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user user id: {}", userId);
+                    return new RuntimeException(
+                            String.format("User not found for the given user user id: %s", userId));
+                });
+
+        if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
+            logger.error("User profile not found for the given user id: {}", userId);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", userId));
+        }
+
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .map(userProfile -> mapper.map(userProfile, UserProfileDto.class));
+    }
+
     public Optional<EntraUserDto> getEntraUserById(String userId) {
         return entraUserRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
+    public Optional<UserProfileDto> getUserProfileById(String userId) {
+        return userProfileRepository.findById(UUID.fromString(userId))
+                .map(user -> mapper.map(user, UserProfileDto.class));
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -197,53 +210,37 @@ public class UserService {
         return dateTime.format(formatter);
     }
 
-    private PaginatedUsers getPageOfUsers(Supplier<Page<EntraUser>> pageSupplier) {
-        Page<EntraUser> userPage = pageSupplier.get();
+    private PaginatedUsers getPageOfUsers(Supplier<Page<UserProfile>> pageSupplier) {
+        Page<UserProfile> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
-        paginatedUsers.setUsers(userPage.stream().map(user -> mapper.map(user, EntraUserDto.class)).toList());
+        paginatedUsers.setUsers(userPage.stream().map(this::mapUserProfileToDto).toList());
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmail(String searchTerm, boolean isInternal, boolean isFirmAdmin,
-                                                      List<UUID> firmList, int page, int pageSize, String sort, String direction) {
-        List<UserType> types;
-        Page<EntraUser> pageOfUsers;
-        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        if (Objects.isNull(firmList)) {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else if (isInternal) {
-                types = UserType.INTERNAL_TYPES;
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypes(types, pageRequest);
-            } else {
-                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypes(searchTerm, searchTerm,
-                        searchTerm, types, pageRequest);
-            }
-        } else {
-            if (isFirmAdmin) {
-                types = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
-            } else {
-                types = UserType.EXTERNAL_TYPES;
-            }
-            if (Objects.isNull(searchTerm) || searchTerm.isEmpty()) {
-                pageOfUsers = entraUserRepository.findByUserTypesAndFirms(types, firmList, pageRequest);
-            } else {
-                pageOfUsers = entraUserRepository.findByNameEmailAndUserTypesFirms(searchTerm, searchTerm,
-                        searchTerm, types, firmList, pageRequest);
-            }
+    private UserProfileDto mapUserProfileToDto(UserProfile userProfile) {
+        UserProfileDto dto = mapper.map(userProfile, UserProfileDto.class);
+        // Ensure the nested EntraUser is properly mapped
+        if (userProfile.getEntraUser() != null) {
+            dto.setEntraUser(mapper.map(userProfile.getEntraUser(), EntraUserDto.class));
         }
-        return getPageOfUsers(() -> pageOfUsers);
+        return dto;
+    }
+
+    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
+        Page<EntraUser> entraUserPage = entraUserRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
+        Page<UserProfile> userProfilePage = entraUserPage.map(user -> user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .orElse(null));
+        return getPageOfUsers(() -> userProfilePage);
     }
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userStatus"), Sort.Order.desc("createdDate"));
+            return Sort.by(Sort.Order.asc("userProfile.userProfileStatus"), Sort.Order.desc("userProfile.createdDate"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -340,7 +337,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-                                UserType userType, String createdBy) {
+            UserType userType, String createdBy) {
 
         RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
@@ -355,36 +352,34 @@ public class UserService {
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-                                     UserType userType, String createdBy) {
+            UserType userType, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
+        Set<AppRole> appRoles = getAuthzAppRoleByUserType(userType).map(Set::of).orElseGet(Set::of);
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .userType(userType)
+                .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
                 .firm(firm)
                 .entraUser(entraUser)
+                .userProfileStatus(UserProfileStatus.PENDING)
                 .build();
 
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser.setCreatedBy(createdBy);
-        entraUser.setCreatedDate(LocalDateTime.now());
+        // Audit fields are automatically set by Spring Data JPA auditing
         return entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                    .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                    .collect(Collectors.toList());
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getAppRoles();
         }
         return Collections.emptyList();
     }
@@ -412,24 +407,25 @@ public class UserService {
 
         if (user != null && user.getUserStatus() == UserStatus.ACTIVE) {
             grantedAuthorities = user.getUserProfiles().stream()
-                    .map(userProfile -> userProfile.getUserType().name())
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .map(Enum::name)
                     .toList();
-
         }
         return grantedAuthorities;
     }
 
     public Set<AppDto> getUserAppsByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                    .map(AppRole::getApp)
-                    .map(app -> mapper.map(app, AppDto.class))
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getAppRoles().stream()
+                    .map(AppRoleDto::getApp)
                     .collect(Collectors.toSet());
         } else {
-            logger.warn("No user found for user id {} when getting user apps", userId);
+            logger.warn("No user profile found for user id {} when getting user apps", userId);
             return Collections.emptySet();
         }
     }
@@ -488,7 +484,7 @@ public class UserService {
             App app = optionalApp.get();
             RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
+                    .filter(appRole -> appRole.isAuthzRole() || appRole.getRoleType().equals(userRoleType)
                             || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .toList();
@@ -507,7 +503,14 @@ public class UserService {
     }
 
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
-        Set<AppDto> userApps = getUserAppsByUserId(id);
+        Optional<UserProfileDto> userProfile =  getActiveProfileByUserId(id);
+
+        if (userProfile.isEmpty()) {
+            logger.error("Active user profile not found for user: {}", id);
+            throw new RuntimeException(String.format("User profile not found for the given user id: %s", id));
+        }
+
+        Set<AppDto> userApps = getUserAppsByUserId(String.valueOf(userProfile.get().getId()));
 
         return getUserAssignedApps(userApps);
     }
@@ -543,7 +546,7 @@ public class UserService {
     private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         return applications.stream().filter(app -> userApps.stream()
-                        .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
+                .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
     }
@@ -554,13 +557,11 @@ public class UserService {
      * @param userId The user ID
      * @return List of offices assigned to the user
      */
-    public List<Office> getUserOfficesByUserId(String userId) {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            return user.getUserProfiles().stream()
-                    .flatMap(userProfile -> userProfile.getOffices().stream())
-                    .collect(Collectors.toList());
+    public List<OfficeDto> getUserOfficesByUserId(String userId) {
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
+        if (optionalUserProfile.isPresent()) {
+            UserProfileDto userProfile = optionalUserProfile.get();
+            return userProfile.getOffices();
         }
         return Collections.emptyList();
     }
@@ -573,39 +574,73 @@ public class UserService {
      * @throws IOException If an error occurs during the update
      */
     public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
-        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
-        if (optionalUser.isPresent()) {
-            EntraUser user = optionalUser.get();
-            List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
-            Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
-
-            // Update user profile offices
-            Optional<UserProfile> userProfile = user.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .findFirst();
-            if (userProfile.isPresent()) {
-                userProfile.get().setOffices(offices);
-                entraUserRepository.saveAndFlush(user);
-                logger.info("Successfully updated user offices for user ID: {}", userId);
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
+        if (optionalUserProfile.isPresent()) {
+            UserProfile userProfile = optionalUserProfile.get();
+            if (selectedOffices.contains("ALL")) {
+                userProfile.setOffices(null);
             } else {
-                logger.warn("User profile for user ID {} not found. Could not update offices.", userId);
-                throw new IOException("User profile not found for user ID: " + userId);
+                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+                Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+
+                // Update user profile offices
+                userProfile.setOffices(offices);
             }
+            userProfileRepository.saveAndFlush(userProfile);
+            logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
-            logger.warn("User with id {} not found. Could not update offices.", userId);
-            throw new IOException("User not found for user ID: " + userId);
+            logger.warn("User profile with id {} not found. Could not update offices.", userId);
+            throw new IOException("User profile not found for user ID: " + userId);
         }
     }
 
-    public boolean isInternal(EntraUser entraUser) {
-        List<UserType> userTypes = entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getUserType).toList();
-        return userTypes.contains(UserType.INTERNAL);
+    public boolean isInternal(String userId) {
+        return isInternal(UUID.fromString(userId));
+    }
+
+    public boolean isInternal(UUID userId) {
+        return getUserPermissionsByUserId(userId).contains(Permission.VIEW_INTERNAL_USER);
+    }
+
+    public boolean isAccessGranted(String userId) {
+        // Get user profile by userId
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            UserProfile user = optionalUser.get();
+            // Check if the user has access granted
+            return user.getUserProfileStatus() == UserProfileStatus.COMPLETE;
+
+        } else {
+            logger.warn("User with id {} not found. Could not check access.", userId);
+            return false;
+        }
+    }
+
+    /**
+     * Grant access to a user by updating their profile status to COMPLETE
+     *
+     * @param userId          The user profile ID
+     * @param currentUserName The name of the user granting access
+     * @return true if access was granted successfully, false otherwise
+     */
+    public boolean grantAccess(String userId, String currentUserName) {
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isPresent()) {
+            UserProfile user = optionalUser.get();
+            user.setUserProfileStatus(UserProfileStatus.COMPLETE);
+            user.setLastModifiedBy(currentUserName);
+            user.setLastModified(LocalDateTime.now());
+            userProfileRepository.saveAndFlush(user);
+            logger.info("Access granted for user profile ID: {} by {}", userId, currentUserName);
+            return true;
+        } else {
+            logger.warn("User profile with id {} not found. Could not grant access.", userId);
+            return false;
+        }
     }
 
     public boolean isUserCreationAllowed(EntraUser entraUser) {
-        Optional<UserType> userType =  getUserTypeByEntraUser(entraUser);
+        Optional<UserType> userType = getUserTypeByEntraUser(entraUser);
         return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
     }
 
@@ -633,6 +668,7 @@ public class UserService {
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder()
                     .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
                     .userType(UserType.INTERNAL)
                     .createdDate(LocalDateTime.now())
                     .createdBy(createdBy)
@@ -670,6 +706,31 @@ public class UserService {
             }
         }
         return usersPersisted;
+    }
+
+    private Optional<AppRole> getAuthzAppRoleByUserType(UserType userType) {
+        if (userType.getAuthzRoleName() != null) {
+            return appRoleRepository.findByName(userType.getAuthzRoleName()).filter(AppRole::isAuthzRole);
+        }
+        return Optional.empty();
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(String userId) {
+        return getUserPermissionsByUserId(UUID.fromString(userId));
+    }
+
+    public Set<Permission> getUserPermissionsByUserId(UUID userId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(userId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .collect(Collectors.toSet());
+        }
+        return Collections.emptySet();
     }
 
     public List<UUID> getInternalUserEntraIds() {

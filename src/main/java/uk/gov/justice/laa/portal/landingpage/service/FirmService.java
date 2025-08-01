@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -9,10 +10,11 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 /**
  * FirmService
@@ -22,7 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 public class FirmService {
 
     private final FirmRepository firmRepository;
-    private final EntraUserRepository entraUserRepository;
+    private final UserProfileRepository userProfileRepository;
     private final ModelMapper mapper;
 
     public List<FirmDto> getFirms() {
@@ -34,6 +36,14 @@ public class FirmService {
 
     public FirmDto getFirm(String id) {
         return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
+    }
+
+    public Optional<FirmDto> getUserFirm(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm)
+                .map(firm -> mapper.map(firm, FirmDto.class));
     }
 
     public List<FirmDto> getUserFirms(EntraUser entraUser) {
@@ -54,11 +64,28 @@ public class FirmService {
      * @return List of FirmDto objects associated with the user
      */
     public List<FirmDto> getUserFirmsByUserId(String userId) {
-        return entraUserRepository.findById(UUID.fromString(userId))
-                .map(entraUser -> entraUser.getUserProfiles().stream()
-                        .filter(UserProfile::isActiveProfile)
-                        .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class))
-                        .collect(Collectors.toList()))
+        return userProfileRepository.findById(UUID.fromString(userId))
+                .map(userProfile -> {
+                    UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+                    return userProfileDto.getFirm() != null ? List.of(userProfileDto.getFirm()) : List.<FirmDto>of();
+                })
                 .orElse(List.of());
+    }
+
+    /**
+     * Search for firms by name or code
+     * 
+     * @param searchTerm The search term to match against firm name or code
+     * @return List of FirmDto objects that match the search term
+     */
+    public List<FirmDto> searchFirms(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return getFirms();
+        }
+        
+        return firmRepository.findByNameOrCodeContaining(searchTerm.trim())
+                .stream()
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .collect(Collectors.toList());
     }
 }

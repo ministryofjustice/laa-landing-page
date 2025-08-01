@@ -23,7 +23,7 @@
         <fieldset class="govuk-fieldset">
             <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                 <h1 class="govuk-fieldset__heading">
-                    User details
+                    Add user details
                 </h1>
             </legend>
             <form th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
@@ -40,56 +40,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="govuk-!-margin-bottom-3">
-                    <div class="govuk-form-group"
-                        th:classappend="${#fields.hasErrors('firmId')} ? 'govuk-form-group--error'">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
-                            Firm name
-                        </label>
-                        <div th:if="${#fields.hasErrors('firmId')}" class="govuk-error-message">
-                            <p th:each="err : ${#fields.errors('firmId')}" th:text="${err}"></p>
-                        </div>
-                        <select class="govuk-select" id="firmId" name="firmId">
-                            <option value="" disabled selected th:if="${selectedFirm == null}">Choose firm</option>
-                            <div th:each="firm : ${firms}">
-                                <option th:value="${firm.id}" th:text="${firm.name}"
-                                    th:selected="${firm.id == selectedFirm?.id}"></option>
-                            </div>
-                        </select>
-                    </div>
-                </div>
-                <div class="govuk-!-margin-bottom-3">
-                    <div class="govuk-form-group"
-                         th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="userType">
-                            User Type
-                        </label>
-                        <div th:if="${#fields.hasErrors('userType')}" class="govuk-error-message">
-                            <p th:each="err : ${#fields.errors('userType')}" th:text="${err}"></p>
-                        </div>
-                        <select class="govuk-select" id="userType" name="userType">
-                            <option value="" disabled selected th:if="${selectedUserType == null}">Choose User Type</option>
-                            <div th:each="userType : ${userTypes}">
-                                <option th:value="${userType}" th:text="${userType.friendlyName}"
-                                        th:selected="${userType == selectedUserType}"></option>
-                            </div>
-                        </select>
-                    </div>
-                </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="email">
-                        Email address
+                        Email
                     </label>
-                    <p class="govuk-hint">
-                        Please ensure the email address you provide is accurate.
-                    </p>
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
                         th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
                 </div>
+
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="firstName">
@@ -114,9 +76,30 @@
                         th:value="*{lastName}" id="lastName"
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
+                <div class="govuk-form-group"
+                    th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
+                    <fieldset class="govuk-fieldset">
+                        <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                            User type
+                        </legend>
+                        <div th:if="${#fields.hasErrors('userType')}" class="govuk-error-message">
+                            <p th:each="err : ${#fields.errors('userType')}" th:text="${err}"></p>
+                        </div>
+                        <div class="govuk-radios">
+                            <div th:each="userType : ${userTypes}" class="govuk-radios__item">
+                                <input class="govuk-radios__input" th:id="${'userType-' + userType}" name="userType"
+                                    type="radio" th:value="${userType}" th:checked="${userType == selectedUserType}">
+                                <label class="govuk-label govuk-radios__label" th:for="${'userType-' + userType}"
+                                    th:text="${userType.friendlyName}">
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a href="/admin/user/create/cancel"  class="govuk-link">Cancel</a>
+                    <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </fieldset>

@@ -13,6 +13,17 @@ import java.util.UUID;
 @AllArgsConstructor
 public class OfficeDto {
     private UUID id;
-    private String name;
-    private String address;
+    private String code;
+    private AddressDto address;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AddressDto {
+        private String addressLine1;
+        private String addressLine2;
+        private String city;
+        private String postcode;
+    }
 }

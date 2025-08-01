@@ -3,7 +3,9 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -48,6 +50,15 @@ public class AppRole extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
+    @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
+    @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
+    private String ccmsCode;
+
+    @Column(name = "legacy_sync", nullable = false)
+    @ColumnDefault("false")
+    @NotNull(message = "Application role legacy sync flag must be provided")
+    private boolean lagacySync;
+
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude
@@ -79,11 +90,11 @@ public class AppRole extends BaseEntity {
     @ColumnDefault("false")
     private boolean authzRole;
 
-    @ManyToMany(mappedBy = "appRoles", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @ToString.Exclude
-    @JsonIgnore
-    @Builder.Default
-    private Set<Permission> permissions = new HashSet<>();
+    @ElementCollection(targetClass = Permission.class, fetch = FetchType.LAZY)
+    @CollectionTable(name = "role_permission", joinColumns = @JoinColumn(name = "app_role_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permission")
+    private Set<Permission> permissions;
 
     @OneToMany(mappedBy = "assigningRole", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @ToString.Exclude
