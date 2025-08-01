@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
 
 public class LiveTechServicesClient implements TechServicesClient {
 
-    public static final String TECH_SERVICES_VERIFICATION_METHOD = "activation_code_email";
+    @Value("${app.tech.services.laa.verification.method}")
+    public static  String techServicesVerificationMethod;
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
@@ -126,7 +127,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
-                    .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
+                    .verificationMethod(techServicesVerificationMethod)
                     .requiredGroups(securityGroups).build();
 
             logger.info("Sending create new user request with security groups to tech services: {}", request);

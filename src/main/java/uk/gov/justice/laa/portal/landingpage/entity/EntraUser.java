@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Set;
 
@@ -64,6 +65,7 @@ public class EntraUser extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
     @NotNull(message = "User status must be provided")
+    @ColumnDefault("AWAITING_APPROVAL")
     private UserStatus userStatus;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
