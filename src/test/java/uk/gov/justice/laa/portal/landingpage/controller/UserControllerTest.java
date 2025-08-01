@@ -69,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -348,10 +349,7 @@ class UserControllerTest {
     @Test
     void createNewUser() {
         when(session.getAttribute("user")).thenReturn(null);
-        when(session.getAttribute("firm")).thenReturn(null);
-        FirmDto firm1 = FirmDto.builder().build();
-        FirmDto firm2 = FirmDto.builder().build();
-        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
+        when(session.getAttribute("selectedUserType")).thenReturn(null);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
@@ -363,29 +361,21 @@ class UserControllerTest {
         EntraUserDto mockUser = new EntraUserDto();
         mockUser.setFullName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
-        when(session.getAttribute("firm")).thenReturn(FirmDto.builder().name("Test firm").build());
-        FirmDto firm1 = FirmDto.builder().build();
-        FirmDto firm2 = FirmDto.builder().build();
-        when(firmService.getFirms()).thenReturn(List.of(firm1, firm2));
+        when(session.getAttribute("selectedUserType")).thenReturn(UserType.EXTERNAL_SINGLE_FIRM);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("firms")).isNotNull();
         EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
         assertThat(sessionUser.getFullName()).isEqualTo("Test User");
-        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
-        assertThat(selectedFirm.getName()).isEqualTo("Test firm");
         assertThat(view).isEqualTo("add-user-details");
     }
 
     @Test
     void postNewUser() {
-        when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().name("Test Firm").build());
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         userDetailsForm.setFirstName("firstName");
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
-        userDetailsForm.setFirmId("firmId");
         userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         HttpSession session = new MockHttpSession();
@@ -395,11 +385,9 @@ class UserControllerTest {
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
-        assertThat(selectedFirm.getName()).isEqualTo("Test Firm");
-        UserType selectedUserType = (UserType) session.getAttribute("userType");
+        UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
         assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
     }
 
     @Test
@@ -408,13 +396,10 @@ class UserControllerTest {
         mockUser.setFullName("Test User");
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", mockUser);
-        session.setAttribute("firm", FirmDto.builder().name("oldFirm").build());
-        when(firmService.getFirm(eq("newFirm"))).thenReturn(FirmDto.builder().name("Test Firm").build());
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         userDetailsForm.setFirstName("firstName");
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
-        userDetailsForm.setFirmId("newFirm");
         userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
@@ -423,10 +408,8 @@ class UserControllerTest {
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
-        String selectedFirmName = ((FirmDto) session.getAttribute("firm")).getName();
-        assertThat(selectedFirmName).isEqualTo("Test Firm");
-        UserType selectedUserType = (UserType) session.getAttribute("userType");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
+        UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
         assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
     }
 
@@ -651,7 +634,7 @@ class UserControllerTest {
         selectedFirm.setName("Test Firm");
         session.setAttribute("firm", selectedFirm);
         UserType selectedUserType = UserType.EXTERNAL_SINGLE_FIRM;
-        session.setAttribute("userType", selectedUserType);
+        session.setAttribute("selectedUserType", selectedUserType);
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("user")).isNotNull();
@@ -670,7 +653,7 @@ class UserControllerTest {
     void addUserCheckAnswersGetFirmAdmin() {
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
@@ -696,7 +679,7 @@ class UserControllerTest {
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
@@ -714,7 +697,7 @@ class UserControllerTest {
         EntraUserDto userDto = new EntraUserDto();
         session.setAttribute("user", userDto);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
-        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
         EntraUser entraUser = EntraUser.builder().build();
         when(userService.createUser(any(), any(), any(), any())).thenReturn(entraUser);
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -738,7 +721,7 @@ class UserControllerTest {
         session.setAttribute("roles", roles);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
-        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
@@ -1747,17 +1730,15 @@ class UserControllerTest {
     @Test
     void createUser_shouldPopulateModelWithFirmsAndSelectedFirm() {
         when(session.getAttribute("user")).thenReturn(null);
-        when(session.getAttribute("firm")).thenReturn(null);
-        List<FirmDto> firms = List.of(FirmDto.builder().id(UUID.randomUUID()).build());
-        when(firmService.getFirms()).thenReturn(firms);
+        when(session.getAttribute("selectedUserType")).thenReturn(null);
 
         UserDetailsForm form = new UserDetailsForm();
         String view = userController.createUser(form, session, model);
 
         assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("firms")).isEqualTo(firms);
-        assertThat(model.getAttribute("selectedFirm")).isNull();
         assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("userTypes")).isNotNull();
+        assertThat(model.getAttribute("selectedUserType")).isNull();
     }
 
     @Test
@@ -1765,17 +1746,18 @@ class UserControllerTest {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("firms", List.of());
-        sessionModel.addAttribute("selectedFirm", null);
-        sessionModel.addAttribute("user", new User());
+        sessionModel.addAttribute("userTypes", List.of());
+        sessionModel.addAttribute("selectedUserType", null);
+        sessionModel.addAttribute("user", new EntraUserDto());
         Mockito.lenient().when(session.getAttribute("createUserDetailsModel")).thenReturn(sessionModel);
 
         final Model model = new ExtendedModelMap();
         UserDetailsForm form = new UserDetailsForm();
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
         String view = userController.postUser(form, result, session, model);
 
         assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("firms")).isNotNull();
+        assertThat(model.getAttribute("userTypes")).isNotNull();
         assertThat(model.getAttribute("user")).isNotNull();
     }
 
@@ -1783,12 +1765,10 @@ class UserControllerTest {
     void postUser_shouldRedirectOnNoValidationErrors() {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
-        when(firmService.getFirm(anyString())).thenReturn(FirmDto.builder().id(UUID.randomUUID()).build());
         UserDetailsForm form = new UserDetailsForm();
         form.setFirstName("A");
         form.setLastName("B");
         form.setEmail("a@b.com");
-        form.setFirmId("firmId");
         form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
 
         final Model model = new ExtendedModelMap();
@@ -1796,9 +1776,9 @@ class UserControllerTest {
 
         String view = userController.postUser(form, result, session, model);
 
-        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
-        assertThat(session.getAttribute("firm")).isNotNull();
-        assertThat(session.getAttribute("userType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(session.getAttribute("selectedUserType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(session.getAttribute("user")).isNotNull();
     }
 
     @Test
@@ -1971,7 +1951,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
 
         String view = userController.getUserCheckAnswers(model, session);
 
@@ -1986,7 +1966,7 @@ class UserControllerTest {
         MockHttpSession mockSession = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
-        mockSession.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        mockSession.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -2176,23 +2156,18 @@ class UserControllerTest {
         existingUser.setFirstName("Existing");
         existingUser.setLastName("User");
 
-        FirmDto existingFirm = FirmDto.builder().id(UUID.randomUUID()).name("Existing Firm").build();
-        List<FirmDto> allFirms = List.of(existingFirm,
-                FirmDto.builder().id(UUID.randomUUID()).name("Other Firm").build());
+        UserType existingUserType = UserType.EXTERNAL_SINGLE_FIRM;
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", existingUser);
-        testSession.setAttribute("firm", existingFirm);
-
-        when(firmService.getFirms()).thenReturn(allFirms);
+        testSession.setAttribute("selectedUserType", existingUserType);
 
         // When
         String view = userController.createUser(new UserDetailsForm(), testSession, model);
 
         // Then
         assertThat(view).isEqualTo("add-user-details");
-        assertThat(model.getAttribute("selectedFirm")).isEqualTo(existingFirm);
-        assertThat(model.getAttribute("firms")).isEqualTo(allFirms);
+        assertThat(model.getAttribute("selectedUserType")).isEqualTo(existingUserType);
         UserDetailsForm form = (UserDetailsForm) model.getAttribute("userDetailsForm");
         assertThat(form.getFirstName()).isEqualTo("Existing");
         assertThat(form.getLastName()).isEqualTo("User");
@@ -2975,6 +2950,261 @@ class UserControllerTest {
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
         assertThat(testSession.getAttribute("successMessage")).isNull();
+    }
+
+    @Test
+    void testCreateUserFirm_ShouldReturnAddUserFirmView() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        // When
+        String view = userController.createUserFirm(firmSearchForm, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        assertThat(testModel.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(testSession.getAttribute("firm")).isNull();
+        assertThat(testSession.getAttribute("selectedFirm")).isNull();
+    }
+
+    @Test
+    void testCreateUserFirm_WithExistingFormInSession_ShouldUseExistingForm() {
+        // Given
+        FirmSearchForm existingForm = new FirmSearchForm();
+        existingForm.setFirmSearch("Existing Firm");
+        existingForm.setSelectedFirmId("existing-id");
+
+        FirmSearchForm newForm = new FirmSearchForm();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("firmSearchForm", existingForm);
+        Model testModel = new ExtendedModelMap();
+
+        // When
+        String view = userController.createUserFirm(newForm, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        assertThat(testModel.getAttribute("firmSearchForm")).isEqualTo(existingForm);
+        assertThat(testSession.getAttribute("firmSearchForm")).isNull(); // Should be removed after use
+    }
+
+    @Test
+    void testSearchFirms_ShouldReturnFirmList() {
+        // Given
+        String query = "Test Firm";
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Test Firm 1")
+                        .code("TF001")
+                        .build(),
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Test Firm 2")
+                        .code("TF002")
+                        .build()
+        );
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).get("name")).isEqualTo("Test Firm 1");
+        assertThat(result.get(0).get("code")).isEqualTo("TF001");
+        assertThat(result.get(1).get("name")).isEqualTo("Test Firm 2");
+        assertThat(result.get(1).get("code")).isEqualTo("TF002");
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_WithEmptyQuery_ShouldReturnAllFirms() {
+        // Given
+        String query = "";
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("All Firms Test")
+                        .code("AFT001")
+                        .build()
+        );
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name")).isEqualTo("All Firms Test");
+        assertThat(result.get(0).get("code")).isEqualTo("AFT001");
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_WithLargeResultSet_ShouldLimitResults() {
+        // Given
+        String query = "Firm";
+        List<FirmDto> mockFirms = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            mockFirms.add(FirmDto.builder()
+                    .id(UUID.randomUUID())
+                    .name("Firm " + i)
+                    .code("F" + String.format("%03d", i))
+                    .build());
+        }
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query);
+
+        // Then
+        assertThat(result).hasSize(10); // Should be limited to 10 results
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testPostUserFirm_WithValidSelectedFirmId_ShouldRedirectToCheckAnswers() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        firmSearchForm.setSelectedFirmId(UUID.randomUUID().toString());
+        firmSearchForm.setFirmSearch("Test Firm");
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        FirmDto mockFirm = FirmDto.builder()
+                .id(UUID.fromString(firmSearchForm.getSelectedFirmId()))
+                .name("Test Firm")
+                .code("TF001")
+                .build();
+
+        when(firmService.getFirm(firmSearchForm.getSelectedFirmId())).thenReturn(mockFirm);
+
+        // When
+        String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirm);
+        assertThat(testSession.getAttribute("firmSearchTerm")).isEqualTo("Test Firm");
+        verify(firmService).getFirm(firmSearchForm.getSelectedFirmId());
+    }
+
+    @Test
+    void testPostUserFirm_WithValidationErrors_ShouldReturnToFirmPage() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        firmSearchForm.setFirmSearch("Test Firm");
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        // When
+        String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        assertThat(testSession.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+    }
+
+    @Test
+    void testPostUserFirm_WithInvalidFirmId_ShouldReturnErrorToFirmPage() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        firmSearchForm.setSelectedFirmId("invalid-uuid");
+        firmSearchForm.setFirmSearch("Test Firm");
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        // No need to stub firmService.getFirm() since UUID.fromString() will throw first
+
+        // When
+        String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        verify(bindingResult).rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
+    }
+
+    @Test
+    void testPostUserFirm_WithNoSelectedFirmId_FallbackToNameSearch_Success() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        firmSearchForm.setFirmSearch("Test Firm");
+        firmSearchForm.setSelectedFirmId(null);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Test Firm")
+                        .code("TF001")
+                        .build()
+        );
+
+        when(firmService.getFirms()).thenReturn(mockFirms);
+
+        // When
+        String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
+        assertThat(testSession.getAttribute("firmSearchTerm")).isEqualTo("Test Firm");
+        verify(firmService).getFirms();
+    }
+
+    @Test
+    void testPostUserFirm_WithNoSelectedFirmId_FallbackToNameSearch_NotFound() {
+        // Given
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        firmSearchForm.setFirmSearch("Nonexistent Firm");
+        firmSearchForm.setSelectedFirmId(null);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        MockHttpSession testSession = new MockHttpSession();
+        Model testModel = new ExtendedModelMap();
+
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Different Firm")
+                        .code("DF001")
+                        .build()
+        );
+
+        when(firmService.getFirms()).thenReturn(mockFirms);
+
+        // When
+        String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        verify(bindingResult).rejectValue("firmSearch", "error.firm", "No firm found with that name. Please select from the dropdown.");
+        verify(firmService).getFirms();
     }
     
     @Test

@@ -71,4 +71,21 @@ public class FirmService {
                 })
                 .orElse(List.of());
     }
+
+    /**
+     * Search for firms by name or code
+     * 
+     * @param searchTerm The search term to match against firm name or code
+     * @return List of FirmDto objects that match the search term
+     */
+    public List<FirmDto> searchFirms(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return getFirms();
+        }
+        
+        return firmRepository.findByNameOrCodeContaining(searchTerm.trim())
+                .stream()
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .collect(Collectors.toList());
+    }
 }
