@@ -9,7 +9,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.CCMSMessage;
+import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -33,7 +33,7 @@ public class RoleChangeNotificationService {
         if (!newPuiRoles.equals(oldPuiRoles)
                 && !UserType.INTERNAL_TYPES.contains(userProfile.getUserType())) {
             try {
-                CCMSMessage message = CCMSMessage.builder()
+                CcmsMessage message = CcmsMessage.builder()
                         .userName(userProfile.getLegacyUserId().toString())
                         .vendorNumber(userProfile.getFirm().getCode())
                         .firstName(entraUser.getFirstName())

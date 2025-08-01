@@ -163,9 +163,9 @@ public class UserService {
     }
 
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
-        return roles.stream()
-                .filter(role -> role.getCcmsCode().contains("CCMS"))
-                .collect(Collectors.toSet());
+        return roles != null && !roles.isEmpty() ? roles.stream()
+                .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
+                .collect(Collectors.toSet()) : new HashSet<>();
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {

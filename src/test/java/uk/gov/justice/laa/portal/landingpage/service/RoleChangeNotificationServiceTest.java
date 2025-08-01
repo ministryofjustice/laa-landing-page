@@ -13,7 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.CCMSMessage;
+import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
 
 import java.util.Set;
 import java.util.UUID;
@@ -99,7 +99,7 @@ class RoleChangeNotificationServiceTest {
 
         roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
+        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
     }
 
     @Test
@@ -108,18 +108,18 @@ class RoleChangeNotificationServiceTest {
 
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
+        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
     }
 
     @Test
     void shouldCreateCorrectCCMSMessage_whenPuiRolesChanged() throws JsonProcessingException {
         String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CCMSMessage.class))).thenReturn(expectedJson);
+        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
 
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
         verify(objectMapper).writeValueAsString(argThat(message -> {
-            CCMSMessage ccmsMessage = (CCMSMessage) message;
+            CcmsMessage ccmsMessage = (CcmsMessage) message;
             return ccmsMessage.getUserName().equals(userProfile.getLegacyUserId().toString()) &&
                    ccmsMessage.getVendorNumber().equals(firm.getCode()) &&
                    ccmsMessage.getFirstName().equals(entraUser.getFirstName()) &&
@@ -133,7 +133,7 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldThrowRuntimeException_whenJsonProcessingFails() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any(CCMSMessage.class)))
+        when(objectMapper.writeValueAsString(any(CcmsMessage.class)))
                 .thenThrow(new JsonProcessingException("JSON processing failed") {});
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
@@ -145,7 +145,7 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldThrowRuntimeException_whenGeneralExceptionOccurs() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any(CCMSMessage.class)))
+        when(objectMapper.writeValueAsString(any(CcmsMessage.class)))
                 .thenThrow(new RuntimeException("General error"));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
@@ -159,27 +159,27 @@ class RoleChangeNotificationServiceTest {
     @Test
     void shouldHandleEmptyOldRoles() throws JsonProcessingException {
         String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CCMSMessage.class))).thenReturn(expectedJson);
+        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
 
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, emptyRoles);
 
-        verify(objectMapper).writeValueAsString(any(CCMSMessage.class));
+        verify(objectMapper).writeValueAsString(any(CcmsMessage.class));
     }
 
     @Test
     void shouldHandleEmptyNewRoles() throws JsonProcessingException {
         String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CCMSMessage.class))).thenReturn(expectedJson);
+        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
 
         roleChangeNotificationService.sendMessage(userProfile, emptyRoles, oldPuiRoles);
 
-        verify(objectMapper).writeValueAsString(any(CCMSMessage.class));
+        verify(objectMapper).writeValueAsString(any(CcmsMessage.class));
     }
 
     @Test
     void shouldNotSendMessage_whenBothRoleSetsAreEmpty() throws JsonProcessingException {
         roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CCMSMessage.class));
+        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
     }
 }

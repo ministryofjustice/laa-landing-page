@@ -11,7 +11,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @Data
-public class CCMSMessage {
+public class CcmsMessage {
 
     @JsonProperty("USER_NAME")
     private final String userName;
