@@ -2555,14 +2555,10 @@ class UserControllerTest {
     @Test
     void grantAccessSetSelectedApps_shouldReturnToFormOnValidationErrors() {
         // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
         ApplicationsForm applicationsForm = new ApplicationsForm();
         applicationsForm.setApps(null); // This will trigger validation error
         
-        MockHttpSession testSession = new MockHttpSession();
-        
         // Mock session model with apps data
-        Model sessionModel = new ExtendedModelMap();
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         
@@ -2571,14 +2567,18 @@ class UserControllerTest {
         app1.setName("App 1");
         List<AppDto> apps = List.of(app1);
         
+        Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("user", user);
         sessionModel.addAttribute("apps", apps);
+        
+        MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessUserAppsModel", sessionModel);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
 
         // When
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
         String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult, authentication, model, testSession);
 
         // Then
