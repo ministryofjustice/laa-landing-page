@@ -2,25 +2,26 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'login'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Offices</title>
+    <title>Grant Access - Offices</title>
 </head>
 
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/user/create/roles">
-                    < Back</a>
+                <a class="govuk-back-link govuk-!-margin-bottom-3"
+                    th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">
+                    Back</a>
             </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form th:action="@{/admin/user/create/offices}" th:method="post" th:object="${officesForm}">
+        <form method="post" th:action="@{/admin/users/grant-access/{id}/offices(id=${user.id})}"
+            th:object="${officesForm}">
             <div th:if="${#fields.hasErrors()}">
                 <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -37,10 +38,9 @@
             <div class="govuk-form-group">
                 <fieldset class="govuk-fieldset" aria-describedby="offices-hint">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
-                        <h1 class="govuk-fieldset__heading">
-                            Which of these offices will <span th:text="${user.firstName}"></span> <span
-                                th:text="${user.lastName}"></span> have access to?
-                        </h1>
+                        <h2 class="govuk-fieldset__heading">
+                            Which of these offices will <span th:text="${user.fullName}"></span> require access to?
+                        </h2>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">
                         Select all that apply
@@ -51,7 +51,7 @@
                         <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
                                 <input class="govuk-checkboxes__input" id="offices-all" name="offices" type="checkbox"
-                                    value="" data-behaviour="exclusive">
+                                    value="ALL" data-behaviour="exclusive" th:checked="${hasAllOffices}">
                                 <label class="govuk-label govuk-checkboxes__label" for="offices-all">
                                     Access to all offices
                                     <div id="all-offices-hint" class="govuk-hint">
@@ -63,13 +63,16 @@
                             <div th:each="office : ${officeData}">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
-                                        type="checkbox" th:value="${office.id}" th:checked="${office.selected}">
-                                    <label class="govuk-label govuk-checkboxes__label">
-                                        <span th:text="${office.address.addressLine1}"></span>,
-                                        <span th:text="${office.address.addressLine2}"></span>,
-                                        <span th:text="${office.address.city}"></span>,
-                                        <span th:text="${office.address.postcode}"></span>
-                                        (<span th:text="${office.code}"></span>)
+                                        type="checkbox" th:value="${office.id}"
+                                        th:checked="${hasAllOffices != true && office.selected}">
+                                    <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
+                                        <label class="govuk-label govuk-checkboxes__label">
+                                            <span th:text="${office.address.addressLine1}"></span>,
+                                            <span th:text="${office.address.addressLine2}"></span>,
+                                            <span th:text="${office.address.city}"></span>,
+                                            <span th:text="${office.address.postcode}"></span>
+                                            (<span th:text="${office.code}"></span>)
+                                        </label>
                                     </label>
                                 </div>
                             </div>
@@ -79,7 +82,7 @@
             </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                <a th:href="@{'/admin/users/grant-access/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
             </div>
         </form>
     </main>

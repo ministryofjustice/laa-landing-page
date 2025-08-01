@@ -20,10 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Check;
-import uk.gov.justice.laa.portal.landingpage.validator.EndDateAfterStartDate;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -42,8 +39,6 @@ import java.util.Set;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-@EndDateAfterStartDate(message = "End date must be after start date")
-@Check(name = "end_date_after_start_date", constraints = "end_date > start_date")
 public class EntraUser extends AuditableEntity {
 
     @Column(name = "entra_oid", nullable = false, length = 255, unique = true)
@@ -70,12 +65,6 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "status", nullable = false, length = 255)
     @NotNull(message = "User status must be provided")
     private UserStatus userStatus;
-
-    @Column(name = "start_date")
-    private LocalDateTime startDate;
-
-    @Column(name = "end_date")
-    private LocalDateTime endDate;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

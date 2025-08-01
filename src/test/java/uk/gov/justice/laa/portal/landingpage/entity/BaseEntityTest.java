@@ -31,12 +31,12 @@ public class BaseEntityTest {
     }
 
     protected Office buildTestOffice() {
-        return Office.builder().name("TestOffice").code("office code").address("Address").phone("123456").build();
+        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("postcode").build();
+        return Office.builder().code("office code").address(address).build();
     }
 
     protected EntraUser buildTestEntraUser() {
         return EntraUser.builder().firstName("FirstName").lastName("LastName").userStatus(UserStatus.ACTIVE)
-                .startDate(LocalDateTime.now()).endDate(LocalDateTime.now().plusYears(1))
                 .entraOid("entra_id").email("test@email.com")
                 .createdBy("test").createdDate(LocalDateTime.now()).build();
     }
@@ -48,7 +48,7 @@ public class BaseEntityTest {
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role").description("App Role Description")
+        return AppRole.builder().name("Test App Role").ccmsCode("ccms_code").description("App Role Description")
                 .roleType(RoleType.INTERNAL).build();
     }
 
@@ -60,6 +60,7 @@ public class BaseEntityTest {
     protected UserProfile buildTestLaaUserProfile() {
         return UserProfile.builder().entraUser(buildTestEntraUser())
                 .userType(UserType.INTERNAL).legacyUserId(UUID.randomUUID())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .createdDate(LocalDateTime.now()).createdBy("test").build();
     }
 
