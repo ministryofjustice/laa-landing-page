@@ -114,7 +114,7 @@ class RoleChangeNotificationServiceTest {
     }
 
     @Test
-    void shouldCreateCorrectCCMSMessage_whenPuiRolesChanged() throws JsonProcessingException {
+    void shouldCreateCorrectCcmsMessage_whenPuiRolesChanged() throws JsonProcessingException {
         String expectedJson = "{\"test\":\"message\"}";
         when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
 
