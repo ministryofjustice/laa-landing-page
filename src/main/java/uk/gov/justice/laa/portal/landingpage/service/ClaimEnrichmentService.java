@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
@@ -17,13 +18,13 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -79,12 +80,11 @@ public class ClaimEnrichmentService {
             //5. Get Office codes associated to the user
             List<String> officeIds = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
-                    .filter(profile -> profile.getFirm() != null)
-                    .map(UserProfile::getFirm)
-                    .map(Firm::getId)
-                    .flatMap(firmId -> officeRepository.findOfficeByFirm_IdIn(List.of(firmId)).stream())
-                    .map(office -> office.getCode())
-                    .filter(officeCode -> officeCode != null)
+                    .map(UserProfile::getOffices)
+                    .filter(Objects::nonNull)
+                    .flatMap(Collection::stream)
+                    .map(Office::getCode)
+                    .filter(Objects::nonNull)
                     .distinct()
                     .collect(Collectors.toList());
 
@@ -108,7 +108,7 @@ public class ClaimEnrichmentService {
                 if (officeIds.isEmpty()) {
                     officeIds = firms.stream()
                             .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())
-                            .map(office -> office.getCode())
+                            .map(Office::getCode)
                             .filter(Objects::nonNull)
                             .distinct()
                             .collect(Collectors.toList());
