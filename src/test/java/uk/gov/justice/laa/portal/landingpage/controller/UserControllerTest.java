@@ -2443,7 +2443,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(availableApps);
 
         // When
-        String view = userController.grantAccessEditUserApps(userId, model);
+        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model, new MockHttpSession());
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-apps");
@@ -2460,23 +2460,29 @@ class UserControllerTest {
     void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
-        List<String> selectedApps = List.of("app1", "app2");
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(List.of("app1", "app2"));
         MockHttpSession testSession = new MockHttpSession();
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
 
         // When
-        RedirectView result = userController.grantAccessSetSelectedApps(userId, selectedApps, authentication, testSession);
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult, authentication, model, testSession);
 
         // Then
-        assertThat(result.getUrl()).isEqualTo("/admin/users/grant-access/" + userId + "/roles");
-        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(selectedApps);
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/roles");
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(List.of("app1", "app2"));
     }
 
     @Test
     void grantAccessSetSelectedApps_shouldRedirectToManageUserWhenNoAppsSelected() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000";
-        final List<String> selectedApps = null; // No apps selected
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(null); // No apps selected
         final MockHttpSession testSession = new MockHttpSession();
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
 
         UserProfileDto userProfileDto = new UserProfileDto();
         EntraUserDto entraUser = new EntraUserDto();
@@ -2489,10 +2495,10 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
-        RedirectView result = userController.grantAccessSetSelectedApps(userId, selectedApps, authentication, testSession);
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult, authentication, model, testSession);
 
         // Then
-        assertThat(result.getUrl()).isEqualTo("/admin/users/manage/" + userId);
+        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
         verify(userService).updateUserRoles(userId, new ArrayList<>());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
