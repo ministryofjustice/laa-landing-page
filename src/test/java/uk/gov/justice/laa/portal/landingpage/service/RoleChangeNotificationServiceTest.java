@@ -120,14 +120,14 @@ class RoleChangeNotificationServiceTest {
 
         verify(objectMapper).writeValueAsString(argThat(message -> {
             CcmsMessage ccmsMessage = (CcmsMessage) message;
-            return ccmsMessage.getUserName().equals(userProfile.getLegacyUserId().toString()) &&
-                   ccmsMessage.getVendorNumber().equals(firm.getCode()) &&
-                   ccmsMessage.getFirstName().equals(entraUser.getFirstName()) &&
-                   ccmsMessage.getLastName().equals(entraUser.getLastName()) &&
-                   ccmsMessage.getEmail().equals(entraUser.getEmail()) &&
-                   ccmsMessage.getTimestamp() != null &&
-                   ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_001") &&
-                   ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_002");
+            return ccmsMessage.getUserName().equals(userProfile.getLegacyUserId().toString())
+                    && ccmsMessage.getVendorNumber().equals(firm.getCode())
+                    && ccmsMessage.getFirstName().equals(entraUser.getFirstName())
+                    && ccmsMessage.getLastName().equals(entraUser.getLastName())
+                    && ccmsMessage.getEmail().equals(entraUser.getEmail())
+                    && ccmsMessage.getTimestamp() != null
+                    && ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_001")
+                    && ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_002");
         }));
     }
 
