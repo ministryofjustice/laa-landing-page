@@ -194,9 +194,7 @@
         </style>
 
         <script>
-            console.log('Script loaded and executing');
             document.addEventListener('DOMContentLoaded', function () {
-                console.log('DOM content loaded');
                 const firmSearchInput = document.getElementById('firmSearch');
                 const firmSearchListbox = document.getElementById('firmSearch__listbox');
                 const selectedFirmIdInput = document.getElementById('selectedFirmId');
@@ -206,7 +204,7 @@
 
 
                 if (!firmSearchInput) {
-                    console.error('firmSearchInput element not found!');
+                    // If the input is not found, return early
                     return;
                 }
 
@@ -221,21 +219,18 @@
 
                 // Handle input changes
                 firmSearchInput.addEventListener('input', function () {
-                    console.log('Input event fired, value:', this.value);
                     clearTimeout(searchTimeout);
                     const query = this.value.trim();
 
+                    // If the input is empty, hide results and reset selected firm ID
                     if (query.length < 1) {
-                        console.log('Query too short, hiding results');
                         hideResults();
                         selectedFirmIdInput.value = '';
                         return;
                     }
 
-                    console.log('Setting timeout for search with query:', query);
                     // Debounce search requests
                     searchTimeout = setTimeout(() => {
-                        console.log('Timeout fired, calling searchFirms');
                         searchFirms(query);
                     }, 300);
                 });
@@ -273,9 +268,6 @@
 
                 function searchFirms(query) {
                     updateStatus('Searching...');
-
-                    console.log('Making request to:', `/admin/user/create/firm/search?q=${encodeURIComponent(query)}`);
-
                     fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
                         method: 'GET',
                         headers: {
@@ -284,19 +276,15 @@
                         },
                     })
                         .then(response => {
-                            console.log('Response status:', response.status);
-                            console.log('Response headers:', response.headers);
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}`);
                             }
                             return response.json();
                         })
                         .then(data => {
-                            console.log('Search results:', data);
                             displayResults(data);
                         })
                         .catch(error => {
-                            console.error('Error searching firms:', error);
                             hideResults();
                             updateStatus('Search failed: ' + error.message);
                         });
@@ -338,11 +326,19 @@
                         item.setAttribute('aria-posinset', index + 1);
                         item.setAttribute('aria-setsize', firms.length);
 
-                        // Create a more select-like display format
-                        const firmName = escapeHtml(firm.name);
-                        const firmCode = firm.code && firm.code.trim() ? escapeHtml(firm.code) : 'No code available';
+                        // Create a more select-like display format - using safe DOM manipulation
+                        const firmName = firm.name || '';
+                        const firmCode = firm.code && firm.code.trim() ? firm.code : 'No code available';
 
-                        item.innerHTML = `<strong>${firmName}</strong><small>Firm code: ${firmCode}</small>`;
+                        // Create elements safely to prevent XSS
+                        const strongElement = document.createElement('strong');
+                        strongElement.textContent = firmName;
+
+                        const smallElement = document.createElement('small');
+                        smallElement.textContent = `Firm code: ${firmCode}`;
+
+                        item.appendChild(strongElement);
+                        item.appendChild(smallElement);
 
                         item.addEventListener('click', function () {
                             selectFirm(firm);
@@ -361,19 +357,17 @@
                 }
 
                 function selectFirm(firm) {
-                    console.log('Selecting firm:', firm.name);
                     firmSearchInput.value = firm.name;
                     selectedFirmIdInput.value = firm.id;
                     hideResults();
                     updateStatus(`${firm.name} selected`);
-                    console.log('Firm selected and dropdown should be hidden');
                 }
 
                 function updateSelection(items) {
                     items.forEach((item, index) => {
                         // Add null check to prevent errors
                         if (!item) return;
-                        
+
                         if (index === selectedIndex) {
                             item.setAttribute('aria-selected', 'true');
                             item.style.backgroundColor = '#1d70b8';
@@ -396,7 +390,6 @@
                 }
 
                 function hideResults() {
-                    console.log('Hiding results');
                     firmSearchListbox.classList.add('autocomplete__menu--hidden');
                     firmSearchListbox.classList.remove('autocomplete__menu--inline');
                     firmSearchInput.setAttribute('aria-expanded', 'false');
@@ -404,19 +397,12 @@
                     if (assistiveHint) {
                         assistiveHint.style.display = 'none';
                     }
-                    console.log('Results hidden, classes:', firmSearchListbox.className);
                 }
 
                 function updateStatus(message) {
                     // Alternate between status elements for better screen reader support
                     currentStatusElement = currentStatusElement === statusA ? statusB : statusA;
                     currentStatusElement.textContent = message;
-                }
-
-                function escapeHtml(text) {
-                    const div = document.createElement('div');
-                    div.textContent = text;
-                    return div.innerHTML;
                 }
             });
         </script>
