@@ -268,7 +268,7 @@ public class UserController {
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
         List<FirmDto> firms = firmService.searchFirms(query);
-        
+
         List<Map<String, String>> result = firms.stream()
                 .limit(10) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
@@ -279,7 +279,6 @@ public class UserController {
                     return firmData;
                 })
                 .collect(Collectors.toList());
-        log.debug("Returning {} firms for query '{}'", result.size(), query);
         return result;
     }
 
@@ -548,7 +547,8 @@ public class UserController {
     @GetMapping("/user/create/confirmation")
     public String addUserCreated(Model model, HttpSession session) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
-        Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile", UserProfileDto.class);
+        Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile",
+                UserProfileDto.class);
         if (userOptional.isPresent() && userProfileOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
