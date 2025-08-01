@@ -1824,6 +1824,55 @@ class UserControllerTest {
     }
 
     @Test
+    void setSelectedApps_shouldHandleValidationErrors() {
+        // Given
+        ApplicationsForm form = new ApplicationsForm();
+        form.setApps(null); // This should trigger validation
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("user", new EntraUserDto());
+
+        // When
+        String view = userController.setSelectedApps(form, model, session);
+
+        // Then - should redirect to check answers when no apps selected
+        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
+    }
+
+    @Test
+    void selectUserApps_shouldHandleFormPopulation() {
+        // Given
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+        
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2));
+        
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("apps", List.of("app1")); // Pre-selected app
+        session.setAttribute("user", new EntraUserDto());
+        
+        ApplicationsForm form = new ApplicationsForm();
+
+        // When
+        String view = userController.selectUserApps(form, model, session);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-apps");
+        assertThat(model.getAttribute("apps")).isNotNull();
+        assertThat(model.getAttribute("user")).isNotNull();
+        
+        @SuppressWarnings("unchecked")
+        List<AppViewModel> apps = (List<AppViewModel>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
+        assertThat(apps.get(1).isSelected()).isFalse(); // app2 should not be selected
+    }
+
+    @Test
     void setSelectedRoles_shouldHandleValidationErrors() {
         BindingResult result = Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
@@ -2501,6 +2550,61 @@ class UserControllerTest {
         assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
         verify(userService).updateUserRoles(userId, new ArrayList<>());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldReturnToFormOnValidationErrors() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(null); // This will trigger validation error
+        
+        MockHttpSession testSession = new MockHttpSession();
+        
+        // Mock session model with apps data
+        Model sessionModel = new ExtendedModelMap();
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        List<AppDto> apps = List.of(app1);
+        
+        sessionModel.addAttribute("user", user);
+        sessionModel.addAttribute("apps", apps);
+        testSession.setAttribute("grantAccessUserAppsModel", sessionModel);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult, authentication, model, testSession);
+
+        // Then
+        assertThat(result).isEqualTo("grant-access-user-apps");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldRedirectWhenValidationErrorsAndNoSessionModel() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(null); // This will trigger validation error
+        
+        MockHttpSession testSession = new MockHttpSession();
+        // No session model present
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult, authentication, model, testSession);
+
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
     }
 
     @Test
