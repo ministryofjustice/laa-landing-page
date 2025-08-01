@@ -15,24 +15,19 @@
 
             <div class="govuk-panel govuk-panel--confirmation">
                 <h1 class="govuk-panel__title">
-                    Access updated
+                    Access and permissions updated
                 </h1>
                 <div class="govuk-panel__body">
                     for <span th:text="${user.fullName}"></span>
                 </div>
             </div>
 
-            <h2 class="govuk-heading-m">What happens next</h2>
+            <h2 class="govuk-heading-m">Next steps</h2>
 
-            <p class="govuk-body">You can:</p>
-            <ul class="govuk-list govuk-list--bullet">
-                <li><a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">manage access</a></li>
-                <li><a th:href="@{/admin/user/create/details}" class="govuk-link">create new user</a></li>
-            </ul>
+            <p class="govuk-body">Contact the user and tell them that their access and permissions have been added to their account.</p>
 
             <div class="govuk-!-padding-top-6">
-                <a th:href="@{/admin/users}" class="govuk-button" data-module="govuk-button">Go back to Manage your
-                    users</a>
+                <a th:href="@{/admin/users}" class="govuk-button" data-module="govuk-button">Go back to manage your users</a>
             </div>
         </div>
     </main>
