@@ -240,7 +240,7 @@ public class UserService {
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userProfile.userProfileStatus"), Sort.Order.desc("userProfile.createdDate"));
+            return Sort.by(Sort.Order.desc("userProfile.userProfileStatus"), Sort.Order.asc("firstName"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -252,7 +252,9 @@ public class UserService {
             case "FIRSTNAME" -> Sort.by(order, "firstName");
             case "LASTNAME" -> Sort.by(order, "lastName");
             case "EMAIL" -> Sort.by(order, "email");
-            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            case "USERSTATUS" -> Sort.by(order, "userProfile.userProfileStatus");
+            case "USERTYPE" -> Sort.by(order, "userProfile.userType");
+            case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }
