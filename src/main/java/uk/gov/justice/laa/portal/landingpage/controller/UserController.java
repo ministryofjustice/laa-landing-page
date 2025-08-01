@@ -947,7 +947,7 @@ public class UserController {
      * assigned apps.
      */
     @GetMapping("/users/grant-access/{id}/apps")
-    public String grantAccessEditUserApps(@PathVariable String id, Model model) {
+    public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
@@ -962,17 +962,37 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
 
+        // Store the model in session to handle validation errors later
+        session.setAttribute("grantAccessUserAppsModel", model);
         return "grant-access-user-apps";
     }
 
     @PostMapping("/users/grant-access/{id}/apps")
-    public RedirectView grantAccessSetSelectedApps(@PathVariable String id,
-            @RequestParam(value = "apps", required = false) List<String> apps,
+    public String grantAccessSetSelectedApps(@PathVariable String id,
+            @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
-            HttpSession session) {
+            Model model, HttpSession session) {
+        
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while selecting apps: {}", result.getAllErrors());
+            // If there are validation errors, return to the apps page with errors
+            Model modelFromSession = (Model) session.getAttribute("grantAccessUserAppsModel");
+            if (modelFromSession == null) {
+                // If no model in session, redirect to apps page to repopulate
+                return "redirect:/admin/users/grant-access/" + id + "/apps";
+            }
+
+            model.addAttribute("user", modelFromSession.getAttribute("user"));
+            model.addAttribute("apps", modelFromSession.getAttribute("apps"));
+            return "grant-access-user-apps";
+        }
+
         // Handle case where no apps are selected (apps will be null)
-        List<String> selectedApps = apps != null ? apps : new ArrayList<>();
+        List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
         session.setAttribute("grantAccessSelectedApps", selectedApps);
+
+        // Clear the grantAccessUserAppsModel from session to avoid stale data
+        session.removeAttribute("grantAccessUserAppsModel");
 
         // If no apps are selected, persist empty roles to database and redirect to
         // manage user page
@@ -987,12 +1007,12 @@ public class UserController {
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
-            return new RedirectView(String.format("/admin/users/manage/%s", uuid));
+            return "redirect:/admin/users/manage/" + uuid;
         }
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return new RedirectView(String.format("/admin/users/grant-access/%s/roles", uuid));
+        return "redirect:/admin/users/grant-access/" + uuid + "/roles";
     }
 
     /**
@@ -1345,6 +1365,7 @@ public class UserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("grantAccessUserOfficesModel");
+        session.removeAttribute("grantAccessUserAppsModel");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
