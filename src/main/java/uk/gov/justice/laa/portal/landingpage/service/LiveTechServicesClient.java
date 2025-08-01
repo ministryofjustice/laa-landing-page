@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 public class LiveTechServicesClient implements TechServicesClient {
 
     @Value("${app.tech.services.laa.verification.method}")
-    public static  String techServicesVerificationMethod;
+    public String techServicesVerificationMethod;
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
