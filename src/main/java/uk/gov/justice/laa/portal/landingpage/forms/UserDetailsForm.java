@@ -10,9 +10,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 @Data
 public class UserDetailsForm {
 
-    @NotEmpty(message = "Select a firm")
-    private String firmId;
-
     @Size(min = 2, max = 99, message = "First name must be between 2-99 characters")
     @NotEmpty(message = "Enter a first name")
     @Pattern(regexp = "^[A-Za-z](?:[A-Za-z \\-']*[A-Za-z])?$", message = "First name must not contain numbers or special characters")
