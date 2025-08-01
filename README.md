@@ -108,12 +108,13 @@ Once the environment variables are set, you can run must first start the databas
 
 If there are changes made to DB structure
 
-1. Ensure the DB with latest changes are present, either modified DB manually or Recreate DB using Hibernate
+1. Ensure there are two DB instances running one with existing version and another with new DB changes
 2. Issue the command below to generate the changelog (it requires installing liquibase locally using brew)
 ```
-liquibase --driver=org.postgresql.Driver --changeLogFile=./changelog.yml --url=jdbc:postgresql://localhost:5432/portal-database --username=<<db_uname>> --password=<<db_pwd>> generateChangeLog
+liquibase diff-changelog --changelog-file=diff-changelog.yml --url="jdbc:postgresql://localhost:5432/portal-database" --username=<<uname>> --password=<<pwd>> 
+--reference-url="jdbc:postgresql://localhost:54321/portal-database" --reference-username=<<uname>> --reference-password=<<pwd>>
 ```
-3. Copy the changelog file to application resources folder (*resources/db/changelog*)
+3. Copy the diff-changelog.yml file to application resources folder (*resources/db/changelog/changesets/*) and rename it to `db.changesets-<<next_version>>.yaml`
 4. Ensure custom constraints are retained along with any new constraints
 
 *Please note liquibase does not generate partial indexes or some custom constraints. Please ensure the constraints are add to the changelog file at the bottom of the file.*
