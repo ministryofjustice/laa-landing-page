@@ -93,7 +93,7 @@ public class LoginController {
                 model.addAttribute("user", userSessionData.getUser());
                 model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
-                boolean isAdmin = userSessionData.getUserTypes().stream().anyMatch(UserType::isAdmin);
+                boolean isAdmin = !userService.getUserPermissionsByUserId(userSessionData.getUser().getId()).isEmpty();
                 model.addAttribute("isAdminUser", isAdmin);
             } else {
                 logger.info("No access token found");
