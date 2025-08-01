@@ -16,6 +16,13 @@ laa-apps:
       url: ${app.crime.apply.url}
       laaApplicationDetails: ${app.crime.apply.details}
       ordinal: 1
+    - name: ${app.pui.name}
+      oidGroupName: PUI
+      title: Client and Cost Management System
+      description: For applications for civil funding
+      url: ${app.pui.url}
+      laaApplicationDetails: ${app.pui.details}
+      ordinal: 2
     - name: ${app.submit.crime.form.name}
       oidGroupName: NEWCRM7
       title: Submit a crime form
