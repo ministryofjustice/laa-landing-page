@@ -165,6 +165,7 @@ public class UserService {
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
         return roles != null && !roles.isEmpty() ? roles.stream()
                 .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
+                .filter(AppRole::isLegacySync)
                 .collect(Collectors.toSet()) : new HashSet<>();
     }
 

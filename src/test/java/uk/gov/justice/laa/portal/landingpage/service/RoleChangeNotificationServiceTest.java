@@ -65,12 +65,14 @@ class RoleChangeNotificationServiceTest {
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_1")
                 .ccmsCode("CCMS_PUI_001")
+                .legacySync(true)
                 .build();
 
         puiRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_2")
                 .ccmsCode("CCMS_PUI_002")
+                .legacySync(true)
                 .build();
 
         nonPuiRole = AppRole.builder()
