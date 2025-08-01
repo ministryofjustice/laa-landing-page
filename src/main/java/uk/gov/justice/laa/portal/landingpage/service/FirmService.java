@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,14 @@ public class FirmService {
 
     public FirmDto getFirm(String id) {
         return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
+    }
+
+    public Optional<FirmDto> getUserFirm(EntraUser entraUser) {
+        return entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm)
+                .map(firm -> mapper.map(firm, FirmDto.class));
     }
 
     public List<FirmDto> getUserFirms(EntraUser entraUser) {
