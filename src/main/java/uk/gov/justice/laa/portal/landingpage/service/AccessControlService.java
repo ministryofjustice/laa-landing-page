@@ -38,31 +38,39 @@ public class AccessControlService {
         this.firmService = firmService;
     }
 
-    public boolean canAccessUser(String userId) {
+    public boolean canAccessUser(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
 
         if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)) {
             return true;
         }
 
-        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userService.isInternal(userId)) {
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(userId) && usersAreInSameFirm(authenticatedUser, userId);
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && usersAreInSameFirm(authenticatedUser, accessedUser.getId());
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userId);
+            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userProfileId);
         }
         return canAccess;
     }
 
-    public boolean canEditUser(String userId) {
+    public boolean canEditUser(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -78,9 +86,9 @@ public class AccessControlService {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && usersAreInSameFirm(authenticatedUser, userId);
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
-            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userId);
+            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userProfileId);
         }
         return canAccess;
     }
