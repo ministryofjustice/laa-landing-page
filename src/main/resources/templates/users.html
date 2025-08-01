@@ -117,7 +117,7 @@
                                         th:text="${user.fullName}"></a>
                                 </td>
                                 <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.firm.name}"></td>
+                                    th:text="${user.firm != null ? user.firm.name : ''}"></td>
                                 <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
                                     th:text="${user.entraUser.email}"></td>
                                 <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
