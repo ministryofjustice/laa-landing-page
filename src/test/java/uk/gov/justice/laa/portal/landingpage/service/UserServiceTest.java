@@ -110,6 +110,8 @@ class UserServiceTest {
     private TechServicesClient techServicesClient;
     @Mock
     private UserProfileRepository mockUserProfileRepository;
+    @Mock
+    private RoleChangeNotificationService mockRoleChangeNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -122,7 +124,8 @@ class UserServiceTest {
                 mockOfficeRepository,
                 laaApplicationsList,
                 techServicesClient,
-                mockUserProfileRepository);
+                mockUserProfileRepository,
+                mockRoleChangeNotificationService);
     }
 
     @Test
