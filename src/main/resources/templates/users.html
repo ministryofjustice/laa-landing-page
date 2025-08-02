@@ -70,7 +70,7 @@
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="show-firm-admins" name="show-firm-admins"
                                         type="checkbox" value="true" onchange="handleShowFirmAdmins(this)"
-                                        th:checked="${param.showFirmAdmins != null}">
+                                        th:checked="${param.showFirmAdmins != null && param.showFirmAdmins[0] == 'true'}">
                                     <label class="govuk-label govuk-checkboxes__label" for="organisation">
                                         Show firm admins
                                     </label>
