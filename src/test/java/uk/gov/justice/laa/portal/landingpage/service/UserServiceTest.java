@@ -1986,15 +1986,15 @@ class UserServiceTest {
     void getDefaultSort() {
         Sort nullSort = userService.getSort(null, null);
         assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
-        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("userProfile.createdDate");
-        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("firstName");
+        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
 
         Sort emptySort = userService.getSort("", null);
         assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
-        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("userProfile.createdDate");
-        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("firstName");
+        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
     }
 
     @Test
@@ -2005,7 +2005,7 @@ class UserServiceTest {
             "email", "email",
             "eMAIl", "email",
             "lAstName", "lastName",
-            "USERSTATUS", "userStatus"
+            "USERSTATUS", "userProfile.userProfileStatus"
         );
 
         String sort = "aSc";
