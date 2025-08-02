@@ -84,6 +84,7 @@ public class UserService {
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
+    private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -93,7 +94,8 @@ public class UserService {
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
             OfficeRepository officeRepository,
             LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository) {
+            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+            RoleChangeNotificationService roleChangeNotificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -103,6 +105,7 @@ public class UserService {
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
+        this.roleChangeNotificationService = roleChangeNotificationService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -142,11 +145,28 @@ public class UserService {
             if (after < before) {
                 logger.warn("Attempt to assign internal role user ID {}.", userProfile.getEntraUser().getId());
             }
-            userProfile.setAppRoles(new HashSet<>(roles));
+
+            Set<AppRole> newRoles = new HashSet<>(roles);
+
+            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+
+            // Update roles
+            userProfile.setAppRoles(newRoles);
             userProfileRepository.saveAndFlush(userProfile);
+
+            // TODO send message to CCMS if PUI roles are added/removed
+            // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
+    }
+
+    private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
+        return roles != null && !roles.isEmpty() ? roles.stream()
+                .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
+                .filter(AppRole::isLegacySync)
+                .collect(Collectors.toSet()) : new HashSet<>();
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {

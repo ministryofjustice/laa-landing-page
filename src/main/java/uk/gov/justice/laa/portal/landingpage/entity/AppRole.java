@@ -57,7 +57,7 @@ public class AppRole extends BaseEntity {
     @Column(name = "legacy_sync", nullable = false)
     @ColumnDefault("false")
     @NotNull(message = "Application role legacy sync flag must be provided")
-    private boolean lagacySync;
+    private boolean legacySync;
 
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
