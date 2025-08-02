@@ -1985,27 +1985,27 @@ class UserServiceTest {
     @Test
     void getDefaultSort() {
         Sort nullSort = userService.getSort(null, null);
-        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
+        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userProfileStatus");
         assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
-        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("firstName");
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("entraUser.firstName");
         assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
 
         Sort emptySort = userService.getSort("", null);
-        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
+        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userProfileStatus");
         assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
-        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("firstName");
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("entraUser.firstName");
         assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
     }
 
     @Test
     void getGivenSort() {
         Map<String, String> fieldMappings = Map.of(
-            "firstName", "firstName",
-            "lastName", "lastName",
-            "email", "email",
-            "eMAIl", "email",
-            "lAstName", "lastName",
-            "USERSTATUS", "userProfile.userProfileStatus"
+            "firstName", "entraUser.firstName",
+            "lastName", "entraUser.lastName",
+            "email", "entraUser.email",
+            "eMAIl", "entraUser.email",
+            "lAstName", "entraUser.lastName",
+            "USERSTATUS", "userProfileStatus"
         );
 
         String sort = "aSc";
