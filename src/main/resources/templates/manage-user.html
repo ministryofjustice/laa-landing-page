@@ -149,8 +149,11 @@
                                         <dd class="govuk-summary-list__value" th:text="${office.address.city}"></dd>
                                         <dd class="govuk-summary-list__value" th:text="${office.address.postcode}"></dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userOffices)}" class="govuk-summary-list__row">
+                                    <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}" class="govuk-summary-list__row">
                                         <dd class="govuk-summary-list__value">No offices assigned</dd>
+                                    </div>
+                                    <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}" class="govuk-summary-list__row">
+                                        <dd class="govuk-summary-list__value">Access to All Offices</dd>
                                     </div>
                                 </dl>
                             </div>
