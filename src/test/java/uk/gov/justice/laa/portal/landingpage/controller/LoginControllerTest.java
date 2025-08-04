@@ -13,9 +13,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
@@ -171,6 +173,78 @@ class LoginControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("home");
         assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithAdmin() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        EntraUserDto user = EntraUserDto.builder().id(userId.toString()).build();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .user(user)
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+        when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of(Permission.VIEW_EXTERNAL_USER));
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(true);
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithoutAdmin() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        EntraUserDto user = EntraUserDto.builder().id(userId.toString()).build();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .user(user)
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+        when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of());
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(false);
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithoutUser() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(false);
         verify(loginService).processUserSession(authentication, authClient, session);
     }
 

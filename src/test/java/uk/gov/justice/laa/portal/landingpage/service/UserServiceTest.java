@@ -110,6 +110,8 @@ class UserServiceTest {
     private TechServicesClient techServicesClient;
     @Mock
     private UserProfileRepository mockUserProfileRepository;
+    @Mock
+    private RoleChangeNotificationService mockRoleChangeNotificationService;
 
     @BeforeEach
     void setUp() {
@@ -122,7 +124,8 @@ class UserServiceTest {
                 mockOfficeRepository,
                 laaApplicationsList,
                 techServicesClient,
-                mockUserProfileRepository);
+                mockUserProfileRepository,
+                mockRoleChangeNotificationService);
     }
 
     @Test
@@ -1985,27 +1988,27 @@ class UserServiceTest {
     @Test
     void getDefaultSort() {
         Sort nullSort = userService.getSort(null, null);
-        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
-        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("userProfile.createdDate");
-        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(nullSort.stream().toList().get(0).getProperty()).isEqualTo("userProfileStatus");
+        assertThat(nullSort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(nullSort.stream().toList().get(1).getProperty()).isEqualTo("entraUser.firstName");
+        assertThat(nullSort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
 
         Sort emptySort = userService.getSort("", null);
-        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userProfile.userProfileStatus");
-        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.ASC);
-        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("userProfile.createdDate");
-        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(emptySort.stream().toList().get(0).getProperty()).isEqualTo("userProfileStatus");
+        assertThat(emptySort.stream().toList().get(0).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(emptySort.stream().toList().get(1).getProperty()).isEqualTo("entraUser.firstName");
+        assertThat(emptySort.stream().toList().get(1).getDirection()).isEqualTo(Sort.Direction.ASC);
     }
 
     @Test
     void getGivenSort() {
         Map<String, String> fieldMappings = Map.of(
-            "firstName", "firstName",
-            "lastName", "lastName",
-            "email", "email",
-            "eMAIl", "email",
-            "lAstName", "lastName",
-            "USERSTATUS", "userStatus"
+            "firstName", "entraUser.firstName",
+            "lastName", "entraUser.lastName",
+            "email", "entraUser.email",
+            "eMAIl", "entraUser.email",
+            "lAstName", "entraUser.lastName",
+            "USERSTATUS", "userProfileStatus"
         );
 
         String sort = "aSc";
@@ -2277,6 +2280,116 @@ class UserServiceTest {
         int actual = userService.createInternalPolledUser(List.of());
         // Assert
         assertThat(actual).isEqualTo(0);
+    }
+
+    @Test
+    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_returnsValidPage() {
+        // Given
+        String searchTerm = "test";
+        List<Permission> permissions = List.of(Permission.CREATE_EXTERNAL_USER);
+        UUID firmId = UUID.randomUUID();
+        int page = 1;
+        int pageSize = 10;
+        String sort = "firstName";
+        String direction = "ASC";
+
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .entraUser(EntraUser.builder()
+                        .firstName("Test")
+                        .lastName("User")
+                        .email("test@example.com")
+                        .build())
+                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .build();
+
+        Page<UserProfile> userProfilePage = new PageImpl<>(
+                List.of(userProfile),
+                PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                1
+        );
+
+        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
+                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class)))
+                .thenReturn(userProfilePage);
+
+        // When
+        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+
+        // Then
+        assertThat(result.getUsers()).hasSize(1);
+        assertThat(result.getTotalUsers()).isEqualTo(1);
+        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
+                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class));
+    }
+
+    @Test
+    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_withEmptyPermissions() {
+        // Given
+        String searchTerm = "test";
+        List<Permission> permissions = List.of(); // Empty list
+        UUID firmId = UUID.randomUUID();
+        int page = 1;
+        int pageSize = 10;
+        String sort = "firstName";
+        String direction = "ASC";
+
+        Page<UserProfile> userProfilePage = new PageImpl<>(
+                List.of(),
+                PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                0
+        );
+
+        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
+                eq(searchTerm), eq(null), eq(firmId), any(PageRequest.class)))
+                .thenReturn(userProfilePage);
+
+        // When
+        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+
+        // Then
+        assertThat(result.getUsers()).hasSize(0);
+        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
+                eq(searchTerm), eq(null), eq(firmId), any(PageRequest.class));
+    }
+
+    @Test
+    void getUserPermissionsByUserId_withStringId_returnsPermissions() {
+        // Given
+        String userId = UUID.randomUUID().toString();
+        UUID userUuid = UUID.fromString(userId);
+        
+        EntraUser entraUser = EntraUser.builder()
+                .id(userUuid)
+                .build();
+        
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .activeProfile(true)
+                .build();
+
+        AppRole appRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .authzRole(true)
+                .permissions(Set.of(Permission.CREATE_EXTERNAL_USER))
+                .build();
+        
+        userProfile.setAppRoles(Set.of(appRole));
+        entraUser.setUserProfiles(Set.of(userProfile));
+
+        when(mockEntraUserRepository.findById(userUuid)).thenReturn(Optional.of(entraUser));
+
+        // When
+        Set<Permission> result = userService.getUserPermissionsByUserId(userId);
+
+        // Then
+        assertThat(result).contains(Permission.CREATE_EXTERNAL_USER);
+        verify(mockEntraUserRepository).findById(userUuid);
     }
 }
 

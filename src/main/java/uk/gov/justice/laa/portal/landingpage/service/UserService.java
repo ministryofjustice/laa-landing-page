@@ -84,6 +84,7 @@ public class UserService {
     private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
+    private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
@@ -93,7 +94,8 @@ public class UserService {
             AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
             OfficeRepository officeRepository,
             LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository) {
+            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+            RoleChangeNotificationService roleChangeNotificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -103,6 +105,7 @@ public class UserService {
         this.laaApplicationsList = laaApplicationsList;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
+        this.roleChangeNotificationService = roleChangeNotificationService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -142,11 +145,28 @@ public class UserService {
             if (after < before) {
                 logger.warn("Attempt to assign internal role user ID {}.", userProfile.getEntraUser().getId());
             }
-            userProfile.setAppRoles(new HashSet<>(roles));
+
+            Set<AppRole> newRoles = new HashSet<>(roles);
+
+            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+
+            // Update roles
+            userProfile.setAppRoles(newRoles);
             userProfileRepository.saveAndFlush(userProfile);
+
+            // TODO send message to CCMS if PUI roles are added/removed
+            // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
+    }
+
+    private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
+        return roles != null && !roles.isEmpty() ? roles.stream()
+                .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
+                .filter(AppRole::isLegacySync)
+                .collect(Collectors.toSet()) : new HashSet<>();
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
@@ -230,17 +250,13 @@ public class UserService {
 
     public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<EntraUser> entraUserPage = entraUserRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
-        Page<UserProfile> userProfilePage = entraUserPage.map(user -> user.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .findFirst()
-                .orElse(null));
+        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userProfile.userProfileStatus"), Sort.Order.desc("userProfile.createdDate"));
+            return Sort.by(Sort.Order.desc("userProfileStatus"), Sort.Order.asc("entraUser.firstName"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -249,10 +265,12 @@ public class UserService {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
         return switch (field.toUpperCase()) {
-            case "FIRSTNAME" -> Sort.by(order, "firstName");
-            case "LASTNAME" -> Sort.by(order, "lastName");
-            case "EMAIL" -> Sort.by(order, "email");
-            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
+            case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
+            case "EMAIL" -> Sort.by(order, "entraUser.email");
+            case "USERSTATUS" -> Sort.by(order, "userProfileStatus");
+            case "USERTYPE" -> Sort.by(order, "userType");
+            case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }

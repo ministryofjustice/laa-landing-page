@@ -58,7 +58,7 @@ public class AccessControlService {
         }
 
         boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
-                && usersAreInSameFirm(authenticatedUser, accessedUser.getId());
+                && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userProfileId);
@@ -93,9 +93,9 @@ public class AccessControlService {
         return canAccess;
     }
 
-    private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserId) {
+    private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
         List<UUID> userManagerFirms = firmService.getUserAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
-        List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserId);
+        List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
         return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }
 

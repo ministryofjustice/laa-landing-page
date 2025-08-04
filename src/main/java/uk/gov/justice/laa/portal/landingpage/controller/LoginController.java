@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
@@ -26,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /***
@@ -93,7 +95,11 @@ public class LoginController {
                 model.addAttribute("user", userSessionData.getUser());
                 model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
-                boolean isAdmin = userSessionData.getUserTypes().stream().anyMatch(UserType::isAdmin);
+                boolean isAdmin = false;
+                if (userSessionData.getUser() != null) {
+                    Set<Permission> permissions = userService.getUserPermissionsByUserId(userSessionData.getUser().getId());
+                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER) || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                }
                 model.addAttribute("isAdminUser", isAdmin);
             } else {
                 logger.info("No access token found");
