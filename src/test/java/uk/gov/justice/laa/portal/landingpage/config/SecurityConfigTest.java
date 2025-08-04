@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -71,9 +72,9 @@ class SecurityConfigTest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isForbidden());
 
-        // With internal role - should be allowed to create users
+        // With create external user permission - should be allowed to create users
         mockMvc.perform(get("/admin/user/create")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.CREATE_EXTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
@@ -82,7 +83,7 @@ class SecurityConfigTest {
 
         // With external admin roles - manage users allowed
         mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM_ADMIN.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.EDIT_EXTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
@@ -91,24 +92,16 @@ class SecurityConfigTest {
 
         // With internal roles - manage users allowed
         mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.INTERNAL.name()})
+                        .with(jwt().authorities(Arrays.stream(new String[]{Permission.EDIT_INTERNAL_USER.name()})
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
                 .andExpect(content().string("manage-user"));
 
-        // With external std roles - do not allow manage users
-        mockMvc.perform(get("/admin/users/manage")
-                        .with(jwt().authorities(Arrays.stream(new String[]{UserType.EXTERNAL_SINGLE_FIRM.name()})
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList()))))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isForbidden());
-
         // With admin role - should be allowed
         mockMvc.perform(get("/admin/dashboard")
-                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
+                        .with(jwt().authorities(Arrays.stream(Permission.ADMIN_PERMISSIONS)
                                 .map(SimpleGrantedAuthority::new)
                                 .collect(Collectors.toList()))))
                 .andDo(MockMvcResultHandlers.print())

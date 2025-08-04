@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 
 @Data
 @Builder
@@ -18,4 +19,5 @@ public class EntraUserDto {
     private String entraOid;
     private String firstName;
     private String lastName;
+    private UserStatus userStatus;
 }
