@@ -151,7 +151,6 @@ public class AccessControlServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
-        UUID accessedUserId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().id(userId).email("test@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
@@ -166,6 +165,7 @@ public class AccessControlServiceTest {
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(Collections.emptyList());
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
+        UUID accessedUserId = UUID.randomUUID();
         Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().activeProfile(true).entraUser(accessedUser).build();
