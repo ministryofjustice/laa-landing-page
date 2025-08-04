@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -575,13 +576,11 @@ public class UserService {
      * @param userId The user ID
      * @return List of offices assigned to the user
      */
-    public List<Office> getUserOfficesByUserId(String userId) {
+    public List<OfficeDto> getUserOfficesByUserId(String userId) {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userId);
         if (optionalUserProfile.isPresent()) {
             UserProfileDto userProfile = optionalUserProfile.get();
-            return userProfile.getOffices().stream()
-                    .map(officeDto -> mapper.map(officeDto, Office.class))
-                    .collect(Collectors.toList());
+            return userProfile.getOffices();
         }
         return Collections.emptyList();
     }
@@ -597,11 +596,15 @@ public class UserService {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
-            List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
-            Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+            if (selectedOffices.contains("ALL")) {
+                userProfile.setOffices(null);
+            } else {
+                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+                Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
 
-            // Update user profile offices
-            userProfile.setOffices(offices);
+                // Update user profile offices
+                userProfile.setOffices(offices);
+            }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
@@ -683,6 +686,7 @@ public class UserService {
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder()
                     .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
                     .userType(UserType.INTERNAL)
                     .createdDate(LocalDateTime.now())
                     .createdBy(createdBy)

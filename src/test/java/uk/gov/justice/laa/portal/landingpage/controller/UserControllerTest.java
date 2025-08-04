@@ -61,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -672,8 +673,12 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
@@ -694,15 +699,19 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
     void addUserCheckAnswersPost() {
         HttpSession session = new MockHttpSession();
-        EntraUserDto user = new EntraUserDto();
-        session.setAttribute("user", user);
+        EntraUserDto userDto = new EntraUserDto();
+        session.setAttribute("user", userDto);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("userType", UserType.EXTERNAL_SINGLE_FIRM);
         EntraUser entraUser = EntraUser.builder().build();
@@ -710,8 +719,12 @@ class UserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(session.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNotNull();
         assertThat(session.getAttribute("firm")).isNull();
         assertThat(session.getAttribute("userType")).isNull();
         verify(eventService).logEvent(any());
@@ -731,6 +744,7 @@ class UserControllerTest {
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
+        assertThat(session.getAttribute("userProfile")).isNull();
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(logEvents).hasSize(1);
     }
@@ -740,8 +754,12 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
+        UserProfileDto userProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
+        session.setAttribute("userProfile", userProfile);
         String view = userController.addUserCreated(model, session);
         assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(session.getAttribute("userProfile")).isNull();
+        assertThat(model.getAttribute("userProfile")).isNotNull();
         assertThat(view).isEqualTo("add-user-created");
     }
 
@@ -1196,10 +1214,13 @@ class UserControllerTest {
 
         Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
         Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
         List<Office> allOffices = List.of(office1, office2);
 
-        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        List<OfficeDto> userOffices = List.of(office1Dto);
 
         // Mock user firms for the new firmService call
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -1240,10 +1261,16 @@ class UserControllerTest {
 
         Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
         Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
+        OfficeDto office2Dto = OfficeDto.builder().id(office2.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         List<Office> allOffices = List.of(office1, office2);
 
-        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
 
         // Mock user firms for the new firmService call
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -1314,18 +1341,6 @@ class UserControllerTest {
         OfficesForm form = new OfficesForm();
         form.setOffices(List.of("ALL")); // Special value for "Access to all offices"
 
-        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-        Office office1 = Office.builder().id(UUID.randomUUID()).address(address).build();
-        Office office2 = Office.builder().id(UUID.randomUUID()).address(address).build();
-
-        // Mock firm service to return user firms
-        UUID firmId = UUID.randomUUID();
-        FirmDto firmDto = FirmDto.builder().id(firmId).name("Test Firm").build();
-        when(firmService.getUserFirmsByUserId(userId)).thenReturn(List.of(firmDto));
-
-        // Mock office service to return offices by firms
-        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
-
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -1338,8 +1353,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        // Should pass all office IDs to the service
-        List<String> expectedOfficeIds = List.of(office1.getId().toString(), office2.getId().toString());
+        // Should pass 'All' to service when option is selected
+        List<String> expectedOfficeIds = List.of("ALL");
         verify(userService).updateUserOffices(userId, expectedOfficeIds);
     }
 
@@ -1980,7 +1995,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
-        EntraUser entraUser = EntraUser.builder().build();
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester")))
                 .thenReturn(entraUser);
 
@@ -2009,6 +2024,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users");
         assertThat(testSession.getAttribute("user")).isNull();
+        assertThat(testSession.getAttribute("userProfile")).isNull();
         assertThat(testSession.getAttribute("firm")).isNull();
         assertThat(testSession.getAttribute("isFirmAdmin")).isNull();
         assertThat(testSession.getAttribute("apps")).isNull();
@@ -2328,6 +2344,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("userOffices")).isNotNull(); // Will be empty list, not null
     }
 
+
     @Test
     void addUserCreated_shouldRemoveUserFromSession() {
         // Given
@@ -2335,8 +2352,11 @@ class UserControllerTest {
         user.setFirstName("Test");
         user.setLastName("User");
 
+        UserProfileDto userProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", user);
+        testSession.setAttribute("userProfile", userProfile);
 
         // When
         String view = userController.addUserCreated(model, testSession);
@@ -2345,6 +2365,8 @@ class UserControllerTest {
         assertThat(view).isEqualTo("add-user-created");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(testSession.getAttribute("user")).isNull();
+        assertThat(testSession.getAttribute("userProfile")).isNull();
+        assertThat(model.getAttribute("userProfile")).isNotNull();
     }
 
     @Test
@@ -2362,8 +2384,14 @@ class UserControllerTest {
         Office office1 = Office.builder().id(office1Id).address(address).build();
         Office office2 = Office.builder().id(office2Id).address(address).build();
         Office office3 = Office.builder().id(office3Id).address(address).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
+        OfficeDto office3Dto = OfficeDto.builder().id(office3.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(address.getAddressLine1())
+                        .city(address.getCity()).postcode(address.getPostcode()).build()).build();
 
-        List<Office> userOffices = List.of(office1, office3); // User has access to 2 out of 3 offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office3Dto); // User has access to 2 out of 3 offices
         List<Office> allOffices = List.of(office1, office2, office3);
 
         // Mock user firms for the new firmService call
@@ -2671,8 +2699,11 @@ class UserControllerTest {
                 .address(Office.Address.builder().addressLine1("Address 1").build()).build();
         Office office2 = Office.builder().id(office2Id).code("Office 2")
                 .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1())
+                        .build()).build();
 
-        List<Office> userOffices = List.of(office1); // User has access to office1 only
+        List<OfficeDto> userOffices = List.of(office1Dto); // User has access to office1 only
         List<Office> allOffices = List.of(office1, office2);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -2717,8 +2748,12 @@ class UserControllerTest {
                 .address(Office.Address.builder().addressLine1("Address 1").build()).build();
         Office office2 = Office.builder().id(office2Id).code("Office 2")
                 .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1()).build()).build();
+        OfficeDto office2Dto = OfficeDto.builder().id(office2.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office2.getAddress().getAddressLine1()).build()).build();
 
-        List<Office> userOffices = List.of(office1, office2); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
         List<Office> allOffices = List.of(office1, office2);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -2786,15 +2821,6 @@ class UserControllerTest {
         OfficesForm officesForm = new OfficesForm();
         officesForm.setOffices(List.of("ALL")); // Special "ALL" value
 
-        UUID office1Id = UUID.randomUUID();
-        UUID office2Id = UUID.randomUUID();
-        Office office1 = Office.builder().id(office1Id).code("Office 1").build();
-        Office office2 = Office.builder().id(office2Id).code("Office 2").build();
-
-        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
-        final List<FirmDto> userFirms = List.of(firmDto);
-        final List<Office> allOffices = List.of(office1, office2);
-
         UserProfileDto userProfileDto = new UserProfileDto();
         EntraUserDto entraUser = new EntraUserDto();
         userProfileDto.setEntraUser(entraUser);
@@ -2806,8 +2832,6 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
-        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
@@ -2817,8 +2841,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
 
-        // Should pass all office IDs to the service
-        List<String> expectedOfficeIds = List.of(office1Id.toString(), office2Id.toString());
+        // Should pass 'ALL' to service when option is selected
+        List<String> expectedOfficeIds = List.of("ALL");
         verify(userService).updateUserOffices(userId, expectedOfficeIds);
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
@@ -2865,7 +2889,8 @@ class UserControllerTest {
         List<AppRoleDto> userAppRoles = List.of(appRole);
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
-        List<Office> userOffices = List.of(office);
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
+        List<OfficeDto> userOffices = List.of(officeDto);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
