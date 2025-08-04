@@ -76,6 +76,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             Set<String> securityGroups = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
+                    .filter(appRole -> !appRole.isAuthzRole())
                     .filter(appRole -> Objects.nonNull(appRole.getApp().getSecurityGroupOid()))
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
