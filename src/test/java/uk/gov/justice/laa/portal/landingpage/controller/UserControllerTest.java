@@ -320,6 +320,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
@@ -1709,6 +1710,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .build();
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
@@ -2347,6 +2349,7 @@ class UserControllerTest {
 
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.randomUUID()) // Add ID to prevent null pointer
+                .userType(UserType.EXTERNAL_SINGLE_FIRM) // Add type to prevent null pointer
                 .entraUser(user)
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
