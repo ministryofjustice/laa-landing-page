@@ -651,7 +651,7 @@ public class UserController {
      * Retrieves available apps for user and their currently assigned apps.
      */
     @GetMapping("/users/edit/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_APP) && @accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -671,7 +671,7 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_APP) && @accessControlService.canEditUser(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             Authentication authentication,
@@ -713,7 +713,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user retrieval
      */
     @GetMapping("/users/edit/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_ROLE) && @accessControlService.canEditUser(#id)")
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
@@ -789,7 +789,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user role update
      */
     @PostMapping("/users/edit/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_ROLE) && @accessControlService.canEditUser(#id)")
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
