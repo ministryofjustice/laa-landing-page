@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,6 +130,7 @@ public class UserService {
         return response != null ? response.getValue() : Collections.emptyList();
     }
 
+    @Transactional
     public void updateUserRoles(String userProfileId, List<String> selectedRoles) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
@@ -153,7 +155,8 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
-            userProfileRepository.saveAndFlush(userProfile);
+            userProfileRepository.save(userProfile);
+            techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
 
             // TODO send message to CCMS if PUI roles are added/removed
             // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);

@@ -38,7 +38,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
@@ -944,7 +943,8 @@ class UserServiceTest {
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
-        verify(mockUserProfileRepository, times(1)).saveAndFlush(userProfile);
+        verify(mockUserProfileRepository, times(1)).save(userProfile);
+        verify(techServicesClient, times(1)).updateRoleAssignment(userId);
     }
 
     @Test
@@ -1917,7 +1917,8 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
-            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+            verify(mockUserProfileRepository).save(userProfile);
+            verify(techServicesClient, times(1)).updateRoleAssignment(userId);
         }
 
         @Test
