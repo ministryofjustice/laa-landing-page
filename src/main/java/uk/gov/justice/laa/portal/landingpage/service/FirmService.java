@@ -6,9 +6,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -23,11 +29,15 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 @RequiredArgsConstructor
 public class FirmService {
 
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final FirmRepository firmRepository;
     private final UserProfileRepository userProfileRepository;
     private final ModelMapper mapper;
+    private final CacheManager cacheManager;
 
-    public List<FirmDto> getFirms() {
+    private static final String ALL_FIRMS = "all_firms";
+
+    protected List<FirmDto> getFirms() {
         return firmRepository.findAll()
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
@@ -80,12 +90,44 @@ public class FirmService {
      */
     public List<FirmDto> searchFirms(String searchTerm) {
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
-            return getFirms();
+            return getAllFirmsFromCache();
         }
         
-        return firmRepository.findByNameOrCodeContaining(searchTerm.trim())
+        return getAllFirmsFromCache()
                 .stream()
-                .map(firm -> mapper.map(firm, FirmDto.class))
+                .filter(firm ->  (firm.getName().toLowerCase().contains(searchTerm.toLowerCase())
+                        || (firm.getCode() != null &&firm.getCode().toLowerCase().contains(searchTerm.toLowerCase()))))
                 .collect(Collectors.toList());
     }
+
+    public List<FirmDto> getAllFirmsFromCache() {
+        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
+        if (cache != null) {
+            try {
+                Cache.ValueWrapper valueWrapper = cache.get(ALL_FIRMS);
+                if (valueWrapper != null) {
+                    @SuppressWarnings("unchecked")
+                    List<FirmDto> cachedFirms = (List<FirmDto>) cache.get(ALL_FIRMS, List.class);
+                    return cachedFirms;
+                }
+            } catch (Exception ex) {
+                logger.info("Error while getting access token from cache", ex);
+            }
+        }
+
+        List<FirmDto> allFirms = getFirms();
+        if (cache != null) {
+            cache.put(ALL_FIRMS, allFirms);
+        }
+        return allFirms;
+    }
+
+    @Scheduled(fixedRateString = "${app.firms.clear.cache.interval}")
+    public void clearCache() {
+        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
+        if (cache != null) {
+            cache.clear();
+        }
+    }
+
 }

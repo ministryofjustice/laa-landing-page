@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.cache.CacheManager;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -33,6 +34,8 @@ class FirmServiceTest {
     @Mock
     private FirmRepository firmRepository;
     @Mock
+    private CacheManager cacheManager;
+    @Mock
     private UserProfileRepository userProfileRepository;
 
     @BeforeEach
@@ -40,7 +43,8 @@ class FirmServiceTest {
         firmService = new FirmService(
             firmRepository,
             userProfileRepository,
-            new MapperConfig().modelMapper()
+            new MapperConfig().modelMapper(),
+                cacheManager
         );
     }
 
