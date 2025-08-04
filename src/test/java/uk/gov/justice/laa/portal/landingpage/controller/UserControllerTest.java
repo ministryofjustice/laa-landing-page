@@ -13,8 +13,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import org.hibernate.mapping.Any;
 import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -3318,8 +3315,86 @@ class UserControllerTest {
     }
     
     @Test
+    void removeAppRole_shouldSuccessfullyRemoveRole() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        final String appId = "app123";
+        final String roleName = "TestRole";
+        
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("Admin User");
+        
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userId))
+                .entraUser(EntraUserDto.builder()
+                        .id("entra123")
+                        .email("test@example.com")
+                        .build())
+                .build();
+
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+
+        // When
+        String result = userController.removeAppRole(userId, appId, roleName, authentication);
+
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
+        verify(userService).removeUserAppRole(userId, appId, roleName);
+        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+    }
+
+    @Test
+    void removeAppRole_shouldHandleException() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        final String appId = "app123";
+        final String roleName = "TestRole";
+        
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("Admin User");
+
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        Mockito.doThrow(new RuntimeException("Test exception"))
+                .when(userService).removeUserAppRole(userId, appId, roleName);
+
+        // When
+        String result = userController.removeAppRole(userId, appId, roleName, authentication);
+
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
+        verify(userService).removeUserAppRole(userId, appId, roleName);
+        // Should still redirect even when exception occurs
+    }
+
+    @Test
+    void removeAppRole_shouldHandleUserNotFound() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        final String appId = "app123";
+        final String roleName = "TestRole";
+        
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("Admin User");
+
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
+
+        // When
+        String result = userController.removeAppRole(userId, appId, roleName, authentication);
+
+        // Then - Should still redirect even when user not found (exception is caught and logged)
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
+        verify(userService).removeUserAppRole(userId, appId, roleName);
+        // The orElseThrow() call throws NoSuchElementException, but it's caught and logged
+    }
+    
+    @Test
     void has_accessControl() throws NoSuchMethodException {
-        Class clazz = UserController.class;
+        Class<?> clazz = UserController.class;
         List<String> canEditMethods = List.of("editUser",
                 "editUserApps", "setSelectedAppsEdit",
                 "editUserRoles", "updateUserRoles");

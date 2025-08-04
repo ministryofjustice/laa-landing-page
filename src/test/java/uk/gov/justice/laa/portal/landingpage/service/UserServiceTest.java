@@ -26,7 +26,6 @@ import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -35,10 +34,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import com.microsoft.graph.core.content.BatchRequestContent;
@@ -80,7 +75,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -2280,6 +2274,188 @@ class UserServiceTest {
         int actual = userService.createInternalPolledUser(List.of());
         // Assert
         assertThat(actual).isEqualTo(0);
+    }
+
+    @Test
+    void removeUserAppRole_shouldSuccessfullyRemoveRole() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        String roleName = "TestRole";
+        
+        AppRole roleToRemove = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name(roleName)
+                .build();
+        
+        App app = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+        
+        roleToRemove.setApp(app);
+        
+        AppRole otherRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("OtherRole")
+                .build();
+        
+        App otherApp = App.builder()
+                .id(UUID.randomUUID())
+                .name("Other App")
+                .build();
+        
+        otherRole.setApp(otherApp);
+        
+        UserProfile userProfile = UserProfile.builder()
+                .id(userProfileId)
+                .appRoles(new HashSet<>(Set.of(roleToRemove, otherRole)))
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        // Act
+        userService.removeUserAppRole(userProfileId.toString(), appId.toString(), roleName);
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).hasSize(1);
+        assertThat(userProfile.getAppRoles()).doesNotContain(roleToRemove);
+        assertThat(userProfile.getAppRoles()).contains(otherRole);
+        verify(mockUserProfileRepository).saveAndFlush(userProfile);
+    }
+
+    @Test
+    void removeUserAppRole_shouldWarnWhenRoleNotFound() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        String roleName = "NonExistentRole";
+        
+        AppRole existingRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("ExistingRole")
+                .build();
+        
+        App app = App.builder()
+                .id(UUID.randomUUID())
+                .name("Test App")
+                .build();
+        
+        existingRole.setApp(app);
+        
+        UserProfile userProfile = UserProfile.builder()
+                .id(userProfileId)
+                .appRoles(new HashSet<>(Set.of(existingRole)))
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        // Act
+        userService.removeUserAppRole(userProfileId.toString(), appId.toString(), roleName);
+
+        // Assert - no roles should be removed
+        assertThat(userProfile.getAppRoles()).hasSize(1);
+        assertThat(userProfile.getAppRoles()).contains(existingRole);
+        // saveAndFlush should not be called when no role is removed
+        verify(mockUserProfileRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    void removeUserAppRole_shouldWarnWhenUserNotFound() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String appId = "app123";
+        String roleName = "TestRole";
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+
+        // Act
+        userService.removeUserAppRole(userProfileId.toString(), appId, roleName);
+
+        // Assert - saveAndFlush should not be called when user not found
+        verify(mockUserProfileRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    void removeUserAppRole_shouldRemoveOnlyMatchingAppAndRole() {
+        // Arrange
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID appId = UUID.randomUUID();
+        final String roleName = "TestRole";
+        
+        // Role with matching app and name (should be removed)
+        AppRole roleToRemove = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name(roleName)
+                .build();
+        
+        App targetApp = App.builder()
+                .id(appId)
+                .name("Target App")
+                .build();
+        
+        roleToRemove.setApp(targetApp);
+        
+        // Role with same name but different app (should NOT be removed)
+        AppRole sameNameDifferentApp = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name(roleName)
+                .build();
+        
+        App differentApp = App.builder()
+                .id(UUID.randomUUID())
+                .name("Different App")
+                .build();
+        
+        sameNameDifferentApp.setApp(differentApp);
+        
+        // Role with same app but different name (should NOT be removed)
+        AppRole sameAppDifferentName = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("DifferentRole")
+                .build();
+        
+        sameAppDifferentName.setApp(targetApp);
+        
+        UserProfile userProfile = UserProfile.builder()
+                .id(userProfileId)
+                .appRoles(new HashSet<>(Set.of(roleToRemove, sameNameDifferentApp, sameAppDifferentName)))
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        // Act
+        userService.removeUserAppRole(userProfileId.toString(), appId.toString(), roleName);
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).hasSize(2);
+        assertThat(userProfile.getAppRoles()).doesNotContain(roleToRemove);
+        assertThat(userProfile.getAppRoles()).contains(sameNameDifferentApp);
+        assertThat(userProfile.getAppRoles()).contains(sameAppDifferentName);
+        verify(mockUserProfileRepository).saveAndFlush(userProfile);
+    }
+
+    @Test
+    void removeUserAppRole_shouldHandleEmptyRolesSet() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String appId = "app123";
+        String roleName = "TestRole";
+        
+        UserProfile userProfile = UserProfile.builder()
+                .id(userProfileId)
+                .appRoles(new HashSet<>())
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        // Act
+        userService.removeUserAppRole(userProfileId.toString(), appId, roleName);
+
+        // Assert - no roles should be removed from empty set
+        assertThat(userProfile.getAppRoles()).isEmpty();
+        // saveAndFlush should not be called when no role is removed
+        verify(mockUserProfileRepository, times(0)).saveAndFlush(any());
     }
 }
 

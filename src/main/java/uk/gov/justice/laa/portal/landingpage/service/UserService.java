@@ -756,4 +756,31 @@ public class UserService {
     public List<UUID> getInternalUserEntraIds() {
         return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
+
+    /**
+     * Remove a specific app role from a user
+     */
+    public void removeUserAppRole(String userProfileId, String appId, String roleName) {
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isPresent()) {
+            UserProfile userProfile = optionalUserProfile.get();
+            Set<AppRole> currentRoles = new HashSet<>(userProfile.getAppRoles());
+            
+            // Find and remove the specific role
+            boolean removed = currentRoles.removeIf(role -> 
+                role.getApp().getId().toString().equals(appId) 
+                && role.getName().equals(roleName)
+            );
+            
+            if (removed) {
+                userProfile.setAppRoles(currentRoles);
+                userProfileRepository.saveAndFlush(userProfile);
+                logger.info("Removed app role '{}' from app '{}' for user '{}'", roleName, appId, userProfileId);
+            } else {
+                logger.warn("App role '{}' from app '{}' not found for user '{}'", roleName, appId, userProfileId);
+            }
+        } else {
+            logger.warn("User profile with id {} not found. Could not remove app role.", userProfileId);
+        }
+    }
 }
