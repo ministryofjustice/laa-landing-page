@@ -2957,11 +2957,12 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessCheckAnswers_shouldPopulateModelAndReturnView() {
+    void grantAccessCheckAnswers_shouldPopulateModelAndReturnViewForExternalUser() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440011";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
 
         AppRoleDto appRole = new AppRoleDto();
         appRole.setId("role1");
@@ -2984,6 +2985,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
         assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
+        assertThat(model.getAttribute("externalUser")).isEqualTo(true);
     }
 
     @Test
