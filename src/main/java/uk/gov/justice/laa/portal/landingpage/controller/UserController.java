@@ -187,11 +187,11 @@ public class UserController {
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
-        boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
+        boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
         model.addAttribute("externalUser", externalUser);
         return "manage-user";
     }
