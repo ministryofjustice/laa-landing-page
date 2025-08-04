@@ -1390,6 +1390,7 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
+        model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
 
         return "grant-access-check-answers";
     }
