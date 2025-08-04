@@ -317,6 +317,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
@@ -1706,6 +1707,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .build();
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
@@ -2344,6 +2346,7 @@ class UserControllerTest {
 
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.randomUUID()) // Add ID to prevent null pointer
+                .userType(UserType.EXTERNAL_SINGLE_FIRM) // Add type to prevent null pointer
                 .entraUser(user)
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
@@ -2954,15 +2957,22 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessCheckAnswers_shouldPopulateModelAndReturnView() {
+    void grantAccessCheckAnswers_shouldPopulateModelAndReturnViewForExternalUser() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440011";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
 
         AppRoleDto appRole = new AppRoleDto();
         appRole.setId("role1");
         appRole.setName("Role 1");
+        
+        AppDto app = new AppDto();
+        app.setId("app1");
+        app.setName("Test App");
+        appRole.setApp(app);
+        
         List<AppRoleDto> userAppRoles = List.of(appRole);
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
@@ -2981,6 +2991,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
         assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
+        assertThat(model.getAttribute("externalUser")).isEqualTo(true);
     }
 
     @Test

@@ -4,22 +4,21 @@ laa-apps:
       oidGroupName: CCMS_Apply
       title: Apply for civil legal aid
       description: >-
-        Apply for civil legal aid for domestic abuse (except domestic abuse
-        protection orders), section 8, special children act, and public law family.
+        For special children act, public law family, domestic abuse and section 8 proceedings only
       url: ${app.civil.apply.url}
       laaApplicationDetails: ${app.civil.apply.details}
       ordinal: 0
     - name: ${app.crime.apply.name}
       oidGroupName: CRIMEAPPLY
       title: Apply for criminal legal aid
-      description: Use this service to apply for criminal legal aid.
+      description: Make an application to represent clients charged with a criminal offence
       url: ${app.crime.apply.url}
       laaApplicationDetails: ${app.crime.apply.details}
       ordinal: 1
     - name: ${app.pui.name}
       oidGroupName: PUI
       title: Client and Cost Management System
-      description: For applications for civil funding
+      description: For all remaining civil legal aid proceedings, managing applications, billing and payments
       url: ${app.pui.url}
       laaApplicationDetails: ${app.pui.details}
       ordinal: 2
@@ -27,9 +26,7 @@ laa-apps:
       oidGroupName: NEWCRM7
       title: Submit a crime form
       description: >-
-        This service replaces eForms CRM4 (apply for prior authority to incur
-        disbursements), CRM5 (apply for extension of upper limit) and CRM7 (claim a
-        non-standard magistrates' court payment).
+        Apply for prior authority to incur disbursements, extension of upper limit, or to claim a non-standard magistrates' court payment
       url: ${app.submit.crime.form.url}
       laaApplicationDetails: ${app.submit.crime.form.details}
       ordinal: 3

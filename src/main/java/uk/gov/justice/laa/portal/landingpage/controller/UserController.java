@@ -88,7 +88,7 @@ public class UserController {
      */
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
-        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
     public String displayAllUsers(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,
@@ -102,21 +102,25 @@ public class UserController {
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
-        boolean canSeeAllUsers = internal && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeAllUsers = internal
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         List<Permission> permissions = new ArrayList<>();
         if (showFirmAdmins) {
             permissions.add(Permission.CREATE_EXTERNAL_USER);
         }
         if (canSeeAllUsers) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, page, size, sort, direction);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
+                    page, size, sort, direction);
         } else if (internal) {
             permissions.add(Permission.VIEW_INTERNAL_USER);
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, page, size, sort, direction);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
+                    page, size, sort, direction);
         } else {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
-                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, firm.getId(), page, size, sort, direction);
+                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions,
+                        firm.getId(), page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();
@@ -137,6 +141,8 @@ public class UserController {
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", search);
+        model.addAttribute("sort", sort);
+        model.addAttribute("direction", direction);
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
@@ -186,6 +192,8 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
+        boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
+        model.addAttribute("externalUser", externalUser);
         return "manage-user";
     }
 
@@ -1038,7 +1046,8 @@ public class UserController {
      * assigned apps.
      */
     @GetMapping("/users/grant-access/{id}/apps")
-    public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model, HttpSession session) {
+    public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
+            HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
@@ -1063,7 +1072,7 @@ public class UserController {
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
             Model model, HttpSession session) {
-        
+
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting apps: {}", result.getAllErrors());
             // If there are validation errors, return to the apps page with errors
@@ -1410,6 +1419,7 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
+        model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
 
         return "grant-access-check-answers";
     }

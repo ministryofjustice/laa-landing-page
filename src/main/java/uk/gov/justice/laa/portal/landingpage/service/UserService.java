@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,6 +130,7 @@ public class UserService {
         return response != null ? response.getValue() : Collections.emptyList();
     }
 
+    @Transactional
     public void updateUserRoles(String userProfileId, List<String> selectedRoles) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
@@ -153,7 +155,8 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
-            userProfileRepository.saveAndFlush(userProfile);
+            userProfileRepository.save(userProfile);
+            techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
 
             // TODO send message to CCMS if PUI roles are added/removed
             // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
@@ -250,17 +253,13 @@ public class UserService {
 
     public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<EntraUser> entraUserPage = entraUserRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
-        Page<UserProfile> userProfilePage = entraUserPage.map(user -> user.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .findFirst()
-                .orElse(null));
+        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
     protected Sort getSort(String field, String direction) {
         if (Objects.isNull(field) || field.isEmpty()) {
-            return Sort.by(Sort.Order.asc("userProfile.userProfileStatus"), Sort.Order.desc("userProfile.createdDate"));
+            return Sort.by(Sort.Order.desc("userProfileStatus"), Sort.Order.asc("entraUser.firstName"));
         }
         Sort.Direction order;
         if (direction == null || direction.isEmpty()) {
@@ -269,10 +268,12 @@ public class UserService {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
         return switch (field.toUpperCase()) {
-            case "FIRSTNAME" -> Sort.by(order, "firstName");
-            case "LASTNAME" -> Sort.by(order, "lastName");
-            case "EMAIL" -> Sort.by(order, "email");
-            case "USERSTATUS" -> Sort.by(order, "userStatus");
+            case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
+            case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
+            case "EMAIL" -> Sort.by(order, "entraUser.email");
+            case "USERSTATUS" -> Sort.by(order, "userProfileStatus");
+            case "USERTYPE" -> Sort.by(order, "userType");
+            case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
     }
