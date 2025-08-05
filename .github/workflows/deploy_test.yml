@@ -80,6 +80,7 @@ jobs:
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
+          SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
