@@ -319,7 +319,7 @@ public class UserController {
             }
         } else {
             // Fallback: search by name if no specific firm was selected
-            List<FirmDto> firms = firmService.getFirms();
+            List<FirmDto> firms = firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
                     .findFirst()
