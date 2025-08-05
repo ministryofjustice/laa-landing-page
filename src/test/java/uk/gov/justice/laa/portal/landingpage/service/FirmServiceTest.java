@@ -1,21 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache.ValueWrapper;
+import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -25,6 +20,21 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FirmServiceTest {
@@ -138,7 +148,7 @@ class FirmServiceTest {
     @Test
     void searchFirms_withValidSearchTerm() {
         // Given
-        String searchTerm = "Smith & Associates";
+        String searchTerm = "Smith";
         Firm firm1 = Firm.builder()
                 .id(UUID.randomUUID())
                 .name("Smith & Associates Law Firm")
@@ -153,7 +163,7 @@ class FirmServiceTest {
                 .build();
         List<Firm> searchResults = List.of(firm1, firm2);
 
-        when(firmRepository.findByNameOrCodeContaining(searchTerm.trim())).thenReturn(searchResults);
+        when(firmRepository.findAll()).thenReturn(searchResults);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
@@ -164,7 +174,8 @@ class FirmServiceTest {
         assertThat(result.get(0).getCode()).isEqualTo("SMITH001");
         assertThat(result.get(1).getName()).isEqualTo("John Smith Legal Services");
         assertThat(result.get(1).getCode()).isEqualTo("JSMITH002");
-        verify(firmRepository).findByNameOrCodeContaining(searchTerm.trim());
+        verify(firmRepository, never()).findByNameOrCodeContaining(searchTerm.trim());
+        verify(firmRepository).findAll();
     }
 
     @Test
@@ -180,7 +191,7 @@ class FirmServiceTest {
                 .build();
         List<Firm> searchResults = List.of(firm);
 
-        when(firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)).thenReturn(searchResults);
+        when(firmRepository.findAll()).thenReturn(searchResults);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
@@ -188,7 +199,8 @@ class FirmServiceTest {
         // Then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("ABC Legal Services");
-        verify(firmRepository).findByNameOrCodeContaining(trimmedSearchTerm);
+        verify(firmRepository, never()).findByNameOrCodeContaining(trimmedSearchTerm);
+        verify(firmRepository).findAll();
     }
 
     @Test
@@ -249,14 +261,14 @@ class FirmServiceTest {
     void searchFirms_noResultsFound() {
         // Given
         String searchTerm = "NonExistentFirm";
-        when(firmRepository.findByNameOrCodeContaining(searchTerm)).thenReturn(List.of());
+        when(firmRepository.findAll()).thenReturn(List.of());
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
 
         // Then
         assertThat(result).isEmpty();
-        verify(firmRepository).findByNameOrCodeContaining(searchTerm);
+        verify(firmRepository).findAll();
     }
 
     @Test
@@ -271,7 +283,7 @@ class FirmServiceTest {
                 .build();
         List<Firm> searchResults = List.of(firm);
 
-        when(firmRepository.findByNameOrCodeContaining(searchTerm)).thenReturn(searchResults);
+        when(firmRepository.findAll()).thenReturn(searchResults);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
@@ -279,7 +291,8 @@ class FirmServiceTest {
         // Then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getCode()).isEqualTo("ABC001");
-        verify(firmRepository).findByNameOrCodeContaining(searchTerm);
+        verify(firmRepository, never()).findByNameOrCodeContaining(searchTerm);
+        verify(firmRepository).findAll();
     }
 
     @Test
@@ -327,5 +340,105 @@ class FirmServiceTest {
 
         // Then
         assertThat(result).isEmpty();
+    }
+
+    @Nested
+    class CacheTests {
+        private Cache cache;
+
+        @BeforeEach
+        void setUp() {
+            cache = mock(Cache.class);
+            when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(cache);
+        }
+
+        @Test
+        void getAllFirmsFromCache_WhenCacheMiss_ShouldFetchFromRepository() {
+            // Arrange
+            Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").build();
+            Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").build();
+            List<Firm> dbFirms = List.of(firm1, firm2);
+
+            when(cache.get("all_firms", List.class)).thenReturn(null);
+            when(firmRepository.findAll()).thenReturn(dbFirms);
+
+            // Act
+            List<FirmDto> result = firmService.getAllFirmsFromCache();
+
+            // Assert
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FirmDto::getName).containsExactly("Firm 1", "Firm 2");
+            verify(firmRepository).findAll();
+            verify(cache).put(eq("all_firms"), anyList());
+        }
+
+        @Test
+        void getAllFirmsFromCache_WhenCacheHit_ShouldReturnCachedValue() {
+            // Arrange
+            FirmDto cachedFirm1 = new FirmDto();
+            cachedFirm1.setId(UUID.randomUUID());
+            cachedFirm1.setName("Cached Firm 1");
+
+            List<FirmDto> cachedFirms = List.of(cachedFirm1);
+            ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(valueWrapper.get()).thenReturn(cachedFirms);
+            when(cache.get("all_firms")).thenReturn(valueWrapper);
+
+            // Act
+            List<FirmDto> result = firmService.getAllFirmsFromCache();
+
+            // Assert
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("Cached Firm 1");
+            verify(firmRepository, never()).findAll();
+            verify(cache, never()).put(anyString(), any());
+        }
+
+        @Test
+        void getAllFirmsFromCache_WhenCacheIsNull_ShouldFetchFromRepository() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(null);
+            Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+            when(firmRepository.findAll()).thenReturn(List.of(firm));
+
+            // Act
+            List<FirmDto> result = firmService.getAllFirmsFromCache();
+
+            // Assert
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("Test Firm");
+        }
+
+        @Test
+        void clearCache_WhenCacheExists_ShouldClearCache() {
+            // Act
+            firmService.clearCache();
+
+            // Assert
+            verify(cache).clear();
+        }
+
+        @Test
+        void clearCache_WhenCacheIsNull_ShouldNotThrowException() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(null);
+
+            // Act & Assert (should not throw exception)
+            firmService.clearCache();
+        }
+
+        @Test
+        void getAllFirmsFromCache_WhenCacheThrowsException_ShouldLogAndReturnEmptyList() {
+            // Arrange
+            when(cache.get("all_firms", List.class)).thenThrow(new RuntimeException("Cache error"));
+            when(firmRepository.findAll()).thenReturn(List.of());
+
+            // Act
+            List<FirmDto> result = firmService.getAllFirmsFromCache();
+
+            // Assert
+            assertThat(result).isEmpty();
+            verify(firmRepository).findAll();
+        }
     }
 }

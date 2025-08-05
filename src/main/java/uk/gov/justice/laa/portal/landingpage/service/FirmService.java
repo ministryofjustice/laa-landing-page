@@ -1,10 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +8,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -21,6 +15,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * FirmService
@@ -92,11 +91,13 @@ public class FirmService {
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
             return getAllFirmsFromCache();
         }
+
+        String trimmedSearchTerm = searchTerm.trim();
         
         return getAllFirmsFromCache()
                 .stream()
-                .filter(firm ->  (firm.getName().toLowerCase().contains(searchTerm.toLowerCase())
-                        || (firm.getCode() != null &&firm.getCode().toLowerCase().contains(searchTerm.toLowerCase()))))
+                .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
+                        || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
                 .collect(Collectors.toList());
     }
 
@@ -107,7 +108,7 @@ public class FirmService {
                 Cache.ValueWrapper valueWrapper = cache.get(ALL_FIRMS);
                 if (valueWrapper != null) {
                     @SuppressWarnings("unchecked")
-                    List<FirmDto> cachedFirms = (List<FirmDto>) cache.get(ALL_FIRMS, List.class);
+                    List<FirmDto> cachedFirms = (List<FirmDto>) valueWrapper.get();
                     return cachedFirms;
                 }
             } catch (Exception ex) {
