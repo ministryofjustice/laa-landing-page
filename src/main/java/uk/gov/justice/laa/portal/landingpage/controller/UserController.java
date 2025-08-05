@@ -1393,24 +1393,22 @@ public class UserController {
 
         // Get user's current app roles
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
-        
+
         // Group roles by app name and sort by app name
         Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream()
-            .collect(Collectors.groupingBy(
-                appRole -> appRole.getApp().getName(),
-                LinkedHashMap::new, // Preserve insertion order
-                Collectors.toList()
-            ));
-        
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getName(),
+                        LinkedHashMap::new, // Preserve insertion order
+                        Collectors.toList()));
+
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue,
-                (e1, e2) -> e1,
-                LinkedHashMap::new
-            ));
+                .sorted(Map.Entry.comparingByKey())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
 
         // Get user's current offices
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
@@ -1432,10 +1430,10 @@ public class UserController {
             Authentication authentication) {
         try {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            
+
             // Remove the app role from the user
             userService.removeUserAppRole(userId, appId, roleName);
-            
+
             // Create audit event for the app role removal
             UserProfileDto userProfileDto = userService.getUserProfileById(userId).orElseThrow();
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
@@ -1444,12 +1442,14 @@ public class UserController {
                     List.of("Removed app role: " + roleName + " for app: " + appId),
                     "app_role_removed");
             eventService.logEvent(updateUserAuditEvent);
-            
+
         } catch (Exception e) {
             log.error("Error removing app role for user: " + userId, e);
         }
-        
-        return "redirect:/admin/users/grant-access/" + userId + "/check-answers";
+
+        UUID uuid = UUID.fromString(userId);
+
+        return "redirect:/admin/users/grant-access/" + uuid + "/check-answers";
     }
 
     /**
