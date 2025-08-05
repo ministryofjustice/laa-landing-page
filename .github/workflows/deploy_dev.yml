@@ -33,13 +33,14 @@ jobs:
           java-version: '21'
 
       - name: Build JAR
-
+        
         run: ./gradlew build
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
       - uses: aws-actions/configure-aws-credentials@v4.2.1
