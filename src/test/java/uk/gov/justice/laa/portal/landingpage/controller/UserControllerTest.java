@@ -3281,7 +3281,7 @@ class UserControllerTest {
                         .build()
         );
 
-        when(firmService.getFirms()).thenReturn(mockFirms);
+        when(firmService.getAllFirmsFromCache()).thenReturn(mockFirms);
 
         // When
         String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
@@ -3290,7 +3290,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
         assertThat(testSession.getAttribute("firmSearchTerm")).isEqualTo("Test Firm");
-        verify(firmService).getFirms();
+        verify(firmService).getAllFirmsFromCache();
     }
 
     @Test
@@ -3314,7 +3314,7 @@ class UserControllerTest {
                         .build()
         );
 
-        when(firmService.getFirms()).thenReturn(mockFirms);
+        when(firmService.getAllFirmsFromCache()).thenReturn(mockFirms);
 
         // When
         String view = userController.postUserFirm(firmSearchForm, bindingResult, testSession, testModel);
@@ -3322,7 +3322,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-firm");
         verify(bindingResult).rejectValue("firmSearch", "error.firm", "No firm found with that name. Please select from the dropdown.");
-        verify(firmService).getFirms();
+        verify(firmService).getAllFirmsFromCache();
     }
     
     @Test

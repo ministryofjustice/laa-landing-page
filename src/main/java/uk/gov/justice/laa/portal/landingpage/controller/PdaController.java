@@ -43,7 +43,7 @@ public class PdaController {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<FirmDto> list;
         if (userService.isInternal(entraUser.getId())) {
-            list = firmService.getFirms();
+            list = firmService.getAllFirmsFromCache();
         } else {
             list = firmService.getUserFirms(entraUser);
         }

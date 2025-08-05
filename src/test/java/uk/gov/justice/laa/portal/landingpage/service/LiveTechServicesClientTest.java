@@ -10,6 +10,7 @@ import com.azure.identity.ClientSecretCredential;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -86,6 +88,33 @@ public class LiveTechServicesClientTest {
         ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
     }
 
+    @Nested
+    class CacheTests {
+        @Mock
+        private Cache cache;
+
+        @Test
+        void clearCache_WhenCacheExists_ShouldClearCache() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE)).thenReturn(cache);
+
+            // Act
+            liveTechServicesClient.clearCache();
+
+            // Assert
+            verify(cache).clear();
+        }
+
+        @Test
+        void clearCache_WhenCacheIsNull_ShouldNotThrowException() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE)).thenReturn(null);
+
+            // Act & Assert (should not throw exception)
+            liveTechServicesClient.clearCache();
+        }
+    }
+
     @Test
     void testUpdateRoleAssignment() {
         UUID userId = UUID.randomUUID();
@@ -110,8 +139,8 @@ public class LiveTechServicesClientTest {
 
         liveTechServicesClient.updateRoleAssignment(userId);
 
-        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
-        assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
+        assertLogMessage(Level.DEBUG, "Sending update security groups request to tech services:");
+        assertLogMessage(Level.DEBUG, "Security Groups assigned successfully for firstName lastName");
         verify(restClient, times(1)).patch();
     }
 
@@ -151,7 +180,7 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage()).contains("Error while sending security group changes to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending update security groups request to tech services:");
         assertLogMessage(Level.ERROR, "Error while sending security group changes to Tech Services.");
     }
 
@@ -182,7 +211,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
                 .contains("Error while sending security group changes to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending update security groups request to tech services:");
         assertLogMessage(Level.ERROR,
                 "Failed to assign security groups for user firstName lastName with error code 400 BAD_REQUEST");
         verify(restClient, times(1)).patch();
@@ -217,7 +246,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
                 .contains("Error while sending security group changes to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending update security groups request to tech services:");
         assertLogMessage(Level.ERROR,
                 "Failed to assign security groups for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
         verify(restClient, times(1)).patch();
@@ -247,8 +276,8 @@ public class LiveTechServicesClientTest {
 
         liveTechServicesClient.registerNewUser(user);
 
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        assertLogMessage(Level.DEBUG, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG, "New User creation by Tech Services is successful for firstName lastName");
         verify(restClient, times(1)).post();
     }
 
@@ -275,8 +304,8 @@ public class LiveTechServicesClientTest {
 
         liveTechServicesClient.registerNewUser(user);
 
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        assertLogMessage(Level.DEBUG, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG, "New User creation by Tech Services is successful for firstName lastName");
         verify(restClient, times(1)).post();
     }
 
@@ -298,7 +327,7 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage()).contains("Error while create user request to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR, "Error while create user request to Tech Services.");
     }
 
@@ -328,7 +357,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
                 .contains("Error while create user request to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR,
                 "Failed to create new user by Tech Services for user firstName lastName with error code 400 BAD_REQUEST");
         verify(restClient, times(1)).post();
@@ -360,7 +389,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
                 .contains("Error while create user request to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR,
                 "Failed to create new user by Tech Services for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
         verify(restClient, times(1)).post();

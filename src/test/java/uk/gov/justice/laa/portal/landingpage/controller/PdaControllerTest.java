@@ -63,7 +63,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(UUID.randomUUID()).build());
         when(userService.isInternal(any(UUID.class)))
                 .thenReturn(true);
-        when(firmService.getFirms())
+        when(firmService.getAllFirmsFromCache())
                 .thenReturn(List.of(new FirmDto()));
         Model model = new ConcurrentModel();
         String view = controller.getFirms(model, authentication);
