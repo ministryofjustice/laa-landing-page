@@ -55,7 +55,7 @@ public class RestUtils {
         if (type.isInstance(object)) {
             return Optional.of(type.cast(object));
         } else {
-            log.warn("Type mismatch: session attribute '{}' is null or not of the expected type", key);
+            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
             return Optional.empty();
         }
     }
@@ -65,11 +65,9 @@ public class RestUtils {
         if (object instanceof List<?> list && list.stream().allMatch(o -> o == null || listType.isInstance(o))) {
             return Optional.of((List<T>) list);
         } else {
-            log.warn("Type mismatch: session attribute '{}' is null or not of the expected type", key);
+            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
             return Optional.empty();
         }
     }
-
-
 
 }

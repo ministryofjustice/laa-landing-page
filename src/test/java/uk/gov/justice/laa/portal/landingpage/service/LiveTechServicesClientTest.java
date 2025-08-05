@@ -10,6 +10,7 @@ import com.azure.identity.ClientSecretCredential;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -84,6 +86,33 @@ public class LiveTechServicesClientTest {
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
         ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
+    }
+
+    @Nested
+    class CacheTests {
+        @Mock
+        private Cache cache;
+
+        @Test
+        void clearCache_WhenCacheExists_ShouldClearCache() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE)).thenReturn(cache);
+
+            // Act
+            liveTechServicesClient.clearCache();
+
+            // Assert
+            verify(cache).clear();
+        }
+
+        @Test
+        void clearCache_WhenCacheIsNull_ShouldNotThrowException() {
+            // Arrange
+            when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE)).thenReturn(null);
+
+            // Act & Assert (should not throw exception)
+            liveTechServicesClient.clearCache();
+        }
     }
 
     @Test

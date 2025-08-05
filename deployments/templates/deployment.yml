@@ -164,3 +164,7 @@ spec:
               value: "${POLLING_INTERVAL}"
             - name: POLLING_GROUP_ID
               value: "${POLLING_GROUP_ID}"
+            - name: FIRM_CACHE_CLEAR_SCHEDULE
+              value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
+            - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
+              value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
