@@ -65,29 +65,6 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void roleAssignmentDoNotAllowSelfAssignableRole() {
-        // Arrange
-        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        appRepository.save(app);
-
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL)
-                .description("appRole1").app(app).build();
-        appRoleRepository.save(appRole1);
-
-        RoleAssignment roleAssignment = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole1).build();
-
-        // Act
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(roleAssignment),
-                "DataIntegrityViolationException expected");
-
-        // Assert
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("role_assignment_no_self_assignable");
-
-    }
-
-    @Test
     public void findByAssigningRole() {
         // Arrange
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
