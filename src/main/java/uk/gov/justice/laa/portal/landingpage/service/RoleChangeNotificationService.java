@@ -1,10 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -19,7 +18,7 @@ import java.util.Set;
 @Slf4j
 public class RoleChangeNotificationService {
 
-    private final ObjectMapper objectMapper;
+    private final CcmsApiClient ccmsApiClient;
 
     /**
      * Send a message to the configured SQS queue
@@ -43,15 +42,12 @@ public class RoleChangeNotificationService {
                         .responsibilityKey(newPuiRoles.stream().map(AppRole::getCcmsCode).toList())
                         .build();
 
-                String messageBodyJson = objectMapper.writeValueAsString(message);
-
-                log.info("message body json: {}", messageBodyJson);
-
-            } catch (JsonProcessingException e) {
-                log.error("Failed to serialize message payload for user: {}", entraUser.getEntraOid(), e);
-                throw new RuntimeException("Failed to send message", e);
+                log.info("Sending role change notification for user: {} to CCMS API", entraUser.getEntraOid());
+                ccmsApiClient.sendUserRoleChange(message);
+                log.info("Successfully sent role change notification for user: {}", entraUser.getEntraOid());
+                
             } catch (Exception e) {
-                log.error("Failed to send message for user: {}", entraUser.getEntraOid(), e);
+                log.error("Failed to send role change notification for user: {}", entraUser.getEntraOid(), e);
                 throw new RuntimeException("Failed to send message", e);
             }
         }
