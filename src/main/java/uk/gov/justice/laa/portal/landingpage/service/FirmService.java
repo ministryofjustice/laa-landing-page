@@ -123,7 +123,7 @@ public class FirmService {
         return allFirms;
     }
 
-    @Scheduled(fixedRateString = "${app.firms.clear.cache.interval}")
+    @Scheduled(cron = "${app.firms.clear.cache.schedule}")
     public void clearCache() {
         Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
         if (cache != null) {
