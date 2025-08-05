@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.util;
+package uk.gov.justice.laa.portal.landingpage.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;

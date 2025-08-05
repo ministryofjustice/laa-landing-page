@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.util;
+package uk.gov.justice.laa.portal.landingpage.utils;
 
 public final class AddressFormatter {
     
