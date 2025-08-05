@@ -116,6 +116,7 @@ jobs:
           POLLING_ENABLED: ${{ vars.POLLING_ENABLED }}
           POLLING_INTERVAL: ${{ vars.POLLING_INTERVAL }}
           POLLING_GROUP_ID: ${{ secrets.POLLING_GROUP_ID }}
+          TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
 
       - name: Deploy to Cloud Platform
         run: |
