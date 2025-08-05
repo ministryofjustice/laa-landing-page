@@ -27,7 +27,6 @@ jobs:
           java-version: '21'
 
       - name: Build JAR
-
         run: ./gradlew build
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
