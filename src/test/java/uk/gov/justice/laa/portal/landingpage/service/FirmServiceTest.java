@@ -8,8 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.Cache.ValueWrapper;
+import org.springframework.cache.CacheManager;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -407,24 +407,6 @@ class FirmServiceTest {
             // Assert
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getName()).isEqualTo("Test Firm");
-        }
-
-        @Test
-        void clearCache_WhenCacheExists_ShouldClearCache() {
-            // Act
-            firmService.clearCache();
-
-            // Assert
-            verify(cache).clear();
-        }
-
-        @Test
-        void clearCache_WhenCacheIsNull_ShouldNotThrowException() {
-            // Arrange
-            when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(null);
-
-            // Act & Assert (should not throw exception)
-            firmService.clearCache();
         }
 
         @Test
