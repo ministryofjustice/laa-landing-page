@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import uk.gov.justice.laa.portal.landingpage.util.AddressFormatter;
 
 @Data
 @AllArgsConstructor
@@ -25,34 +26,7 @@ public class OfficeModel {
         private String postcode;
         
         public String getFormattedAddress() {
-            StringBuilder sb = new StringBuilder();
-            
-            if (addressLine1 != null && !addressLine1.trim().isEmpty()) {
-                sb.append(addressLine1);
-            }
-            
-            if (addressLine2 != null && !addressLine2.trim().isEmpty()) {
-                if (sb.length() > 0) {
-                    sb.append(", ");
-                }
-                sb.append(addressLine2);
-            }
-            
-            if (city != null && !city.trim().isEmpty()) {
-                if (sb.length() > 0) {
-                    sb.append(", ");
-                }
-                sb.append(city);
-            }
-            
-            if (postcode != null && !postcode.trim().isEmpty()) {
-                if (sb.length() > 0) {
-                    sb.append(", ");
-                }
-                sb.append(postcode);
-            }
-            
-            return sb.toString();
+            return AddressFormatter.formatAddress(addressLine1, addressLine2, city, postcode);
         }
     }
 }
