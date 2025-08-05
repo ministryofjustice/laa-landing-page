@@ -87,7 +87,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             UpdateSecurityGroupsRequest request = builder.requiredGroups(securityGroups).build();
 
-            logger.info("Sending update security groups request to tech services: {}", request);
+            logger.debug("Sending update security groups request to tech services: {}", request);
 
             String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraUser.getEntraOid());
 
@@ -103,7 +103,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             if (response.getStatusCode().is2xxSuccessful()) {
                 UpdateSecurityGroupsResponse responseBody = response.getBody();
                 assert responseBody != null;
-                logger.info("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
+                logger.debug("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
                         entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
             } else {
                 logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
@@ -133,7 +133,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .verificationMethod(techServicesVerificationMethod)
                     .requiredGroups(securityGroups).build();
 
-            logger.info("Sending create new user request with security groups to tech services: {}", request);
+            logger.debug("Sending create new user request with security groups to tech services: {}", request);
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
@@ -149,7 +149,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             if (response.getStatusCode().is2xxSuccessful()) {
                 RegisterUserResponse responseBody = response.getBody();
                 assert responseBody != null;
-                logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
+                logger.debug("New User creation by Tech Services is successful for {} with security groups {} added",
                         user.getFirstName() + " " + user.getLastName(), securityGroups);
                 return responseBody;
             } else {
@@ -175,7 +175,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     }
                 }
             } catch (Exception ex) {
-                logger.info("Error while getting access token from cache", ex);
+                logger.debug("Error while getting access token from cache", ex);
             }
 
         }
