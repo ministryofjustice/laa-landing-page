@@ -25,5 +25,53 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_USER_ROLE')"
-
-
+  # Add Role Assignment Table.
+  - changeSet:
+      id: 1754409911000-1
+      author: pijian.liao
+      changes:
+        # External Global Admin
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        # External Internal User Manager
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+        # External External User Admin
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'External User Admin'))"
+        # External External User Manager
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), (SELECT id FROM app_role WHERE name = 'External User Manager'))"
+  - changeSet:
+      id: 1754409911000-2
+      author: pijian.liao
+      changes:
+        # External Global Admin
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE role_assignment DROP CONSTRAINT role_assignment_no_self_assignable"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'External User Manager'))"

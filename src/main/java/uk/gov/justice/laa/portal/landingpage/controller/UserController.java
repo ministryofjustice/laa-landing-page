@@ -40,10 +40,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
@@ -53,12 +50,8 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
+
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -81,6 +74,7 @@ public class UserController {
     private final FirmService firmService;
     private final ModelMapper mapper;
     private final AccessControlService accessControlService;
+    private final RoleAssignmentService roleAssignmentService;
 
     /**
      * Retrieves a list of users from Microsoft Graph API.
@@ -371,7 +365,7 @@ public class UserController {
 
     @GetMapping("/user/create/roles")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
-    public String getSelectedRoles(RolesForm rolesForm, Model model, HttpSession session) {
+    public String getSelectedRoles(RolesForm rolesForm, Authentication authentication, Model model, HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
@@ -386,6 +380,8 @@ public class UserController {
         // user creation flow is only for external users right now.
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex),
                 UserType.EXTERNAL_SINGLE_FIRM);
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -682,8 +678,6 @@ public class UserController {
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
 
-        // If no apps are selected, persist empty roles to database and redirect to
-        // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             userService.updateUserRoles(id, new ArrayList<>());
@@ -719,6 +713,7 @@ public class UserController {
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
+            Authentication authentication,
             Model model, HttpSession session) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
@@ -755,8 +750,9 @@ public class UserController {
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-
         // Get currently selected roles from session or use user's existing roles
         List<String> selectedRoles = getListFromHttpSession(session, "editUserRoles", String.class)
                 .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
@@ -845,11 +841,14 @@ public class UserController {
                     .flatMap(List::stream)
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            userService.updateUserRoles(id, allSelectedRoles);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                    user != null ? user.getEntraUser() : null, allSelectedRoles,
-                    "role");
-            eventService.logEvent(updateUserAuditEvent);
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
+                userService.updateUserRoles(id, allSelectedRoles);
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
+            }
             return "redirect:/admin/users/manage/" + id;
         } else {
             modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
@@ -1122,6 +1121,7 @@ public class UserController {
     public String grantAccessEditUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
+            Authentication authentication,
             Model model, HttpSession session) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
@@ -1158,6 +1158,8 @@ public class UserController {
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         // Get currently selected roles from session or use user's existing roles
@@ -1238,11 +1240,14 @@ public class UserController {
                     .flatMap(List::stream)
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            userService.updateUserRoles(id, allSelectedRoles);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                    user != null ? user.getEntraUser() : null, allSelectedRoles,
-                    "role");
-            eventService.logEvent(updateUserAuditEvent);
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
+                userService.updateUserRoles(id, allSelectedRoles);
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
+            }
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
             modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex + 1);
