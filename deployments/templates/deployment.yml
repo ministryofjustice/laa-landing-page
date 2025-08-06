@@ -172,3 +172,11 @@ spec:
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
+            - name: TECH_SERVICES_REQ_READ_TIMEOUT
+              value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
+            - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
+              value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: SENTRY_ENVIRONMENT
+              value: "${SENTRY_ENVIRONMENT}"
+            - name: SENTRY_ENABLED
+              value: "${SENTRY_ENABLED}"
