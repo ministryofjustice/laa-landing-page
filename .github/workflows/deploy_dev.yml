@@ -124,6 +124,8 @@ jobs:
           POLLING_GROUP_ID : ${{ secrets.POLLING_GROUP_ID }}
           FIRM_CACHE_CLEAR_SCHEDULE : ${{ vars.FIRM_CACHE_CLEAR_SCHEDULE }}
           TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
+          CCMS_USER_MANAGEMENT_API_BASE_URL : ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
+          CCMS_USER_MANAGEMENT_API_KEY : ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
 
       - name: Deploy to Cloud Platform
         run: |

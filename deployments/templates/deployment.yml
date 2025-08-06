@@ -170,3 +170,7 @@ spec:
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
+            - name: CCMS_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_USER_MANAGEMENT_API_KEY}"
