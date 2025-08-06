@@ -416,6 +416,24 @@ class UserControllerTest {
     }
 
     @Test
+    void editSessionUser() {
+        EntraUserDto mockUser = new EntraUserDto();
+        mockUser.setFullName("Test User");
+        FirmDto firmDto = new FirmDto();
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("user", mockUser);
+        session.setAttribute("firm", firmDto);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("firstName");
+        userDetailsForm.setLastName("lastName");
+        userDetailsForm.setEmail("email");
+        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
+    }
+
+    @Test
     void selectUserAppsGet() {
         AppDto app = new AppDto();
         app.setId("1");
