@@ -62,7 +62,7 @@ databaseChangeLog:
       id: 1754409911000-2
       author: pijian.liao
       changes:
-        # External Global Admin
+        # remove self assignable
         - sql:
             dbms: postgresql
             sql: "ALTER TABLE role_assignment DROP CONSTRAINT role_assignment_no_self_assignable"
