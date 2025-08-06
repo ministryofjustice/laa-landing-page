@@ -441,13 +441,13 @@ class UserServiceTest {
                 .build();
         AppRole role1 = AppRole.builder()
                 .app(app)
-                .name("Test Role 1")
                 .id(role1Id)
+                .name("Test Role 1")
                 .build();
         AppRole role2 = AppRole.builder()
                 .app(app)
-                .name("Test Role 2")
                 .id(role2Id)
+                .name("Test Role 2")
                 .build();
         app.setAppRoles(Set.of(role1, role2));
         when(mockAppRoleRepository.findAll()).thenReturn(List.of(role1, role2));
@@ -2574,5 +2574,52 @@ class UserServiceTest {
         // Then
         assertThat(result).contains(Permission.CREATE_EXTERNAL_USER);
         verify(mockEntraUserRepository).findById(userUuid);
+    }
+
+    @Test
+    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_searchByFullName() {
+        String searchTerm = "Test Name";
+        List<Permission> permissions = List.of(Permission.VIEW_EXTERNAL_USER);
+        UUID firmId = UUID.randomUUID();
+        int page = 1;
+        int pageSize = 10;
+        String sort = "firstName";
+        String direction = "ASC";
+
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .entraUser(EntraUser.builder()
+                        .firstName("Test")
+                        .lastName("Name")
+                        .email("test.name@example.com")
+                        .build())
+                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .build();
+
+        Page<UserProfile> userProfilePage = new PageImpl<>(
+                List.of(userProfile),
+                PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                1
+        );
+
+        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
+                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class)))
+                .thenReturn(userProfilePage);
+
+        // When
+        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+
+        // Then
+        assertThat(result.getUsers()).hasSize(1);
+        assertThat(result.getTotalUsers()).isEqualTo(1);
+        assertThat(result.getUsers().get(0).getEntraUser().getFirstName()).isEqualTo("Test");
+        assertThat(result.getUsers().get(0).getEntraUser().getLastName()).isEqualTo("Name");
+
+        // Verify the repository was called with the full name search term
+        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
+                eq("Test Name"), eq(permissions), eq(firmId), any(PageRequest.class));
     }
 }
