@@ -11,7 +11,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.RestClient;
@@ -187,11 +186,5 @@ public class LiveTechServicesClient implements TechServicesClient {
         return accessToken;
     }
 
-    @Scheduled(fixedRateString = "${app.tech.services.clear.cache.interval:3300000}")
-    public void clearCache() {
-        Cache cache = cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
-        if (cache != null) {
-            cache.clear();
-        }
-    }
+
 }

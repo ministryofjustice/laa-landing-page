@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
@@ -133,6 +134,16 @@ public class LoginService {
         EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
         assert entraUser != null;
         return entraUser;
+    }
+
+    public UserProfile getCurrentProfile(Authentication authentication) {
+        EntraUser currentUser = getCurrentEntraUser(authentication);
+        for (UserProfile up : currentUser.getUserProfiles()) {
+            if (up.isActiveProfile()) {
+                return up;
+            }
+        }
+        return currentUser.getUserProfiles().iterator().next();
     }
 
     public void logout(Authentication authentication,

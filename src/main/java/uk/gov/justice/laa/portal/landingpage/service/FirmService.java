@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -95,7 +94,7 @@ public class FirmService {
         String trimmedSearchTerm = searchTerm.trim();
         
         return getAllFirmsFromCache()
-                .stream()
+                .parallelStream()
                 .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
                         || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
                 .collect(Collectors.toList());
@@ -121,14 +120,6 @@ public class FirmService {
             cache.put(ALL_FIRMS, allFirms);
         }
         return allFirms;
-    }
-
-    @Scheduled(cron = "${app.firms.clear.cache.schedule}")
-    public void clearCache() {
-        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
-        if (cache != null) {
-            cache.clear();
-        }
     }
 
 }

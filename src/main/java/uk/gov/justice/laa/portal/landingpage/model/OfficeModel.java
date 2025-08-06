@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import uk.gov.justice.laa.portal.landingpage.utils.AddressFormatter;
 
 @Data
 @AllArgsConstructor
@@ -24,5 +25,8 @@ public class OfficeModel {
         private String city;
         private String postcode;
 
+        public String getFormattedAddress() {
+            return AddressFormatter.formatAddress(addressLine1, addressLine2, city, postcode);
+        }
     }
 }

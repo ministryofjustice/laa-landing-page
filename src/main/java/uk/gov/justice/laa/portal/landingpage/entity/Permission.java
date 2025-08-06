@@ -23,6 +23,6 @@ public enum Permission {
             EDIT_EXTERNAL_USER.name(),
             EDIT_USER_FIRM.name(),
             EDIT_USER_OFFICE.name(),
-            EDIT_USER_DETAILS.name()
+            EDIT_USER_DETAILS.name(),
     };
 }
