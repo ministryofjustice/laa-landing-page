@@ -157,9 +157,8 @@ public class UserService {
             userProfile.setAppRoles(newRoles);
             
             // Try to send role change notification with retry logic before saving
-            // todo skipping this (and unit tests) until api key is setup in k8s
-            // boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
-            // userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
             
             // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
