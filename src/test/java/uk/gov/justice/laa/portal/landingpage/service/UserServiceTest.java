@@ -2608,7 +2608,7 @@ class UserServiceTest {
                     .authzRole(false)
                     .build();
             
-            AppRole newRole = AppRole.builder()
+            final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
                     .ccmsCode("CCMS_NEW")
@@ -2661,7 +2661,7 @@ class UserServiceTest {
                     .legacyUserId(UUID.randomUUID())
                     .build();
             
-            AppRole newRole = AppRole.builder()
+            final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
                     .ccmsCode("CCMS_NEW")
@@ -2723,7 +2723,7 @@ class UserServiceTest {
                     .legacyUserId(UUID.randomUUID())
                     .build();
 
-            AppRole nonPuiRole = AppRole.builder()
+            final AppRole nonPuiRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NON_PUI_ROLE")
                     .legacySync(false)

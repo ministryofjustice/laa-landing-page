@@ -63,13 +63,6 @@ public class RoleChangeNotificationService {
         return false;
     }
 
-    /**
-     * Internal method that performs the actual role change notification.
-     *
-     * @param userProfile The user profile
-     * @param newPuiRoles new roles filtered by PUI
-     * @param oldPuiRoles old roled filtered by PUI
-     */
     private void sendRoleChangeNotification(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)

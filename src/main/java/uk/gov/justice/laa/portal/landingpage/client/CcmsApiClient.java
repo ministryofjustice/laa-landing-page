@@ -14,9 +14,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
 
-/**
- * Client for communicating with the CCMS User Management API
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -31,12 +28,6 @@ public class CcmsApiClient {
     @Value("${ccms.user.management.api.key}")
     private String ccmsApiKey;
 
-    /**
-     * Send user role change notification to CCMS API
-     *
-     * @param message The CCMS message to send
-     * @throws CcmsApiException if the API call fails
-     */
     public void sendUserRoleChange(CcmsMessage message) {
         try {
             String messageBodyJson = objectMapper.writeValueAsString(message);
