@@ -75,3 +75,15 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'External User Manager'))"
+  # Add more lassie permissions.
+  - changeSet:
+      id: 1754409911000-3
+      author: pijian.liao
+      changes:
+        # Internal user manager permissions
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'EDIT_USER_APP')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'EDIT_USER_ROLE')"
