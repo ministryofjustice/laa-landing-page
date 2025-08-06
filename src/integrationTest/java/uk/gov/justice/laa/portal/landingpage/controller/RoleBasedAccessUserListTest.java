@@ -205,7 +205,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .filter(firm -> firm.getId().equals(loggedInUserFirm.getId()))
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for(UserProfileDto userProfile : users) {
+        for (UserProfileDto userProfile : users) {
             Assertions.assertThat(userProfile.getFirm().getId()).isEqualTo(loggedInUserFirm.getId());
         }
     }
