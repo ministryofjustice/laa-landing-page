@@ -678,7 +678,7 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/apps")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_APP) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             Authentication authentication,
