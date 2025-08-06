@@ -122,6 +122,8 @@ jobs:
           TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
           TECH_SERVICES_REQ_READ_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_READ_TIMEOUT }}
           TECH_SERVICES_REQ_CONNECT_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_CONNECT_TIMEOUT }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+          SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
 
       - name: Deploy to Cloud Platform
         run: |
