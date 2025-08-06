@@ -260,7 +260,12 @@ public class UserController {
 
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
-        return "redirect:/admin/user/create/firm";
+        FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
+        if (Objects.isNull(selectedFirm)) {
+            return "redirect:/admin/user/create/firm";
+        } else {
+            return "redirect:/admin/user/create/check-answers";
+        }
     }
 
     @GetMapping("/user/create/firm")
