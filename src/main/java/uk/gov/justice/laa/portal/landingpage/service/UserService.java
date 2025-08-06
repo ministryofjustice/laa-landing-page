@@ -155,15 +155,14 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
+            
+            // Try to send role change notification with retry logic before saving
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+            
+            // Save user profile with updated sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
-
-            try {
-                roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
-            } catch (Exception e) {
-                logger.error("Failed to send CCMS role change notification for user: {}. Database changes have been saved.", 
-                    userProfile.getEntraUser().getId(), e);
-            }
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }

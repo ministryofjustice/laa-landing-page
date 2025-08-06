@@ -40,7 +40,7 @@ public class CcmsApiClient {
     public void sendUserRoleChange(CcmsMessage message) {
         try {
             String messageBodyJson = objectMapper.writeValueAsString(message);
-            log.info("Request payload: {}", messageBodyJson);
+            log.info("CCMS API request payload: {}", messageBodyJson);
 
             String apiUrl = ccmsApiBaseUrl + "/api/v1/user";
 
@@ -57,13 +57,13 @@ public class CcmsApiClient {
                 String.class
             );
             
-            log.info("Successfully sent role change notification. Response status: {}", response.getStatusCode());
+            log.info("CCMS API response status: {}", response.getStatusCode());
             
         } catch (RestClientException e) {
-            log.error("Failed to send role change notification to CCMS API: {}", e.getMessage(), e);
+            log.error("CCMS API communication error: {}", e.getMessage());
             throw new CcmsApiException("Failed to communicate with CCMS API", e);
         } catch (Exception e) {
-            log.error("Unexpected error sending role change notification: {}", e.getMessage(), e);
+            log.warn("CCMS API unexpected error: {}", e.getMessage());
             throw new CcmsApiException("Failed to send role change notification", e);
         }
     }
