@@ -2624,6 +2624,7 @@ class UserServiceTest {
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
                 eq("Test Name"), eq(permissions), eq(firmId), any(PageRequest.class));
     }
+
     @Nested
     class RoleChangeTests {
 
