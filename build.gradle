@@ -111,6 +111,7 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
     testImplementation('com.microsoft.playwright:playwright:1.52.0')
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
 }
 
 test {
