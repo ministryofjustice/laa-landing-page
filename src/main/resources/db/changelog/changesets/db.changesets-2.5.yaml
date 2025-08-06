@@ -1,30 +1,4 @@
 databaseChangeLog:
-  # Add more lassie permissions.
-  - changeSet:
-      id: 1754327576000-1
-      author: pijian.liao
-      changes:
-        # External user manager permissions
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'EDIT_USER_APP')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'EDIT_USER_ROLE')"
-        # External user admin permissions
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'EDIT_USER_APP')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'EDIT_USER_ROLE')"
-        # Global Admin permissions
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_USER_APP')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EDIT_USER_ROLE')"
   # Add Role Assignment Table.
   - changeSet:
       id: 1754409911000-1
@@ -75,15 +49,3 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), (SELECT id FROM app_role WHERE name = 'External User Manager'))"
-  # Add more lassie permissions.
-  - changeSet:
-      id: 1754409911000-3
-      author: pijian.liao
-      changes:
-        # Internal user manager permissions
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'EDIT_USER_APP')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'EDIT_USER_ROLE')"
