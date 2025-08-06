@@ -1,11 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.UUID;
+import uk.gov.justice.laa.portal.landingpage.utils.AddressFormatter;
 
 @Data
 @Builder
@@ -25,5 +26,9 @@ public class OfficeDto {
         private String addressLine2;
         private String city;
         private String postcode;
+        
+        public String getFormattedAddress() {
+            return AddressFormatter.formatAddress(addressLine1, addressLine2, city, postcode);
+        }
     }
 }

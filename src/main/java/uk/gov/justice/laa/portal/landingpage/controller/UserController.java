@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1407,15 +1408,62 @@ public class UserController {
         // Get user's current app roles
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
 
+        // Group roles by app name and sort by app name
+        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getName(),
+                        LinkedHashMap::new, // Preserve insertion order
+                        Collectors.toList()));
+
+        // Sort the map by app name
+        Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
+
         // Get user's current offices
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
+        model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
 
         return "grant-access-check-answers";
+    }
+
+    /**
+     * Grant Access Flow - Remove an app role from user
+     */
+    @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
+    public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
+            Authentication authentication) {
+        try {
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+
+            // Remove the app role from the user
+            userService.removeUserAppRole(userId, appId, roleName);
+
+            // Create audit event for the app role removal
+            UserProfileDto userProfileDto = userService.getUserProfileById(userId).orElseThrow();
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    currentUserDto,
+                    userProfileDto.getEntraUser(),
+                    List.of("Removed app role: " + roleName + " for app: " + appId),
+                    "app_role_removed");
+            eventService.logEvent(updateUserAuditEvent);
+
+        } catch (Exception e) {
+            log.error("Error removing app role for user: " + userId, e);
+        }
+
+        UUID uuid = UUID.fromString(userId);
+
+        return "redirect:/admin/users/grant-access/" + uuid + "/check-answers";
     }
 
     /**

@@ -35,7 +35,18 @@
                         </h2>
                         <div class="govuk-error-summary__body" id="error-summary-description">
                             <ul class="govuk-list govuk-error-summary__list">
-                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                                <li th:each="err : ${#fields.errors('email')}" th:if="${#fields.hasErrors('email')}">
+                                    <a href="#email" th:text="${err}"></a>
+                                </li>
+                                <li th:each="err : ${#fields.errors('firstName')}" th:if="${#fields.hasErrors('firstName')}">
+                                    <a href="#firstName" th:text="${err}"></a>
+                                </li>
+                                <li th:each="err : ${#fields.errors('lastName')}" th:if="${#fields.hasErrors('lastName')}">
+                                    <a href="#lastName" th:text="${err}"></a>
+                                </li>
+                                <li th:each="err : ${#fields.errors('userType')}" th:if="${#fields.hasErrors('userType')}">
+                                    <a href="#userType" th:text="${err}"></a>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -87,9 +98,9 @@
                         </div>
                         <div class="govuk-radios">
                             <div th:each="userType : ${userTypes}" class="govuk-radios__item">
-                                <input class="govuk-radios__input" th:id="${'userType-' + userType}" name="userType"
-                                    type="radio" th:value="${userType}" th:checked="${userType == selectedUserType}">
-                                <label class="govuk-label govuk-radios__label" th:for="${'userType-' + userType}"
+                                <input class="govuk-radios__input" id="userType" name="userType" type="radio"
+                                    th:value="${userType}" th:checked="${userType == selectedUserType}">
+                                <label class="govuk-label govuk-radios__label" for="userType"
                                     th:text="${userType.friendlyName}">
                                 </label>
                             </div>
