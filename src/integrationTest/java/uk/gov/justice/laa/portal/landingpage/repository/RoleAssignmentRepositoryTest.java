@@ -65,25 +65,28 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void roleAssignmentDoNotAllowSelfAssignableRole() {
+    public void findByAssigningRole() {
         // Arrange
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL)
-                .description("appRole1").app(app).build();
-        appRoleRepository.save(appRole1);
-
-        RoleAssignment roleAssignment = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole1).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole3 = AppRole.builder().name("appRole3").description("appRole3").roleType(RoleType.EXTERNAL).app(app).build();
+        appRoleRepository.saveAll(List.of(appRole1, appRole2, appRole3));
 
         // Act
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(roleAssignment),
-                "DataIntegrityViolationException expected");
+        RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole2).build();
+        RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole3).build();
+        repository.saveAll(List.of(roleAssignment1, roleAssignment2));
 
         // Assert
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("role_assignment_no_self_assignable");
+        List<RoleAssignment> assignments = repository.findByAssigningRole_IdIn(List.of(appRole1.getId()));
 
+        Assertions.assertThat(assignments).isNotNull();
+        Assertions.assertThat(assignments).hasSize(2);
+
+        List<RoleAssignment> empty = repository.findByAssigningRole_IdIn(List.of(appRole2.getId()));
+        Assertions.assertThat(empty).hasSize(0);
     }
 }

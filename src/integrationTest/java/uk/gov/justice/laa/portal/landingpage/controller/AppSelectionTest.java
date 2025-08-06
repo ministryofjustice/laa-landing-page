@@ -30,6 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Import(TestSecurityConfig.class)
@@ -50,11 +51,15 @@ public class AppSelectionTest extends BaseIntegrationTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepository;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private RoleAssignmentRepository roleAssignmentRepository;
 
     @BeforeEach
     public void beforeEach() {
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
+        roleAssignmentRepository.deleteAll();
         appRoleRepository.deleteAll();
         appRepository.deleteAll();
     }

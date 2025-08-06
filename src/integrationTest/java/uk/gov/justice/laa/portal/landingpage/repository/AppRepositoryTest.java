@@ -18,10 +18,14 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepository;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private RoleAssignmentRepository roleAssignmentRepository;
 
     @BeforeEach
     public void beforeEach() {
         // Delete child tables first to avoid foreign key constraint violations
+        roleAssignmentRepository.deleteAll();
         appRoleRepository.deleteAll();
         repository.deleteAll();
     }

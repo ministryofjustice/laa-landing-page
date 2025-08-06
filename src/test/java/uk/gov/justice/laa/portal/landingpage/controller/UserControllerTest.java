@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,7 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -106,6 +108,8 @@ class UserControllerTest {
     private Authentication authentication;
     @Mock
     private RedirectAttributes redirectAttributes;
+    @Mock
+    private RoleAssignmentService roleAssignmentService;
 
 
     private Model model;
@@ -113,7 +117,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
-                new MapperConfig().modelMapper(), accessControlService);
+                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService);
         model = new ExtendedModelMap();
     }
 
@@ -471,7 +475,9 @@ class UserControllerTest {
         session.setAttribute("user", new EntraUserDto());
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
         when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
-        String view = userController.getSelectedRoles(new RolesForm(), model, session);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        String view = userController.getSelectedRoles(new RolesForm(), authentication, model, session);
         assertThat(view).isEqualTo("add-user-roles");
         assertThat(model.getAttribute("roles")).isNotNull();
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -482,7 +488,7 @@ class UserControllerTest {
     @Test
     void getSelectedRolesGetThrowsExceptionWhenNoAppsPresent() {
         assertThrows(CreateUserDetailsIncompleteException.class,
-                () -> userController.getSelectedRoles(new RolesForm(), model, session));
+                () -> userController.getSelectedRoles(new RolesForm(), authentication, model, session));
     }
 
     @Test
@@ -503,8 +509,10 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
         when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         assertThrows(CreateUserDetailsIncompleteException.class,
-                () -> userController.getSelectedRoles(new RolesForm(), model, session));
+                () -> userController.getSelectedRoles(new RolesForm(), authentication, model, session));
     }
 
     @Test
@@ -794,9 +802,10 @@ class UserControllerTest {
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any())).thenReturn(allRoles);
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
@@ -835,8 +844,10 @@ class UserControllerTest {
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allRoles);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -878,8 +889,10 @@ class UserControllerTest {
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.INTERNAL)).thenReturn(allRoles);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -893,7 +906,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
         // When
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.editUserRoles(userId, 0, new RolesForm(), model, session));
+                () -> userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, session));
     }
 
     @Test
@@ -911,6 +924,8 @@ class UserControllerTest {
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("testUserName");
         when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         // When
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, authentication, model,
                 testSession);
@@ -1428,11 +1443,12 @@ class UserControllerTest {
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(appRoles);
         lenient().when(userService.getAppRolesByAppId("app2")).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -1491,6 +1507,8 @@ class UserControllerTest {
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("testUserName");
         when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
                 testSession);
@@ -1643,9 +1661,10 @@ class UserControllerTest {
 
         when(userService.getAppByAppId("app2")).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType("app2", UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(roles);
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
-        String view = userController.getSelectedRoles(new RolesForm(), model, testSession);
+        String view = userController.getSelectedRoles(new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("add-user-roles");
@@ -2075,7 +2094,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -2102,9 +2121,11 @@ class UserControllerTest {
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
-        String view = userController.editUserRoles(userId, 5, new RolesForm(), model, testSession);
+        String view = userController.editUserRoles(userId, 5, new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -2630,9 +2651,10 @@ class UserControllerTest {
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
-        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -2656,7 +2678,7 @@ class UserControllerTest {
         when(userService.getUserAppsByUserId(userId)).thenReturn(Set.of()); // No apps
 
         // When
-        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), model, testSession);
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -2721,6 +2743,8 @@ class UserControllerTest {
         when(bindingResult.hasErrors()).thenReturn(false);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
 
         // When - updating roles for last app (index 1)
         String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model, testSession);
