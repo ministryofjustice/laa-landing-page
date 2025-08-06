@@ -18,10 +18,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -218,6 +220,36 @@ class LoginServiceTest {
         assertThrows(AssertionError.class, () -> {
             loginService.getCurrentEntraUser(realAuthToken);
         });
+    }
+
+    @Test
+    void getCurrentEntraUser_singleProfile() {
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        Set<UserProfile> userProfiles = new HashSet<>();
+        userProfiles.add(UserProfile.builder().build());
+        when(userService.getUserByEntraId(any())).thenReturn(EntraUser.builder().userProfiles(userProfiles).build());
+        assertThat(loginService.getCurrentProfile(realAuthToken)).isNotNull();
+    }
+
+    @Test
+    void getCurrentEntraUser_multiProfiles() {
+        Set<UserProfile> userProfiles = new HashSet<>();
+        userProfiles.add(UserProfile.builder().build());
+        userProfiles.add(UserProfile.builder().activeProfile(true).build());
+        when(userService.getUserByEntraId(any())).thenReturn(EntraUser.builder().userProfiles(userProfiles).build());
+        UUID userId = UUID.randomUUID();
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "oid", userId.toString()),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        UserProfile up = loginService.getCurrentProfile(realAuthToken);
+        assertThat(up.isActiveProfile()).isTrue();
     }
 
     @Test
