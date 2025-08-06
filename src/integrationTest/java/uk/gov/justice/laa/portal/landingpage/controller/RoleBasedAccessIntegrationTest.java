@@ -1,0 +1,212 @@
+package uk.gov.justice.laa.portal.landingpage.controller;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
+
+public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest {
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected EntraUserRepository entraUserRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected UserProfileRepository userProfileRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected AppRoleRepository appRoleRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected AppRepository appRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected FirmRepository firmRepository;
+
+    protected Firm testFirm1;
+    protected Firm testFirm2;
+    protected List<EntraUser> internalUserManagers = new ArrayList<>();
+    protected List<EntraUser> internalAndExternalUserManagers = new ArrayList<>();
+    protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
+    protected List<EntraUser> externalUsersNoRoles = new ArrayList<>();
+    protected List<EntraUser> externalUserAdmins = new ArrayList<>();
+    protected List<EntraUser> globalAdmins = new ArrayList<>();
+    protected List<EntraUser> allUsers = new ArrayList<>();
+
+    @BeforeAll
+    public void beforeAll() {
+        clearRepositories();
+        setupFirms();
+        setupTestUsers();
+    }
+
+    @AfterAll
+    public void afterAll() {
+        clearRepositories();
+    }
+
+    protected void setupFirms() {
+        Firm firm1 = buildFirm("firm1", "firm1");
+        testFirm1 = firmRepository.save(firm1);
+        Firm firm2 = buildFirm("firm2", "firm2");
+        testFirm2 = firmRepository.save(firm2);
+    }
+
+    protected void setupTestUsers() {
+        // Index to keep all email addresses unique.
+        int emailIndex = 0;
+        List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
+        // Setup 5 internal Users (only internal role)
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InternalUserManager");
+            UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+            AppRole appRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("Internal User Manager"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            profile.setAppRoles(Set.of(appRole));
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            internalUserManagers.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 internal Users with external user manager role.
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "ExternalUserManager");
+            UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+            AppRole internalUserManagerRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("Internal User Manager"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            AppRole externalUserManagerRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Manager"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            profile.setAppRoles(Set.of(internalUserManagerRole, externalUserManagerRole));
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            internalAndExternalUserManagers.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 external users with external user manager role.
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "ExternalUserManager");
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            profile.setFirm(testFirm1);
+            AppRole externalUserManagerRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Manager"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            profile.setAppRoles(Set.of(externalUserManagerRole));
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            externalOnlyUserManagers.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 Firm1 External Users
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            profile.setAppRoles(Set.of());
+            profile.setFirm(testFirm1);
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 Firm2 External Users
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwo");
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            profile.setAppRoles(Set.of());
+            profile.setFirm(testFirm2);
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup Firm1 admin
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneAdmin");
+        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, true);
+        profile.setFirm(testFirm1);
+        AppRole appRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("External User Admin"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(appRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        externalUserAdmins.add(entraUserRepository.saveAndFlush(user));
+
+        // Setup Firm2 admin
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwoAdmin");
+        profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, true);
+        profile.setFirm(testFirm2);
+        profile.setAppRoles(Set.of(appRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        externalUserAdmins.add(entraUserRepository.saveAndFlush(user));
+
+        // Setup Global Admin
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "GlobalAdmin");
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        appRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Global Admin"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(appRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        globalAdmins.add(entraUserRepository.saveAndFlush(user));
+
+        allUsers.addAll(internalUserManagers);
+        allUsers.addAll(internalAndExternalUserManagers);
+        allUsers.addAll(externalOnlyUserManagers);
+        allUsers.addAll(externalUsersNoRoles);
+        allUsers.addAll(externalUserAdmins);
+        allUsers.addAll(globalAdmins);
+    }
+
+    protected void clearRepositories() {
+        userProfileRepository.deleteAll();
+        entraUserRepository.deleteAll();
+        firmRepository.deleteAll();
+    }
+}

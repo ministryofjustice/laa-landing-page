@@ -24,13 +24,6 @@ import java.util.Set;
 
 class UserControllerTest extends BaseIntegrationTest {
 
-    @MockitoBean
-    private GraphServiceClient graphServiceClient;
-    @MockitoBean
-    private EmailService emailService;
-    @MockitoBean
-    private LoginService loginService;
-
     @Test
     void shouldRedirectAnonymousUser() throws Exception {
         this.mockMvc
@@ -51,19 +44,9 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    void redirectToLoginPage() throws Exception {
-        this.mockMvc.perform(get("/"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    @Test
     void adminPageSuccess() throws Exception {
-        Authentication authentication = new TestingAuthenticationToken("user", "password", "INTERNAL");
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().userType(UserType.INTERNAL).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
-        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         mockMvc.perform(get("/admin/users")
-                        .with(SecurityMockMvcRequestPostProcessors.authentication(authentication)))
+                        .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().isOk());
     }
 }
