@@ -23,7 +23,11 @@ import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
@@ -234,16 +238,16 @@ class LoginServiceTest {
 
     @Test
     void getCurrentEntraUser_multiProfiles() {
+        Set<UserProfile> userProfiles = new HashSet<>();
+        userProfiles.add(UserProfile.builder().build());
+        userProfiles.add(UserProfile.builder().activeProfile(true).build());
+        when(userService.getUserByEntraId(any())).thenReturn(EntraUser.builder().userProfiles(userProfiles).build());
         UUID userId = UUID.randomUUID();
         OAuth2User realPrincipal = new DefaultOAuth2User(
                 List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 Map.of("name", "Alice", "oid", userId.toString()),
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
-        Set<UserProfile> userProfiles = new HashSet<>();
-        userProfiles.add(UserProfile.builder().build());
-        userProfiles.add(UserProfile.builder().activeProfile(true).build());
-        when(userService.getUserByEntraId(any())).thenReturn(EntraUser.builder().userProfiles(userProfiles).build());
         UserProfile up = loginService.getCurrentProfile(realAuthToken);
         assertThat(up.isActiveProfile()).isTrue();
     }

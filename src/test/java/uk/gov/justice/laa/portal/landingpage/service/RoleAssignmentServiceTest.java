@@ -31,10 +31,10 @@ public class RoleAssignmentServiceTest {
     @Mock
     private RoleAssignmentRepository roleAssignmentRepository;
 
-    private UUID gAdminId = UUID.randomUUID();
+    private UUID gbAdminId = UUID.randomUUID();
     private UUID exAdminId = UUID.randomUUID();
     private UUID exManId = UUID.randomUUID();
-    AppRole gAdmin;
+    AppRole gbAdmin;
     AppRole exMan;
     AppRole exAdmin;
 
@@ -42,19 +42,19 @@ public class RoleAssignmentServiceTest {
     void setUp() {
         roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, new MapperConfig().modelMapper());
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        gAdmin = AppRole.builder().id(gAdminId).name("globalAdmin").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
+        gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
         exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
         exMan = AppRole.builder().id(exManId).name("externalManager").description("appRole3").roleType(RoleType.EXTERNAL).app(app).build();
-        RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(gAdmin).assignableRole(exAdmin).build();
-        RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(gAdmin).assignableRole(exMan).build();
+        RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exAdmin).build();
+        RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exMan).build();
 
-        lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(gAdminId))).thenReturn(List.of(roleAssignment1, roleAssignment2));
+        lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(gbAdminId))).thenReturn(List.of(roleAssignment1, roleAssignment2));
         lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(exAdminId))).thenReturn(List.of());
     }
 
     @Test
     void canAssignRole_ok() {
-        Set<AppRole> editorRoles = Set.of(gAdmin);
+        Set<AppRole> editorRoles = Set.of(gbAdmin);
         List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString());
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isTrue();
     }
@@ -62,13 +62,13 @@ public class RoleAssignmentServiceTest {
     @Test
     void canAssignRole_fail() {
         Set<AppRole> editorRoles = Set.of(exAdmin);
-        List<String> targetRoles = List.of(gAdminId.toString(), exManId.toString());
+        List<String> targetRoles = List.of(gbAdminId.toString(), exManId.toString());
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isFalse();
     }
 
     @Test
     void filterRoles_globalAdmin() {
-        Set<AppRole> editorRoles = Set.of(gAdmin);
+        Set<AppRole> editorRoles = Set.of(gbAdmin);
         AppRoleDto exAdminDto = new AppRoleDto();
         exAdminDto.setId(exAdminId.toString());
         AppRoleDto exManDto = new AppRoleDto();
@@ -83,7 +83,7 @@ public class RoleAssignmentServiceTest {
         AppRoleDto exAdminDto = new AppRoleDto();
         exAdminDto.setId(exAdminId.toString());
         AppRoleDto exManDto = new AppRoleDto();
-        exManDto.setId(gAdminId.toString());
+        exManDto.setId(gbAdminId.toString());
         List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto);
         assertThat(roleAssignmentService.filterRoles(editorRoles, targetRoles)).hasSize(0);
     }
