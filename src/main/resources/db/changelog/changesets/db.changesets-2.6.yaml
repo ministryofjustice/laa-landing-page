@@ -11,4 +11,4 @@ databaseChangeLog:
                   defaultValueBoolean: false
                   name: last_sync_successful
                   type: BOOLEAN
-            tableName: user_profil
+            tableName: user_profile

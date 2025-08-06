@@ -94,7 +94,7 @@ public class UserProfile extends AuditableEntity {
     @NotNull(message = "User profile status must be provided")
     private UserProfileStatus userProfileStatus;
 
-    @Column(name = "last_sync_successful", nullable = true)
+    @Column(name = "last_sync_successful", nullable = false)
     private boolean lastCcmsSyncSuccessful;
 
     @PrePersist
