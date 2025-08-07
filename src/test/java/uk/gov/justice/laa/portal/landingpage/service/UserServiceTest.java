@@ -2607,7 +2607,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2622,7 +2622,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(permissions), eq(firmId), any(PageRequest.class));
+                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class));
     }
 
     @Nested
