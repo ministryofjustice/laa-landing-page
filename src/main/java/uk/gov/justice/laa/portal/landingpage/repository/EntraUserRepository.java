@@ -41,6 +41,5 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
     Page<EntraUser> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
             @Param("permissions") List<Permission> permissions, @Param("firmId") UUID firmId, Pageable pageable);
 
-    @Query("SELECT u from EntraUser u where u.email = ?1")
     Optional<EntraUser> findByEmailIgnoreCase(String email);
 }
