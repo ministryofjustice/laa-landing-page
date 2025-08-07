@@ -25,6 +25,5 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             """)
     Optional<EntraUser> findByEntraOid(String entraOid);
 
-    @Query("SELECT u from EntraUser u where u.email = ?1")
     Optional<EntraUser> findByEmailIgnoreCase(String email);
 }
