@@ -66,11 +66,11 @@ public class RoleAssignmentServiceTest {
     @Test
     void canAssignRoleWithNonAuthzRole_ok() {
         Set<AppRole> editorRoles = Set.of(gbAdmin);
-        UUID viewCrimeID = UUID.randomUUID();
+        UUID viewCrimeId = UUID.randomUUID();
         App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        AppRole viewCrime = AppRole.builder().id(viewCrimeID).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
-        List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString(), viewCrimeID.toString());
-        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeID), true)).thenReturn(List.of(exAdmin, exMan));
+        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
+        List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString(), viewCrimeId.toString());
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeId), true)).thenReturn(List.of(exAdmin, exMan));
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isTrue();
     }
 
@@ -106,18 +106,18 @@ public class RoleAssignmentServiceTest {
 
     @Test
     void filterRoles_exManager_withNoAuthzRole() {
-        Set<AppRole> editorRoles = Set.of(exMan);
         AppRoleDto exAdminDto = new AppRoleDto();
         exAdminDto.setId(exAdminId.toString());
         AppRoleDto exManDto = new AppRoleDto();
         exManDto.setId(gbAdminId.toString());
-        UUID viewCrimeID = UUID.randomUUID();
+        UUID viewCrimeId = UUID.randomUUID();
         App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        AppRole viewCrime = AppRole.builder().id(viewCrimeID).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
+        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
         AppRoleDto viewCrimeDto = new AppRoleDto();
-        viewCrimeDto.setId(viewCrimeID.toString());
+        viewCrimeDto.setId(viewCrimeId.toString());
         List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto, viewCrimeDto);
-        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, gbAdminId, viewCrimeID), false)).thenReturn(List.of(viewCrime));
+        Set<AppRole> editorRoles = Set.of(exMan);
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, gbAdminId, viewCrimeId), false)).thenReturn(List.of(viewCrime));
         assertThat(roleAssignmentService.filterRoles(editorRoles, targetRoles)).hasSize(1);
     }
 }
