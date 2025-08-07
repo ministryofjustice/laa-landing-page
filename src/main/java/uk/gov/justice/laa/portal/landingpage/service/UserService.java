@@ -155,11 +155,14 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
+            
+            // Try to send role change notification with retry logic before saving
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+            
+            // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
-
-            // TODO send message to CCMS if PUI roles are added/removed
-            // roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }

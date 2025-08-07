@@ -180,3 +180,7 @@ spec:
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
               value: "${SENTRY_ENABLED}"
+            - name: CCMS_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_USER_MANAGEMENT_API_KEY}"

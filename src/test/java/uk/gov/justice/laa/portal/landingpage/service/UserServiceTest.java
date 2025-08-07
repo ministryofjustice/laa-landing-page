@@ -30,7 +30,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -2621,5 +2623,189 @@ class UserServiceTest {
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
                 eq("Test Name"), eq(permissions), eq(firmId), any(PageRequest.class));
+    }
+
+    @Nested
+    class RoleChangeTests {
+
+        @Test
+        void updateUserRoles_successfulUpdate_sendsRoleChangeNotification() {
+            String userProfileId = UUID.randomUUID().toString();
+            List<String> selectedRoles = List.of(UUID.randomUUID().toString());
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid("test-entra-oid")
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.fromString(userProfileId))
+                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .entraUser(entraUser)
+                    .legacyUserId(UUID.randomUUID())
+                    .build();
+
+            AppRole oldRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("OLD_ROLE")
+                    .ccmsCode("CCMS_OLD")
+                    .legacySync(true)
+                    .roleType(RoleType.EXTERNAL)
+                    .authzRole(false)
+                    .build();
+
+            final AppRole newRole = AppRole.builder()
+                    .id(UUID.fromString(selectedRoles.get(0)))
+                    .name("NEW_ROLE")
+                    .ccmsCode("CCMS_NEW")
+                    .legacySync(true)
+                    .roleType(RoleType.EXTERNAL)
+                    .authzRole(false)
+                    .build();
+
+            userProfile.setAppRoles(Set.of(oldRole));
+            entraUser.setUserProfiles(Set.of(userProfile));
+
+            when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
+                    .thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any()))
+                    .thenReturn(List.of(newRole));
+            when(mockUserProfileRepository.save(any(UserProfile.class)))
+                    .thenReturn(userProfile);
+            when(mockRoleChangeNotificationService.sendMessage(
+                    any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            userService.updateUserRoles(userProfileId, selectedRoles);
+
+            ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
+            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockRoleChangeNotificationService).sendMessage(
+                    eq(userProfile),
+                    eq(Set.of(newRole)),
+                    eq(Set.of(oldRole))
+            );
+
+            UserProfile savedProfile = userProfileCaptor.getValue();
+            assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
+        }
+
+        @Test
+        void updateUserRoles_roleChangeNotificationFails_updatedRolesSavedToDb() {
+            String userProfileId = UUID.randomUUID().toString();
+            List<String> selectedRoles = List.of(UUID.randomUUID().toString());
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid("test-entra-oid")
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.fromString(userProfileId))
+                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .entraUser(entraUser)
+                    .legacyUserId(UUID.randomUUID())
+                    .build();
+
+            final AppRole newRole = AppRole.builder()
+                    .id(UUID.fromString(selectedRoles.get(0)))
+                    .name("NEW_ROLE")
+                    .ccmsCode("CCMS_NEW")
+                    .legacySync(true)
+                    .roleType(RoleType.EXTERNAL)
+                    .authzRole(false)
+                    .build();
+
+            userProfile.setAppRoles(Set.of());
+            entraUser.setUserProfiles(Set.of(userProfile));
+
+            when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
+                    .thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any()))
+                    .thenReturn(List.of(newRole));
+            when(mockUserProfileRepository.save(any(UserProfile.class)))
+                    .thenReturn(userProfile);
+            when(mockRoleChangeNotificationService.sendMessage(
+                    any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(false);
+
+            userService.updateUserRoles(userProfileId, selectedRoles);
+
+            ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
+            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockRoleChangeNotificationService).sendMessage(any(), any(), any());
+
+            UserProfile savedProfile = userProfileCaptor.getValue();
+            assertThat(savedProfile.isLastCcmsSyncSuccessful()).isFalse();
+        }
+
+        @Test
+        void updateUserRoles_userProfileNotFound_logsWarning() {
+            String userProfileId = UUID.randomUUID().toString();
+            List<String> selectedRoles = List.of(UUID.randomUUID().toString());
+
+            when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
+                    .thenReturn(Optional.empty());
+
+            userService.updateUserRoles(userProfileId, selectedRoles);
+
+            verify(mockUserProfileRepository, never()).save(any());
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
+        }
+
+        @Test
+        void updateUserRoles_noPuiRoleChanges_doesNotSendNotification() {
+            String userProfileId = UUID.randomUUID().toString();
+            List<String> selectedRoles = List.of(UUID.randomUUID().toString());
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid("test-entra-oid")
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.fromString(userProfileId))
+                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .entraUser(entraUser)
+                    .legacyUserId(UUID.randomUUID())
+                    .build();
+
+            final AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.fromString(selectedRoles.get(0)))
+                    .name("NON_PUI_ROLE")
+                    .legacySync(false)
+                    .roleType(RoleType.EXTERNAL)
+                    .authzRole(false)
+                    .build();
+
+            userProfile.setAppRoles(Set.of());
+            entraUser.setUserProfiles(Set.of(userProfile));
+
+            when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
+                    .thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any()))
+                    .thenReturn(List.of(nonPuiRole));
+            when(mockUserProfileRepository.save(any(UserProfile.class)))
+                    .thenReturn(userProfile);
+            when(mockRoleChangeNotificationService.sendMessage(
+                    any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            userService.updateUserRoles(userProfileId, selectedRoles);
+
+            ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
+            verify(mockUserProfileRepository).save(userProfileCaptor.capture());
+            verify(mockRoleChangeNotificationService).sendMessage(
+                    eq(userProfile),
+                    eq(Set.of()),
+                    eq(Set.of())
+            );
+
+            UserProfile savedProfile = userProfileCaptor.getValue();
+            assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
+        }
     }
 }

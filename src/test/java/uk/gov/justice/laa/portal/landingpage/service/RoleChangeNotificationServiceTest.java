@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,15 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RoleChangeNotificationServiceTest {
 
     @Mock
-    private ObjectMapper objectMapper;
+    private CcmsApiClient ccmsApiClient;
 
     @InjectMocks
     private RoleChangeNotificationService roleChangeNotificationService;
@@ -96,31 +95,28 @@ class RoleChangeNotificationServiceTest {
     }
 
     @Test
-    void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() throws JsonProcessingException {
+    void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() {
         Set<AppRole> unchangedRoles = Set.of(puiRole1);
 
         roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
+        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
     }
 
     @Test
-    void shouldNotSendMessage_whenUserIsInternal() throws JsonProcessingException {
+    void shouldNotSendMessage_whenUserIsInternal() {
         userProfile.setUserType(UserType.INTERNAL);
 
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
+        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
     }
 
     @Test
-    void shouldCreateCorrectCcmsMessage_whenPuiRolesChanged() throws JsonProcessingException {
-        String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
-
+    void shouldCreateCorrectCcmsMessage_whenPuiRolesChanged() {
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
-        verify(objectMapper).writeValueAsString(argThat(message -> {
+        verify(ccmsApiClient).sendUserRoleChange(argThat(message -> {
             CcmsMessage ccmsMessage = (CcmsMessage) message;
             return ccmsMessage.getUserName().equals(userProfile.getLegacyUserId().toString())
                     && ccmsMessage.getVendorNumber().equals(firm.getCode())
@@ -134,54 +130,35 @@ class RoleChangeNotificationServiceTest {
     }
 
     @Test
-    void shouldThrowRuntimeException_whenJsonProcessingFails() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any(CcmsMessage.class)))
-                .thenThrow(new JsonProcessingException("JSON processing failed") {});
+    void shouldThrowRuntimeException_whenCcmsApiClientFails() {
+        doThrow(new RuntimeException("CCMS API call failed"))
+                .when(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
                 roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
 
         assertThat(exception.getMessage()).isEqualTo("Failed to send message");
-        assertThat(exception.getCause()).isInstanceOf(JsonProcessingException.class);
+        assertThat(exception.getCause().getMessage()).isEqualTo("CCMS API call failed");
     }
 
     @Test
-    void shouldThrowRuntimeException_whenGeneralExceptionOccurs() throws JsonProcessingException {
-        when(objectMapper.writeValueAsString(any(CcmsMessage.class)))
-                .thenThrow(new RuntimeException("General error"));
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
-
-        assertThat(exception.getMessage()).isEqualTo("Failed to send message");
-        assertThat(exception.getCause()).isInstanceOf(RuntimeException.class);
-        assertThat(exception.getCause().getMessage()).isEqualTo("General error");
-    }
-
-    @Test
-    void shouldHandleEmptyOldRoles() throws JsonProcessingException {
-        String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
-
+    void shouldHandleEmptyOldRoles() {
         roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, emptyRoles);
 
-        verify(objectMapper).writeValueAsString(any(CcmsMessage.class));
+        verify(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
     }
 
     @Test
-    void shouldHandleEmptyNewRoles() throws JsonProcessingException {
-        String expectedJson = "{\"test\":\"message\"}";
-        when(objectMapper.writeValueAsString(any(CcmsMessage.class))).thenReturn(expectedJson);
-
+    void shouldHandleEmptyNewRoles() {
         roleChangeNotificationService.sendMessage(userProfile, emptyRoles, oldPuiRoles);
 
-        verify(objectMapper).writeValueAsString(any(CcmsMessage.class));
+        verify(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
     }
 
     @Test
-    void shouldNotSendMessage_whenBothRoleSetsAreEmpty() throws JsonProcessingException {
+    void shouldNotSendMessage_whenBothRoleSetsAreEmpty() {
         roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
 
-        verify(objectMapper, never()).writeValueAsString(any(CcmsMessage.class));
+        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
     }
 }

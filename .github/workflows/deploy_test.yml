@@ -124,6 +124,8 @@ jobs:
           TECH_SERVICES_REQ_CONNECT_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_CONNECT_TIMEOUT }}
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
+          CCMS_USER_MANAGEMENT_API_BASE_URL: ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
+          CCMS_USER_MANAGEMENT_API_KEY: ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
 
       - name: Deploy to Cloud Platform
         run: |
