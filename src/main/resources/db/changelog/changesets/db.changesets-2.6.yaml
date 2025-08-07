@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1754486173299-1
+      author: sankavi.mohanraj (generated)
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+                  name: last_sync_successful
+                  type: BOOLEAN
+            tableName: user_profile
