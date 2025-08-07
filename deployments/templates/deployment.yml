@@ -53,7 +53,7 @@ spec:
             periodSeconds: 10
           env:
             - name: JWT_URL
-              value: "{JWT_URL}"
+              value: "${JWT_URL}"
             - name: SPRING_PROFILE
               value: "${SPRING_PROFILE}"
             - name: LOG_LEVEL
