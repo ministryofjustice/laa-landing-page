@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,18 +14,19 @@ import java.util.List;
 @Data
 public class CcmsMessage {
 
-    @JsonProperty("USER_NAME")
+    @JsonProperty("userName")
     private final String userName;
-    @JsonProperty("VENDOR_NUMBER")
+    @JsonProperty("vendorNumber")
     private final String vendorNumber;
-    @JsonProperty("FIRST_NAME")
+    @JsonProperty("firstName")
     private final String firstName;
-    @JsonProperty("LAST_NAME")
+    @JsonProperty("lastName")
     private final String lastName;
-    @JsonProperty("TIMESTAMP")
+    @JsonProperty("timestampNow")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private final LocalDateTime timestamp;
-    @JsonProperty("EMAIL_ADDRESS")
+    @JsonProperty("emailAddress")
     private final String email;
-    @JsonProperty("RESPONSIBILITY_KEY")
+    @JsonProperty("responsibilityKey")
     private final List<String> responsibilityKey;
 }

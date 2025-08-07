@@ -69,7 +69,8 @@ public class BaseRepositoryTest {
         return UserProfile.builder().entraUser(entraUser)
                 .userType(userType).appRoles(HashSet.newHashSet(1))
                 .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
-                .userProfileStatus(UserProfileStatus.COMPLETE).build();
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .lastCcmsSyncSuccessful(true).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
