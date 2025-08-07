@@ -15,4 +15,6 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
     Optional<AppRole> findByName(String roleName);
 
     List<AppRole> findByRoleTypeIn(Collection<RoleType> roleTypes);
+
+    List<AppRole> findAllByIdInAndAuthzRoleIs(Collection<UUID> roleIds, boolean authzRole);
 }
