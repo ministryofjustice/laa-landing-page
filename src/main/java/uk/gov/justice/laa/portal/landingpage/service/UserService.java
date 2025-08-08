@@ -510,7 +510,7 @@ public class UserService {
             App app = optionalApp.get();
             RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> appRole.isAuthzRole() || appRole.getRoleType().equals(userRoleType)
+                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
                             || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .toList();
