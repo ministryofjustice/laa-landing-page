@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -380,7 +381,8 @@ public class UserController {
 
     @GetMapping("/user/create/roles")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
-    public String getSelectedRoles(RolesForm rolesForm, Authentication authentication, Model model, HttpSession session) {
+    public String getSelectedRoles(RolesForm rolesForm, Authentication authentication, Model model,
+            HttpSession session) {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         Model modelFromSession = (Model) session.getAttribute("userCreateRolesModel");
@@ -778,6 +780,26 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
+
+        // Check if this is the CCMS app and organize roles by section
+        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+
+        if (isCcmsApp) {
+            // Filter to only CCMS roles for organization
+            List<AppRoleDto> ccmsRoles = roles.stream()
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .collect(Collectors.toList());
+
+            if (!ccmsRoles.isEmpty()) {
+                // Organize CCMS roles by section dynamically
+                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                model.addAttribute("ccmsRolesBySection", organizedRoles);
+            }
+            model.addAttribute("isCcmsApp", true);
+        } else {
+            model.addAttribute("isCcmsApp", false);
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
@@ -1192,6 +1214,26 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
+
+        // Check if this is the CCMS app and organize roles by section
+        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+
+        if (isCcmsApp) {
+            // Filter to only CCMS roles for organization
+            List<AppRoleDto> ccmsRoles = roles.stream()
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .collect(Collectors.toList());
+
+            if (!ccmsRoles.isEmpty()) {
+                // Organize CCMS roles by section dynamically
+                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                model.addAttribute("ccmsRolesBySection", organizedRoles);
+            }
+            model.addAttribute("isCcmsApp", true);
+        } else {
+            model.addAttribute("isCcmsApp", false);
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);

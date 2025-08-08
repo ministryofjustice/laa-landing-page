@@ -52,13 +52,114 @@
                     <div class="govuk-form-group govuk-!-padding-top-3"
                         th:classappend="${#fields.hasErrors('roles')} ? 'govuk-form-group--error'">
                         <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                            <div class="govuk-checkboxes__item" th:each="role : ${roles}">
-                                <input class="govuk-checkboxes__input" th:id="${role.id}" name="roles" type="checkbox"
-                                    th:value="${role.id}" th:checked="${role.selected}">
-                                <label class="govuk-label govuk-checkboxes__label" th:for="${role.id}">
-                                    <span th:text="${role.name}"></span>
-                                </label>
+
+                            <!-- CCMS App: Display roles organized by sections -->
+                            <div th:if="${isCcmsApp}">
+                                <!-- Provider Section -->
+                                <div th:if="${ccmsRolesBySection.containsKey('Provider') and !ccmsRolesBySection['Provider'].isEmpty()}"
+                                    class="govuk-!-margin-bottom-6">
+                                    <h3 class="govuk-heading-m">Provider</h3>
+                                    <div th:each="roleDto : ${ccmsRolesBySection['Provider']}">
+                                        <div th:each="roleViewModel : ${roles}"
+                                            th:if="${roleViewModel.id == roleDto.id}">
+                                            <div class="govuk-checkboxes__item govuk-!-margin-bottom-3">
+                                                <input class="govuk-checkboxes__input" th:id="${roleViewModel.id}"
+                                                    name="roles" type="checkbox" th:value="${roleViewModel.id}"
+                                                    th:checked="${roleViewModel.selected}">
+                                                <label class="govuk-label govuk-checkboxes__label"
+                                                    th:for="${roleViewModel.id}">
+                                                    <span th:text="${roleViewModel.name}"></span>
+                                                </label>
+                                                <div class="govuk-hint govuk-checkboxes__hint"
+                                                    th:text="${roleViewModel.description}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chambers Section -->
+                                <div th:if="${ccmsRolesBySection.containsKey('Chambers') and !ccmsRolesBySection['Chambers'].isEmpty()}"
+                                    class="govuk-!-margin-bottom-6">
+                                    <h3 class="govuk-heading-m">Chambers</h3>
+                                    <div th:each="roleDto : ${ccmsRolesBySection['Chambers']}">
+                                        <div th:each="roleViewModel : ${roles}"
+                                            th:if="${roleViewModel.id == roleDto.id}">
+                                            <div class="govuk-checkboxes__item govuk-!-margin-bottom-3">
+                                                <input class="govuk-checkboxes__input" th:id="${roleViewModel.id}"
+                                                    name="roles" type="checkbox" th:value="${roleViewModel.id}"
+                                                    th:checked="${roleViewModel.selected}">
+                                                <label class="govuk-label govuk-checkboxes__label"
+                                                    th:for="${roleViewModel.id}">
+                                                    <span th:text="${roleViewModel.name}"></span>
+                                                </label>
+                                                <div class="govuk-hint govuk-checkboxes__hint"
+                                                    th:text="${roleViewModel.description}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Advocate Section -->
+                                <div th:if="${ccmsRolesBySection.containsKey('Advocate') and !ccmsRolesBySection['Advocate'].isEmpty()}"
+                                    class="govuk-!-margin-bottom-6">
+                                    <h3 class="govuk-heading-m">Advocate</h3>
+                                    <div th:each="roleDto : ${ccmsRolesBySection['Advocate']}">
+                                        <div th:each="roleViewModel : ${roles}"
+                                            th:if="${roleViewModel.id == roleDto.id}">
+                                            <div class="govuk-checkboxes__item govuk-!-margin-bottom-3">
+                                                <input class="govuk-checkboxes__input" th:id="${roleViewModel.id}"
+                                                    name="roles" type="checkbox" th:value="${roleViewModel.id}"
+                                                    th:checked="${roleViewModel.selected}">
+                                                <label class="govuk-label govuk-checkboxes__label"
+                                                    th:for="${roleViewModel.id}">
+                                                    <span th:text="${roleViewModel.name}"></span>
+                                                </label>
+                                                <div class="govuk-hint govuk-checkboxes__hint"
+                                                    th:text="${roleViewModel.description}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Other CCMS Roles Section (if any) -->
+                                <div th:if="${ccmsRolesBySection.containsKey('Other') and !ccmsRolesBySection['Other'].isEmpty()}"
+                                    class="govuk-!-margin-bottom-6">
+                                    <h3 class="govuk-heading-m">Other</h3>
+                                    <div th:each="roleDto : ${ccmsRolesBySection['Other']}">
+                                        <div th:each="roleViewModel : ${roles}"
+                                            th:if="${roleViewModel.id == roleDto.id}">
+                                            <div class="govuk-checkboxes__item govuk-!-margin-bottom-3">
+                                                <input class="govuk-checkboxes__input" th:id="${roleViewModel.id}"
+                                                    name="roles" type="checkbox" th:value="${roleViewModel.id}"
+                                                    th:checked="${roleViewModel.selected}">
+                                                <label class="govuk-label govuk-checkboxes__label"
+                                                    th:for="${roleViewModel.id}">
+                                                    <span th:text="${roleViewModel.name}"></span>
+                                                </label>
+                                                <div class="govuk-hint govuk-checkboxes__hint govuk-!-margin-top-1"
+                                                    th:text="${roleViewModel.description}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Non-CCMS App: Display roles in flat list -->
+                            <div th:unless="${isCcmsApp}">
+                                <div class="govuk-checkboxes__item govuk-!-margin-bottom-3" th:each="role : ${roles}">
+                                    <input class="govuk-checkboxes__input" th:id="${role.id}" name="roles"
+                                        type="checkbox" th:value="${role.id}" th:checked="${role.selected}">
+                                    <label class="govuk-label govuk-checkboxes__label" th:for="${role.id}">
+                                        <span th:text="${role.name}"></span>
+                                    </label>
+                                    <div class="govuk-hint govuk-checkboxes__hint" th:text="${role.description}"></div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </fieldset>

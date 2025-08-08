@@ -7,5 +7,6 @@ public class AppRoleViewModel {
     private String id;
     private String name;
     private String appName;
+    private String description;
     private boolean selected;
 }
