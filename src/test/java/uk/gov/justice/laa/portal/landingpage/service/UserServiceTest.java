@@ -1276,20 +1276,23 @@ class UserServiceTest {
 
     @Test
     void isInternal_Ok() {
+        UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_INTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).appRoles(Set.of(appRole)).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isTrue();
     }
 
     @Test
     void isInternal_Failed() {
+        UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isFalse();
     }
@@ -1976,7 +1979,8 @@ class UserServiceTest {
             Set<UserProfile> userProfiles = Set.of(
                     UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).userType(UserType.INTERNAL).build(),
                     UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM).build());
-            EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+            UUID userId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
             when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
 
 

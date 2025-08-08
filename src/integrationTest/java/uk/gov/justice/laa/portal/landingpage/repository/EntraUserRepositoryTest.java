@@ -2,7 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -64,6 +64,11 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getEmail()).isEqualTo("test@email.com");
         Assertions.assertThat(result.getCreatedDate()).isNotNull();
 
+        Optional<EntraUser> ignoreCaseResult1 = repository.findByEmailIgnoreCase("test@email.com");
+        Optional<EntraUser> ignoreCaseResult2 = repository.findByEmailIgnoreCase("Test@emaiL.com");
+        Assertions.assertThat(ignoreCaseResult1).isPresent();
+        Assertions.assertThat(ignoreCaseResult2).isPresent();
+        Assertions.assertThat(ignoreCaseResult1.get().getEntraOid()).isEqualTo(ignoreCaseResult2.get().getEntraOid());
     }
 
     @Test
