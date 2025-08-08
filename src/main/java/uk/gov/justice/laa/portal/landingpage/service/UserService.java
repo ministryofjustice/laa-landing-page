@@ -619,11 +619,12 @@ public class UserService {
     }
 
     public boolean isInternal(String userId) {
-        return isInternal(UUID.fromString(userId));
+        Optional<UserType> userType = getUserTypeByUserId(userId);
+        return userType.map(UserType.INTERNAL_TYPES::contains).orElse(false);
     }
 
     public boolean isInternal(UUID userId) {
-        return getUserPermissionsByUserId(userId).contains(Permission.VIEW_INTERNAL_USER);
+        return isInternal(userId.toString());
     }
 
     public boolean isAccessGranted(String userId) {
