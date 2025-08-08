@@ -109,6 +109,84 @@ public class AccessControlServiceTest {
     }
 
     @Test
+    public void testInternalUserWithExternalUserManagerRoleCanAccessExternalUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.VIEW_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL) // Internal user type
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canAccessUser(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testInternalUserWithExternalUserManagerRoleCanEditExternalUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.VIEW_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL) // Internal user type
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canEditUser(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
     public void testCanAccessUserFalseExternalDifferentFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);

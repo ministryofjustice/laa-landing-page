@@ -57,6 +57,12 @@ public class AccessControlService {
             return true;
         }
 
+        //internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId())) {
+            return true;
+        }
+
         boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
@@ -83,6 +89,12 @@ public class AccessControlService {
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
         boolean internalManagerCanEditInternalUser = userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId());
         if (internalManagerCanEditInternalUser) {
+            return true;
+        }
+
+        //internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
 

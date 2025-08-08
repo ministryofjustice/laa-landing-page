@@ -104,7 +104,7 @@ public class UserController {
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        boolean internal = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = internal
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         List<Permission> permissions = new ArrayList<>();
