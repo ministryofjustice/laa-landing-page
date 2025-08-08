@@ -57,6 +57,12 @@ public class AccessControlService {
             return true;
         }
 
+        //internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId())) {
+            return true;
+        }
+
         boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
@@ -77,6 +83,12 @@ public class AccessControlService {
 
         // Only global admin should have both these permissions.
         if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER)) {
+            return true;
+        }
+
+        //internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(userProfileId)
+                && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
 

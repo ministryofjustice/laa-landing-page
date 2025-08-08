@@ -99,6 +99,22 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
+    public void testInternalUserWithExternalUserManagerCanSeeExternalUsersOnly() throws Exception {
+        EntraUser loggedInUser = internalWithExternalOnlyUserManagers.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=100")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+
+        int expectedExternalUsers = externalUsersNoRoles.size() + externalUserAdmins.size() + externalOnlyUserManagers.size();
+
+        Assertions.assertThat(users).hasSize(expectedExternalUsers);
+    }
+
+    @Test
     public void testInternalAndExternalUserManagerCanSeeAllFirmAdminsAndGlobalAdminsWhenFiltered() throws Exception {
         EntraUser loggedInUser = internalAndExternalUserManagers.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showFirmAdmins=true")
