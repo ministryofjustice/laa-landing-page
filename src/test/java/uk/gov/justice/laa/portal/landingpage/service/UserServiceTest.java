@@ -1290,7 +1290,8 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM).appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isFalse();
