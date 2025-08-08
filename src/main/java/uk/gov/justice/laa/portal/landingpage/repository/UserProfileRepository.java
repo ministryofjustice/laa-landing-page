@@ -89,9 +89,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             OR LOWER(user.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(user.email) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))))
-            AND (:permissions IS NULL OR (permission IN :permissions))
+            AND (:permissions IS NULL OR
+            (permission IN :permissions AND (SELECT COUNT(DISTINCT p) FROM ups.appRoles ar JOIN ar.permissions p WHERE p IN :permissions) = :permissionCount))
             AND (:firmId IS NULL OR ups.firm.id = :firmId)
             """)
     Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
-            @Param("permissions") List<Permission> permissions, @Param("firmId") UUID firmId, Pageable pageable);
+            @Param("permissions") List<Permission> permissions, @Param("permissionCount") int permissionCount, @Param("firmId") UUID firmId, Pageable pageable);
 }

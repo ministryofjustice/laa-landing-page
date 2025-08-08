@@ -8,6 +8,5 @@ import lombok.Data;
 @Data
 public class RolesForm {
 
-    @NotNull(message = "At least one role must be selected")
     List<String> roles;
 }
