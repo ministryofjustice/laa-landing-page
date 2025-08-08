@@ -827,7 +827,10 @@ public class UserController {
                     }
                 });
             }
-            model.addAttribute("roles", roles);
+            if (roles != null) {
+                model.addAttribute("roles", roles);
+            }
+
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("editUserRolesSelectedAppIndex",
                     modelFromSession.getAttribute("editUserRolesSelectedAppIndex"));
@@ -846,7 +849,9 @@ public class UserController {
             allSelectedRolesByPage = new HashMap<>();
         }
         // Add the roles for the currently selected app to a map for lookup.
-        allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
+        if (rolesForm.getRoles() != null) {
+            allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
+        }
         if (selectedAppIndex >= selectedApps.size() - 1) {
             // Clear the userEditRolesModel and page roles from session to avoid stale data
             session.removeAttribute("userEditRolesModel");
