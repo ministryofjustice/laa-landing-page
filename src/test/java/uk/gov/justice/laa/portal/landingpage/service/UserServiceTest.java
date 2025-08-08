@@ -30,14 +30,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -2653,6 +2651,7 @@ class UserServiceTest {
             AppRole oldRole = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("OLD_ROLE")
+                    .description("Old Role Description")
                     .ccmsCode("CCMS_OLD")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)
@@ -2662,6 +2661,7 @@ class UserServiceTest {
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
+                    .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)
@@ -2716,6 +2716,7 @@ class UserServiceTest {
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
+                    .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)
