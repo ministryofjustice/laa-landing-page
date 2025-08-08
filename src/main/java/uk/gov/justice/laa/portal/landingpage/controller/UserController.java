@@ -795,8 +795,8 @@ public class UserController {
                 // Organize CCMS roles by section dynamically
                 Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
                 model.addAttribute("ccmsRolesBySection", organizedRoles);
-                model.addAttribute("isCcmsApp", true);
             }
+            model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
         }
@@ -1224,8 +1224,8 @@ public class UserController {
                 // Organize CCMS roles by section dynamically
                 Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
                 model.addAttribute("ccmsRolesBySection", organizedRoles);
-                model.addAttribute("isCcmsApp", true);
             }
+            model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
         }
