@@ -1,0 +1,89 @@
+name: Cut Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Release type'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - minor
+          - major
+      push_to:
+        description: 'Which branch to push the release to?'
+        required: true
+        type: choice
+        options:
+          - main
+          - test
+          - prd
+
+permissions:
+  contents: write
+
+jobs:
+  cut-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.push_to }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          if [ "${{ github.event.inputs.bump }}" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          else
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          fi
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+          sed -i "s/^version=.*/version=$NEW_VERSION/" gradle.properties
+          git add gradle.properties
+          git commit -m "chore: release v$NEW_VERSION"
+          git tag "v$NEW_VERSION"
+
+      - name: Push branch and tag
+        run: |
+          git push origin ${{ github.event.inputs.push_to }}
+          git push origin "v$NEW_VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.NEW_VERSION }}
+          name: Release v${{ env.NEW_VERSION }}
+          body: |
+            Version v${{ env.NEW_VERSION }} released from `${{ github.event.inputs.push_to }}` branch.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag database via Kubernetes Job
+        run: |
+          envsubst < deployments/templates/liquibase-tag-job.yaml > liquibase-tag-job-rendered.yaml
+          kubectl apply -f liquibase-tag-job-rendered.yaml
+        env:
+          VERSION: v${{ env.NEW_VERSION }}
