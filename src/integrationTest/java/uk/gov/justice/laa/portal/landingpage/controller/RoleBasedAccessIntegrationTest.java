@@ -56,6 +56,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
     protected Firm testFirm1;
     protected Firm testFirm2;
+    protected List<EntraUser> internalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> internalUserManagers = new ArrayList<>();
     protected List<EntraUser> internalAndExternalUserManagers = new ArrayList<>();
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
@@ -87,7 +88,18 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Index to keep all email addresses unique.
         int emailIndex = 0;
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
-        // Setup 5 internal Users (only internal role)
+
+        for(int i = 0; i < 5; i++) {
+            // Setup 5 internal users no roles
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+            UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+            profile.setAppRoles(Set.of());
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            internalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 internal userManagers
         for (int i = 0; i < 5; i++) {
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InternalUserManager");
             UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
@@ -196,6 +208,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         globalAdmins.add(entraUserRepository.saveAndFlush(user));
 
+        allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
         allUsers.addAll(internalAndExternalUserManagers);
         allUsers.addAll(externalOnlyUserManagers);

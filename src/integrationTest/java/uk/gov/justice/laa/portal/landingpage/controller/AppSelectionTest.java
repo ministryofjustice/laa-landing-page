@@ -61,7 +61,6 @@ public class AppSelectionTest extends BaseIntegrationTest {
     public void beforeEach() {
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
-        roleAssignmentRepository.deleteAll();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
         buildTestAppRole();
