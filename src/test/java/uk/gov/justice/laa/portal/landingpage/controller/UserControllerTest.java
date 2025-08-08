@@ -3005,7 +3005,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldDetectCcmsAppByName() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3017,7 +3017,7 @@ class UserControllerTest {
         normalRole.setId("role1");
         normalRole.setCcmsCode("NORMAL_ROLE");
 
-        List<AppRoleDto> roles = List.of(normalRole);
+        final List<AppRoleDto> roles = List.of(normalRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -3040,7 +3040,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldDetectCcmsAppByRoleCodes() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3052,7 +3052,7 @@ class UserControllerTest {
         ccmsRole.setId("role1");
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN"); // CCMS role code
 
-        List<AppRoleDto> roles = List.of(ccmsRole);
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -3078,7 +3078,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldOrganizeCcmsRolesBySection() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3103,7 +3103,7 @@ class UserControllerTest {
         otherRole.setId("other1");
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
 
-        List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
+        final List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -3133,7 +3133,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldNotDetectCcmsForRegularApp() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3145,7 +3145,7 @@ class UserControllerTest {
         regularRole.setId("role1");
         regularRole.setCcmsCode("REGULAR_ROLE"); // Not a CCMS role
 
-        List<AppRoleDto> roles = List.of(regularRole);
+        final List<AppRoleDto> roles = List.of(regularRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -3168,7 +3168,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldHandleMixedCcmsAndRegularRoles() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3184,7 +3184,7 @@ class UserControllerTest {
         regularRole.setId("regular1");
         regularRole.setCcmsCode("REGULAR_ROLE");
 
-        List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
+        final List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -3216,7 +3216,7 @@ class UserControllerTest {
     @Test
     void grantAccessEditUserRoles_shouldDetectCcmsAppByName() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3228,7 +3228,7 @@ class UserControllerTest {
         normalRole.setId("role1");
         normalRole.setCcmsCode("NORMAL_ROLE");
 
-        List<AppRoleDto> roles = List.of(normalRole);
+        final List<AppRoleDto> roles = List.of(normalRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -3251,7 +3251,7 @@ class UserControllerTest {
     @Test
     void grantAccessEditUserRoles_shouldDetectCcmsAppByRoleCodes() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3263,7 +3263,7 @@ class UserControllerTest {
         ccmsRole.setId("role1");
         ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
 
-        List<AppRoleDto> roles = List.of(ccmsRole);
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -3289,7 +3289,7 @@ class UserControllerTest {
     @Test
     void grantAccessEditUserRoles_shouldOrganizeCcmsRolesBySection() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3322,7 +3322,7 @@ class UserControllerTest {
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
 
-        List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole, advocateRole);
+        final List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole, advocateRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -3357,7 +3357,7 @@ class UserControllerTest {
     @Test
     void grantAccessEditUserRoles_shouldNotDetectCcmsForRegularApp() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3369,7 +3369,7 @@ class UserControllerTest {
         regularRole.setId("role1");
         regularRole.setCcmsCode("REGULAR_ROLE");
 
-        List<AppRoleDto> roles = List.of(regularRole);
+        final List<AppRoleDto> roles = List.of(regularRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -3392,7 +3392,7 @@ class UserControllerTest {
     @Test
     void grantAccessEditUserRoles_shouldUseSessionModelAppIndex() {
         // Given
-        String userId = "user123";
+        final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
 
@@ -3404,7 +3404,7 @@ class UserControllerTest {
         ccmsRole.setId("role1");
         ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
 
-        List<AppRoleDto> roles = List.of(ccmsRole);
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
 
