@@ -7,6 +7,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 public class AppRoleDto {
     private String id;
     private String name;
+    private String description;
+    private String ccmsCode;
     private AppDto app;
     private RoleType roleType;
 }

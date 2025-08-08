@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -779,6 +780,33 @@ public class UserController {
                     return viewModel;
                 }).toList();
 
+        // Check if this is the CCMS app and organize roles by section
+        boolean isCcmsApp = currentApp.getName().contains("CCMS") || 
+                           roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+        
+        if (isCcmsApp) {
+            // Filter to only CCMS roles for organization
+            List<AppRoleDto> ccmsRoles = roles.stream()
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .collect(Collectors.toList());
+            
+            if (!ccmsRoles.isEmpty()) {
+                // Organize CCMS roles by section dynamically
+                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                model.addAttribute("isCcmsApp", true);
+                
+                // Log the organization for debugging
+                log.debug("Dynamically organized CCMS roles for edit user: Provider={}, Chambers={}, Advocate={}, Other={}", 
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.PROVIDER_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.CHAMBERS_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.ADVOCATE_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.OTHER_SECTION, List.of()).size());
+            }
+        } else {
+            model.addAttribute("isCcmsApp", false);
+        }
+
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
@@ -1187,6 +1215,33 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).toList();
+
+        // Check if this is the CCMS app and organize roles by section
+        boolean isCcmsApp = currentApp.getName().contains("CCMS") || 
+                           roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+        
+        if (isCcmsApp) {
+            // Filter to only CCMS roles for organization
+            List<AppRoleDto> ccmsRoles = roles.stream()
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .collect(Collectors.toList());
+            
+            if (!ccmsRoles.isEmpty()) {
+                // Organize CCMS roles by section dynamically
+                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                model.addAttribute("isCcmsApp", true);
+                
+                // Log the organization for debugging
+                log.debug("Dynamically organized CCMS roles for grant access: Provider={}, Chambers={}, Advocate={}, Other={}", 
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.PROVIDER_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.CHAMBERS_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.ADVOCATE_SECTION, List.of()).size(),
+                         organizedRoles.getOrDefault(CcmsRoleGroupsUtil.OTHER_SECTION, List.of()).size());
+            }
+        } else {
+            model.addAttribute("isCcmsApp", false);
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
