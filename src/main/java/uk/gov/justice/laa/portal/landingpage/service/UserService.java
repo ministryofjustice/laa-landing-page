@@ -254,10 +254,10 @@ public class UserService {
         return dto;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
+    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, List<UserType> userTypes, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, permissions.size(),
-                firmId, pageRequest);
+                firmId, userTypes, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 

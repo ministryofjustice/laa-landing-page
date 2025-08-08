@@ -2500,18 +2500,18 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class));
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
     }
 
     @Test
@@ -2532,17 +2532,17 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), any(PageRequest.class));
+                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
     }
 
     @Test
@@ -2609,12 +2609,12 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2624,7 +2624,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class));
+                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
     }
 
     @Nested

@@ -87,7 +87,7 @@ public class AccessControlService {
         }
 
         //internal user with external user manager permission
-        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(userProfileId)
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }

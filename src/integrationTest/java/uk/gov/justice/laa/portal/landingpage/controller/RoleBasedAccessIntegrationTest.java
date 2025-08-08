@@ -59,6 +59,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> internalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> internalUserManagers = new ArrayList<>();
     protected List<EntraUser> internalAndExternalUserManagers = new ArrayList<>();
+    protected List<EntraUser> internalWithExternalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> externalUserAdmins = new ArrayList<>();
@@ -132,6 +133,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             user.setUserProfiles(Set.of(profile));
             profile.setEntraUser(user);
             internalAndExternalUserManagers.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Setup 5 internal users with ONLY external user manager role.
+        for (int i = 0; i < 5; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "ExternalOnlyUserManager");
+            UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+            AppRole externalUserManagerRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Manager"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            profile.setAppRoles(Set.of(externalUserManagerRole));
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            internalWithExternalOnlyUserManagers.add(entraUserRepository.saveAndFlush(user));
         }
 
         // Setup 5 external users with external user manager role.
@@ -211,6 +227,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
         allUsers.addAll(internalAndExternalUserManagers);
+        allUsers.addAll(internalWithExternalOnlyUserManagers);
         allUsers.addAll(externalOnlyUserManagers);
         allUsers.addAll(externalUsersNoRoles);
         allUsers.addAll(externalUserAdmins);
