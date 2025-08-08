@@ -92,7 +92,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             AND (:permissions IS NULL OR
             (permission IN :permissions AND (SELECT COUNT(DISTINCT p) FROM ups.appRoles ar JOIN ar.permissions p WHERE p IN :permissions) = :permissionCount))
             AND (:firmId IS NULL OR ups.firm.id = :firmId)
+            AND (:userTypes IS NULL OR ups.userType IN :userTypes)
             """)
     Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
-            @Param("permissions") List<Permission> permissions, @Param("permissionCount") int permissionCount, @Param("firmId") UUID firmId, Pageable pageable);
+            @Param("permissions") List<Permission> permissions, @Param("permissionCount") int permissionCount, @Param("firmId") UUID firmId, @Param("userTypes") List<UserType> userTypes,
+                                                             Pageable pageable);
 }
