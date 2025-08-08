@@ -199,10 +199,19 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         List<AppRoleViewModel> roles = (List<AppRoleViewModel>) getRolesResult.getModelAndView().getModel().get("roles");
 
         // Get Authz Role from list.
-        AppRoleViewModel authzRole = roles.stream()
+        Optional<AppRoleViewModel> optionalAuthzRole = roles.stream()
                 .filter(role -> role.getName().equals(authzRoleName))
-                .findFirst()
-                .orElseThrow();
+                .findFirst();
+
+        if (optionalAuthzRole.isEmpty()) {
+            if (!expectedSuccess) {
+                return;
+            } else {
+                Assertions.fail(String.format("Authz role \"%s\" was not available for selection when it should have been", authzRoleName));
+            }
+        }
+
+        AppRoleViewModel authzRole = optionalAuthzRole.get();
 
         // Post request to set Internal User Manager role
         MvcResult postRolesResult = this.mockMvc.perform(post(redirectedUrl)
