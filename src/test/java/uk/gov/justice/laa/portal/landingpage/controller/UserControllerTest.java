@@ -2136,6 +2136,7 @@ class UserControllerTest {
         // Mock for the logic when selectedAppIndex is reset to 0
         AppDto currentApp = new AppDto();
         currentApp.setId("app1");
+        currentApp.setName("Test App");
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
