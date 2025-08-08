@@ -53,18 +53,18 @@ public class RoleBasedAccessEditUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testInternalUserManagerCannotOpenExternalUserAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    public void testInternalUserManagerCanOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
     }
 
     @Test
-    public void testInternalUserManagerCannotOpenExternalUserManagerAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalOnlyUserManagers.getFirst(), status().is3xxRedirection());
+    public void testInternalUserManagerCanOpenExternalUserManagerAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), externalOnlyUserManagers.getFirst(), status().isOk());
     }
 
     @Test
-    public void testInternalUserManagerCannotOpenExternalUserAdminAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalUserAdmins.getFirst(), status().is3xxRedirection());
+    public void testInternalUserManagerCanOpenExternalUserAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
     }
 
     @Test

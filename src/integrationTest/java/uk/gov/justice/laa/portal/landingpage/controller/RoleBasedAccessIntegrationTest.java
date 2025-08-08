@@ -89,7 +89,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         int emailIndex = 0;
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
 
-        for(int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++) {
             // Setup 5 internal users no roles
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
             UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
