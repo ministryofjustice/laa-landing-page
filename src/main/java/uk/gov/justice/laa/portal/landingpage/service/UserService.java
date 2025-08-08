@@ -141,7 +141,7 @@ public class UserService {
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> appRole.isAuthzRole() || (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
+                    .filter(appRole -> (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -256,7 +256,8 @@ public class UserService {
 
     public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, firmId, pageRequest);
+        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, permissions.size(),
+                firmId, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
@@ -619,11 +620,12 @@ public class UserService {
     }
 
     public boolean isInternal(String userId) {
-        return isInternal(UUID.fromString(userId));
+        Optional<UserType> userType = getUserTypeByUserId(userId);
+        return userType.map(UserType.INTERNAL_TYPES::contains).orElse(false);
     }
 
     public boolean isInternal(UUID userId) {
-        return getUserPermissionsByUserId(userId).contains(Permission.VIEW_INTERNAL_USER);
+        return isInternal(userId.toString());
     }
 
     public boolean isAccessGranted(String userId) {

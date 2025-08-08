@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
@@ -26,14 +25,15 @@ class FirmsCacheControllerTest extends BaseIntegrationTest {
     private Cache cache;
 
     @Test
-    @WithMockUser(authorities = {"CREATE_INTERNAL_USER", "EDIT_INTERNAL_USER"})
     void clearFirmsCache_WhenAuthorized_ShouldClearCacheAndReturnSuccess() throws Exception {
+
         // Arrange
         when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(cache);
 
         // Act & Assert
         mockMvc.perform(get("/admin/firms/clear-cache")
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Firms cache cleared!!"));
 
@@ -42,14 +42,14 @@ class FirmsCacheControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @WithMockUser(authorities = {"CREATE_INTERNAL_USER", "EDIT_INTERNAL_USER"})
     void clearFirmsCache_WhenCacheIsNull_ShouldReturnSuccess() throws Exception {
         // Arrange
         when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(null);
 
         // Act & Assert
         mockMvc.perform(get("/admin/firms/clear-cache")
-                        .with(csrf()))
+                        .with(csrf())
+                        .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Firms cache cleared!!"));
 

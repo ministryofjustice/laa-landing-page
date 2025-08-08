@@ -76,13 +76,7 @@ public class AccessControlService {
         }
 
         // Only global admin should have both these permissions.
-        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)) {
-            return true;
-        }
-
-        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
-        boolean internalManagerCanEditInternalUser = userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId());
-        if (internalManagerCanEditInternalUser) {
+        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER)) {
             return true;
         }
 

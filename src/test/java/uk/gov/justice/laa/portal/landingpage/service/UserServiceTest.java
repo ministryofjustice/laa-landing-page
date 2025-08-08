@@ -30,14 +30,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -1276,20 +1274,23 @@ class UserServiceTest {
 
     @Test
     void isInternal_Ok() {
+        UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_INTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).appRoles(Set.of(appRole)).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isTrue();
     }
 
     @Test
     void isInternal_Failed() {
+        UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
+        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isFalse();
     }
@@ -1976,7 +1977,8 @@ class UserServiceTest {
             Set<UserProfile> userProfiles = Set.of(
                     UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).userType(UserType.INTERNAL).build(),
                     UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM).build());
-            EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
+            UUID userId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
             when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
 
 
@@ -2292,31 +2294,31 @@ class UserServiceTest {
         UUID userProfileId = UUID.randomUUID();
         UUID appId = UUID.randomUUID();
         String roleName = "TestRole";
-        
+
         AppRole roleToRemove = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name(roleName)
                 .build();
-        
+
         App app = App.builder()
                 .id(appId)
                 .name("Test App")
                 .build();
-        
+
         roleToRemove.setApp(app);
-        
+
         AppRole otherRole = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("OtherRole")
                 .build();
-        
+
         App otherApp = App.builder()
                 .id(UUID.randomUUID())
                 .name("Other App")
                 .build();
-        
+
         otherRole.setApp(otherApp);
-        
+
         UserProfile userProfile = UserProfile.builder()
                 .id(userProfileId)
                 .appRoles(new HashSet<>(Set.of(roleToRemove, otherRole)))
@@ -2340,19 +2342,19 @@ class UserServiceTest {
         UUID userProfileId = UUID.randomUUID();
         UUID appId = UUID.randomUUID();
         String roleName = "NonExistentRole";
-        
+
         AppRole existingRole = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("ExistingRole")
                 .build();
-        
+
         App app = App.builder()
                 .id(UUID.randomUUID())
                 .name("Test App")
                 .build();
-        
+
         existingRole.setApp(app);
-        
+
         UserProfile userProfile = UserProfile.builder()
                 .id(userProfileId)
                 .appRoles(new HashSet<>(Set.of(existingRole)))
@@ -2392,41 +2394,41 @@ class UserServiceTest {
         final UUID userProfileId = UUID.randomUUID();
         final UUID appId = UUID.randomUUID();
         final String roleName = "TestRole";
-        
+
         // Role with matching app and name (should be removed)
         AppRole roleToRemove = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name(roleName)
                 .build();
-        
+
         App targetApp = App.builder()
                 .id(appId)
                 .name("Target App")
                 .build();
-        
+
         roleToRemove.setApp(targetApp);
-        
+
         // Role with same name but different app (should NOT be removed)
         AppRole sameNameDifferentApp = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name(roleName)
                 .build();
-        
+
         App differentApp = App.builder()
                 .id(UUID.randomUUID())
                 .name("Different App")
                 .build();
-        
+
         sameNameDifferentApp.setApp(differentApp);
-        
+
         // Role with same app but different name (should NOT be removed)
         AppRole sameAppDifferentName = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("DifferentRole")
                 .build();
-        
+
         sameAppDifferentName.setApp(targetApp);
-        
+
         UserProfile userProfile = UserProfile.builder()
                 .id(userProfileId)
                 .appRoles(new HashSet<>(Set.of(roleToRemove, sameNameDifferentApp, sameAppDifferentName)))
@@ -2451,7 +2453,7 @@ class UserServiceTest {
         UUID userProfileId = UUID.randomUUID();
         String appId = "app123";
         String roleName = "TestRole";
-        
+
         UserProfile userProfile = UserProfile.builder()
                 .id(userProfileId)
                 .appRoles(new HashSet<>())
@@ -2498,7 +2500,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2509,7 +2511,7 @@ class UserServiceTest {
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class));
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class));
     }
 
     @Test
@@ -2530,7 +2532,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(null), eq(0), eq(firmId), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2540,7 +2542,7 @@ class UserServiceTest {
         // Then
         assertThat(result.getUsers()).hasSize(0);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(firmId), any(PageRequest.class));
+                eq(searchTerm), eq(null), eq(0), eq(firmId), any(PageRequest.class));
     }
 
     @Test
@@ -2548,11 +2550,11 @@ class UserServiceTest {
         // Given
         String userId = UUID.randomUUID().toString();
         UUID userUuid = UUID.fromString(userId);
-        
+
         EntraUser entraUser = EntraUser.builder()
                 .id(userUuid)
                 .build();
-        
+
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
@@ -2564,7 +2566,7 @@ class UserServiceTest {
                 .authzRole(true)
                 .permissions(Set.of(Permission.CREATE_EXTERNAL_USER))
                 .build();
-        
+
         userProfile.setAppRoles(Set.of(appRole));
         entraUser.setUserProfiles(Set.of(userProfile));
 
@@ -2607,7 +2609,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(firmId), any(PageRequest.class)))
+                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2622,7 +2624,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(permissions), eq(firmId), any(PageRequest.class));
+                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), any(PageRequest.class));
     }
 
     @Nested
@@ -2649,6 +2651,7 @@ class UserServiceTest {
             AppRole oldRole = AppRole.builder()
                     .id(UUID.randomUUID())
                     .name("OLD_ROLE")
+                    .description("Old Role Description")
                     .ccmsCode("CCMS_OLD")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)
@@ -2658,6 +2661,7 @@ class UserServiceTest {
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
+                    .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)
@@ -2712,6 +2716,7 @@ class UserServiceTest {
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NEW_ROLE")
+                    .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
                     .roleType(RoleType.EXTERNAL)

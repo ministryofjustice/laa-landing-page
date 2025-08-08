@@ -1,29 +1,29 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
-
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class RoleChangeNotificationServiceTest {
@@ -63,6 +63,7 @@ class RoleChangeNotificationServiceTest {
         puiRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_1")
+                .description("PUI Role 1 Description")
                 .ccmsCode("CCMS_PUI_001")
                 .legacySync(true)
                 .build();
@@ -70,6 +71,7 @@ class RoleChangeNotificationServiceTest {
         puiRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_2")
+                .description("PUI Role 2 Description")
                 .ccmsCode("CCMS_PUI_002")
                 .legacySync(true)
                 .build();
@@ -77,6 +79,7 @@ class RoleChangeNotificationServiceTest {
         nonPuiRole = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("NON_PUI_ROLE")
+                .description("Non-PUI Role Description")
                 .ccmsCode("NON_CCMS_001")
                 .build();
 
@@ -134,8 +137,8 @@ class RoleChangeNotificationServiceTest {
         doThrow(new RuntimeException("CCMS API call failed"))
                 .when(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
 
         assertThat(exception.getMessage()).isEqualTo("Failed to send message");
         assertThat(exception.getCause().getMessage()).isEqualTo("CCMS API call failed");
