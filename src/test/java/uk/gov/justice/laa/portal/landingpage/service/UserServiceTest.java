@@ -2505,7 +2505,7 @@ class UserServiceTest {
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2537,7 +2537,7 @@ class UserServiceTest {
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
@@ -2614,7 +2614,7 @@ class UserServiceTest {
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, eq(UserType.EXTERNAL_TYPES), page, pageSize, sort, direction);
+                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);

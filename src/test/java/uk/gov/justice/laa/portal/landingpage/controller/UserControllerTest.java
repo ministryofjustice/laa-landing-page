@@ -206,7 +206,7 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), any(), anyList(),anyInt(), anyInt(),
+        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), any(), anyList(), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act

@@ -107,7 +107,7 @@ public class UserController {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
-        && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         List<Permission> permissions = new ArrayList<>();
         if (showFirmAdmins) {
             permissions.add(Permission.CREATE_EXTERNAL_USER);
