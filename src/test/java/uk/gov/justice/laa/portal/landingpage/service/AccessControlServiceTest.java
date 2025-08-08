@@ -272,7 +272,6 @@ public class AccessControlServiceTest {
         entraUser.getUserProfiles().add(userProfile);
 
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(userService.isInternal(accessedUser.getId())).thenReturn(Boolean.TRUE);
         Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canEditUser(authenticatedUserId.toString());

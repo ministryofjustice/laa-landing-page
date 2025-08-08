@@ -28,7 +28,6 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
  * Configures security filter chains, authentication, and authorization
  */
 @Configuration
-@Profile("!integration-test")
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {

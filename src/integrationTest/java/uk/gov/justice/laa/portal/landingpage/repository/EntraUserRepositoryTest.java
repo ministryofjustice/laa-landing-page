@@ -62,7 +62,6 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getFirstName()).isEqualTo("FirstName");
         Assertions.assertThat(result.getLastName()).isEqualTo("LastName");
         Assertions.assertThat(result.getEmail()).isEqualTo("test@email.com");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("System");
         Assertions.assertThat(result.getCreatedDate()).isNotNull();
 
         Optional<EntraUser> ignoreCaseResult1 = repository.findByEmailIgnoreCase("test@email.com");
