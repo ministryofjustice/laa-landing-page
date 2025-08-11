@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -22,6 +23,9 @@ import java.util.Set;
 public class RoleChangeNotificationService {
 
     private final CcmsApiClient ccmsApiClient;
+    
+    @Value("${ccms.user.management.api.base-url}")
+    private String ccmsApiBaseUrl;
 
     /**
      * This method will automatically retry up to 3 times with 0.1 second delays
@@ -37,6 +41,13 @@ public class RoleChangeNotificationService {
         backoff = @Backoff(delay = 100)
     )
     public boolean sendMessage(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
+        // skip for now in prod as api isn't ready yet
+        if (ccmsApiBaseUrl != null && ccmsApiBaseUrl.toLowerCase().contains("none")) {
+            log.info("Skipping CCMS sync for user as api isn't ready for env: {}",
+                userProfile.getEntraUser().getEntraOid());
+            return false;
+        }
+        
         try {
             sendRoleChangeNotification(userProfile, newPuiRoles, oldPuiRoles);
             return true;
