@@ -8,7 +8,6 @@ import lombok.Data;
 public class FirmSearchForm {
 
     @Size(min = 1, message = "Enter a firm name to search")
-    @NotEmpty(message = "Enter a firm name to search")
     private String firmSearch;
 
     private String selectedFirmId;
