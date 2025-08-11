@@ -34,6 +34,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 @ExtendWith(MockitoExtension.class)
@@ -165,7 +166,7 @@ public class AccessControlServiceTest {
                 .entraUser(accessedUser)
                 .build();
 
-        Permission userPermission = Permission.VIEW_EXTERNAL_USER;
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
@@ -264,7 +265,7 @@ public class AccessControlServiceTest {
         UUID accessedUserId = UUID.randomUUID();
         EntraUser entraUser = EntraUser.builder().id(authenticatedUserId).email("test@email.com").userProfiles(HashSet.newHashSet(1)).build();
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
-        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().id(UUID.randomUUID()).entraUser(accessedUser).userType(UserType.INTERNAL).build();
         Permission userPermission = Permission.EDIT_INTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
@@ -273,8 +274,9 @@ public class AccessControlServiceTest {
 
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        Mockito.when(userService.isInternal(anyString())).thenReturn(true);
 
-        boolean result = accessControlService.canEditUser(authenticatedUserId.toString());
+        boolean result = accessControlService.canEditUser(accessedUserProfile.getId().toString());
         Assertions.assertThat(result).isTrue();
     }
 

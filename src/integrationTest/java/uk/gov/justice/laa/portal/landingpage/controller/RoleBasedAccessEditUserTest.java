@@ -43,6 +43,16 @@ public class RoleBasedAccessEditUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
+    public void testGlobalAdminCanOpenInternalUserWithExternalUserManagerRoleAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(globalAdmins.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testGlobalAdminCanOpenInternalUserAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(globalAdmins.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
     public void testInternalUserManagerCanOpenInternalUserManagerAppsToEdit() throws Exception {
         canOpenEditScreen(internalUserManagers.getFirst(), internalUserManagers.getLast(), status().isOk());
     }
@@ -53,23 +63,61 @@ public class RoleBasedAccessEditUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testInternalUserManagerCanOpenExternalUserAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    public void testInternalUserManagerCanOpenInternalUserWithExternalUserManagerAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().isOk());
     }
 
     @Test
-    public void testInternalUserManagerCanOpenExternalUserManagerAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalOnlyUserManagers.getFirst(), status().isOk());
-    }
-
-    @Test
-    public void testInternalUserManagerCanOpenExternalUserAdminAppsToEdit() throws Exception {
-        canOpenEditScreen(internalUserManagers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
+    public void testInternalUserManagerCanOpenInternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
     }
 
     @Test
     public void testInternalUserManagerCanOpenGlobalAdminAppsToEdit() throws Exception {
         canOpenEditScreen(internalUserManagers.getFirst(), globalAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testInternalUserManagerCannotOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserManagers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testInternalUserWithOnlyExternalUserManagerCanOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalWithExternalOnlyUserManagers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testInternalUserWithOnlyExternalUserManagerCannotOpenInternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalWithExternalOnlyUserManagers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testInternalUserWithOnlyExternalUserManagerCannotOpenGlobalAdminUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalWithExternalOnlyUserManagers.getFirst(), globalAdmins.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserManagerCannotOpenInternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(externalOnlyUserManagers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserManagerCannotOpenExternalUserInDifferentFirmsAppsToEdit() throws Exception {
+        EntraUser externalUserManagerFirm1 = externalOnlyUserManagers.getFirst();
+        EntraUser externalUserFirm2 = externalUsersNoRoles.stream()
+                        .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm2.getId()))
+                        .findFirst().orElseThrow();
+        canOpenEditScreen(externalUserManagerFirm1, externalUserFirm2, status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserManagerCanOpenExternalUserInSameFirmsAppsToEdit() throws Exception {
+        EntraUser externalUserManagerFirm1 = externalOnlyUserManagers.getFirst();
+        EntraUser externalUserFirm1 = externalUsersNoRoles.stream()
+                .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm1.getId()))
+                .findFirst().orElseThrow();
+        canOpenEditScreen(externalUserManagerFirm1, externalUserFirm1, status().isOk());
     }
 
 
