@@ -150,13 +150,14 @@ public class UserService {
             }
 
             Set<AppRole> newRoles = new HashSet<>(roles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>() : new HashSet<>(userProfile.getAppRoles());
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>() : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
             userProfile.setAppRoles(newRoles);
+            diff = diffRole(oldRoles, newRoles);
             
             // Try to send role change notification with retry logic before saving
             boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
@@ -165,7 +166,6 @@ public class UserService {
             // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
-            diff = diffRole(oldRoles, newRoles);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
