@@ -23,10 +23,26 @@ metadata:
 spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
+    # - hosts:
+    #   - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
     - hosts:
-        - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
+      - dev.your-legal-aid-services.service.justice.gov.uk
+      secretName: "laa-landing-page-homepage-dev-secret"
+    - hosts:
+      - dev.manage-your-legal-aid-users.service.justice.gov.uk
+      secretName: "manage-srv-dev-secret"
   rules:
-    - host: ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
+    # - host: ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
+    #   http:
+    #     paths:
+    #       - path: /
+    #         pathType: ImplementationSpecific
+    #         backend:
+    #           service:
+    #             name: laa-landing-page # this should match the metadata.name in service.yml
+    #             port:
+    #               number: 8080
+    - host: dev.your-legal-aid-services.service.justice.gov.uk
       http:
         paths:
           - path: /
@@ -36,3 +52,13 @@ spec:
                 name: laa-landing-page # this should match the metadata.name in service.yml
                 port:
                   number: 8080
+    - host: dev.manage-your-legal-aid-users.service.justice.gov.uk
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: xxxx # this should match the metadata.name in service.yml
+                port:
+                  number: xxxx
