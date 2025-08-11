@@ -109,25 +109,40 @@ public class UserController {
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         List<Permission> permissions = new ArrayList<>();
+        List<UserType> userTypesToFilter;
+
         if (showFirmAdmins) {
-            permissions.add(Permission.CREATE_EXTERNAL_USER);
+            // When showFirmAdmins is true,
+            // filter to only show EXTERNAL_SINGLE_FIRM_ADMIN users
+            userTypesToFilter = List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        } else {
+            // Default to all external user types if showFirmAdmins is false
+            userTypesToFilter = UserType.EXTERNAL_TYPES;
         }
+
         if (canSeeAllUsers) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, null,
-                    page, size, sort, direction);
+            // Combine userTypesToFilter with INTERNAL user type
+            List<UserType> allUserTypes = new ArrayList<>(userTypesToFilter);
+            if (!showFirmAdmins) {
+                allUserTypes.add(UserType.INTERNAL);
+            }
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    search, permissions, null, allUserTypes, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             permissions.add(Permission.VIEW_INTERNAL_USER);
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, List.of(UserType.INTERNAL),
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
+                    List.of(UserType.INTERNAL),
                     page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, UserType.EXTERNAL_TYPES,
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
+                    userTypesToFilter,
                     page, size, sort, direction);
         } else {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
                 paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions,
-                        firm.getId(), UserType.EXTERNAL_TYPES, page, size, sort, direction);
+                        firm.getId(), userTypesToFilter, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();
