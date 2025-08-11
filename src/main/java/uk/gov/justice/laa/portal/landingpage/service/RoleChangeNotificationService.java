@@ -42,7 +42,7 @@ public class RoleChangeNotificationService {
     )
     public boolean sendMessage(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
         // skip for now in prod as api isn't ready yet
-        if (ccmsApiBaseUrl != null && ccmsApiBaseUrl.toLowerCase().contains("placeholder")) {
+        if (ccmsApiBaseUrl != null && ccmsApiBaseUrl.toLowerCase().contains("none")) {
             log.info("Skipping CCMS sync for user as api isn't ready for env: {}",
                 userProfile.getEntraUser().getEntraOid());
             return false;
