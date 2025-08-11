@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.ArrayList;
@@ -53,6 +54,10 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected FirmRepository firmRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected OfficeRepository officeRepository;
 
     protected Firm testFirm1;
     protected Firm testFirm2;
@@ -237,6 +242,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected void clearRepositories() {
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
+        officeRepository.deleteAll();
         firmRepository.deleteAll();
     }
 }
