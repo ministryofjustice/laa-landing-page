@@ -19,42 +19,36 @@ metadata:
 spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
-    # - hosts:
-    #   - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
     - hosts:
-      - dev.your-legal-aid-services.service.justice.gov.uk
-      secretName: "laa-landing-page-homepage-dev-secret"
+      - ${BASE_URL_HOMEPAGE}
+      secretName: "laa-landing-page-homepage-secret"
     - hosts:
-      - dev.manage-your-legal-aid-users.service.justice.gov.uk
-      secretName: "manage-srv-dev-secret"
+      - ${BASE_URL_MANAGE_USER}
+      secretName: "manage-srv-secret"
   rules:
-    # - host: ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
-    #   http:
-    #     paths:
-    #       - path: /
-    #         pathType: ImplementationSpecific
-    #         backend:
-    #           service:
-    #             name: laa-landing-page # this should match the metadata.name in service.yml
-    #             port:
-    #               number: 8080
-    - host: dev.your-legal-aid-services.service.justice.gov.uk
+    - host: ${BASE_URL_HOMEPAGE}
       http:
         paths:
-          - path: /
+# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
+# Services thing going live today to solve this? hasn't been tested etc
+# What do we set BASE_URL in secrets manager as??
+          - path: /home
             pathType: ImplementationSpecific
             backend:
               service:
-                name: laa-landing-page # this should match the metadata.name in service.yml
+                name: laa-landing-page
                 port:
                   number: 8080
-    - host: dev.manage-your-legal-aid-users.service.justice.gov.uk
+    - host: ${BASE_URL_MANAGE_USER}
       http:
         paths:
-          - path: /
+# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
+# Services thing going live today to solve this? hasn't been tested etc
+# What do we set BASE_URL in secrets manager as??
+          - path: /admin/users
             pathType: ImplementationSpecific
             backend:
               service:
-                name: xxxx # this should match the metadata.name in service.yml
+                name: laa-landing-page
                 port:
-                  number: xxxx
+                  number: 8080
