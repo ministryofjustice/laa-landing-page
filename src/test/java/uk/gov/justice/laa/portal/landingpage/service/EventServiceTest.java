@@ -67,4 +67,25 @@ class EventServiceTest {
                 + ", Existing user oldUser updated, user id " + userId + ", with role Removed: Old Role, Added: New Role\n"
                 + "\n");
     }
+
+    @Test
+    void auditUpdateOffices() {
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+        UUID adminUuid = UUID.randomUUID();
+        currentUserDto.setUserId(adminUuid);
+        UUID userId = UUID.randomUUID();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("oldUser");
+        entraUser.setId(userId.toString());
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+        List<String> updatedOffices = List.of("Office1", "Office2");
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUser, updatedOffices, "office");
+        eventService.logEvent(updateUserAuditEvent);
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User admin with user id " + adminUuid
+                + ", Existing user oldUser updated, user id " + userId + ", with office Office1, Office2\n"
+                + "\n");
+    }
 }
