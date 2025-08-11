@@ -12,6 +12,8 @@ public class FirmSearchForm {
     private String selectedFirmId;
 
     public void setFirmSearch(String firmSearch) {
-        this.firmSearch = firmSearch.trim();
+        if(firmSearch != null) {
+            this.firmSearch = firmSearch.trim();
+        }
     }
 }
