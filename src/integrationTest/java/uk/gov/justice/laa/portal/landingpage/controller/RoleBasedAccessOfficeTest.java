@@ -23,13 +23,8 @@ public class RoleBasedAccessOfficeTest extends RoleBasedAccessIntegrationTest {
         officeRepository.saveAndFlush(office);
 
         // Get an external user manager from firm 1.
-        EntraUser loggedInUser = externalUserAdmins.stream()
+        EntraUser loggedInUser = externalOnlyUserManagers.stream()
                 .filter(user -> getUserFirm(user).getId().equals(testFirm1.getId()))
-                .findFirst()
-                .orElseThrow();
-
-        // Get their profile
-        UserProfile loggedInUserProfile = loggedInUser.getUserProfiles().stream()
                 .findFirst()
                 .orElseThrow();
 
@@ -49,7 +44,7 @@ public class RoleBasedAccessOfficeTest extends RoleBasedAccessIntegrationTest {
                         .with(userOauth2Login(loggedInUser))
                         .with(csrf())
                         .param("offices", office.getId().toString())
-                        .param("id", loggedInUserProfile.getId().toString()))
+                        .param("id", editedUserProfile.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
         UserProfile updatedEditedUserProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
@@ -65,13 +60,8 @@ public class RoleBasedAccessOfficeTest extends RoleBasedAccessIntegrationTest {
         officeRepository.saveAndFlush(office);
 
         // Get an external user manager from firm 1.
-        EntraUser loggedInUser = externalUserAdmins.stream()
+        EntraUser loggedInUser = externalOnlyUserManagers.stream()
                 .filter(user -> getUserFirm(user).getId().equals(testFirm1.getId()))
-                .findFirst()
-                .orElseThrow();
-
-        // Get their profile
-        UserProfile loggedInUserProfile = loggedInUser.getUserProfiles().stream()
                 .findFirst()
                 .orElseThrow();
 
@@ -91,7 +81,7 @@ public class RoleBasedAccessOfficeTest extends RoleBasedAccessIntegrationTest {
                         .with(userOauth2Login(loggedInUser))
                         .with(csrf())
                         .param("offices", office.getId().toString())
-                        .param("id", loggedInUserProfile.getId().toString()))
+                        .param("id", editedUserProfile.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
         UserProfile updatedEditedUserProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
