@@ -800,11 +800,12 @@ public class UserController {
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .collect(Collectors.toList());
 
+            Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
             }
+            model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
