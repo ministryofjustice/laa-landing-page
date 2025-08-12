@@ -3,13 +3,6 @@ kind: Ingress
 metadata:
   name: laa-landing-page-ingress
   annotations:
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($host = '${BASE_URL_HOMEPAGE}') {
-        rewrite ^/(.*)$ /home/$1 break;
-      }
-      if ($host = '${BASE_URL_MANAGE_USER}') {
-        rewrite ^/(.*)$ /admin/users/$1 break;
-      }
     external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
