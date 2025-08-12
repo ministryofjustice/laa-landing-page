@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -140,8 +141,10 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
+            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal && appRole.getRoleType().equals(RoleType.INTERNAL);
+            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal && appRole.getRoleType().equals(RoleType.EXTERNAL);
             roles = roles.stream()
-                    .filter(appRole -> (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
+                    .filter(appRole -> internalUserWithInternalRole.test(appRole) || externalUserWithExternalRole.test(appRole) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .toList();
             int after = roles.size();
             if (after < before) {
