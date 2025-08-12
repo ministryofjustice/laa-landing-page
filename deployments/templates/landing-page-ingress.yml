@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: laa-landing-page-ingress
+  annotations:
+    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
+    external-dns.alpha.kubernetes.io/aws-weight: "100"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "sticky"
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine On
+      SecAuditEngine On
+      SecDefaultAction "phase:2,pass,log,tag:github_team=laa-portal-stabilisation-tech"
+      SecDebugLogLevel 1
+spec:
+  ingressClassName: ${INGRESS_CLASS_NAME}
+  tls:
+    - hosts:
+      - ${BASE_URL_HOMEPAGE}
+      secretName: "laa-landing-page-homepage-secret"
+  rules:
+    - host: ${BASE_URL_HOMEPAGE}
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: laa-landing-page
+                port:
+                  number: 8080
