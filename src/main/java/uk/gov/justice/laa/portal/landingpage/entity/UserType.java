@@ -10,13 +10,12 @@ public enum UserType {
     INTERNAL("Internal User"),
     EXTERNAL_SINGLE_FIRM_ADMIN("Provider Admin", "External User Admin"),
     EXTERNAL_SINGLE_FIRM("Provider User"),
-    EXTERNAL_MULTI_FIRM("Provider Multi-firm User"),
-    GLOBAL_ADMIN("Global Admin", "Global Admin"); // Placeholder friendly name.
+    EXTERNAL_MULTI_FIRM("Provider Multi-firm User");
 
     public static final String[]  ADMIN_TYPES = new String[]{INTERNAL.name(), EXTERNAL_SINGLE_FIRM_ADMIN.name()};
     public static final String[]  USER_CREATION_TYPES = new String[]{INTERNAL.name()};
 
-    public static final List<UserType> INTERNAL_TYPES = List.of(UserType.INTERNAL, UserType.GLOBAL_ADMIN);
+    public static final List<UserType> INTERNAL_TYPES = List.of(UserType.INTERNAL);
     public static final List<UserType> EXTERNAL_TYPES = List.of(UserType.EXTERNAL_SINGLE_FIRM, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, UserType.EXTERNAL_MULTI_FIRM);
 
     private final String authzRoleName;
