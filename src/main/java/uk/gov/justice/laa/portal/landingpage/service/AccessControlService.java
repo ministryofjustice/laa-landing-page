@@ -50,7 +50,7 @@ public class AccessControlService {
         }
 
         // Global Admin
-        if (userHasAuthzRole(authenticatedUser, UserType.GLOBAL_ADMIN.getAuthzRoleName())) {
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
@@ -87,7 +87,7 @@ public class AccessControlService {
         }
 
         // Global Admin
-        if (userHasAuthzRole(authenticatedUser, UserType.GLOBAL_ADMIN.getAuthzRoleName())) {
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
