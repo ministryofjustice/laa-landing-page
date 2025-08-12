@@ -287,7 +287,7 @@ public class DemoDataPopulator {
                 if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
                     UserProfile userProfile = buildLaaUserProfile(entraUser, userPrincipal.getUserType());
                     userProfile.getAppRoles().addAll(externalAppRoles);
-                    Optional<AppRole> globalAdmin = lassieAppRoles.stream().filter(appRole -> appRole.getName().equalsIgnoreCase(UserType.GLOBAL_ADMIN.getAuthzRoleName())).findFirst();
+                    Optional<AppRole> globalAdmin = lassieAppRoles.stream().filter(appRole -> appRole.getName().equalsIgnoreCase("Global Admin")).findFirst();
                     globalAdmin.ifPresent(appRole -> userProfile.getAppRoles().add(appRole));
                     if (userProfile.getUserType() != UserType.INTERNAL) {
                         userProfile.setFirm(firmRepository.findFirmByName("Firm One"));

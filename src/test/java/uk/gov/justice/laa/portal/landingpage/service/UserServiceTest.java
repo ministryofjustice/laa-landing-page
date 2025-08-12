@@ -1509,20 +1509,24 @@ class UserServiceTest {
         }
 
         @Test
-        void updateUserOffices_updatesOffices_whenUserAndProfileExist() throws IOException {
+        void updateUserOffices_updatesOffices_whenUserAndProfileExistAndSameFirm() throws IOException {
             // Arrange
+            UUID firmId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
+            Firm userFirm = Firm.builder().id(firmId).build();
+
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).build();
-            Office office2 = Office.builder().id(officeId2).address(address).build();
+            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).address(address).firm(userFirm).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
+                    .firm(userFirm)
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
             EntraUser entraUser = EntraUser.builder()
@@ -1542,6 +1546,47 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
+        void updateUserOffices_doesNotUpdateAllOffices_whenUserAndProfileExistAndDifferentFirm() throws IOException {
+            // Arrange
+            UUID firmId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            UUID officeId1 = UUID.randomUUID();
+            UUID officeId2 = UUID.randomUUID();
+
+            Firm userFirm = Firm.builder().id(firmId).build();
+
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .firm(userFirm)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(entraUser);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockOfficeRepository.findAllById(any())).thenReturn(List.of(office1, office2));
+            when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfile);
+
+            List<String> selectedOffices = List.of(officeId1.toString(), officeId2.toString());
+
+            // Act
+            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+
+            // Assert
+            assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 

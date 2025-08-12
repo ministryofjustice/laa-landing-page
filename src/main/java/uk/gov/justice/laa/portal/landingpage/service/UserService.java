@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -140,8 +141,10 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
+            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal && appRole.getRoleType().equals(RoleType.INTERNAL);
+            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal && appRole.getRoleType().equals(RoleType.EXTERNAL);
             roles = roles.stream()
-                    .filter(appRole -> (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
+                    .filter(appRole -> internalUserWithInternalRole.test(appRole) || externalUserWithExternalRole.test(appRole) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -607,8 +610,7 @@ public class UserService {
                 userProfile.setOffices(null);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
-                Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
-
+                Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 // Update user profile offices
                 userProfile.setOffices(offices);
             }
@@ -618,6 +620,25 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
         }
+    }
+
+    private Set<Office> validateOfficesByUserFirm(UserProfile userProfile, Iterable<UUID> officeIds) {
+        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+        // Only allow offices that associated with the same firm as the user.
+        UUID userFirmId = userProfile.getFirm() != null ? userProfile.getFirm().getId() : null;
+        Set<Office> validOffices = offices.stream()
+                .filter(office -> office.getFirm() != null)
+                .filter(office -> office.getFirm().getId().equals(userFirmId))
+                .collect(Collectors.toSet());
+        Set<Office> invalidOffices = new HashSet<>(offices);
+        invalidOffices.removeAll(validOffices);
+        if (!invalidOffices.isEmpty()) {
+            String invalidOfficeIds = invalidOffices.stream()
+                    .map(office -> office.getId().toString())
+                    .collect(Collectors.joining(","));
+            logger.warn("There was an attempt to assign user with profile id \"{}\" the following offices not associated with their firm: {}", userProfile.getId().toString(), invalidOfficeIds);
+        }
+        return validOffices;
     }
 
     public boolean isInternal(String userId) {
