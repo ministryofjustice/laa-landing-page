@@ -20,35 +20,15 @@ spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
     - hosts:
-      - ${BASE_URL_HOMEPAGE}
-      secretName: "laa-landing-page-homepage-secret"
-    - hosts:
-      - ${BASE_URL_MANAGE_USER}
-      secretName: "manage-srv-secret"
+        - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
   rules:
-    - host: ${BASE_URL_HOMEPAGE}
+    - host: ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
       http:
         paths:
-# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
-# Services thing going live today to solve this? hasn't been tested etc
-# What do we set BASE_URL in secrets manager as??
-          - path: /home
+          - path: /
             pathType: ImplementationSpecific
             backend:
               service:
-                name: laa-landing-page
-                port:
-                  number: 8080
-    - host: ${BASE_URL_MANAGE_USER}
-      http:
-        paths:
-# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
-# Services thing going live today to solve this? hasn't been tested etc
-# What do we set BASE_URL in secrets manager as??
-          - path: /admin/users
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: laa-landing-page
+                name: laa-landing-page # this should match the metadata.name in service.yml
                 port:
                   number: 8080
