@@ -3,11 +3,7 @@ kind: Ingress
 metadata:
   name: laa-landing-page-ingress-manage-user
   annotations:
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($request_uri = '/') {
-        return 301 /admin/users;
-      }
-    
+    nginx.ingress.kubernetes.io/app-root: /admin/users
     external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-manage-user-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
