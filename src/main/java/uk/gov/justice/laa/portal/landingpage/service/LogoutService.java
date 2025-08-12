@@ -9,10 +9,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class LogoutService {
 
-    @Value("${BASE_URL}")
+    @Value("${entra.base-url}")
     private String baseUrl;
 
-    @Value("${AZURE_TENANT_ID}")
+    @Value("${spring.security.oauth2.client.registration.azure.tenant-id}")
     private String tenantId;
 
     /**
