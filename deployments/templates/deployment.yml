@@ -52,6 +52,10 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 10
           env:
+            - name: JWT_URL
+              value: "${JWT_URL}"
+            - name: SPRING_PROFILE
+              value: "${SPRING_PROFILE}"
             - name: LOG_LEVEL
               value: "${LOG_LEVEL}"
             - name: POPULATE_TEST_DATA
@@ -102,6 +106,8 @@ spec:
               value: "${TECH_SERVICES_AZURE_CLIENT_SECRET}"
             - name: TECH_SERVICES_TENANT_ID
               value: "${TECH_SERVICES_TENANT_ID}"
+            - name: TECH_SERVICES_VERIFICATION_METHOD
+              value: "${TECH_SERVICES_VERIFICATION_METHOD}"
             - name: APP_DEFAULT_USER_ACC_SEC_GROUP
               value: "${APP_DEFAULT_USER_ACC_SEC_GROUP}"
             - name: TECH_SERVICES_BASE_URL
@@ -162,3 +168,19 @@ spec:
               value: "${POLLING_INTERVAL}"
             - name: POLLING_GROUP_ID
               value: "${POLLING_GROUP_ID}"
+            - name: FIRM_CACHE_CLEAR_SCHEDULE
+              value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
+            - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
+              value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
+            - name: TECH_SERVICES_REQ_READ_TIMEOUT
+              value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
+            - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
+              value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: SENTRY_ENVIRONMENT
+              value: "${SENTRY_ENVIRONMENT}"
+            - name: SENTRY_ENABLED
+              value: "${SENTRY_ENABLED}"
+            - name: CCMS_USER_MANAGEMENT_API_BASE_URL
+              value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
+            - name: CCMS_USER_MANAGEMENT_API_KEY
+              value: "${CCMS_USER_MANAGEMENT_API_KEY}"

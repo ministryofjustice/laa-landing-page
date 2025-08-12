@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,7 +35,8 @@ import java.util.stream.Collectors;
 
 public class LiveTechServicesClient implements TechServicesClient {
 
-    public static final String TECH_SERVICES_VERIFICATION_METHOD = "activation_code_email";
+    @Value("${app.tech.services.laa.verification.method}")
+    public String techServicesVerificationMethod;
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
@@ -74,6 +76,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             Set<String> securityGroups = entraUser.getUserProfiles().stream()
                     .flatMap(profile -> profile.getAppRoles().stream())
+                    .filter(appRole -> !appRole.isAuthzRole())
                     .filter(appRole -> Objects.nonNull(appRole.getApp().getSecurityGroupOid()))
                     .map(appRole -> appRole.getApp().getSecurityGroupOid())
                     .collect(Collectors.toSet());
@@ -126,7 +129,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
-                    .verificationMethod(TECH_SERVICES_VERIFICATION_METHOD)
+                    .verificationMethod(techServicesVerificationMethod)
                     .requiredGroups(securityGroups).build();
 
             logger.info("Sending create new user request with security groups to tech services: {}", request);
@@ -159,14 +162,16 @@ public class LiveTechServicesClient implements TechServicesClient {
     }
 
     private String getAccessToken() {
-        String accessToken = cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE).get(ACCESS_TOKEN, String.class);
-
-        if (accessToken != null) {
+        Cache cache = cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
+        if (cache != null) {
             try {
-                Jwt jwt = jwtDecoder.decode(accessToken);
-                assert jwt.getExpiresAt() != null;
-                if (jwt.getExpiresAt().isAfter(Instant.now().plusSeconds(30))) {
-                    return accessToken;
+                String accessTokenFromCache = cache.get(ACCESS_TOKEN, String.class);
+                if (accessTokenFromCache != null) {
+                    Jwt jwt = jwtDecoder.decode(accessTokenFromCache);
+                    assert jwt.getExpiresAt() != null;
+                    if (jwt.getExpiresAt().isAfter(Instant.now().plusSeconds(30))) {
+                        return accessTokenFromCache;
+                    }
                 }
             } catch (Exception ex) {
                 logger.info("Error while getting access token from cache", ex);
@@ -174,10 +179,12 @@ public class LiveTechServicesClient implements TechServicesClient {
 
         }
 
-        accessToken = Objects.requireNonNull(clientSecretCredential.getToken(new TokenRequestContext()
+        String accessToken = Objects.requireNonNull(clientSecretCredential.getToken(new TokenRequestContext()
                 .setScopes(List.of(accessTokenRequestScope))).timeout(Duration.of(60, ChronoUnit.SECONDS)).block()).getToken();
         cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE).put(ACCESS_TOKEN, accessToken);
 
         return accessToken;
     }
+
+
 }

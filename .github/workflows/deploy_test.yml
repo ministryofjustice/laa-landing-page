@@ -27,13 +27,13 @@ jobs:
           java-version: '21'
 
       - name: Build JAR
-
         run: ./gradlew build
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
       - uses: aws-actions/configure-aws-credentials@v4.2.1
@@ -73,13 +73,17 @@ jobs:
           ENV_NAME: ${{ vars.ENV_NAME }}
 
 
-      - name: Generate Deployment Files
+      - name: Generate Deployment the Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
+          BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
+          BASE_URL_MANAGE_USER: ${{ secrets.BASE_URL_MANAGE_USER }}
+          JWT_URL: ${{ secrets.JWT_URL }}
+          SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -111,10 +115,19 @@ jobs:
           TECH_SERVICES_AZURE_CLIENT_SECRET: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_SECRET }}
           TECH_SERVICES_TENANT_ID: ${{ secrets.TECH_SERVICES_TENANT_ID }}
           TECH_SERVICES_BASE_URL: ${{ secrets.TECH_SERVICES_BASE_URL }}
+          TECH_SERVICES_VERIFICATION_METHOD: ${{ vars.TECH_SERVICES_VERIFICATION_METHOD }}
           APP_DEFAULT_USER_ACC_SEC_GROUP: ${{ secrets.APP_DEFAULT_USER_ACC_SEC_GROUP }}
           POLLING_ENABLED: ${{ vars.POLLING_ENABLED }}
           POLLING_INTERVAL: ${{ vars.POLLING_INTERVAL }}
           POLLING_GROUP_ID: ${{ secrets.POLLING_GROUP_ID }}
+          FIRM_CACHE_CLEAR_SCHEDULE : ${{ vars.FIRM_CACHE_CLEAR_SCHEDULE }}
+          TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
+          TECH_SERVICES_REQ_READ_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_READ_TIMEOUT }}
+          TECH_SERVICES_REQ_CONNECT_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_CONNECT_TIMEOUT }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+          SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
+          CCMS_USER_MANAGEMENT_API_BASE_URL: ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
+          CCMS_USER_MANAGEMENT_API_KEY: ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
 
       - name: Deploy to Cloud Platform
         run: |

@@ -12,9 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.List;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 
 @Repository
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
@@ -79,4 +77,24 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findByUserTypesAndFirms(@Param("userTypes") List<UserType> userTypes,
             @Param("firmIds") List<UUID> firmIds, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+            LEFT JOIN FETCH ups.firm firm
+            LEFT JOIN FETCH ups.entraUser user
+            LEFT JOIN FETCH ups.appRoles appRole
+            LEFT JOIN FETCH appRole.permissions permission
+            WHERE (:search = ''
+            OR (LOWER(user.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(user.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(user.email) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))))
+            AND (:permissions IS NULL OR
+            (permission IN :permissions AND (SELECT COUNT(DISTINCT p) FROM ups.appRoles ar JOIN ar.permissions p WHERE p IN :permissions) = :permissionCount))
+            AND (:firmId IS NULL OR ups.firm.id = :firmId)
+            AND (:userTypes IS NULL OR ups.userType IN :userTypes)
+            """)
+    Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
+            @Param("permissions") List<Permission> permissions, @Param("permissionCount") int permissionCount, @Param("firmId") UUID firmId, @Param("userTypes") List<UserType> userTypes,
+                                                             Pageable pageable);
 }

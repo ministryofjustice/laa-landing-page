@@ -1,10 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -13,25 +21,19 @@ import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
@@ -145,16 +147,6 @@ class LoginControllerTest {
     }
 
     @Test
-    void whenMigrateEndpoint_thenReturnsMigrateView() {
-
-        // Arrange & Act
-        String view = controller.migrate();
-
-        // Assert
-        assertThat(view).isEqualTo("migrate");
-    }
-
-    @Test
     void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeView() {
 
         // Arrange
@@ -171,6 +163,78 @@ class LoginControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("home");
         assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithAdmin() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        EntraUserDto user = EntraUserDto.builder().id(userId.toString()).build();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .user(user)
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+        when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of(Permission.VIEW_EXTERNAL_USER));
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(true);
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithoutAdmin() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        EntraUserDto user = EntraUserDto.builder().id(userId.toString()).build();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .user(user)
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+        when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of());
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(false);
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeViewWithoutUser() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UUID userId = UUID.randomUUID();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("isAdminUser")).isEqualTo(false);
         verify(loginService).processUserSession(authentication, authClient, session);
     }
 
@@ -250,11 +314,11 @@ class LoginControllerTest {
     @Test
     void switchFirm_post() throws IOException {
         String firmId = UUID.randomUUID().toString();
+        
         RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
+        
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        verify(loginService).logout(authentication, authClient);
-        verify(session).invalidate();
-        assertThat(view.getUrl()).isEqualTo("/?message=logout");
+        assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
     }
 }

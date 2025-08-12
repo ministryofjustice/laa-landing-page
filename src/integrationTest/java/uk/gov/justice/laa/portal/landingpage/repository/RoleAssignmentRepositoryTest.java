@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -33,9 +34,8 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
 
     @BeforeEach
     public void beforeEach() {
-        repository.deleteAll();
-        appRoleRepository.deleteAll();
-        appRepository.deleteAll();
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(appRepository);
     }
 
     @Test
@@ -47,6 +47,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
         AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2));
+        int oldAssignmentsSize = repository.findAll().size();
 
         // Act
         RoleAssignment roleAssignment = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole2).build();
@@ -56,34 +57,37 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         List<RoleAssignment> assignments = repository.findAll();
 
         Assertions.assertThat(assignments).isNotNull();
-        Assertions.assertThat(assignments).hasSize(1);
+        Assertions.assertThat(assignments).hasSize(oldAssignmentsSize + 1);
 
-        RoleAssignment result = assignments.stream().findFirst().get();
-        Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getAssigningRole()).isEqualTo(appRole1);
-        Assertions.assertThat(result.getAssignableRole()).isEqualTo(appRole2);
+        Optional<RoleAssignment> result = assignments.stream()
+                .filter(assignment -> assignment.getAssigningRole().equals(appRole1) && assignment.getAssignableRole().equals(appRole2))
+                .findFirst();
+        Assertions.assertThat(result).isNotEmpty();
     }
 
     @Test
-    public void roleAssignmentDoNotAllowSelfAssignableRole() {
+    public void findByAssigningRole() {
         // Arrange
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").roleType(RoleType.EXTERNAL)
-                .description("appRole1").app(app).build();
-        appRoleRepository.save(appRole1);
-
-        RoleAssignment roleAssignment = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole1).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole3 = AppRole.builder().name("appRole3").description("appRole3").roleType(RoleType.EXTERNAL).app(app).build();
+        appRoleRepository.saveAll(List.of(appRole1, appRole2, appRole3));
 
         // Act
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(roleAssignment),
-                "DataIntegrityViolationException expected");
+        RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole2).build();
+        RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(appRole1).assignableRole(appRole3).build();
+        repository.saveAll(List.of(roleAssignment1, roleAssignment2));
 
         // Assert
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("role_assignment_no_self_assignable");
+        List<RoleAssignment> assignments = repository.findByAssigningRole_IdIn(List.of(appRole1.getId()));
 
+        Assertions.assertThat(assignments).isNotNull();
+        Assertions.assertThat(assignments).hasSize(2);
+
+        List<RoleAssignment> empty = repository.findByAssigningRole_IdIn(List.of(appRole2.getId()));
+        Assertions.assertThat(empty).hasSize(0);
     }
 }

@@ -35,19 +35,22 @@
                             </h2>
                         </div>
                         <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list" th:if="${userAppRoles != null and !userAppRoles.isEmpty()}">
-                                <div th:each="appRole : ${userAppRoles}" class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key" th:text="${appRole.app.name}">App Name</dt>
-                                    <dd class="govuk-summary-list__value" th:text="${appRole.name}">Role Name</dd>
-                                    <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link"
-                                            th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Edit</a>
-                                        |
-                                        <a class="govuk-link" href="#">Remove</a>
-                                    </dd>
-                                </div>
+                            <dl class="govuk-summary-list" th:if="${groupedAppRoles != null and !groupedAppRoles.isEmpty()}">
+                                <th:block th:each="appEntry : ${groupedAppRoles}">
+                                    <div th:each="appRole, iterStat : ${appEntry.value}" class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key" th:text="${iterStat.first ? appEntry.key : ''}">App Name</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${appRole.name}">Role Name</dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a class="govuk-link"
+                                                th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Edit</a>
+                                            |
+                                            <a class="govuk-link" 
+                                                th:href="@{/admin/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}(userId=${user.id}, appId=${appRole.app.id}, roleName=${appRole.name})}">Remove</a>
+                                        </dd>
+                                    </div>
+                                </th:block>
                             </dl>
-                            <div th:if="${userAppRoles == null or userAppRoles.isEmpty()}" class="govuk-inset-text">
+                            <div th:if="${groupedAppRoles == null or groupedAppRoles.isEmpty()}" class="govuk-inset-text">
                                 No user permissions assigned
                             </div>
                         </div>
@@ -70,16 +73,16 @@
                             <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
                                 <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${office.address.addressLine1}"></span>,
-                                        <span th:text="${office.address.addressLine2}"></span>,
-                                        <span th:text="${office.address.city}"></span>,
-                                        <span th:text="${office.address.postcode}"></span>
+                                        <span th:text="${office.address.formattedAddress}"></span>
                                         (<span th:text="${office.code}"></span>)
                                     </dd>
                                     <dt class="govuk-summary-list__key govuk-visually-hidden"></dt>
                                 </div>
                             </dl>
-                            <div th:if="${userOffices == null or userOffices.isEmpty()}" class="govuk-inset-text">
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser}" class="govuk-inset-text">
+                                Access to All Offices
+                            </div>
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and !externalUser}" class="govuk-inset-text">
                                 No offices assigned
                             </div>
                         </div>

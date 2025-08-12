@@ -19,7 +19,6 @@ import org.hibernate.annotations.Check;
 @Entity
 @Table(name = "role_assignment")
 @IdClass(RoleAssignmentId.class)
-@Check(name = "role_assignment_check", constraints = "assigning_role_id <> assignable_role_id")
 @Getter
 @Setter
 @Builder

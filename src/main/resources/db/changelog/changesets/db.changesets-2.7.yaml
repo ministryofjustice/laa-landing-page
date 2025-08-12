@@ -1,0 +1,10 @@
+databaseChangeLog:
+  # External User Manager can not assign External User Admin
+  - changeSet:
+      id: 1754575028-1
+      author: pijian.liao
+      changes:
+        # External User Manager
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_assignment WHERE assigning_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager') AND assignable_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"

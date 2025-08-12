@@ -1,14 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -16,17 +13,22 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 /***
  * Controller for handling login-related requests.
@@ -93,7 +95,11 @@ public class LoginController {
                 model.addAttribute("user", userSessionData.getUser());
                 model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
-                boolean isAdmin = userSessionData.getUserTypes().stream().anyMatch(UserType::isAdmin);
+                boolean isAdmin = false;
+                if (userSessionData.getUser() != null) {
+                    Set<Permission> permissions = userService.getUserPermissionsByUserId(userSessionData.getUser().getId());
+                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER) || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                }
                 model.addAttribute("isAdminUser", isAdmin);
             } else {
                 logger.info("No access token found");
@@ -102,11 +108,6 @@ public class LoginController {
             logger.error("Error getting user list: {}", e.getMessage());
         }
         return "home";
-    }
-
-    @GetMapping("/migrate")
-    public String migrate() {
-        return "migrate";
     }
 
     @ExceptionHandler(Exception.class)
@@ -121,9 +122,9 @@ public class LoginController {
                                    @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        loginService.logout(authentication, authClient);
-        session.invalidate();
-        return new RedirectView("/?message=logout");
+        
+        // For switchFirm, we want to do full Azure logout, so redirect to logout with Azure logout parameter
+        return new RedirectView("/logout?azure_logout=true");
     }
 
     @GetMapping("/switchfirm")

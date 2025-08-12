@@ -12,7 +12,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @DataJpaTest
 public class AppRoleRepositoryTest extends BaseRepositoryTest {
@@ -27,16 +29,12 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
-    private PermissionRepository permissionRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
     private AppRoleRepository repository;
 
     @BeforeEach
     public void beforeEach() {
-        repository.deleteAll();
-        appRepository.deleteAll();
+        deleteNonAuthzAppRoles(repository);
+        deleteNonAuthzApps(appRepository);
     }
 
     @Test
@@ -94,38 +92,28 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testSaveAndRetrieveLaaAppRoleWithPermissionsAndRoleAssignment() {
-        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
+    public void findAllByIdInAndAuthzRoleIs() {
+        App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
                 "Security Group Name");
-        appRepository.saveAndFlush(app);
+        App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
+                "Security Group Name 2");
+        appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
 
-        AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
-        AppRole appRole2 = buildLaaAppRole(app, "App Role 2");
-        app.getAppRoles().add(appRole1);
-        app.getAppRoles().add(appRole2);
-        repository.saveAllAndFlush(Arrays.asList(appRole1, appRole2));
+        AppRole lassieExMan = buildLaaAppRole(lassie, "App Role 1");
+        lassieExMan.setAuthzRole(true);
+        AppRole lassieInMan = buildLaaAppRole(lassie, "App Role 2");
+        lassieInMan.setAuthzRole(true);
 
-        RoleAssignment roleAssignment = RoleAssignment.builder().assignableRole(appRole2).assigningRole(appRole1).build();
-        roleAssignmentRepository.saveAndFlush(roleAssignment);
+        AppRole crimeViewer = buildLaaAppRole(crime, "App Role 3");
+        crimeViewer.setAuthzRole(false);
 
-        Permission rolePermission = Permission.builder().name("Role Permission").description("Role Permission Description")
-                .function("allow-all").appRoles(Set.of(appRole1, appRole2)).build();
-        permissionRepository.save(rolePermission);
+        repository.saveAllAndFlush(Arrays.asList(lassieExMan, lassieInMan, crimeViewer));
 
-        appRole1.getAssignableRoles().add(roleAssignment);
-        appRole2.getAssigningRoles().add(roleAssignment);
-        repository.saveAllAndFlush(Arrays.asList(appRole1, appRole2));
-
-        AppRole result = repository.findById(appRole1.getId()).orElseThrow();
-
-        Assertions.assertThat(result.getId()).isEqualTo(appRole1.getId());
-        Assertions.assertThat(result.getName()).isEqualTo("App Role 1");
-        Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
-        Assertions.assertThat(result.getUserTypeRestriction()).hasSize(1);
-        Assertions.assertThat(result.getUserTypeRestriction()[0]).isEqualTo(UserType.INTERNAL);
-        Assertions.assertThat(result.getAssignableRoles()).isNotNull();
-        Assertions.assertThat(result.getAssignableRoles()).hasSize(1);
-        Assertions.assertThat(result.getAssignableRoles().stream().findFirst().get()).isInstanceOf(RoleAssignment.class);
+        List<UUID> ids = List.of(lassieExMan.getId(), lassieInMan.getId(), crimeViewer.getId());
+        List<AppRole> authzRoles = repository.findAllByIdInAndAuthzRoleIs(ids, true);
+        Assertions.assertThat(authzRoles).hasSize(2);
+        List<AppRole> nonAuthzRoles = repository.findAllByIdInAndAuthzRoleIs(ids, false);
+        Assertions.assertThat(nonAuthzRoles).hasSize(1);
     }
 
 }

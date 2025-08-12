@@ -2,8 +2,8 @@ package uk.gov.justice.laa.portal.landingpage.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,9 +15,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 
@@ -26,7 +26,6 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
  * Configures security filter chains, authentication, and authorization
  */
 @Configuration
-@Profile("!integration-test")
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
@@ -92,9 +91,9 @@ public class SecurityConfig {
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
             .requestMatchers("/admin/users/**", "/pda/**")
-                .hasAnyAuthority(UserType.ADMIN_TYPES)
-            .requestMatchers("admin/user/**")
-                .hasAnyAuthority(UserType.USER_CREATION_TYPES)
+                .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
+            .requestMatchers("/admin/user/**")
+                .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
             .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
             ).permitAll()
             .requestMatchers("/actuator/**")

@@ -33,6 +33,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -270,7 +272,12 @@ public class DemoDataPopulator {
         userPrinciples.addAll(getUserPrincipals(internalUserPrincipals, UserType.INTERNAL));
 
         List<AppRole> appRoles = laaAppRoleRepository.findAll();
-
+        List<AppRole> externalAppRoles = appRoles.stream()
+                .filter(appRole -> !appRole.isAuthzRole())
+                .toList();
+        List<AppRole> lassieAppRoles = appRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .toList();
         for (UserPrincipal userPrincipal : userPrinciples) {
             try {
                 EntraUser entraUser = entraUserRepository.findByEntraOid(userPrincipal.getEntraId())
@@ -279,7 +286,9 @@ public class DemoDataPopulator {
                 entraUserRepository.save(entraUser);
                 if (isNewUser || entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty()) {
                     UserProfile userProfile = buildLaaUserProfile(entraUser, userPrincipal.getUserType());
-                    userProfile.getAppRoles().addAll(appRoles);
+                    userProfile.getAppRoles().addAll(externalAppRoles);
+                    Optional<AppRole> globalAdmin = lassieAppRoles.stream().filter(appRole -> appRole.getName().equalsIgnoreCase("Global Admin")).findFirst();
+                    globalAdmin.ifPresent(appRole -> userProfile.getAppRoles().add(appRole));
                     if (userProfile.getUserType() != UserType.INTERNAL) {
                         userProfile.setFirm(firmRepository.findFirmByName("Firm One"));
                     }
@@ -294,7 +303,6 @@ public class DemoDataPopulator {
             }
 
         }
-
 
         System.out.println("Dummy Data Populated!!");
     }
