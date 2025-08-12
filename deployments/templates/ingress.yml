@@ -3,6 +3,13 @@ kind: Ingress
 metadata:
   name: laa-landing-page-ingress
   annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($host = '${BASE_URL_HOMEPAGE}') {
+        rewrite ^/(.*)$ /home/$1 break;
+      }
+      if ($host = '${BASE_URL_MANAGE_USER}') {
+        rewrite ^/(.*)$ /admin/users/$1 break;
+      }
     external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
@@ -29,9 +36,6 @@ spec:
     - host: ${BASE_URL_HOMEPAGE}
       http:
         paths:
-# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
-# Services thing going live today to solve this? hasn't been tested etc
-# What do we set BASE_URL in secrets manager as??
           - path: /home
             pathType: ImplementationSpecific
             backend:
@@ -42,9 +46,6 @@ spec:
     - host: ${BASE_URL_MANAGE_USER}
       http:
         paths:
-# Need to work out what is happening with it - we won't have a route to / if we put this in?? Is the tech
-# Services thing going live today to solve this? hasn't been tested etc
-# What do we set BASE_URL in secrets manager as??
           - path: /admin/users
             pathType: ImplementationSpecific
             backend:
