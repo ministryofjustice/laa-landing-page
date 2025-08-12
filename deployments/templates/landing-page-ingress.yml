@@ -24,13 +24,23 @@ spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
     - hosts:
-        - ${BASE_URL_HOMEPAGE}
+      - ${BASE_URL_HOMEPAGE}
       secretName: "laa-landing-page-homepage-secret"
   rules:
     - host: ${BASE_URL_HOMEPAGE}
       http:
         paths:
           - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: laa-landing-page
+                port:
+                  number: 8080
+    - host: ${BASE_URL_MANAGE_USER}
+      http:
+        paths:
+          - path: /admin/users
             pathType: ImplementationSpecific
             backend:
               service:
