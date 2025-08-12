@@ -437,6 +437,24 @@ class UserControllerTest {
     }
 
     @Test
+    void testPostingInternalUserTypeGetRejected() {
+        EntraUserDto mockUser = new EntraUserDto();
+        mockUser.setFullName("Test User");
+        FirmDto firmDto = new FirmDto();
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("user", mockUser);
+        session.setAttribute("firm", firmDto);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("firstName");
+        userDetailsForm.setLastName("lastName");
+        userDetailsForm.setEmail("email");
+        userDetailsForm.setUserType(UserType.INTERNAL);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        userController.postUser(userDetailsForm, bindingResult, session, model);
+        verify(bindingResult).rejectValue(eq("userType"), eq("error.userType"), any());
+    }
+
+    @Test
     void selectUserAppsGet() {
         AppDto app = new AppDto();
         app.setId("1");
