@@ -131,11 +131,12 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUserRoles(String userProfileId, List<String> selectedRoles) {
+    public String updateUserRoles(String userProfileId, List<String> selectedRoles) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
@@ -152,9 +153,11 @@ public class UserService {
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>() : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
             userProfile.setAppRoles(newRoles);
+            diff = diffRole(oldRoles, newRoles);
             
             // Try to send role change notification with retry logic before saving
             boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
@@ -166,6 +169,31 @@ public class UserService {
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
+        return diff;
+    }
+
+    protected static String diffRole(Set<AppRole> oldRoles, Set<AppRole> newRoles) {
+        List<UUID> oldIds = oldRoles.stream().map(AppRole::getId).toList();
+        List<UUID> newIds = newRoles.stream().map(AppRole::getId).toList();
+        List<String> removed = oldRoles.stream()
+                .filter(role -> !newIds.contains(role.getId()))
+                .map(AppRole::getName)
+                .toList();
+        List<String> added = newRoles.stream()
+                .filter(role -> !oldIds.contains(role.getId()))
+                .map(AppRole::getName)
+                .toList();
+        String changed = "";
+        if (!removed.isEmpty()) {
+            changed += "Removed: " + String.join(", ", removed);
+        }
+        if (!added.isEmpty()) {
+            if (!changed.isEmpty()) {
+                changed += ", ";
+            }
+            changed += "Added: " + String.join(", ", added);
+        }
+        return changed;
     }
 
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
