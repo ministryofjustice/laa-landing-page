@@ -1106,6 +1106,7 @@ public class UserController {
      * Grant access to a user by updating their profile status to COMPLETE
      */
     @PostMapping("/users/manage/{id}/grant-access")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantUserAccess(@PathVariable String id) {
         return "redirect:/admin/users/grant-access/" + id + "/apps";
     }
@@ -1115,6 +1116,7 @@ public class UserController {
      * assigned apps.
      */
     @GetMapping("/users/grant-access/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
             HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
@@ -1137,6 +1139,7 @@ public class UserController {
     }
 
     @PostMapping("/users/grant-access/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessSetSelectedApps(@PathVariable String id,
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
@@ -1189,6 +1192,7 @@ public class UserController {
      * assigned roles.
      */
     @GetMapping("/users/grant-access/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
@@ -1279,6 +1283,7 @@ public class UserController {
      * Grant Access Flow - Update user roles for a specific app.
      */
     @PostMapping("/users/grant-access/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
@@ -1354,6 +1359,7 @@ public class UserController {
      * Grant Access Flow - Get user offices for editing
      */
     @GetMapping("/users/grant-access/{id}/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1409,6 +1415,7 @@ public class UserController {
      * Grant Access Flow - Update user offices
      */
     @PostMapping("/users/grant-access/{id}/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Authentication authentication,
@@ -1483,6 +1490,7 @@ public class UserController {
      * Grant Access Flow - Check answers page
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1521,6 +1529,7 @@ public class UserController {
      * Grant Access Flow - Remove an app role from user
      */
     @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
+    @PreAuthorize("@accessControlService.canEditUser(#userId)")
     public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
             Authentication authentication) {
         try {
@@ -1551,6 +1560,7 @@ public class UserController {
      * Grant Access Flow - Process check answers and complete grant
      */
     @PostMapping("/users/grant-access/{id}/check-answers")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessProcessCheckAnswers(@PathVariable String id, Authentication authentication,
             HttpSession session) {
         try {
