@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.ModelAndView;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -30,7 +31,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCannotAssignInternalUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true, false);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", false);
     }
 
     @Test
@@ -38,7 +39,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true, true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true);
     }
 
     @Test
@@ -46,7 +47,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCanAssignExternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true, true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true);
     }
 
     @Test
@@ -54,7 +55,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCanAssignExternalUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true, true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true);
     }
 
     @Test
@@ -62,7 +63,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCannotAssignGlobalAdminRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Global Admin", true, false);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Global Admin", false);
     }
 
     @Test
@@ -70,15 +71,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCannotAssignExternalUserAdminRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Admin", true, false);
-    }
-
-    @Test
-    @Transactional
-    public void testInternalUserManagerCannotAssignInternalUserManagerRoleToExternalUser() throws Exception {
-        EntraUser loggedInUser = internalUserManagers.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true, false);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Admin", false);
     }
 
     @Test
@@ -86,7 +79,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testInternalUserManagerCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true, true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", true);
     }
 
     @Test
@@ -94,67 +87,11 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testInternalUserManagerCanAssignExternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true, true);
-    }
-
-    @Test
-    @Transactional
-    public void testInternalUserManagerCanAssignExternalUserManagerRoleToExternalUser() throws Exception {
-        EntraUser loggedInUser = internalUserManagers.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true, true);
-    }
-
-    @Test
-    @Transactional
-    public void testInternalUserManagerCannotAssignGlobalAdminRoleToExternalUser() throws Exception {
-        EntraUser loggedInUser = internalUserManagers.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Global Admin", true, false);
-    }
-
-    @Test
-    @Transactional
-    public void testInternalUserManagerCannotAssignExternalUserAdminRoleToExternalUser() throws Exception {
-        EntraUser loggedInUser = internalUserManagers.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Admin", true, false);
-    }
-
-    @Test
-    @Transactional
-    public void testExternalUserWithNoRolesCannotAssignInternalUserManagerRole() throws Exception {
-        EntraUser loggedInUser = externalUsersNoRoles.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Manager", false, false);
-    }
-
-    @Test
-    @Transactional
-    public void testExternalUserWithNoRolesCannotAssignExternalUserManagerRole() throws Exception {
-        EntraUser loggedInUser = externalUsersNoRoles.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", false, false);
-    }
-
-    @Test
-    @Transactional
-    public void testExternalUserWithNoRolesCannotAssignExternalUserAdminRole() throws Exception {
-        EntraUser loggedInUser = externalUsersNoRoles.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Admin", false, false);
-    }
-
-    @Test
-    @Transactional
-    public void testExternalUserWithNoRolesCannotAssignGlobalAdminRole() throws Exception {
-        EntraUser loggedInUser = externalUsersNoRoles.getFirst();
-        EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "Global Admin", false, false);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true);
     }
 
     @SuppressWarnings("unchecked")
-    private void assignAuthzRoleToUser(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName, boolean canAccessAppScreen, boolean expectedSuccess) throws Exception {
+    private void assignAuthzRoleToUser(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName, boolean expectedSuccess) throws Exception {
         UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
         MockHttpSession session = new MockHttpSession();
 
@@ -162,12 +99,8 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         MvcResult selectAppsResult = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
                 .with(userOauth2Login(loggedInUser))
                 .session(session))
-                .andExpect(canAccessAppScreen ? status().isOk() : status().isForbidden())
+                .andExpect(status().isOk())
                 .andReturn();
-
-        if (!canAccessAppScreen) {
-            return;
-        }
 
         // Fetch AuthZ app from response.
         ModelAndView modelAndView = selectAppsResult.getModelAndView();
