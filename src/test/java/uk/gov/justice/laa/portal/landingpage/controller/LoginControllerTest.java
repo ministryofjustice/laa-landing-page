@@ -314,11 +314,11 @@ class LoginControllerTest {
     @Test
     void switchFirm_post() throws IOException {
         String firmId = UUID.randomUUID().toString();
+        
         RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
+        
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        verify(loginService).logout(authentication, authClient);
-        verify(session).invalidate();
-        assertThat(view.getUrl()).isEqualTo("/?message=logout");
+        assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
     }
 }

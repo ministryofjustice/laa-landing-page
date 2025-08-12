@@ -122,9 +122,9 @@ public class LoginController {
                                    @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        loginService.logout(authentication, authClient);
-        session.invalidate();
-        return new RedirectView("/?message=logout");
+        
+        // For switchFirm, we want to do full Azure logout, so redirect to logout with Azure logout parameter
+        return new RedirectView("/logout?azure_logout=true");
     }
 
     @GetMapping("/switchfirm")
