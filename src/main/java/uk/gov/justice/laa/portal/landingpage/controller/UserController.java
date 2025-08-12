@@ -259,15 +259,13 @@ public class UserController {
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
-        // Set user details from the form
-        user.setFirstName(userDetailsForm.getFirstName());
-        user.setLastName(userDetailsForm.getLastName());
-        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
-        user.setEmail(userDetailsForm.getEmail());
-        session.setAttribute("user", user);
 
-        // Add selected userType to session
-        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+        // Validate selected User Type
+        UserType selectedUserType = userDetailsForm.getUserType();
+        // Add a check to stop users injecting internal user types into create external user post request.
+        if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
+            result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
+        }
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -282,6 +280,14 @@ public class UserController {
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-details";
         }
+
+        // Set user details from the form
+        user.setFirstName(userDetailsForm.getFirstName());
+        user.setLastName(userDetailsForm.getLastName());
+        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setEmail(userDetailsForm.getEmail());
+        session.setAttribute("user", user);
+        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
 
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
