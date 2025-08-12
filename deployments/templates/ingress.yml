@@ -36,7 +36,7 @@ spec:
     - host: ${BASE_URL_HOMEPAGE}
       http:
         paths:
-          - path: /home
+          - path: /
             pathType: ImplementationSpecific
             backend:
               service:
@@ -46,7 +46,7 @@ spec:
     - host: ${BASE_URL_MANAGE_USER}
       http:
         paths:
-          - path: /admin/users
+          - path: /
             pathType: ImplementationSpecific
             backend:
               service:

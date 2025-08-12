@@ -78,7 +78,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
-      - name: Generate Deployment Files
+      - name: Generate Deployment the Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
