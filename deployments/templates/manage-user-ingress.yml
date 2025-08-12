@@ -3,10 +3,10 @@ kind: Ingress
 metadata:
   name: laa-landing-page-ingress-manage-user
   annotations:
-  nginx.ingress.kubernetes.io/configuration-snippet: |
-    if ($request_uri = '/') {
-      return 301 /admin/users;
-    }
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($request_uri = '/') {
+        return 301 /admin/users;
+      }
     
     external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-manage-user-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
@@ -15,7 +15,7 @@ metadata:
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
-    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"    
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
       SecRuleEngine On
       SecAuditEngine On
