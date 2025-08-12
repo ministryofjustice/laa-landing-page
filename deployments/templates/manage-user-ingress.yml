@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: laa-landing-page-ingress
+  name: manage-user-ingress
   annotations:
-    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
+    external-dns.alpha.kubernetes.io/set-identifier: manage-user-ingress-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: "sticky"
@@ -20,14 +20,14 @@ spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
     - hosts:
-      - ${BASE_URL_HOMEPAGE}
-      secretName: "laa-landing-page-homepage-secret"
+      - ${BASE_URL_MANAGE_USER}
+      secretName: "manage-srv-secret"
   rules:
-    - host: ${BASE_URL_HOMEPAGE}
+    - host: ${BASE_URL_MANAGE_USER}
       http:
         paths:
-          - path: /
-            pathType: ImplementationSpecific
+          - path: /admin/users
+            pathType: Prefix
             backend:
               service:
                 name: laa-landing-page
