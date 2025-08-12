@@ -78,12 +78,15 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
+      # Remove ingress once split up
       - name: Generate Deployment the Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+          cat deployments/templates/manage-user-ingress.yml | envsubst > deployments/manage-user-ingress.yml
+          cat deployments/templates/manage-user-redirect-ingress.yml | envsubst > deployments/manage-user-redirect-ingress.yml
         env:
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
           BASE_URL_MANAGE_USER: ${{ secrets.BASE_URL_MANAGE_USER }}
