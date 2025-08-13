@@ -38,6 +38,7 @@ public class GraphApiService {
     public void logoutUser(String accessToken) {
         logger.info("STB2503 - Calling Graph API to logout user");
         String url = GRAPH_URL + "/me" + "/microsoft.graph.revokeSignInSessions";
+
         try {
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             postGraphApi(accessToken, url, body);

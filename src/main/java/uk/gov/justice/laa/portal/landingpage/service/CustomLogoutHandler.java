@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
@@ -15,7 +14,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 
 @Service
-@Slf4j
 public class CustomLogoutHandler implements LogoutHandler {
 
     private final OAuth2AuthorizedClientService clientService;
@@ -31,8 +29,7 @@ public class CustomLogoutHandler implements LogoutHandler {
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         // First, revoke the Graph API sessions
-        log.info("STB2503 - Logout user initiated for user: {}", authentication.getName());
-        loginService.logout(request, authentication, getClient(authentication));
+        loginService.logout(authentication, getClient(authentication));
         
         // Only redirect to Azure logout if this is not a test environment or if explicitly requested
         // Check if the request has a parameter indicating Azure logout is needed
