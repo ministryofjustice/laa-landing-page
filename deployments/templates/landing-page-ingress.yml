@@ -20,15 +20,16 @@ spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
     - hosts:
-        - ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
+      - ${BASE_URL_HOMEPAGE}
+      secretName: "laa-landing-page-homepage-secret"
   rules:
-    - host: ${NAMESPACE}.apps.live.cloud-platform.service.justice.gov.uk
+    - host: ${BASE_URL_HOMEPAGE}
       http:
         paths:
           - path: /
             pathType: ImplementationSpecific
             backend:
               service:
-                name: laa-landing-page # this should match the metadata.name in service.yml
+                name: laa-landing-page
                 port:
                   number: 8080
