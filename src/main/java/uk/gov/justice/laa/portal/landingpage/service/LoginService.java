@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -146,11 +147,14 @@ public class LoginService {
         return currentUser.getUserProfiles().iterator().next();
     }
 
-    public void logout(Authentication authentication,
+    public void logout(HttpServletRequest request,
+                       Authentication authentication,
                        OAuth2AuthorizedClient authorizedClient) {
         if (authentication == null) {
             return;
         }
+
+        logger.info("STB2503 - Calling graph api to invalidate session for user: {}", authentication.getName());
 
         OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
         if (accessToken == null || accessToken.getTokenValue() == null) {
@@ -159,5 +163,10 @@ public class LoginService {
         }
         String tokenValue = accessToken.getTokenValue();
         graphApiService.logoutUser(tokenValue);
+
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
     }
 }

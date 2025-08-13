@@ -59,7 +59,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         // Should not call LogoutService.buildAzureLogoutUrl() when azure_logout parameter is not present
     }
 
@@ -79,7 +79,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         verify(logoutService).buildAzureLogoutUrl();
     }
 
@@ -107,7 +107,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, spyResponse, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         verify(logoutService).buildAzureLogoutUrl();
         
         // Should set fallback response when IOException occurs
@@ -129,7 +129,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         verify(logoutService, never()).buildAzureLogoutUrl();
     }
 
@@ -147,7 +147,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         verify(logoutService, never()).buildAzureLogoutUrl();
     }
 
@@ -165,7 +165,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         verify(logoutService, never()).buildAzureLogoutUrl();
     }
 
@@ -183,7 +183,7 @@ public class CustomLogoutHandlerTest {
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
-        verify(loginService).logout(any(), any());
+        verify(loginService).logout(any(), any(), any());
         // Should not call buildAzureLogoutUrl because "TRUE" != "true"
         verify(logoutService, never()).buildAzureLogoutUrl();
     }
