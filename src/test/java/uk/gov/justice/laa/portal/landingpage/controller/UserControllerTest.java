@@ -3697,7 +3697,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirm);
-        assertThat(((FirmSearchForm)testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
         verify(firmService).getFirm(firmSearchForm.getSelectedFirmId());
     }
 
@@ -3773,8 +3773,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
-        assertThat(((FirmSearchForm)testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
-        assertThat(((FirmSearchForm)testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
         verify(firmService).getAllFirmsFromCache();
     }
 
@@ -3826,7 +3826,6 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("firmSearchForm", old);
         testSession.setAttribute("firm", savedFirm);
-        Model testModel = new ExtendedModelMap();
         UUID firmId = UUID.fromString("b38ce9cd-f385-4799-b19b-5330ec251cac");
         List<FirmDto> mockFirms = List.of(
                 FirmDto.builder()
@@ -3840,6 +3839,7 @@ class UserControllerTest {
         FirmSearchForm newSearch = new FirmSearchForm();
         newSearch.setFirmSearch("Test");
         newSearch.setSelectedFirmId("014a4a45-10b9-4940-9212-7cbd0937f6d1");
+        Model testModel = new ExtendedModelMap();
 
         // When
         String view = userController.postUserFirm(newSearch, bindingResult, testSession, testModel);
@@ -3847,8 +3847,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
-        assertThat(((FirmSearchForm)testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
-        assertThat(((FirmSearchForm)testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
         verify(firmService).getAllFirmsFromCache();
     }
     
