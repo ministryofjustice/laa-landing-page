@@ -1,20 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.List;
+import java.util.Objects;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import org.springframework.web.servlet.ModelAndView;
+
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-
-import java.util.List;
-import java.util.Objects;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest {
 
@@ -34,7 +34,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testGlobalAdminCanSeeAllFirmAdminsAndGlobalAdminsWhenFiltered() throws Exception {
+    public void testGlobalAdminCanSeeAllFirmAdminsWhenFiltered() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showFirmAdmins=true")
                         .with(userOauth2Login(loggedInUser)))
@@ -43,7 +43,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = externalUserAdmins.size() + globalAdmins.size();
+        int expectedSize = externalUserAdmins.size(); // Only EXTERNAL_SINGLE_FIRM_ADMIN users, no global admins
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
             Assertions.assertThat(userProfile.getEntraUser().getLastName()).contains("Admin");
@@ -68,7 +68,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testInternalUserManagerCanSeeOnlyGlobalAdminWhenFiltered() throws Exception {
+    public void testInternalUserManagerCannotSeeAnyUsersWhenFiltered() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showFirmAdmins=true")
                         .with(userOauth2Login(loggedInUser)))
@@ -77,11 +77,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = globalAdmins.size();
+        int expectedSize = 0; // No users shown since GLOBAL_ADMIN is excluded and no EXTERNAL_SINGLE_FIRM_ADMIN visible to internal user manager
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getEntraUser().getLastName()).isEqualTo("GlobalAdmin");
-        }
     }
 
     @Test
@@ -115,7 +112,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testInternalAndExternalUserManagerCanSeeAllFirmAdminsAndGlobalAdminsWhenFiltered() throws Exception {
+    public void testInternalAndExternalUserManagerCanSeeAllFirmAdminsWhenFiltered() throws Exception {
         EntraUser loggedInUser = internalAndExternalUserManagers.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showFirmAdmins=true")
                         .with(userOauth2Login(loggedInUser)))
@@ -124,7 +121,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = externalUserAdmins.size() + globalAdmins.size();
+        int expectedSize = externalUserAdmins.size(); // Only EXTERNAL_SINGLE_FIRM_ADMIN users, no global admins
         Assertions.assertThat(users).hasSize(expectedSize);
     }
 
