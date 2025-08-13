@@ -3057,7 +3057,9 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull(); // No CCMS roles to organize
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
+        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model.getAttribute("ccmsRolesBySection");
+        assertThat(ccmsRolesBySection).isEmpty(); // No CCMS roles to organize
     }
 
     @Test

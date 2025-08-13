@@ -385,10 +385,14 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
-        Set<AppRole> appRoles = getAuthzAppRoleByUserType(userType).map(Set::of).orElseGet(Set::of);
+        Set<AppRole> appRoles = new HashSet<>();
+        if (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN) {
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            externalUserManagerRole.ifPresent(appRoles::add);
+        }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .userType(userType)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
@@ -754,13 +758,6 @@ public class UserService {
             }
         }
         return usersPersisted;
-    }
-
-    private Optional<AppRole> getAuthzAppRoleByUserType(UserType userType) {
-        if (userType.getAuthzRoleName() != null) {
-            return appRoleRepository.findByName(userType.getAuthzRoleName()).filter(AppRole::isAuthzRole);
-        }
-        return Optional.empty();
     }
 
     public Set<Permission> getUserPermissionsByUserId(String userId) {
