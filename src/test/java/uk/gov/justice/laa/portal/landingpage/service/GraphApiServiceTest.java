@@ -66,13 +66,13 @@ class GraphApiServiceTest {
     @Test
     void logoutUser_fromGraph_Ok() {
         service.logoutUser("token");
-        String url = "https://graph.microsoft.com/v1.0/me/microsoft.graph.revokeSignInSessions";
+        String url = "https://graph.microsoft.com/v1.0/me/revokeSignInSessions";
         mockedRestUtils.verify(() -> RestUtils.postGraphApi(eq("token"), eq(url), any()));
     }
 
     @Test
     void logoutUser_fromGraph_Error() {
-        String url = "https://graph.microsoft.com/v1.0/me/microsoft.graph.revokeSignInSessions";
+        String url = "https://graph.microsoft.com/v1.0/me/revokeSignInSessions";
         given(RestUtils.postGraphApi(eq("token"), eq(url), any())).willAnswer(invocation -> {
             throw new Exception("abc msg");
         });
