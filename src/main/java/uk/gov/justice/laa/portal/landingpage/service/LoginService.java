@@ -163,10 +163,5 @@ public class LoginService {
         }
         String tokenValue = accessToken.getTokenValue();
         graphApiService.logoutUser(tokenValue);
-
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
     }
 }
