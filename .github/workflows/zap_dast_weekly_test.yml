@@ -25,19 +25,3 @@ jobs:
           path: |
             report_html.html
             report_json.json
-      
-      - name: Run ZAP Daily Manage Users Baseline Scan
-        id: manage_srv_baseline_run
-        uses: zaproxy/action-baseline@v0.14.0
-        with:
-          target: 'https://test.manage-your-legal-aid-users.service.justice.gov.uk/'
-          cmd_options: '-a -j'
-          fail_action: false
-
-      - name: Upload ZAP Daily Manage Users Baseline Run Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: daily-zap-manage-srv-report
-          path: |
-            report_html.html
-            report_json.json
