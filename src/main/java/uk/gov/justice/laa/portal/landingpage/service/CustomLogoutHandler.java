@@ -31,20 +31,14 @@ public class CustomLogoutHandler implements LogoutHandler {
         // First, revoke the Graph API sessions
         loginService.logout(authentication, getClient(authentication));
         
-        // Only redirect to Azure logout if this is not a test environment or if explicitly requested
-        // Check if the request has a parameter indicating Azure logout is needed
-        String azureLogout = request.getParameter("azure_logout");
-        if ("true".equals(azureLogout)) {
-            try {
-                String logoutUrl = logoutService.buildAzureLogoutUrl();
-                response.sendRedirect(logoutUrl);
-            } catch (IOException e) {
-                // If redirect fails, let Spring Security handle the logout normally
-                response.setStatus(HttpServletResponse.SC_FOUND);
-                response.setHeader("Location", "/?message=logout");
-            }
+        try {
+            String logoutUrl = logoutService.buildAzureLogoutUrl();
+            response.sendRedirect(logoutUrl);
+        } catch (IOException e) {
+            // If redirect fails, let Spring Security handle the logout normally
+            response.setStatus(HttpServletResponse.SC_FOUND);
+            response.setHeader("Location", "/?message=logout");
         }
-        // If no Azure logout is requested, let Spring Security handle the normal logout flow
     }
 
     protected OAuth2AuthorizedClient getClient(Authentication authentication) {

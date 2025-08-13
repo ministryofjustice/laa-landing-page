@@ -319,6 +319,6 @@ class LoginControllerTest {
         
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
+        assertThat(view.getUrl()).isEqualTo("/logout");
     }
 }
