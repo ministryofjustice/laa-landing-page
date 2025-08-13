@@ -8,9 +8,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -60,10 +62,12 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = internalUserManagers.size() + internalAndExternalUserManagers.size() + globalAdmins.size();
+        int expectedSize = (int) allUsers.stream()
+                .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.INTERNAL)
+                .count();
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getEntraUser().getFirstName()).contains("Internal");
+            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.INTERNAL);
         }
     }
 
@@ -77,10 +81,12 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = globalAdmins.size();
+        int expectedSize = externalUserAdmins.size() + globalAdmins.size();
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getEntraUser().getLastName()).isEqualTo("GlobalAdmin");
+            boolean allUsersAreExternalAdminsOrGlobalAdmins =  userProfile.getAppRoles().stream()
+                    .allMatch(role -> role.getName().equalsIgnoreCase("External User Admin") || role.getName().equalsIgnoreCase("Global Admin"));
+            Assertions.assertThat(allUsersAreExternalAdminsOrGlobalAdmins).isTrue();
         }
     }
 
@@ -109,9 +115,14 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
 
-        int expectedExternalUsers = externalUsersNoRoles.size() + externalUserAdmins.size() + externalOnlyUserManagers.size();
+        int expectedSize = (int) allUsers.stream()
+                .filter(user -> UserType.EXTERNAL_TYPES.contains(user.getUserProfiles().stream().findFirst().orElseThrow().getUserType()))
+                .count();
 
-        Assertions.assertThat(users).hasSize(expectedExternalUsers);
+        Assertions.assertThat(users).hasSize(expectedSize);
+        for (UserProfileDto userProfile : users) {
+            Assertions.assertThat(UserType.EXTERNAL_TYPES).contains(userProfile.getUserType());
+        }
     }
 
     @Test
@@ -179,7 +190,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testExternalUserAdminCanSeeAllUsersInFirm() throws Exception {
+    public void testExternalUserAdminCanSeeAllExternalUsers() throws Exception {
         EntraUser loggedInUser = externalUserAdmins.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100")
                         .with(userOauth2Login(loggedInUser)))
@@ -188,17 +199,12 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
         List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
-                .findFirst().get()
-                .getFirm();
         int expectedSize = (int) allUsers.stream()
-                .map(user -> user.getUserProfiles().stream().findFirst().get().getFirm())
-                .filter(Objects::nonNull)
-                .filter(firm -> firm.getId().equals(loggedInUserFirm.getId()))
+                .filter(user -> UserType.EXTERNAL_TYPES.contains(user.getUserProfiles().stream().findFirst().orElseThrow().getUserType()))
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getFirm().getId()).isEqualTo(loggedInUserFirm.getId());
+            Assertions.assertThat(UserType.EXTERNAL_TYPES).contains(userProfile.getUserType());
         }
     }
 

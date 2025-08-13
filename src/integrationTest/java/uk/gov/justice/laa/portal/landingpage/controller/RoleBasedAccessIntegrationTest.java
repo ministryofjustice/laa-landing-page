@@ -195,8 +195,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
         // Setup Firm1 admin
         EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneAdmin");
-        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, true);
-        profile.setFirm(testFirm1);
+        UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
         AppRole appRole = allAppRoles.stream()
                 .filter(AppRole::isAuthzRole)
                 .filter(role -> role.getName().equals("External User Admin"))
@@ -209,8 +208,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
         // Setup Firm2 admin
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwoAdmin");
-        profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, true);
-        profile.setFirm(testFirm2);
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
         profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
