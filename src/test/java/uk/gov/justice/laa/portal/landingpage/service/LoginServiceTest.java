@@ -8,7 +8,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -255,9 +254,9 @@ class LoginServiceTest {
 
     @Test
     void logout_whenAuthenticationIsNull_doNothing() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
+
         // Arrange & Act
-        loginService.logout(request, null, authorizedClient);
+        loginService.logout(null, authorizedClient);
 
         // Assert
         verify(graphApiService, never()).logoutUser(anyString());
@@ -265,10 +264,9 @@ class LoginServiceTest {
 
     @Test
     void logout_whenAccessTokenIsNull_doNothing() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
         // Arrange & Act
         when(authorizedClient.getAccessToken()).thenReturn(null);
-        loginService.logout(request, oauthToken, authorizedClient);
+        loginService.logout(oauthToken, authorizedClient);
 
         // Assert
         verify(graphApiService, never()).logoutUser(anyString());
@@ -276,11 +274,10 @@ class LoginServiceTest {
 
     @Test
     void logout_ok() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
         // Arrange & Act
         when(authorizedClient.getAccessToken()).thenReturn(accessToken);
         when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
-        loginService.logout(request, oauthToken, authorizedClient);
+        loginService.logout(oauthToken, authorizedClient);
 
         // Assert
         verify(graphApiService).logoutUser(anyString());
