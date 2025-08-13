@@ -385,9 +385,15 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
+        Set<AppRole> appRoles = new HashSet<>();
+        if (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN) {
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            externalUserManagerRole.ifPresent(appRoles::add);
+        }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .userType(userType)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
                 .firm(firm)
