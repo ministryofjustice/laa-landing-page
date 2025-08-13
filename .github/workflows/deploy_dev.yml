@@ -86,7 +86,6 @@ jobs:
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
-          BASE_URL_MANAGE_USER: ${{ secrets.BASE_URL_MANAGE_USER }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
