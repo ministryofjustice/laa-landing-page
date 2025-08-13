@@ -36,7 +36,6 @@ public class GraphApiService {
     }
 
     public void logoutUser(String accessToken) {
-        logger.info("STB2503 - Calling Graph API to logout user");
         String url = GRAPH_URL + "/me" + "/revokeSignInSessions";
         try {
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();

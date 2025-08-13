@@ -39,10 +39,6 @@ public class RestUtils {
         ResponseEntity<String> response = restTemplate.exchange(
                 url, method, entity, String.class);
 
-        if (url.contains("revokeSignInSessions")) {
-            log.info("STB2503 - User logged out successfully from Entra, the response status is: {}", response.getStatusCode());
-        }
-
         return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
     }
 
