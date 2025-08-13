@@ -699,12 +699,12 @@ public class UserController {
 
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            userService.updateUserRoles(id, new ArrayList<>());
+            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    List.of(), "apps");
+                    changed, "apps");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -887,9 +887,9 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles);
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }
@@ -1140,12 +1140,12 @@ public class UserController {
         // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            userService.updateUserRoles(id, new ArrayList<>());
+            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    List.of(), "apps");
+                    changed, "roles");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -1306,9 +1306,9 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles);
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }
