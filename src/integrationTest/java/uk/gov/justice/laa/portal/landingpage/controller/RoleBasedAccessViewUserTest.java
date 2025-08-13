@@ -88,8 +88,8 @@ public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testInternalUserManagerCannotAccessExternalUserAdminProfile() throws Exception {
-        testCanAccessUser(internalUserManagers.getFirst(), externalUserAdmins.getFirst(), status().is3xxRedirection());
+    public void testInternalUserManagerCanAccessExternalUserAdminProfile() throws Exception {
+        testCanAccessUser(internalUserManagers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
     }
 
     @Test
@@ -181,31 +181,23 @@ public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
-    public void testExternalUserAdminCannotAccessExternalUserInDifferentFirm() throws Exception {
+    public void testExternalUserAdminCanAccessExternalUserInFirmOne() throws Exception {
         EntraUser loggedInUser = externalUserAdmins.getFirst();
-        Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
-                .findFirst()
-                .orElseThrow()
-                .getFirm();
-        EntraUser accessedUserDifferentFirm = externalUsersNoRoles.stream()
-                .filter(user -> !user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(loggedInUserFirm.getId()))
+        EntraUser accessedUserFirmOne = externalUsersNoRoles.stream()
+                .filter(user -> !user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm1.getId()))
                 .findFirst()
                 .orElseThrow();
-        testCanAccessUser(loggedInUser, accessedUserDifferentFirm, status().is3xxRedirection());
+        testCanAccessUser(loggedInUser, accessedUserFirmOne, status().isOk());
     }
 
     @Test
-    public void testExternalUserAdminCanAccessExternalUserInSameFirm() throws Exception {
-        EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
-        Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
-                .findFirst()
-                .orElseThrow()
-                .getFirm();
-        EntraUser accessedUserSameFirm = externalUsersNoRoles.stream()
-                .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(loggedInUserFirm.getId()))
+    public void testExternalUserAdminCanAccessExternalUserInFirmTwo() throws Exception {
+        EntraUser loggedInUser = externalUserAdmins.getFirst();
+        EntraUser accessedUserFirmTwo = externalUsersNoRoles.stream()
+                .filter(user -> !user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm2.getId()))
                 .findFirst()
                 .orElseThrow();
-        testCanAccessUser(loggedInUser, accessedUserSameFirm, status().isOk());
+        testCanAccessUser(loggedInUser, accessedUserFirmTwo, status().isOk());
     }
 
 
