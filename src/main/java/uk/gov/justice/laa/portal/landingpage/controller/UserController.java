@@ -103,7 +103,7 @@ public class UserController {
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             Model model, HttpSession session, Authentication authentication) {
 
-        PaginatedUsers paginatedUsers;
+        PaginatedUsers paginatedUsers = new PaginatedUsers();
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
@@ -130,9 +130,15 @@ public class UserController {
                     search, permissions, null, allUserTypes, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             permissions.add(Permission.VIEW_INTERNAL_USER);
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
-                    List.of(UserType.INTERNAL),
-                    page, size, sort, direction);
+            if (showFirmAdmins) {
+                // When showFirmAdmins=true, internal users with only VIEW_INTERNAL_USER permission
+                // cannot see EXTERNAL_SINGLE_FIRM_ADMIN users, so return empty results
+                paginatedUsers = new PaginatedUsers();
+            } else {
+                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
+                        List.of(UserType.INTERNAL),
+                        page, size, sort, direction);
+            }
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
             paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null,
                     userTypesToFilter,
