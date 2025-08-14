@@ -123,8 +123,8 @@ public class LoginController {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
         
-        // Redirect to logout
-        return new RedirectView("/logout");
+        // For switchFirm, we want to do full Azure logout, so redirect to logout with Azure logout parameter
+        return new RedirectView("/logout?azure_logout=true");
     }
 
     @GetMapping("/switchfirm")
