@@ -18,18 +18,11 @@ public enum UserType {
     public static final List<UserType> INTERNAL_TYPES = List.of(UserType.INTERNAL);
     public static final List<UserType> EXTERNAL_TYPES = List.of(UserType.EXTERNAL_SINGLE_FIRM, UserType.EXTERNAL_SINGLE_FIRM_ADMIN, UserType.EXTERNAL_MULTI_FIRM);
 
-    private final String authzRoleName;
     /** Used in the UI dropdown. */
     private final String friendlyName;
 
-    UserType(String friendlyName, String authzRoleName) {
-        this.friendlyName = friendlyName;
-        this.authzRoleName = authzRoleName;
-    }
-
     UserType(String friendlyName) {
         this.friendlyName = friendlyName;
-        this.authzRoleName = null;
     }
 
     public boolean isAdmin() {

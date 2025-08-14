@@ -1,4 +1,4 @@
-name: ZAP DAST Daily Baseline Scan
+name: ZAP DEV DAST Daily Baseline Scan
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   zap_scan:
-    name: Run ZAP DAST Daily Baseline Scan Against Live App
+    name: Run ZAP DEV DAST Daily Baseline Scan Against Live App
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +14,7 @@ jobs:
         id: baseline_run
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
+          target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
 

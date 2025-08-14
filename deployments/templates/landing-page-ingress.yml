@@ -37,13 +37,3 @@ spec:
                 name: laa-landing-page
                 port:
                   number: 8080
-    - host: ${BASE_URL_MANAGE_USER}
-      http:
-        paths:
-          - path: /admin/users
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: laa-landing-page
-                port:
-                  number: 8080
