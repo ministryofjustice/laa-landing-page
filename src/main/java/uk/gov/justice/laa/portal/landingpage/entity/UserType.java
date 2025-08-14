@@ -8,7 +8,7 @@ import java.util.List;
 @Getter
 public enum UserType {
     INTERNAL("Internal User"),
-    EXTERNAL_SINGLE_FIRM_ADMIN("Provider Admin", "External User Admin"),
+    EXTERNAL_SINGLE_FIRM_ADMIN("Provider Admin"),
     EXTERNAL_SINGLE_FIRM("Provider User"),
     EXTERNAL_MULTI_FIRM("Provider Multi-firm User");
 
