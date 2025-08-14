@@ -1,26 +1,11 @@
-name: Promote Test into Prod
+name: Merge to Production
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  merge:
+  create-prod-pr:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Test
-        uses: actions/checkout@v4
-        with:
-          ref: test
-          fetch-depth: 0
-      
-jobs:
-  merge-to-prod:
-    runs-on: ubuntu-latest
-    
-    # Only allow github-actions[bot] to run this workflow
     if: github.actor == 'github-actions[bot]'
     
     steps:
@@ -35,9 +20,12 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
     
-    - name: Merge to production
-      run: |
-        git checkout prd
-        git pull origin prd
-        git merge test --no-ff -m "Merge test to production via GitHub Actions"
-        git push origin prd
+    - name: Create PR to production
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: prd
+        branch: merge-test-to-prod
+        title: "Merge test to production"
+        body: "Automated PR from test branch to production"
+        delete-branch: true
