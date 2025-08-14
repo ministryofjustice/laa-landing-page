@@ -16,23 +16,28 @@ jobs:
           ref: test
           fetch-depth: 0
       
-      - name: Configure Git User
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge into prd
-        run: |
-          git pull origin prd
-          git fetch origin main
-          git merge origin/main --no-ff --no-edit
-
-          if git status | grep -q "Unmerged paths"; then
-            echo "Merge Conflict. Please resolve manually"
-            git merge --abort
-            exit 1
-          fi
-          
-      - name: Push to prd
-        run: |
-          git push origin prd
+jobs:
+  merge-to-prod:
+    runs-on: ubuntu-latest
+    
+    # Only allow github-actions[bot] to run this workflow
+    if: github.actor == 'github-actions[bot]'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: test
+    
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Merge to production
+      run: |
+        git checkout prd
+        git pull origin prd
+        git merge test --no-ff -m "Merge test to production via GitHub Actions"
+        git push origin prd
