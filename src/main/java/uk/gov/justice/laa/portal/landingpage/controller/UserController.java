@@ -295,9 +295,6 @@ public class UserController {
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
-        // Clear any previous firm selection
-        session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -339,7 +336,10 @@ public class UserController {
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
         }
-
+        FirmDto savedFirm = (FirmDto) session.getAttribute("firm");
+        if (!Objects.isNull(savedFirm) && !savedFirm.getName().equals(firmSearchForm.getFirmSearch())) {
+            firmSearchForm.setSelectedFirmId(null);
+        }
         // Check if a specific firm was selected
         if (firmSearchForm.getSelectedFirmId() != null && !firmSearchForm.getSelectedFirmId().isEmpty()) {
             try {
@@ -364,11 +364,11 @@ public class UserController {
                         "No firm found with that name. Please select from the dropdown.");
                 return "add-user-firm";
             }
-
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId().toString());
             session.setAttribute("firm", selectedFirm);
         }
-
-        session.setAttribute("firmSearchTerm", firmSearchForm.getFirmSearch());
+        session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
 
@@ -622,7 +622,6 @@ public class UserController {
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
         session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
         session.removeAttribute("selectedUserType");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");

@@ -3697,7 +3697,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirm);
-        assertThat(testSession.getAttribute("firmSearchTerm")).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
         verify(firmService).getFirm(firmSearchForm.getSelectedFirmId());
     }
 
@@ -3756,10 +3756,10 @@ class UserControllerTest {
 
         MockHttpSession testSession = new MockHttpSession();
         Model testModel = new ExtendedModelMap();
-
+        UUID firmId = UUID.randomUUID();
         List<FirmDto> mockFirms = List.of(
                 FirmDto.builder()
-                        .id(UUID.randomUUID())
+                        .id(firmId)
                         .name("Test Firm")
                         .code("TF001")
                         .build()
@@ -3773,7 +3773,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
-        assertThat(testSession.getAttribute("firmSearchTerm")).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
         verify(firmService).getAllFirmsFromCache();
     }
 
@@ -3806,6 +3807,48 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-firm");
         verify(bindingResult).rejectValue("firmSearch", "error.firm", "No firm found with that name. Please select from the dropdown.");
+        verify(firmService).getAllFirmsFromCache();
+    }
+
+    @Test
+    void testPostUserFirm_ShouldOverwritePreviousSearch_success() {
+        // Given
+        FirmSearchForm old = new FirmSearchForm();
+        old.setFirmSearch("old");
+        old.setSelectedFirmId("014a4a45-10b9-4940-9212-7cbd0937f6d1");
+        FirmDto savedFirm = new FirmDto();
+        savedFirm.setName("Old Firm");
+        savedFirm.setId(UUID.fromString("014a4a45-10b9-4940-9212-7cbd0937f6d1"));
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("firmSearchForm", old);
+        testSession.setAttribute("firm", savedFirm);
+        UUID firmId = UUID.fromString("b38ce9cd-f385-4799-b19b-5330ec251cac");
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(firmId)
+                        .name("Test Firm")
+                        .code("TF001")
+                        .build()
+        );
+
+        when(firmService.getAllFirmsFromCache()).thenReturn(mockFirms);
+        FirmSearchForm newSearch = new FirmSearchForm();
+        newSearch.setFirmSearch("Test");
+        newSearch.setSelectedFirmId("014a4a45-10b9-4940-9212-7cbd0937f6d1");
+        Model testModel = new ExtendedModelMap();
+
+        // When
+        String view = userController.postUserFirm(newSearch, bindingResult, testSession, testModel);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(testSession.getAttribute("firm")).isEqualTo(mockFirms.get(0));
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getFirmSearch()).isEqualTo("Test Firm");
+        assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId.toString());
         verify(firmService).getAllFirmsFromCache();
     }
     
