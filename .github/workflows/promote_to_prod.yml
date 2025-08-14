@@ -6,8 +6,6 @@ on:
 jobs:
   create-prod-pr:
     runs-on: ubuntu-latest
-    if: github.actor == 'github-actions[bot]'
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
