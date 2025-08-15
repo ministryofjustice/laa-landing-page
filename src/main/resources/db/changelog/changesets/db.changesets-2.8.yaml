@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: system
+      changes:
+        - createTable:
+            tableName: distributed_lock
+            columns:
+              - column:
+                  name: lock_key
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: locked_until
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_by
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: distributed_lock
+            indexName: idx_distributed_lock_locked_until
+            columns:
+              - column:
+                  name: locked_until
+      comment: Add distributed_lock table for coordinating tasks across multiple application instances

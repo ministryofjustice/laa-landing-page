@@ -20,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 
 import java.util.Set;
 
@@ -48,6 +49,9 @@ class DemoDataPopulatorTest {
 
     @Mock
     private UserProfileRepository laaUserProfileRepository;
+
+    @Mock
+    private DistributedLockService lockService;
 
     @Mock
     private ApplicationReadyEvent applicationReadyEvent;

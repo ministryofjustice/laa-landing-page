@@ -5,12 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -28,12 +31,13 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -46,7 +50,13 @@ import java.util.Set;
  */
 @Component
 @Profile("!production")
+@Slf4j
 public class DemoDataPopulator {
+
+    private static final String DEMO_DATA_LOCK_KEY = "DEMO_DATA_POPULATOR_LOCK";
+    private static final Duration LOCK_TIMEOUT = Duration.ofMinutes(30);
+
+    private final DistributedLockService lockService;
 
     private final FirmRepository firmRepository;
 
@@ -105,13 +115,15 @@ public class DemoDataPopulator {
     public DemoDataPopulator(FirmRepository firmRepository,
                              OfficeRepository officeRepository, EntraUserRepository entraUserRepository,
                              AppRepository laaAppRepository, AppRoleRepository laaAppRoleRepository,
-                             UserProfileRepository laaUserProfileRepository) {
+                             UserProfileRepository laaUserProfileRepository,
+                             DistributedLockService lockService) {
         this.firmRepository = firmRepository;
         this.officeRepository = officeRepository;
         this.entraUserRepository = entraUserRepository;
         this.laaAppRepository = laaAppRepository;
         this.laaAppRoleRepository = laaAppRoleRepository;
         this.laaUserProfileRepository = laaUserProfileRepository;
+        this.lockService = lockService;
     }
 
     protected EntraUser buildEntraUser(String userPrincipal, String entraId) {
@@ -185,10 +197,26 @@ public class DemoDataPopulator {
                 .build();
     }
 
-    @EventListener
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void appReady(ApplicationReadyEvent event) {
         if (populateDummyData) {
-            initialTestData();
+            log.info("Attempting to populate demo data...");
+            try {
+                lockService.withLock(DEMO_DATA_LOCK_KEY, LOCK_TIMEOUT, () -> {
+                    log.info("Acquired lock for demo data population");
+                    initialTestData();
+                    log.info("Completed demo data population");
+                    return null;
+                });
+            } catch (DistributedLockService.LockAcquisitionException e) {
+                log.warn("Could not acquire lock for demo data population. Another instance might be running.");
+            } catch (Exception e) {
+                log.error("Error during demo data population", e);
+                throw e; // Re-throw to ensure transaction rollback on error
+            }
+        } else {
+            log.info("Demo data population is disabled via configuration");
         }
     }
 
@@ -214,9 +242,7 @@ public class DemoDataPopulator {
 
             }
         } catch (Exception ex) {
-            System.err.println("Error populating dummy data!!");
-            System.err.println(ex.getMessage());
-            ex.printStackTrace();
+            log.error("Error while populating demo data", ex);
         }
 
         // Now trying to populate custom-defined apps and roles
@@ -259,9 +285,7 @@ public class DemoDataPopulator {
                 laaAppRoleRepository.save(externalRole);
 
             } catch (Exception ex) {
-                System.out
-                        .println("Unable to add app to the list of apps in the database: " + appDetailPair.getRight());
-                ex.printStackTrace();
+                log.error("Unable to add app to the list of apps in the database: " + appDetailPair.getRight(), ex);
             }
         }
 
@@ -294,11 +318,9 @@ public class DemoDataPopulator {
                     }
                     laaUserProfileRepository.save(userProfile);
                 }
-            } catch (Exception e) {
-                System.err.println(
-                        "Unable to add user to the list of users in the database, the user may not present in entra: "
-                                + userPrincipal);
-                e.printStackTrace();
+            } catch (Exception ex) {
+                log.error("Unable to add user to the list of users in the database, the user may not present in entra: "
+                                + userPrincipal, ex);
                 System.err.println("Continuing with the list of users in the database");
             }
 
