@@ -1574,6 +1574,7 @@ public class UserController {
      * Grant Access Flow - Show confirmation page
      */
     @GetMapping("/users/grant-access/{id}/confirmation")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessConfirmation(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
