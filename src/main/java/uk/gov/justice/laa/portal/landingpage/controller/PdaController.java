@@ -1,7 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.UUID;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -9,6 +10,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -18,9 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.List;
-import java.util.UUID;
 
 
 /**
@@ -48,6 +49,7 @@ public class PdaController {
             list = firmService.getUserFirms(entraUser);
         }
         model.addAttribute("firms", list);
+        model.addAttribute("pageTitle", "Firms");
         return "firms";
     }
 
@@ -63,6 +65,7 @@ public class PdaController {
         }
         FirmDto firmDto = firmService.getFirm(id);
         model.addAttribute("firm", firmDto);
+        model.addAttribute("pageTitle", firmDto.getName());
         return "firm";
     }
 
@@ -76,6 +79,7 @@ public class PdaController {
             list = officeService.getUserOffices(entraUser);
         }
         model.addAttribute("offices", list);
+        model.addAttribute("pageTitle", "Offices");
         return "offices";
     }
 
@@ -93,7 +97,9 @@ public class PdaController {
                 return "redirect:/pda/offices";
             }
         }
-        model.addAttribute("office", mapper.map(office, OfficeDto.class));
+        OfficeDto officeDto = mapper.map(office, OfficeDto.class);
+        model.addAttribute("office", officeDto);
+        model.addAttribute("pageTitle", officeDto.getCode());
         return "office";
     }
 

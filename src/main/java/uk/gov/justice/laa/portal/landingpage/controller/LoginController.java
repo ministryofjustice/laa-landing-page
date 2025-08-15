@@ -53,6 +53,7 @@ public class LoginController {
             String successMessage = "You have been securely logged out";
             model.addAttribute("successMessage", successMessage);
         }
+        model.addAttribute("pageTitle", "Sign in");
         return "index";
     }
 
@@ -107,6 +108,7 @@ public class LoginController {
         } catch (Exception e) {
             logger.error("Error getting user list: {}", e.getMessage());
         }
+        model.addAttribute("pageTitle", "Your legal aid services");
         return "home";
     }
 
@@ -138,6 +140,7 @@ public class LoginController {
             }
         }
         model.addAttribute("firmDtoList", firmDtoList);
+        model.addAttribute("pageTitle", "Switch firm");
         return "switch-firm";
     }
 
