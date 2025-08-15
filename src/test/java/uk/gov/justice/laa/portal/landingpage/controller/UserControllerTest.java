@@ -3956,13 +3956,19 @@ class UserControllerTest {
         Class<?> clazz = UserController.class;
         List<String> canEditMethods = List.of("editUser",
                 "editUserApps", "setSelectedAppsEdit",
-                "editUserRoles", "updateUserRoles");
+                "editUserRoles", "updateUserRoles",
+                "grantUserAccess", "grantAccessEditUserApps",
+                "grantAccessSetSelectedApps", "grantAccessEditUserRoles",
+                "grantAccessUpdateUserRoles", "grantAccessCheckAnswers",
+                "removeAppRole", "grantAccessProcessCheckAnswers",
+                "grantAccessConfirmation");
         List<String> canAcessMethods = List.of("manageUser");
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
             if (canEditMethods.contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.canEditUser(#id)");
+                assertThat(anno.value().equals("@accessControlService.canEditUser(#id)")
+                        || anno.value().equals("@accessControlService.canEditUser(#userId)")).isTrue();
                 continue;
             }
             if (canAcessMethods.contains(method.getName())) {
@@ -3971,22 +3977,12 @@ class UserControllerTest {
                 continue;
             }
             // Methods with more complicated permissions
-            if ("editUserDetails".equals(method.getName())) {
+            if (List.of("updateUserDetails", "editUserDetails").contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
                 assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)"
                         + " && @accessControlService.canEditUser(#id)");
             }
-            if ("updateUserDetails".equals(method.getName())) {
-                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)"
-                        + " && @accessControlService.canEditUser(#id)");
-            }
-            if ("editUserOffices".equals(method.getName())) {
-                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
-                       + " && @accessControlService.canEditUser(#id)");
-            }
-            if ("updateUserOffices".equals(method.getName())) {
+            if (List.of("updateUserOffices", "grantAccessEditUserOffices", "grantAccessUpdateUserOffices", "editUserOffices").contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
                 assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
                         + " && @accessControlService.canEditUser(#id)");
