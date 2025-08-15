@@ -87,7 +87,8 @@ public class LoginController {
      * @return the view for home
      */
     @GetMapping("/home")
-    public String home(Model model, Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+    public String home(Model model, Authentication authentication, HttpSession session,
+            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
         try {
             UserSessionData userSessionData = loginService.processUserSession(authentication, authClient, session);
 
@@ -98,8 +99,10 @@ public class LoginController {
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
                 if (userSessionData.getUser() != null) {
-                    Set<Permission> permissions = userService.getUserPermissionsByUserId(userSessionData.getUser().getId());
-                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER) || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                    Set<Permission> permissions = userService
+                            .getUserPermissionsByUserId(userSessionData.getUser().getId());
+                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
+                            || permissions.contains(Permission.VIEW_INTERNAL_USER);
                 }
                 model.addAttribute("isAdminUser", isAdmin);
             } else {
@@ -107,7 +110,7 @@ public class LoginController {
             }
         } catch (Exception e) {
             logger.error("Error getting user list: {}", e.getMessage());
-        }        
+        }
         return "home";
     }
 
@@ -119,12 +122,13 @@ public class LoginController {
 
     @PostMapping("/switchfirm")
     public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication,
-                                   HttpSession session,
-                                   @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
+            HttpSession session,
+            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        
-        // For switchFirm, we want to do full Azure logout, so redirect to logout with Azure logout parameter
+
+        // For switchFirm, we want to do full Azure logout, so redirect to logout with
+        // Azure logout parameter
         return new RedirectView("/logout?azure_logout=true");
     }
 
@@ -133,7 +137,8 @@ public class LoginController {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
         for (FirmDto firmDto : firmDtoList) {
-            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
+            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                    .orElse(null);
             if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
                 firmDto.setName(firmDto.getName() + " - Active");
             }
