@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -53,7 +54,7 @@ public class LoginController {
             String successMessage = "You have been securely logged out";
             model.addAttribute("successMessage", successMessage);
         }
-        model.addAttribute("pageTitle", "Sign in");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Sign in");
         return "index";
     }
 
@@ -144,7 +145,7 @@ public class LoginController {
             }
         }
         model.addAttribute("firmDtoList", firmDtoList);
-        model.addAttribute("pageTitle", "Switch firm");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
         return "switch-firm";
     }
 

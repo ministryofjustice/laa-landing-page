@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -48,7 +49,7 @@ public class PdaController {
             list = firmService.getUserFirms(entraUser);
         }
         model.addAttribute("firms", list);
-        model.addAttribute("pageTitle", "Firms");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Firms");
         return "firms";
     }
 
@@ -65,7 +66,7 @@ public class PdaController {
         }
         FirmDto firmDto = firmService.getFirm(id);
         model.addAttribute("firm", firmDto);
-        model.addAttribute("pageTitle", "Firms");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Firms");
         return "firm";
     }
 
@@ -79,7 +80,7 @@ public class PdaController {
             list = officeService.getUserOffices(entraUser);
         }
         model.addAttribute("offices", list);
-        model.addAttribute("pageTitle", "Offices");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Offices");
         return "offices";
     }
 
@@ -99,7 +100,7 @@ public class PdaController {
         }
         OfficeDto officeDto = mapper.map(office, OfficeDto.class);
         model.addAttribute("office", officeDto);
-        model.addAttribute("pageTitle", "Offices");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Offices");
         return "office";
     }
 
