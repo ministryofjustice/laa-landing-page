@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -2545,18 +2546,18 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
     }
 
     @Test
@@ -2577,17 +2578,17 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), eq(false), any(PageRequest.class));
     }
 
     @Test
@@ -2654,12 +2655,12 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2669,7 +2670,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq("Test Name"), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
     }
 
     @Nested
