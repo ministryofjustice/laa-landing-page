@@ -3966,7 +3966,8 @@ class UserControllerTest {
         for (Method method : methods) {
             if (canEditMethods.contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.canEditUser(#id)");
+                assertThat(anno.value().equals("@accessControlService.canEditUser(#id)")
+                        || anno.value().equals("@accessControlService.canEditUser(#userId)")).isTrue();
                 continue;
             }
             if (canAcessMethods.contains(method.getName())) {
