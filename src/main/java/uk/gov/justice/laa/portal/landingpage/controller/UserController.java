@@ -259,15 +259,13 @@ public class UserController {
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
-        // Set user details from the form
-        user.setFirstName(userDetailsForm.getFirstName());
-        user.setLastName(userDetailsForm.getLastName());
-        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
-        user.setEmail(userDetailsForm.getEmail());
-        session.setAttribute("user", user);
 
-        // Add selected userType to session
-        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+        // Validate selected User Type
+        UserType selectedUserType = userDetailsForm.getUserType();
+        // Add a check to stop users injecting internal user types into create external user post request.
+        if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
+            result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
+        }
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -283,6 +281,14 @@ public class UserController {
             return "add-user-details";
         }
 
+        // Set user details from the form
+        user.setFirstName(userDetailsForm.getFirstName());
+        user.setLastName(userDetailsForm.getLastName());
+        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setEmail(userDetailsForm.getEmail());
+        session.setAttribute("user", user);
+        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
@@ -295,9 +301,6 @@ public class UserController {
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
-        // Clear any previous firm selection
-        session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -339,7 +342,10 @@ public class UserController {
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
         }
-
+        FirmDto savedFirm = (FirmDto) session.getAttribute("firm");
+        if (!Objects.isNull(savedFirm) && !savedFirm.getName().equals(firmSearchForm.getFirmSearch())) {
+            firmSearchForm.setSelectedFirmId(null);
+        }
         // Check if a specific firm was selected
         if (firmSearchForm.getSelectedFirmId() != null && !firmSearchForm.getSelectedFirmId().isEmpty()) {
             try {
@@ -364,11 +370,11 @@ public class UserController {
                         "No firm found with that name. Please select from the dropdown.");
                 return "add-user-firm";
             }
-
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId().toString());
             session.setAttribute("firm", selectedFirm);
         }
-
-        session.setAttribute("firmSearchTerm", firmSearchForm.getFirmSearch());
+        session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
 
@@ -622,7 +628,6 @@ public class UserController {
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
         session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
         session.removeAttribute("selectedUserType");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
@@ -815,11 +820,12 @@ public class UserController {
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .collect(Collectors.toList());
 
+            Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
             }
+            model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
@@ -1524,7 +1530,7 @@ public class UserController {
      * Grant Access Flow - Remove an app role from user
      */
     @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUser(#userId)")
     public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
             Authentication authentication) {
         try {

@@ -9,10 +9,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -47,7 +49,8 @@ public class AccessControlService {
             return false;
         }
 
-        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)) {
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
@@ -63,7 +66,9 @@ public class AccessControlService {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)
+                && !userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -81,18 +86,29 @@ public class AccessControlService {
             return false;
         }
 
-        // Only global admin should have both these permissions.
-        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER)) {
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
-        //internal user with external user manager permission
-        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(userProfileId)
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        // Internal User Manager editing internal user.
+        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
+            return true;
+        }
+
+        //internal user with external user manager permission accessing external user
+        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && usersAreInSameFirm(authenticatedUser, userProfileId);
+        // External user accessing external User
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)
+                && !userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userProfileId);
         }
@@ -120,6 +136,13 @@ public class AccessControlService {
 
     public static boolean userHasPermission(EntraUser entraUser, Permission permission) {
         return userHasAnyGivenPermissions(entraUser, permission);
+    }
+
+    public static boolean userHasAuthzRole(EntraUser user, String authzRoleName) {
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser, Permission... permissions) {
