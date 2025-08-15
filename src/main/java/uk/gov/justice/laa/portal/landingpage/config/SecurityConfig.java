@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 
@@ -127,6 +128,15 @@ public class SecurityConfig {
             .permitAll()
         ).csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        ).headers(headers -> headers
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(31536000)
+                        .requestMatcher(AnyRequestMatcher.INSTANCE)
+                )
+                .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
+                        .policyDirectives("form-action 'self'"))
         );
         return http.build();
     }
