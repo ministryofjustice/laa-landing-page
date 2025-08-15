@@ -107,8 +107,7 @@ public class LoginController {
             }
         } catch (Exception e) {
             logger.error("Error getting user list: {}", e.getMessage());
-        }
-        model.addAttribute("pageTitle", "Your legal aid services");
+        }        
         return "home";
     }
 
