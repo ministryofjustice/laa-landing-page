@@ -29,6 +29,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -152,6 +153,7 @@ public class UserController {
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
     }
@@ -165,6 +167,7 @@ public class UserController {
             List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId().toString());
             model.addAttribute("user", user);
             model.addAttribute("roles", roles);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user - " + user.getFullName());
         }
         return "edit-user";
     }
@@ -198,6 +201,7 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
         model.addAttribute("externalUser", externalUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
         return "manage-user";
     }
 
@@ -218,6 +222,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
         return "add-user-details";
     }
 
@@ -287,6 +292,7 @@ public class UserController {
         }
 
         model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
     }
 
@@ -370,6 +376,7 @@ public class UserController {
         EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select services");
         return "add-user-apps";
     }
 
@@ -422,6 +429,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("userCreateRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select roles");
         return "add-user-roles";
     }
 
@@ -499,6 +507,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select offices");
         return "add-user-offices";
     }
 
@@ -551,6 +560,7 @@ public class UserController {
 
         UserType userType = (UserType) session.getAttribute("selectedUserType");
         model.addAttribute("userType", userType);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
     }
 
@@ -597,6 +607,7 @@ public class UserController {
         }
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "User created");
         return "add-user-created";
     }
 
@@ -634,6 +645,7 @@ public class UserController {
         editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
         return "edit-user-details";
     }
 
@@ -686,6 +698,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
 
         return "edit-user-apps";
     }
@@ -815,6 +828,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("userEditRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
         return "edit-user-roles";
     }
 
@@ -966,6 +980,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
         return "edit-user-offices";
     }
 
@@ -1112,6 +1127,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select services - " + user.getFullName());
         return "grant-access-user-apps";
     }
 
@@ -1253,6 +1269,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("grantAccessUserRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select roles - " + user.getFullName());
         return "grant-access-user-roles";
     }
 
@@ -1385,6 +1402,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
     }
 
@@ -1498,6 +1516,7 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";
     }
@@ -1578,6 +1597,7 @@ public class UserController {
     public String grantAccessConfirmation(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Access granted - " + user.getFullName());
         return "grant-access-confirmation";
     }
 
