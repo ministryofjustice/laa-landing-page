@@ -23,7 +23,6 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
-
 /**
  * Provider Data Controller
  */
@@ -57,7 +56,8 @@ public class PdaController {
     public String getFirm(@PathVariable String id, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         if (!userService.isInternal(entraUser.getId())) {
-            boolean isMyFirm = firmService.getUserFirms(entraUser).stream().anyMatch(o -> o.getId().equals(UUID.fromString(id)));
+            boolean isMyFirm = firmService.getUserFirms(entraUser).stream()
+                    .anyMatch(o -> o.getId().equals(UUID.fromString(id)));
             if (!isMyFirm) {
                 log.debug("Access denied for firm id: {}, user: {}", id, entraUser.getEntraOid());
                 return "redirect:/pda/firms";
@@ -65,7 +65,7 @@ public class PdaController {
         }
         FirmDto firmDto = firmService.getFirm(id);
         model.addAttribute("firm", firmDto);
-        model.addAttribute("pageTitle", firmDto.getName());
+        model.addAttribute("pageTitle", "Firms");
         return "firm";
     }
 
@@ -99,7 +99,7 @@ public class PdaController {
         }
         OfficeDto officeDto = mapper.map(office, OfficeDto.class);
         model.addAttribute("office", officeDto);
-        model.addAttribute("pageTitle", officeDto.getCode());
+        model.addAttribute("pageTitle", "Offices");
         return "office";
     }
 
