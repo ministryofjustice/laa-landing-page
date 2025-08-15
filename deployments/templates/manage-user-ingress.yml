@@ -1,33 +1,30 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: laa-landing-page-ingress
+  name: laa-landing-page-ingress-manage-user
   annotations:
-    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-${NAMESPACE}-green
+    nginx.ingress.kubernetes.io/app-root: /admin/users
+    external-dns.alpha.kubernetes.io/set-identifier: laa-landing-page-ingress-manage-user-${NAMESPACE}-green
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: "sticky"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
     nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
-    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
-    nginx.ingress.kubernetes.io/ssl-ciphers: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305"
-    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"    
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
       SecRuleEngine On
       SecAuditEngine On
       SecDefaultAction "phase:2,pass,log,tag:github_team=laa-portal-stabilisation-tech"
       SecDebugLogLevel 1
 spec:
-  ingressClassName: ${INGRESS_CLASS_NAME}
+  ingressClassName: modsec-non-prod
   tls:
     - hosts:
-      - ${BASE_URL_HOMEPAGE}
-      secretName: "laa-landing-page-homepage-secret"
+      - ${BASE_URL_MANAGE_USER}
+      secretName: "manage-srv-secret"
   rules:
-    - host: ${BASE_URL_HOMEPAGE}
+    - host: ${BASE_URL_MANAGE_USER}
       http:
         paths:
           - path: /

@@ -42,10 +42,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${appRole.name}">Role Name</dd>
                                         <dd class="govuk-summary-list__actions">
                                             <a class="govuk-link"
-                                                th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Edit</a>
-                                            |
-                                            <a class="govuk-link" 
-                                                th:href="@{/admin/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}(userId=${user.id}, appId=${appRole.app.id}, roleName=${appRole.name})}">Remove</a>
+                                                th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">Change</a>
                                         </dd>
                                     </div>
                                 </th:block>
