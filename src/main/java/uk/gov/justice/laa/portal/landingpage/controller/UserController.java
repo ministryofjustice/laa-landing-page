@@ -930,9 +930,7 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size()
-                && allOffices.stream()
-                        .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+        boolean hasAllOffices = userOffices.isEmpty();
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
@@ -1343,9 +1341,7 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size()
-                && allOffices.stream()
-                        .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+        boolean hasAllOffices = userOffices.isEmpty();
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
