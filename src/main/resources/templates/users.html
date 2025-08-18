@@ -91,121 +91,123 @@
                     </script>
                 </form>
                 <form class="govuk-form-group govuk-!-margin-top-3">
-                    <table class="govuk-table" data-id-prefix="users-"
-                        style="table-layout: fixed; width: 100%;">
-                        <thead class="govuk-table__head">
-                            <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'firstName' ? direction : 'none'}" style="width: 20%;">
-                                    <button type="button" data-index="0"
-                                        th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
-                                        Name
-                                        <img th:if="${sort == 'firstName' and direction == 'asc'}" 
-                                             th:src="@{/assets/images/sort-asc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort == 'firstName' and direction == 'desc'}" 
-                                             th:src="@{/assets/images/sort-desc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort != 'firstName'}" 
-                                             th:src="@{/assets/images/sort-none.svg}" 
-                                             width="22" height="22" alt="">
-                                    </button>
-                                </th>
-                                <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'firmName' ? direction : 'none'}" style="width: 20%;">
-                                    <button type="button" data-index="1"
-                                        th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firmName', direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
-                                        Firm
-                                        <img th:if="${sort == 'firmName' and direction == 'asc'}" 
-                                             th:src="@{/assets/images/sort-asc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort == 'firmName' and direction == 'desc'}" 
-                                             th:src="@{/assets/images/sort-desc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort != 'firmName'}" 
-                                             th:src="@{/assets/images/sort-none.svg}" 
-                                             width="22" height="22" alt="">
-                                    </button>
-                                </th>
-                                <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'email' ? direction : 'none'}" style="width: 35%;">
-                                    <button type="button" data-index="2"
-                                        th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
-                                        Email
-                                        <img th:if="${sort == 'email' and direction == 'asc'}" 
-                                             th:src="@{/assets/images/sort-asc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort == 'email' and direction == 'desc'}" 
-                                             th:src="@{/assets/images/sort-desc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort != 'email'}" 
-                                             th:src="@{/assets/images/sort-none.svg}" 
-                                             width="22" height="22" alt="">
-                                    </button>
-                                </th>
-                                <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'userType' ? direction : 'none'}" style="width: 15%;">
-                                    <button type="button" data-index="3"
-                                        th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
-                                        User Type
-                                        <img th:if="${sort == 'userType' and direction == 'asc'}" 
-                                             th:src="@{/assets/images/sort-asc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort == 'userType' and direction == 'desc'}" 
-                                             th:src="@{/assets/images/sort-desc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort != 'userType'}" 
-                                             th:src="@{/assets/images/sort-none.svg}" 
-                                             width="22" height="22" alt="">
-                                    </button>
-                                </th>
-                                <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'userStatus' ? direction : 'none'}" style="width: 10%;">
-                                    <button type="button" data-index="4"
-                                        th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
-                                        Status
-                                        <img th:if="${sort == 'userStatus' and direction == 'asc'}" 
-                                             th:src="@{/assets/images/sort-asc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort == 'userStatus' and direction == 'desc'}" 
-                                             th:src="@{/assets/images/sort-desc.svg}" 
-                                             width="22" height="22" alt="">
-                                        <img th:if="${sort != 'userStatus'}" 
-                                             th:src="@{/assets/images/sort-none.svg}" 
-                                             width="22" height="22" alt="">
-                                    </button>
-                                </th>
-                            </tr>
-                        </thead>
+                    <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="govuk-table" data-id-prefix="users-"
+                            style="table-layout: fixed; min-width: 768px; width: 100%;">
+                            <thead class="govuk-table__head">
+                                <tr class="govuk-table__row">
+                                    <th scope="col" class="govuk-table__header"
+                                        th:aria-sort="${sort == 'firstName' ? direction : 'none'}" style="width: 20%; min-width: 120px;">
+                                        <button type="button" data-index="0"
+                                            th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                            Name
+                                            <img th:if="${sort == 'firstName' and direction == 'asc'}" 
+                                                 th:src="@{/assets/images/sort-asc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firstName' and direction == 'desc'}" 
+                                                 th:src="@{/assets/images/sort-desc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort != 'firstName'}" 
+                                                 th:src="@{/assets/images/sort-none.svg}" 
+                                                 width="22" height="22" alt="">
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="govuk-table__header"
+                                        th:aria-sort="${sort == 'firmName' ? direction : 'none'}" style="width: 20%; min-width: 120px;">
+                                        <button type="button" data-index="1"
+                                            th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firmName', direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                            Firm
+                                            <img th:if="${sort == 'firmName' and direction == 'asc'}" 
+                                                 th:src="@{/assets/images/sort-asc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firmName' and direction == 'desc'}" 
+                                                 th:src="@{/assets/images/sort-desc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort != 'firmName'}" 
+                                                 th:src="@{/assets/images/sort-none.svg}" 
+                                                 width="22" height="22" alt="">
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="govuk-table__header"
+                                        th:aria-sort="${sort == 'email' ? direction : 'none'}" style="width: 35%; min-width: 200px;">
+                                        <button type="button" data-index="2"
+                                            th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                            Email
+                                            <img th:if="${sort == 'email' and direction == 'asc'}" 
+                                                 th:src="@{/assets/images/sort-asc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'email' and direction == 'desc'}" 
+                                                 th:src="@{/assets/images/sort-desc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort != 'email'}" 
+                                                 th:src="@{/assets/images/sort-none.svg}" 
+                                                 width="22" height="22" alt="">
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="govuk-table__header"
+                                        th:aria-sort="${sort == 'userType' ? direction : 'none'}" style="width: 15%; min-width: 110px;">
+                                        <button type="button" data-index="3"
+                                            th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                            User Type
+                                            <img th:if="${sort == 'userType' and direction == 'asc'}" 
+                                                 th:src="@{/assets/images/sort-asc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userType' and direction == 'desc'}" 
+                                                 th:src="@{/assets/images/sort-desc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort != 'userType'}" 
+                                                 th:src="@{/assets/images/sort-none.svg}" 
+                                                 width="22" height="22" alt="">
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="govuk-table__header"
+                                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}" style="width: 10%; min-width: 90px;">
+                                        <button type="button" data-index="4"
+                                            th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                            Status
+                                            <img th:if="${sort == 'userStatus' and direction == 'asc'}" 
+                                                 th:src="@{/assets/images/sort-asc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userStatus' and direction == 'desc'}" 
+                                                 th:src="@{/assets/images/sort-desc.svg}" 
+                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort != 'userStatus'}" 
+                                                 th:src="@{/assets/images/sort-none.svg}" 
+                                                 width="22" height="22" alt="">
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
 
-                        <tbody class="govuk-table__body">
-                            <tr class="govuk-table__row" th:each="user : ${users}">
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                    <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
-                                        th:text="${user.fullName}"></a>
-                                </td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.firm != null ? user.firm.name : ''}"></td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.entraUser.email}"></td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                    <span th:switch="${#strings.trim(user.userType)}">
-                                        <span th:case="'INTERNAL'">Internal</span>
-                                        <span th:case="'EXTERNAL_SINGLE_FIRM_ADMIN'">Firm Admin</span>
-                                        <span th:case="'EXTERNAL_SINGLE_FIRM'">Firm User</span>
-                                        <span th:case="'EXTERNAL_MULTI_FIRM'">Multi Firm User</span>
-                                        <span th:case="*" th:text="${user.userType}"></span>
-                                    </span>
-                                </td>
-                                <td class="govuk-table__cell">
-                                    <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
-                                        class="moj-badge moj-badge--red">PENDING</span>
-                                    <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
-                                        class="moj-badge moj-badge--green">COMPLETE</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                            <tbody class="govuk-table__body">
+                                <tr class="govuk-table__row" th:each="user : ${users}">
+                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
+                                            th:text="${user.fullName}"></a>
+                                    </td>
+                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                        th:text="${user.firm != null ? user.firm.name : ''}"></td>
+                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                        th:text="${user.entraUser.email}"></td>
+                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                        <span th:switch="${#strings.trim(user.userType)}">
+                                            <span th:case="'INTERNAL'">Internal</span>
+                                            <span th:case="'EXTERNAL_SINGLE_FIRM_ADMIN'">Firm Admin</span>
+                                            <span th:case="'EXTERNAL_SINGLE_FIRM'">Firm User</span>
+                                            <span th:case="'EXTERNAL_MULTI_FIRM'">Multi Firm User</span>
+                                            <span th:case="*" th:text="${user.userType}"></span>
+                                        </span>
+                                    </td>
+                                    <td class="govuk-table__cell">
+                                        <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
+                                            class="moj-badge moj-badge--red">PENDING</span>
+                                        <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
+                                            class="moj-badge moj-badge--green">COMPLETE</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </form>
                 <nav class="govuk-pagination" aria-label="Pagination">
                     <div class="govuk-pagination__prev" th:if="${page > 1}">
