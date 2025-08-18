@@ -94,7 +94,7 @@ public class LiveTechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
-        String reqStr = "{\"requiredGroups\": []}";
+        String reqStr = "{\"groups\": []}";
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));

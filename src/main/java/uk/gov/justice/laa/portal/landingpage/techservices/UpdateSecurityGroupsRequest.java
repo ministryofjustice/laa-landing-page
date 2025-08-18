@@ -12,5 +12,5 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateSecurityGroupsRequest {
-    private Set<String> requiredGroups;
+    private Set<String> groups;
 }
