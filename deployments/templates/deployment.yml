@@ -14,6 +14,7 @@ spec:
       labels:
         app: laa-landing-page # this should match the selector in service.yml
     spec:
+      serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
         runAsUser: 1000
         runAsNonRoot: true
@@ -184,3 +185,7 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
             - name: CCMS_USER_MANAGEMENT_API_KEY
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
+            - name: CCMS_USER_API_SQS_ARN
+              value: "${CCMS_USER_API_SQS_ARN}"
+            - name: AWS_REGION
+              value: "${CCMS_SQS_REGION}"

@@ -98,6 +98,10 @@ dependencies {
     implementation "org.liquibase:liquibase-core"
     // UK Gov Notify dependency for email notifications
     implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
+    
+    // AWS SQS SDK for message queue integration
+    implementation 'software.amazon.awssdk:sqs:2.28.11'
+    
     // Needed for the @Validated annotation, used when injecting properties.
     implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
 
