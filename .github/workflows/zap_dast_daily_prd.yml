@@ -1,0 +1,27 @@
+name: ZAP PRD DAST Daily Baseline Scan
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'
+
+jobs:
+  zap_scan:
+    name: ZAP PRD DAST Daily Baseline Scan Against Live App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run ZAP Daily Homepage Baseline Scan 
+        id: homepage_baseline_run
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://your-legal-aid-services.service.justice.gov.uk/'
+          cmd_options: '-a -j'
+          fail_action: false
+
+      - name: Upload ZAP Daily Homepage Baseline Run Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-zap-homepage-report
+          path: |
+            report_html.html
+            report_json.json

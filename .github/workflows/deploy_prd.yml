@@ -1,9 +1,9 @@
-name: Deploy Test
+name: Deploy Prod
 
 on:
   workflow_dispatch:
   push:
-    branches: [test]
+    branches: [prd]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   ecr:
     runs-on: ubuntu-latest
-    environment: test
+    environment: production
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
@@ -153,9 +153,9 @@ jobs:
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
           ENV_NAME: ${{ vars.ENV_NAME }}
           # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
-          RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
+          RDS_LOW_FREEABLE_MEMORY_TRIGGER: "600"
           # Should be 'prd' only if the environment is prd, otherwise set it to an random string. 
-          ALERT_ALWAYS_ON_ENV: 'null'
+          ALERT_ALWAYS_ON_ENV: 'prd'
       
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform

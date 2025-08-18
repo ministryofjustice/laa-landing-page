@@ -29,6 +29,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -108,26 +109,23 @@ public class UserController {
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-        List<Permission> permissions = new ArrayList<>();
-        if (showFirmAdmins) {
-            permissions.add(Permission.CREATE_EXTERNAL_USER);
-        }
         if (canSeeAllUsers) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, null,
-                    page, size, sort, direction);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    search, null, null, showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            permissions.add(Permission.VIEW_INTERNAL_USER);
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, List.of(UserType.INTERNAL),
-                    page, size, sort, direction);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
+                    List.of(UserType.INTERNAL),
+                    showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions, null, UserType.EXTERNAL_TYPES,
-                    page, size, sort, direction);
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
+                    UserType.EXTERNAL_TYPES,
+                    showFirmAdmins, page, size, sort, direction);
         } else {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
-                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, permissions,
-                        firm.getId(), UserType.EXTERNAL_TYPES, page, size, sort, direction);
+                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search,
+                        firm.getId(), UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();
@@ -155,6 +153,7 @@ public class UserController {
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
     }
@@ -168,6 +167,7 @@ public class UserController {
             List<AppRoleDto> roles = userService.getUserAppRolesByUserId(user.getId().toString());
             model.addAttribute("user", user);
             model.addAttribute("roles", roles);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user - " + user.getFullName());
         }
         return "edit-user";
     }
@@ -201,6 +201,7 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
         model.addAttribute("externalUser", externalUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
         return "manage-user";
     }
 
@@ -221,6 +222,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
         return "add-user-details";
     }
 
@@ -238,15 +240,13 @@ public class UserController {
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
-        // Set user details from the form
-        user.setFirstName(userDetailsForm.getFirstName());
-        user.setLastName(userDetailsForm.getLastName());
-        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
-        user.setEmail(userDetailsForm.getEmail());
-        session.setAttribute("user", user);
 
-        // Add selected userType to session
-        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+        // Validate selected User Type
+        UserType selectedUserType = userDetailsForm.getUserType();
+        // Add a check to stop users injecting internal user types into create external user post request.
+        if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
+            result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
+        }
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -262,6 +262,14 @@ public class UserController {
             return "add-user-details";
         }
 
+        // Set user details from the form
+        user.setFirstName(userDetailsForm.getFirstName());
+        user.setLastName(userDetailsForm.getLastName());
+        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
+        user.setEmail(userDetailsForm.getEmail());
+        session.setAttribute("user", user);
+        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
@@ -274,9 +282,6 @@ public class UserController {
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
-        // Clear any previous firm selection
-        session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -287,6 +292,7 @@ public class UserController {
         }
 
         model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
     }
 
@@ -318,7 +324,10 @@ public class UserController {
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
         }
-
+        FirmDto savedFirm = (FirmDto) session.getAttribute("firm");
+        if (!Objects.isNull(savedFirm) && !savedFirm.getName().equals(firmSearchForm.getFirmSearch())) {
+            firmSearchForm.setSelectedFirmId(null);
+        }
         // Check if a specific firm was selected
         if (firmSearchForm.getSelectedFirmId() != null && !firmSearchForm.getSelectedFirmId().isEmpty()) {
             try {
@@ -343,11 +352,11 @@ public class UserController {
                         "No firm found with that name. Please select from the dropdown.");
                 return "add-user-firm";
             }
-
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId().toString());
             session.setAttribute("firm", selectedFirm);
         }
-
-        session.setAttribute("firmSearchTerm", firmSearchForm.getFirmSearch());
+        session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
 
@@ -367,6 +376,7 @@ public class UserController {
         EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select services");
         return "add-user-apps";
     }
 
@@ -419,6 +429,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("userCreateRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select roles");
         return "add-user-roles";
     }
 
@@ -496,6 +507,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select offices");
         return "add-user-offices";
     }
 
@@ -548,6 +560,7 @@ public class UserController {
 
         UserType userType = (UserType) session.getAttribute("selectedUserType");
         model.addAttribute("userType", userType);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
     }
 
@@ -594,6 +607,7 @@ public class UserController {
         }
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "User created");
         return "add-user-created";
     }
 
@@ -601,7 +615,6 @@ public class UserController {
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
         session.removeAttribute("firm");
-        session.removeAttribute("selectedFirm");
         session.removeAttribute("selectedUserType");
         session.removeAttribute("isFirmAdmin");
         session.removeAttribute("apps");
@@ -632,6 +645,7 @@ public class UserController {
         editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
         return "edit-user-details";
     }
 
@@ -684,6 +698,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
 
         return "edit-user-apps";
     }
@@ -700,12 +715,12 @@ public class UserController {
 
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            userService.updateUserRoles(id, new ArrayList<>());
+            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    List.of(), "apps");
+                    changed, "apps");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -785,7 +800,8 @@ public class UserController {
                 }).toList();
 
         // Check if this is the CCMS app and organize roles by section
-        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+        boolean isCcmsApp = (currentApp.getName().contains("CCMS")
+                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {
@@ -794,11 +810,12 @@ public class UserController {
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .collect(Collectors.toList());
 
+            Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
             }
+            model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
@@ -812,6 +829,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("userEditRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
         return "edit-user-roles";
     }
 
@@ -888,9 +906,9 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles);
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }
@@ -963,6 +981,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
         return "edit-user-offices";
     }
 
@@ -1080,6 +1099,7 @@ public class UserController {
      * Grant access to a user by updating their profile status to COMPLETE
      */
     @PostMapping("/users/manage/{id}/grant-access")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantUserAccess(@PathVariable String id) {
         return "redirect:/admin/users/grant-access/" + id + "/apps";
     }
@@ -1089,6 +1109,7 @@ public class UserController {
      * assigned apps.
      */
     @GetMapping("/users/grant-access/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
             HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
@@ -1107,10 +1128,12 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select services - " + user.getFullName());
         return "grant-access-user-apps";
     }
 
     @PostMapping("/users/grant-access/{id}/apps")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessSetSelectedApps(@PathVariable String id,
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
@@ -1141,12 +1164,12 @@ public class UserController {
         // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            userService.updateUserRoles(id, new ArrayList<>());
+            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    List.of(), "apps");
+                    changed, "roles");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -1163,6 +1186,7 @@ public class UserController {
      * assigned roles.
      */
     @GetMapping("/users/grant-access/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
@@ -1219,7 +1243,8 @@ public class UserController {
                 }).toList();
 
         // Check if this is the CCMS app and organize roles by section
-        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+        boolean isCcmsApp = (currentApp.getName().contains("CCMS")
+                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {
@@ -1246,6 +1271,7 @@ public class UserController {
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("grantAccessUserRolesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select roles - " + user.getFullName());
         return "grant-access-user-roles";
     }
 
@@ -1253,6 +1279,7 @@ public class UserController {
      * Grant Access Flow - Update user roles for a specific app.
      */
     @PostMapping("/users/grant-access/{id}/roles")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
@@ -1307,9 +1334,9 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles);
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, allSelectedRoles,
+                        user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }
@@ -1328,6 +1355,7 @@ public class UserController {
      * Grant Access Flow - Get user offices for editing
      */
     @GetMapping("/users/grant-access/{id}/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1376,6 +1404,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
     }
 
@@ -1383,6 +1412,7 @@ public class UserController {
      * Grant Access Flow - Update user offices
      */
     @PostMapping("/users/grant-access/{id}/offices")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Authentication authentication,
@@ -1457,6 +1487,7 @@ public class UserController {
      * Grant Access Flow - Check answers page
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1487,6 +1518,7 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";
     }
@@ -1495,6 +1527,7 @@ public class UserController {
      * Grant Access Flow - Remove an app role from user
      */
     @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
+    @PreAuthorize("@accessControlService.canEditUser(#userId)")
     public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
             Authentication authentication) {
         try {
@@ -1525,6 +1558,7 @@ public class UserController {
      * Grant Access Flow - Process check answers and complete grant
      */
     @PostMapping("/users/grant-access/{id}/check-answers")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessProcessCheckAnswers(@PathVariable String id, Authentication authentication,
             HttpSession session) {
         try {
@@ -1561,9 +1595,11 @@ public class UserController {
      * Grant Access Flow - Show confirmation page
      */
     @GetMapping("/users/grant-access/{id}/confirmation")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessConfirmation(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Access granted - " + user.getFullName());
         return "grant-access-confirmation";
     }
 

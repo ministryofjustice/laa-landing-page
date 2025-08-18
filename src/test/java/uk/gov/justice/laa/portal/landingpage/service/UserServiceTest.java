@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -1509,20 +1510,24 @@ class UserServiceTest {
         }
 
         @Test
-        void updateUserOffices_updatesOffices_whenUserAndProfileExist() throws IOException {
+        void updateUserOffices_updatesOffices_whenUserAndProfileExistAndSameFirm() throws IOException {
             // Arrange
+            UUID firmId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
+            Firm userFirm = Firm.builder().id(firmId).build();
+
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).build();
-            Office office2 = Office.builder().id(officeId2).address(address).build();
+            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).address(address).firm(userFirm).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
+                    .firm(userFirm)
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
             EntraUser entraUser = EntraUser.builder()
@@ -1542,6 +1547,47 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
+        void updateUserOffices_doesNotUpdateAllOffices_whenUserAndProfileExistAndDifferentFirm() throws IOException {
+            // Arrange
+            UUID firmId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            UUID officeId1 = UUID.randomUUID();
+            UUID officeId2 = UUID.randomUUID();
+
+            Firm userFirm = Firm.builder().id(firmId).build();
+
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).address(address).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .firm(userFirm)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(entraUser);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockOfficeRepository.findAllById(any())).thenReturn(List.of(office1, office2));
+            when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfile);
+
+            List<String> selectedOffices = List.of(officeId1.toString(), officeId2.toString());
+
+            // Act
+            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+
+            // Assert
+            assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2500,18 +2546,18 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
     }
 
     @Test
@@ -2532,17 +2578,17 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(null), eq(0), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), eq(false), any(PageRequest.class));
     }
 
     @Test
@@ -2609,12 +2655,12 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class)))
+                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, permissions, firmId, UserType.EXTERNAL_TYPES, page, pageSize, sort, direction);
+                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2624,7 +2670,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the full name search term
         verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(permissions), eq(permissions.size()), eq(firmId), eq(UserType.EXTERNAL_TYPES), any(PageRequest.class));
+                eq("Test Name"), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
     }
 
     @Nested
@@ -2681,7 +2727,7 @@ class UserServiceTest {
                     any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
 
-            userService.updateUserRoles(userProfileId, selectedRoles);
+            String changed = userService.updateUserRoles(userProfileId, selectedRoles);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2811,6 +2857,51 @@ class UserServiceTest {
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
+        }
+
+        @Test
+        void roleDiff_add_roles() {
+            UUID newRole1Id = UUID.randomUUID();
+            UUID newRole2Id = UUID.randomUUID();
+            Set<AppRole> appRoleSet = new HashSet<>();
+            appRoleSet.add(AppRole.builder().id(newRole1Id).name("New Role 1").build());
+            appRoleSet.add(AppRole.builder().id(newRole2Id).name("New Role 2").build());
+            String diffString = UserService.diffRole(new HashSet<>(), appRoleSet);
+            assertThat(diffString).isNotEmpty();
+            assertThat(diffString).contains("Added: ");
+            assertThat(diffString).contains("New Role 1");
+            assertThat(diffString).contains("New Role 2");
+        }
+
+        @Test
+        void roleDiff_remove_roles() {
+            UUID newRole1Id = UUID.randomUUID();
+            UUID newRole2Id = UUID.randomUUID();
+            Set<AppRole> appRoleSet = new HashSet<>();
+            appRoleSet.add(AppRole.builder().id(newRole1Id).name("Old Role 1").build());
+            appRoleSet.add(AppRole.builder().id(newRole2Id).name("Old Role 2").build());
+            String diffString = UserService.diffRole(appRoleSet, new HashSet<>());
+            assertThat(diffString).isNotEmpty();
+            assertThat(diffString).contains("Removed: ");
+            assertThat(diffString).contains("Old Role 1");
+            assertThat(diffString).contains("Old Role 2");
+        }
+
+        @Test
+        void roleDiff_edit_roles() {
+            UUID newRoleId = UUID.randomUUID();
+            UUID oldRoleId = UUID.randomUUID();
+            UUID existingRoleId = UUID.randomUUID();
+            AppRole existingRole = AppRole.builder().id(existingRoleId).name("Existing Role").build();
+            Set<AppRole> oldAppRoleSet = new HashSet<>();
+            oldAppRoleSet.add(AppRole.builder().id(oldRoleId).name("Old Role").build());
+            oldAppRoleSet.add(existingRole);
+            Set<AppRole> newAppRoleSet = new HashSet<>();
+            newAppRoleSet.add(AppRole.builder().id(newRoleId).name("New Role").build());
+            newAppRoleSet.add(existingRole);
+            String diffString = UserService.diffRole(oldAppRoleSet, newAppRoleSet);
+            assertThat(diffString).isNotEmpty();
+            assertThat(diffString).isEqualTo("Removed: Old Role, Added: New Role");
         }
     }
 }
