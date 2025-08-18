@@ -17,9 +17,8 @@ public class UserTypeTest {
 
     @Test
     public void testInternalTypes() {
-        assertThat(UserType.INTERNAL_TYPES).hasSize(2);
+        assertThat(UserType.INTERNAL_TYPES).hasSize(1);
         assertThat(UserType.INTERNAL_TYPES).contains(UserType.INTERNAL);
-        assertThat(UserType.INTERNAL_TYPES).contains(UserType.GLOBAL_ADMIN);
     }
 
     @Test
