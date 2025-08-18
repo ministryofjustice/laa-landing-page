@@ -19,8 +19,7 @@ import java.time.Duration;
 @Slf4j
 public class InternalUserPolling {
     private static final String POLLING_LOCK_KEY = "INTERNAL_USER_POLLING_LOCK";
-    private static final Duration LOCK_TIMEOUT = Duration.ofMinutes(5);
-    
+
     private final InternalUserPollingService internalUserPollingService;
     private final DistributedLockService lockService;
 
@@ -30,6 +29,9 @@ public class InternalUserPolling {
     @Value("${app.enable.distributed.db.locking}")
     private boolean enableDistributedDbLocking;
 
+    @Value("${app.distributed.db.locking.period}")
+    private int distributedDbLockingPeriod;
+
     @Scheduled(fixedRateString = "${internal.user.polling.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void poll() {
@@ -37,7 +39,7 @@ public class InternalUserPolling {
             log.debug("Starting internal user polling process...");
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(POLLING_LOCK_KEY, LOCK_TIMEOUT, () -> {
+                    lockService.withLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for internal user polling");
                         internalUserPollingService.pollForNewUsers();
                         log.debug("Completed internal user polling");

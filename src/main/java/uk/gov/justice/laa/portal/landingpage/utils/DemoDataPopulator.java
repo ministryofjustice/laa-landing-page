@@ -54,7 +54,6 @@ import java.util.Set;
 public class DemoDataPopulator {
 
     private static final String DEMO_DATA_LOCK_KEY = "DEMO_DATA_POPULATOR_LOCK";
-    private static final Duration LOCK_TIMEOUT = Duration.ofMinutes(30);
 
     private final DistributedLockService lockService;
 
@@ -84,6 +83,9 @@ public class DemoDataPopulator {
 
     @Value("${app.enable.distributed.db.locking}")
     private boolean enableDistributedDbLocking;
+
+    @Value("${app.distributed.db.locking.period}")
+    private int distributedDbLockingPeriod;
 
     @Value("${app.civil.apply.name}")
     private String appCivilApplyName;
@@ -207,7 +209,7 @@ public class DemoDataPopulator {
             log.info("Attempting to populate demo data...");
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(DEMO_DATA_LOCK_KEY, LOCK_TIMEOUT, () -> {
+                    lockService.withLock(DEMO_DATA_LOCK_KEY, Duration.ofSeconds(distributedDbLockingPeriod), () -> {
                         log.info("Acquired lock for demo data population");
                         initialTestData();
                         log.info("Completed demo data population");
