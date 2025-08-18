@@ -790,7 +790,8 @@ public class UserController {
                 }).toList();
 
         // Check if this is the CCMS app and organize roles by section
-        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+        boolean isCcmsApp = (currentApp.getName().contains("CCMS")
+                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {
@@ -1229,7 +1230,8 @@ public class UserController {
                 }).toList();
 
         // Check if this is the CCMS app and organize roles by section
-        boolean isCcmsApp = currentApp.getName().contains("CCMS")
+        boolean isCcmsApp = (currentApp.getName().contains("CCMS")
+                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {

@@ -3191,6 +3191,41 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRoles_shouldNotDetectCcmsForRegularAppWithCcmsInName() {
+        // Given
+        final String userId = "user123";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+
+        AppDto regularApp = new AppDto();
+        regularApp.setId("app1");
+        regularApp.setName("Requests to transfer CCMS cases");
+
+        AppRoleDto regularRole = new AppRoleDto();
+        regularRole.setId("role1");
+        regularRole.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN"); // Not a CCMS role
+
+        final List<AppRoleDto> roles = List.of(regularRole);
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", List.of("app1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+    }
+
+    @Test
     void editUserRoles_shouldHandleMixedCcmsAndRegularRoles() {
         // Given
         final String userId = "user123";
