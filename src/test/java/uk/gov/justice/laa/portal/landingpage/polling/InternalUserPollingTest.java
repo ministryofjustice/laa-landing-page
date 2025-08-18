@@ -2,37 +2,41 @@ package uk.gov.justice.laa.portal.landingpage.polling;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 import uk.gov.justice.laa.portal.landingpage.service.InternalUserPollingService;
 
-import java.time.Duration;
-import java.util.function.Supplier;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 class InternalUserPollingTest {
 
     @Mock
     private InternalUserPollingService internalUserPollingService;
 
-    private static final String POLLING_LOCK_KEY = "INTERNAL_USER_POLLING_LOCK";
-
     private InternalUserPolling internalUserPolling;
-    @Mock
     private DistributedLockService lockService;
+    @Mock
+    private DistributedLockRepository lockRepository;
 
     @BeforeEach
     void setUp() {
+        lockService = new DistributedLockService(lockRepository);
         internalUserPolling = new InternalUserPolling(internalUserPollingService, lockService);
         setPollingEnabled(true);
+        ReflectionTestUtils.setField(internalUserPolling, "enableDistributedDbLocking", true);
     }
 
     @Test
@@ -41,12 +45,20 @@ class InternalUserPollingTest {
         internalUserPolling.poll();
 
         // Then
-        verify(lockService).withLock(
-                eq(POLLING_LOCK_KEY),
-                any(Duration.class),
-                any(Supplier.class)
-        );
         verify(internalUserPollingService).pollForNewUsers();
+        verify(lockRepository, times(1)).acquireLock(any(), any(), any());
+    }
+
+    @Test
+    void shouldNotTryToAcquireLockAndCallPollForNewUsers_whenPollingEnabled() {
+        // Given
+        ReflectionTestUtils.setField(internalUserPolling, "enableDistributedDbLocking", false);
+        // When
+        internalUserPolling.poll();
+
+        // Then
+        verify(internalUserPollingService).pollForNewUsers();
+        verify(lockRepository, never()).acquireLock(any(), any(), any());
     }
 
     @Test
@@ -58,7 +70,6 @@ class InternalUserPollingTest {
         internalUserPolling.poll();
 
         // Then
-        verify(lockService, never()).withLock(any(), any(), any(Supplier.class));
         verify(internalUserPollingService, never()).pollForNewUsers();
     }
 
@@ -66,8 +77,8 @@ class InternalUserPollingTest {
     void shouldHandleLockAcquisitionFailure_gracefully() {
         // Given
         doThrow(new RuntimeException("Lock acquisition failed"))
-                .when(lockService)
-                .withLock(any(), any(), any(Supplier.class));
+                .when(lockRepository)
+                .acquireLock(any(), any(), any());
 
         // When/Then
         assertDoesNotThrow(() -> internalUserPolling.poll());
@@ -77,25 +88,20 @@ class InternalUserPollingTest {
     @Test
     void shouldOnlyAllowOneInstanceToAcquireLock() {
         // Given
-        InternalUserPolling anotherInstance = new InternalUserPolling(internalUserPollingService, lockService);
         setPollingEnabled(true);
+        InternalUserPolling anotherInstance = new InternalUserPolling(internalUserPollingService, lockService);
 
         // When
         internalUserPolling.poll();
 
         // Then
-        verify(lockService).withLock(
-                eq(POLLING_LOCK_KEY),
-                any(Duration.class),
-                any(Supplier.class)
-        );
         verify(internalUserPollingService).pollForNewUsers();
 
         // When
         anotherInstance.poll();
 
         // Then
-        verify(lockService, times(2)).withLock(any(), any(), any(Supplier.class));
+        verify(lockRepository, times(1)).acquireLock(any(), any(), any());
         verify(internalUserPollingService).pollForNewUsers();
     }
 
@@ -105,13 +111,12 @@ class InternalUserPollingTest {
         internalUserPolling.poll();
 
         // Then
-        verify(lockService).withLock(
-                eq(POLLING_LOCK_KEY),
-                any(Duration.class),
-                any(Supplier.class)
+        verify(lockRepository).acquireLock(
+                anyString(),
+                any(LocalDateTime.class),
+                anyString()
         );
         verify(internalUserPollingService).pollForNewUsers();
-        verify(lockService).releaseLock(eq(POLLING_LOCK_KEY));
     }
 
     // Helper method to set polling enabled state

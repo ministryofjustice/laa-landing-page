@@ -9,7 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -59,7 +58,7 @@ class DistributedLockServiceTest {
     void withLock_WhenLockNotAcquired_ShouldNotExecuteTask() {
         // Given
         when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
-        when(lockRepository.findById(anyString())).thenReturn(Optional.empty());
+        when(lockRepository.save(any())).thenThrow(new RuntimeException("Error acquiring lock"));
 
         // When/Then
         assertThrows(

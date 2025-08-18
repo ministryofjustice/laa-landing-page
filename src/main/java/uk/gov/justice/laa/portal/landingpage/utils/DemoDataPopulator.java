@@ -82,6 +82,9 @@ public class DemoDataPopulator {
     @Value("${app.populate.dummy-data}")
     private boolean populateDummyData;
 
+    @Value("${app.enable.distributed.db.locking}")
+    private boolean enableDistributedDbLocking;
+
     @Value("${app.civil.apply.name}")
     private String appCivilApplyName;
 
@@ -202,18 +205,22 @@ public class DemoDataPopulator {
     public void appReady(ApplicationReadyEvent event) {
         if (populateDummyData) {
             log.info("Attempting to populate demo data...");
-            try {
-                lockService.withLock(DEMO_DATA_LOCK_KEY, LOCK_TIMEOUT, () -> {
-                    log.info("Acquired lock for demo data population");
-                    initialTestData();
-                    log.info("Completed demo data population");
-                    return null;
-                });
-            } catch (DistributedLockService.LockAcquisitionException e) {
-                log.warn("Could not acquire lock for demo data population. Another instance might be running.");
-            } catch (Exception e) {
-                log.error("Error during demo data population", e);
-                throw e; // Re-throw to ensure transaction rollback on error
+            if (enableDistributedDbLocking) {
+                try {
+                    lockService.withLock(DEMO_DATA_LOCK_KEY, LOCK_TIMEOUT, () -> {
+                        log.info("Acquired lock for demo data population");
+                        initialTestData();
+                        log.info("Completed demo data population");
+                        return null;
+                    });
+                } catch (DistributedLockService.LockAcquisitionException e) {
+                    log.warn("Could not acquire lock for demo data population. Another instance might be running.");
+                } catch (Exception e) {
+                    log.error("Error during demo data population", e);
+                    throw e; // Re-throw to ensure transaction rollback on error
+                }
+            } else {
+                initialTestData();
             }
         } else {
             log.info("Demo data population is disabled via configuration");
@@ -320,7 +327,7 @@ public class DemoDataPopulator {
                 }
             } catch (Exception ex) {
                 log.error("Unable to add user to the list of users in the database, the user may not present in entra: "
-                                + userPrincipal, ex);
+                        + userPrincipal, ex);
                 System.err.println("Continuing with the list of users in the database");
             }
 
