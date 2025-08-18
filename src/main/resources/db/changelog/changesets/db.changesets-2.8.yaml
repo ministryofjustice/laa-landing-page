@@ -1,31 +1,36 @@
 databaseChangeLog:
   - changeSet:
-      id: 1
-      author: system
+      id: 1755520094956-1
+      author: suresh.kavali (generated)
       changes:
         - createTable:
-            tableName: distributed_lock
             columns:
               - column:
-                  name: lock_key
-                  type: varchar(255)
                   constraints:
+                    nullable: false
                     primaryKey: true
-                    nullable: false
+                    primaryKeyName: distributed_lock_pkey
+                  name: lock_key
+                  type: VARCHAR(255)
               - column:
+                  constraints:
+                    nullable: false
                   name: locked_until
-                  type: timestamp
-                  constraints:
-                    nullable: false
+                  type: TIMESTAMP WITHOUT TIME ZONE
               - column:
-                  name: locked_by
-                  type: varchar(255)
                   constraints:
                     nullable: false
-        - createIndex:
+                  name: locked_by
+                  type: VARCHAR(255)
             tableName: distributed_lock
-            indexName: idx_distributed_lock_locked_until
+  - changeSet:
+      id: 1755520094956-2
+      author: suresh.kavali (generated)
+      changes:
+        - createIndex:
             columns:
               - column:
                   name: locked_until
-      comment: Add distributed_lock table for coordinating tasks across multiple application instances
+            indexName: idx_distributed_lock_locked_until
+            tableName: distributed_lock
+            using: btree
