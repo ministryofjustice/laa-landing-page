@@ -1,4 +1,5 @@
-<html th:fragment="layout" lang="en" class="govuk-template" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html th:fragment="layout" lang="en" class="govuk-template--rebranded" xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head th:replace="~{partials/head :: head}">
 </head>
@@ -43,10 +44,10 @@
 
         // Initialize only if not already initialized
         if (!window.govukFrontendInitialized) {
-            GOVUKFrontend.initAll()
+            GOVUKFrontend.initAll({ rebrand: true });
             window.govukFrontendInitialized = true
         }
-        
+
         if (!window.mojFrontendInitialized) {
             MOJUKFrontend.initAll()
             window.mojFrontendInitialized = true

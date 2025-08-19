@@ -4,7 +4,6 @@
     
     <!-- Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     
@@ -16,20 +15,21 @@
     <meta name="robots" content="index, follow">
     <meta name="format-detection" content="telephone=no">
     
-    <!-- Progressive Web App -->
-    <link rel="manifest" th:href="@{/assets/manifest.json}">
-    <meta name="theme-color" content="#0b0c0c">
+        <!-- Progressive Web App -->
+    <meta name="theme-color" content="#1d70b8">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Legal Aid Services">
+    
 
     <!-- Favicons and Icons -->
-    <link rel="shortcut icon" sizes="16x16 32x32 48x48" th:href="@{/assets/images/favicon.ico}" type="image/x-icon">
-    <link rel="mask-icon" th:href="@{/assets/images/govuk-mask-icon.svg}" color="#0b0c0c">
-    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/assets/images/govuk-apple-touch-icon-180x180.png}">
-    <link rel="apple-touch-icon" sizes="167x167" th:href="@{/assets/images/govuk-apple-touch-icon-167x167.png}">
-    <link rel="apple-touch-icon" sizes="152x152" th:href="@{/assets/images/govuk-apple-touch-icon-152x152.png}">
-    <link rel="apple-touch-icon" th:href="@{/assets/images/govuk-apple-touch-icon.png}">
+    <link rel="icon" sizes="48x48" th:href="@{/assets/rebrand/images/favicon.ico}">
+    <link rel="icon" sizes="any" th:href="@{/assets/rebrand/images/favicon.svg}" type="image/svg+xml">
+    <link rel="mask-icon" th:href="@{/assets/rebrand/images/govuk-icon-mask.svg}" color="#1d70b8">
+    <link rel="apple-touch-icon" th:href="@{/assets/rebrand/images/govuk-icon-180.png}">
+    <link rel="manifest" th:href="@{/assets/rebrand/manifest.json}">
+    <meta property="og:image" th:content="@{/assets/rebrand/images/govuk-opengraph-image.png}">
 
     <!-- Stylesheets -->
     <link th:href="@{/css/govuk-frontend-5.11.1.min.css}" rel="stylesheet" type="text/css">
