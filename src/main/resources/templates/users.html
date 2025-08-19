@@ -9,7 +9,6 @@
 </head>
 
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
         <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
             aria-label="success: User added successfully" data-module="moj-alert">
