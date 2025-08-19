@@ -1543,6 +1543,7 @@ class UserControllerTest {
         // Simulate roles for previous apps already selected
         Map<Integer, List<String>> existingRoles = new HashMap<>();
         existingRoles.put(0, List.of("role1", "role2"));
+        existingRoles.put(1, null);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
