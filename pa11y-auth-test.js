@@ -104,7 +104,7 @@ const puppeteer = require('puppeteer');
     console.log('Login flow completed successfully');
 
     // === OPTIONAL: Run Pa11y Accessibility Test ===
-    const results = await pa11y(`https://${namespace}..your-legal-aid-services.service.justice.gov.uk`, {
+    const results = await pa11y(`https://${namespace}.your-legal-aid-services.service.justice.gov.uk`, {
       browser,
       page,
     });
