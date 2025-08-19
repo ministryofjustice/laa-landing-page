@@ -94,6 +94,12 @@
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">
+                                            User type
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.userType.getFriendlyName()}"></dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
