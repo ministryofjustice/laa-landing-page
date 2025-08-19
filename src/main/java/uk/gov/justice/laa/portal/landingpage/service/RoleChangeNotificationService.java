@@ -101,13 +101,13 @@ public class RoleChangeNotificationService {
      * This ensures that duplicate messages with the same content are not processed multiple times
      */
     private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {
-        String content = userProfile.getEntraUser().getEntraOid() + "-" + 
-                        userProfile.getLegacyUserId() + "-" +
-                        newPuiRoles.stream()
+        String content = userProfile.getEntraUser().getEntraOid() + "-"
+                + userProfile.getLegacyUserId() + "-"
+                + newPuiRoles.stream()
                             .map(AppRole::getCcmsCode)
                             .sorted()
-                            .reduce("", (a, b) -> a + b) + "-" +
-                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"));
+                            .reduce("", (a, b) -> a + b) + "-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"));
 
         return UUID.nameUUIDFromBytes(content.getBytes()).toString();
     }
