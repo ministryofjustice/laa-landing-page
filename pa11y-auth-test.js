@@ -9,12 +9,12 @@ const puppeteer = require('puppeteer');
   console.log('NAMESPACE:', process.env.NAMESPACE ? '[SET]' : '[MISSING]');
   console.log('ENTRA_USERNAME:', process.env.ENTRA_USERNAME ? '[SET]' : '[MISSING]');
   console.log('ENTRA_PASSWORD:', process.env.ENTRA_PASSWORD ? '[SET]' : '[MISSING]');
-  
+
   ['NAMESPACE', 'ENTRA_USERNAME', 'ENTRA_PASSWORD'].forEach((key) => {
     if (!process.env[key]) {
       console.error(`Missing required env var: ${key}`);
     }
-    });
+  });
 
   if (!namespace || !username || !password) {
     console.error("One or more required environment variables (NAMESPACE, ENTRA_USERNAME, ENTRA_PASSWORD) are missing.");
@@ -22,10 +22,10 @@ const puppeteer = require('puppeteer');
   }
 
   const urls = [
-    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
-    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/home`,
-    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/users`,
-    `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/users/manage/4e4d12bb-e0f7-4951-955f-fefe5958a1f9`,
+    `https://${namespace}.your-legal-aid-services.service.justice.gov.uk`,
+    `https://${namespace}.your-legal-aid-services.service.justice.gov.uk/home`,
+    `https://${namespace}.your-legal-aid-services.service.justice.gov.uk/users`,
+    `https://${namespace}.your-legal-aid-services.service.justice.gov.uk/users/manage/4e4d12bb-e0f7-4951-955f-fefe5958a1f9`,
   ];
 
   const browser = await puppeteer.launch({
@@ -34,7 +34,7 @@ const puppeteer = require('puppeteer');
   const page = await browser.newPage();
   try {
     console.log('Step 1: Navigating to login page...');
-    await page.goto(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, { waitUntil: 'networkidle2' });
+    await page.goto(`https://${namespace}.your-legal-aid-services.service.justice.gov.uk`, { waitUntil: 'networkidle2' });
 
     // === FIRST LOGIN ATTEMPT ===
     console.log('Step 2: Typing username...');
@@ -57,15 +57,15 @@ const puppeteer = require('puppeteer');
 
     // === "STAY SIGNED IN?" SCREEN ===
     try {
-        console.log('Step 7: Checking for "Stay signed in?" prompt...');
-        await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
-  
-        console.log('"Stay signed in?" prompt detected. Clicking "No"...');
-        await page.click('#idBtn_Back');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-      } catch (staySignedInSkip) {
-        console.log('No "Stay signed in?" prompt appeared.');
-      }
+      console.log('Step 7: Checking for "Stay signed in?" prompt...');
+      await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
+
+      console.log('"Stay signed in?" prompt detected. Clicking "No"...');
+      await page.click('#idBtn_Back');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    } catch (staySignedInSkip) {
+      console.log('No "Stay signed in?" prompt appeared.');
+    }
 
     // === SECOND LOGIN ===
     try {
@@ -99,12 +99,12 @@ const puppeteer = require('puppeteer');
 
     // Test if we have logged in
     console.log('Step 8: Testing if we have logged in.');
-    await page.waitForSelector('nav[class="moj-sub-navigation"]',{ visible: true,  timeout: 5000});
+    await page.waitForSelector('nav[class="moj-sub-navigation"]', { visible: true, timeout: 5000 });
 
     console.log('Login flow completed successfully');
 
     // === OPTIONAL: Run Pa11y Accessibility Test ===
-    const results = await pa11y(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, {
+    const results = await pa11y(`https://${namespace}..your-legal-aid-services.service.justice.gov.uk`, {
       browser,
       page,
     });
@@ -112,13 +112,13 @@ const puppeteer = require('puppeteer');
     console.log('Accessibility results:');
     console.log(results);
 
-  
+
   } catch (error) {
     console.error('Login automation failed:', error);
     await page.screenshot({ path: 'login-failure.png' });
     process.exit(1);
-  }  
-  
+  }
+
 
   // Loop through URLs after login
   for (const url of urls) {
