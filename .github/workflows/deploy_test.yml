@@ -129,6 +129,8 @@ jobs:
           CCMS_USER_MANAGEMENT_API_KEY: ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
           CCMS_USER_API_SQS_ARN: ${{ secrets.CCMS_USER_API_SQS_ARN }}
           CCMS_SQS_REGION: ${{ secrets.CCMS_SQS_REGION }}
+          ENABLE_DISTRIBUTED_DB_LOCKING: ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
+          DISTRIBUTED_DB_LOCKING_PERIOD: ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
 
       - name: Deploy to Cloud Platform
         run: |
