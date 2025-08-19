@@ -1,21 +1,43 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#0b0c0c">
-
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    
+    <!-- SEO and Accessibility -->
+    <meta name="description" content="Your legal aid services - GOV.UK">
+    <meta name="keywords" content="legal aid, services, government, MOJ, Ministry of Justice, legal assistance">
+    <meta name="author" content="Ministry of Justice">
+    <meta name="application-name" content="Your legal aid services - GOV.UK">
+    <meta name="robots" content="index, follow">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Progressive Web App -->
+    <link rel="manifest" th:href="@{/assets/manifest.json}">
+    <meta name="theme-color" content="#0b0c0c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Legal Aid Services">
 
-    <link rel="shortcut icon" sizes="16x16 32x32 48x48" href="/assets/images/favicon.ico" type="image/x-icon">
-    <link rel="mask-icon" href="/assets/images/govuk-mask-icon.svg" color="#0b0c0c">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/govuk-apple-touch-icon-180x180.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/assets/images/govuk-apple-touch-icon-167x167.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/govuk-apple-touch-icon-152x152.png">
-    <link rel="apple-touch-icon" href="/assets/images/govuk-apple-touch-icon.png">
+    <!-- Favicons and Icons -->
+    <link rel="shortcut icon" sizes="16x16 32x32 48x48" th:href="@{/assets/images/favicon.ico}" type="image/x-icon">
+    <link rel="mask-icon" th:href="@{/assets/images/govuk-mask-icon.svg}" color="#0b0c0c">
+    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/assets/images/govuk-apple-touch-icon-180x180.png}">
+    <link rel="apple-touch-icon" sizes="167x167" th:href="@{/assets/images/govuk-apple-touch-icon-167x167.png}">
+    <link rel="apple-touch-icon" sizes="152x152" th:href="@{/assets/images/govuk-apple-touch-icon-152x152.png}">
+    <link rel="apple-touch-icon" th:href="@{/assets/images/govuk-apple-touch-icon.png}">
 
-    <link th:href="@{/css/govuk-frontend-5.8.0.min.css}" rel="stylesheet" type="text/css">
-    <link th:href="@{/css/moj-frontend-5.1.2.min.css}" rel="stylesheet" type="text/css">
-    <link th:href="@{/css/styles.css}" rel="stylesheet" />
-    <title
-        th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
+    <!-- Stylesheets -->
+    <link th:href="@{/css/govuk-frontend-5.11.1.min.css}" rel="stylesheet" type="text/css">
+    <link th:href="@{/css/moj-frontend-5.1.5.min.css}" rel="stylesheet" type="text/css">
+    <link th:href="@{/css/styles.css}" rel="stylesheet" type="text/css">
+    
+    <!-- Page Title -->
+    <title th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
+        Your legal aid services - GOV.UK
     </title>
 </head>

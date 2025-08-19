@@ -1,4 +1,4 @@
-<html th:fragment="layout" lang="en" class="govuk-template">
+<html th:fragment="layout" lang="en" class="govuk-template" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head th:replace="~{partials/head :: head}">
 </head>
@@ -37,14 +37,20 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous">
         </script>
-    <script type="module" th:src="@{/js/govuk-frontend-5.8.0.min.js}"></script>
-    <script type="module" th:src="@{/js/moj-frontend-5.1.2.min.js}"></script>
     <script type="module">
-        import * as GOVUKFrontend from '/js/govuk-frontend-5.8.0.min.js'
-        import * as MOJUKFrontend from '/js/moj-frontend-5.1.2.min.js'
+        import * as GOVUKFrontend from '/js/govuk-frontend-5.11.1.min.js'
+        import * as MOJUKFrontend from '/js/moj-frontend-5.1.5.min.js'
 
-        GOVUKFrontend.initAll()
-        MOJUKFrontend.initAll()
+        // Initialize only if not already initialized
+        if (!window.govukFrontendInitialized) {
+            GOVUKFrontend.initAll()
+            window.govukFrontendInitialized = true
+        }
+        
+        if (!window.mojFrontendInitialized) {
+            MOJUKFrontend.initAll()
+            window.mojFrontendInitialized = true
+        }
     </script>
 </body>
 
