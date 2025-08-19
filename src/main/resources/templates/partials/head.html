@@ -1,12 +1,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    
-    <!-- Security Headers -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    
+
+
     <!-- SEO and Accessibility -->
     <meta name="description" content="Your legal aid services - GOV.UK">
     <meta name="keywords" content="legal aid, services, government, MOJ, Ministry of Justice, legal assistance">
@@ -14,14 +10,14 @@
     <meta name="application-name" content="Your legal aid services - GOV.UK">
     <meta name="robots" content="index, follow">
     <meta name="format-detection" content="telephone=no">
-    
-        <!-- Progressive Web App -->
+
+    <!-- Progressive Web App -->
     <meta name="theme-color" content="#1d70b8">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Legal Aid Services">
-    
+
 
     <!-- Favicons and Icons -->
     <link rel="icon" sizes="48x48" th:href="@{/assets/rebrand/images/favicon.ico}">
@@ -35,9 +31,10 @@
     <link th:href="@{/css/govuk-frontend-5.11.1.min.css}" rel="stylesheet" type="text/css">
     <link th:href="@{/css/moj-frontend-5.1.5.min.css}" rel="stylesheet" type="text/css">
     <link th:href="@{/css/styles.css}" rel="stylesheet" type="text/css">
-    
+
     <!-- Page Title -->
-    <title th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
+    <title
+        th:text="${pageTitle != null ? pageTitle + ' - Your legal aid services - GOV.UK' : 'Your legal aid services - GOV.UK'}">
         Your legal aid services - GOV.UK
     </title>
 </head>
