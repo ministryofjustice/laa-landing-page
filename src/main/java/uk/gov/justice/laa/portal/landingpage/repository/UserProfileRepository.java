@@ -78,8 +78,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     @Query("""
             SELECT ups FROM UserProfile ups
-            WHERE 1=1
-            AND (:firmId IS NULL OR ups.firm.id = :firmId)
+            WHERE (:firmId IS NULL OR ups.firm.id = :firmId)
             AND (:userTypes IS NULL OR ups.userType IN :userTypes)
             AND (
                 :search = '' OR 
