@@ -78,6 +78,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     @Query("""
             SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser u
             WHERE (:firmId IS NULL OR ups.firm.id = :firmId)
             AND (:userTypes IS NULL OR ups.userType IN :userTypes)
             AND (
