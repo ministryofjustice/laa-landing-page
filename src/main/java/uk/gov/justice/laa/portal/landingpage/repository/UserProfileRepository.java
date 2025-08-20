@@ -87,6 +87,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                     WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+                    OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))
                 )
             )
             AND (:showFirmAdmins = false OR EXISTS (
