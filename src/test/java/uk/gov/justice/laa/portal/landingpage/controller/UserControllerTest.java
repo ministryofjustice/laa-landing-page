@@ -34,8 +34,11 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
@@ -46,6 +49,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import com.microsoft.graph.models.User;
 
 import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
@@ -952,7 +956,7 @@ class UserControllerTest {
     @Test
     public void testUpdateUserRolesReturnsCorrectView() {
         // Given
-        final String userId = "12345";
+        final String userId = UUID.randomUUID().toString();
         final RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role1"));
         MockHttpSession testSession = new MockHttpSession();
@@ -4023,6 +4027,62 @@ class UserControllerTest {
                 assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
                         + " && @accessControlService.canEditUser(#id)");
             }
+        }
+    }
+
+    @Test
+    void handleAuthorizationException_withAuthorizationDeniedException_redirectsToNotAuthorized() {
+        // Given
+        MockHttpSession mockSession = new MockHttpSession();
+        AuthorizationDeniedException authException = new AuthorizationDeniedException("Access denied");
+
+        // When
+        RedirectView result = userController.handleAuthorizationException(authException, mockSession);
+
+        // Then
+        assertThat(result.getUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
+    void handleAuthorizationException_withAccessDeniedException_redirectsToNotAuthorized() {
+        // Given
+        MockHttpSession mockSession = new MockHttpSession();
+        AccessDeniedException accessException = 
+            new AccessDeniedException("Access denied");
+
+        // When
+        RedirectView result = userController.handleAuthorizationException(accessException, mockSession);
+
+        // Then
+        assertThat(result.getUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
+    void handleAuthorizationException_logsWarningMessage() {
+        // Given
+        MockHttpSession mockSession = new MockHttpSession();
+        AuthorizationDeniedException authException = 
+            new AuthorizationDeniedException("Test access denied");
+
+        // Setup log monitoring
+        Logger logger = (Logger) 
+            LoggerFactory.getLogger(UserController.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        logger.addAppender(listAppender);
+
+        try {
+            // When
+            userController.handleAuthorizationException(authException, mockSession);
+
+            // Then
+            List<ILoggingEvent> logsList = listAppender.list;
+            assertThat(logsList).hasSize(1);
+            assertThat(logsList.get(0).getLevel()).isEqualTo(Level.WARN);
+            assertThat(logsList.get(0).getMessage()).isEqualTo("Authorization denied while accessing user: {}");
+            assertThat(logsList.get(0).getArgumentArray()).containsExactly("Test access denied");
+        } finally {
+            logger.detachAppender(listAppender);
         }
     }
 }
