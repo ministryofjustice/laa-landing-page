@@ -85,8 +85,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 EXISTS (
                     SELECT 1 FROM ups.entraUser u 
                     WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))
                 )
             )
