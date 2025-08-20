@@ -57,8 +57,6 @@ dependencies {
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
-    implementation 'io.sentry:sentry-spring-boot-starter:8.16.0'
-
     implementation 'org.apache.httpcomponents.client5:httpclient5'
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
