@@ -180,8 +180,8 @@ public class UserController {
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user - " + user.getFullName());
             
             // Store filter parameters for "Back to Filter" functionality
-            if (size != null || page != null || sort != null || direction != null || 
-                search != null || showFirmAdmins != null || usertype != null) {
+            if (size != null || page != null || sort != null || direction != null
+                    || search != null || showFirmAdmins != null || usertype != null) {
                 session.setAttribute("userListFilters", Map.of(
                     "size", size != null ? size : 10,
                     "page", page != null ? page : 1,
@@ -242,8 +242,8 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
         
         // Store filter parameters for "Back to Filter" functionality
-        if (size != null || page != null || sort != null || direction != null || 
-            search != null || showFirmAdmins != null || usertype != null) {
+        if (size != null || page != null || sort != null || direction != null
+                || search != null || showFirmAdmins != null || usertype != null) {
             session.setAttribute("userListFilters", Map.of(
                 "size", size != null ? size : 10,
                 "page", page != null ? page : 1,
