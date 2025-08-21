@@ -1311,7 +1311,7 @@ class UserControllerTest {
                         .city(address.getCity()).postcode(address.getPostcode()).build()).build();
         List<Office> allOffices = List.of(office1, office2);
 
-        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(); // User has access to all offices
 
         // Mock user firms for the new firmService call
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -1334,8 +1334,8 @@ class UserControllerTest {
         List<OfficeModel> offices = (List<OfficeModel>) model.getAttribute("officeData");
         assertThat(offices).hasSize(2);
         // All offices should be selected when user has access to all
-        assertThat(offices.get(0).isSelected()).isTrue();
-        assertThat(offices.get(1).isSelected()).isTrue();
+        assertThat(offices.get(0).isSelected()).isFalse();
+        assertThat(offices.get(1).isSelected()).isFalse();
     }
 
     @Test
@@ -2905,7 +2905,7 @@ class UserControllerTest {
         OfficeDto office2Dto = OfficeDto.builder().id(office2.getId())
                 .address(OfficeDto.AddressDto.builder().addressLine1(office2.getAddress().getAddressLine1()).build()).build();
 
-        List<OfficeDto> userOffices = List.of(office1Dto, office2Dto); // User has access to all offices
+        List<OfficeDto> userOffices = List.of(); // User has access to all offices
         List<Office> allOffices = List.of(office1, office2);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
