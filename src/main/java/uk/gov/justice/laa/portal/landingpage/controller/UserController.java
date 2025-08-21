@@ -124,22 +124,25 @@ public class UserController {
             paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
                     search, firmUuid, null, showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, firmUuid,
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
                     List.of(UserType.INTERNAL),
                     showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            List<FirmDto> userFirms = firmService.getUserAllFirms(entraUser);
-            boolean hasFirmAccess = userFirms.stream()
-                    .anyMatch(firm -> firm.getId().equals(firmUuid));
-            if (firmUuid != null && !hasFirmAccess) {
-                log.error("Unauthorized firm access for firm id: {}", firmUuid);
-                throw new AccessDeniedException("Unauthorized firm access for firm id: " + firmUuid);
-            }
-
             paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, firmUuid,
                     UserType.EXTERNAL_TYPES,
                     showFirmAdmins, page, size, sort, direction);
         } else {
+
+            if (firmUuid != null) {
+                List<FirmDto> userFirms = firmService.getUserAllFirms(entraUser);
+                boolean hasFirmAccess = userFirms.stream()
+                        .anyMatch(firm -> firm.getId().equals(firmUuid));
+                if (!hasFirmAccess) {
+                    log.error("Unauthorized firm access for firm id: {}", firmUuid);
+                    throw new AccessDeniedException("Unauthorized firm access for firm id: " + firmUuid);
+                }
+            }
+
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
