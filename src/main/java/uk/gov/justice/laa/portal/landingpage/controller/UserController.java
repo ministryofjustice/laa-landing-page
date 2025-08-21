@@ -143,9 +143,10 @@ public class UserController {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
+                UUID firmId = firmUuid == null? firm.getId() : firmUuid;
                 // If a firm filter is selected, use that instead of the user's firm
                 paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search,
-                        firmUuid, UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
+                        firmId, UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();

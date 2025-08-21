@@ -142,7 +142,7 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session,
                 authentication);
 
         assertThat(view).isEqualTo("users");
@@ -189,7 +189,7 @@ class UserControllerTest {
                 any())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session,
                 authentication);
 
         // Assert
@@ -215,7 +215,7 @@ class UserControllerTest {
                 any(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session,
                 authentication);
 
         // Assert
@@ -236,7 +236,7 @@ class UserControllerTest {
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "Test", false, model, session,
+        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "Test", false, null, model, session,
                 authentication);
 
         // Assert
@@ -259,7 +259,7 @@ class UserControllerTest {
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "", false, model, session,
+        String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "", false, null, model, session,
                 authentication);
 
         // Assert
@@ -1603,7 +1603,7 @@ class UserControllerTest {
 
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, true, model, session,
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, true, null, model, session,
                 authentication);
 
         // Then
@@ -1633,7 +1633,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, null, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -2399,7 +2399,7 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn(null);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
