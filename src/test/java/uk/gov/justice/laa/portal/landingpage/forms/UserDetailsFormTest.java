@@ -77,7 +77,7 @@ class UserDetailsFormTest {
     }
 
     @Test
-    void EmailHasPlus_shouldTriggerPatternViolation() {
+    void emailHasPlus_shouldTriggerPatternViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirstName("John");
         form.setLastName("Doe");
