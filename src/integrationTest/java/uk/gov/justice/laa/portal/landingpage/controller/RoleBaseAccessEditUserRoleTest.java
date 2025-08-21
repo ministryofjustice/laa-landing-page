@@ -276,7 +276,6 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         // Teardown
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
-        System.out.println();
     }
 
 
