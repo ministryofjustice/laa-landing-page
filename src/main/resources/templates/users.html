@@ -181,7 +181,7 @@
                             <tbody class="govuk-table__body">
                                 <tr class="govuk-table__row" th:each="user : ${users}">
                                     <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id}, size=${requestedPageSize}, page=${page}, search=${search}, sort=${sort}, direction=${direction}, showFirmAdmins=${showFirmAdmins}, usertype=${usertype})}"
                                             th:text="${user.fullName}"></a>
                                     </td>
                                     <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
