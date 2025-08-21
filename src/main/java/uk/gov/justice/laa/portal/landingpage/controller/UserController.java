@@ -472,7 +472,7 @@ public class UserController {
             session.removeAttribute("userCreateRolesModel");
             session.removeAttribute("createUserAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
+            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
             // Set selected roles in session
@@ -907,7 +907,7 @@ public class UserController {
             session.removeAttribute("userEditRolesModel");
             session.removeAttribute("editUserAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
+            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1332,7 +1332,7 @@ public class UserController {
             session.removeAttribute("grantAccessUserRolesModel");
             session.removeAttribute("grantAccessAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
+            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
