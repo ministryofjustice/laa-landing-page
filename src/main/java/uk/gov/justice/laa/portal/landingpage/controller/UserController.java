@@ -13,7 +13,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,9 +31,9 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
@@ -243,7 +245,8 @@ public class UserController {
 
         // Validate selected User Type
         UserType selectedUserType = userDetailsForm.getUserType();
-        // Add a check to stop users injecting internal user types into create external user post request.
+        // Add a check to stop users injecting internal user types into create external
+        // user post request.
         if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
             result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
         }
@@ -852,8 +855,12 @@ public class UserController {
             Authentication authentication,
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
+
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
+
         if (modelFromSession == null) {
-            return "redirect:/admin/users/edit/" + id + "/roles";
+            return "redirect:/admin/users/edit/" + uuid + "/roles";
         }
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
@@ -912,13 +919,12 @@ public class UserController {
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/users/manage/" + uuid;
         } else {
             modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
             session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
             session.setAttribute("userEditRolesModel", modelFromSession);
-            // Ensure passed in ID is a valid UUID to avoid open redirects.
-            UUID uuid = UUID.fromString(id);
+
             return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
         }
     }
@@ -948,9 +954,7 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size()
-                && allOffices.stream()
-                        .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+        boolean hasAllOffices = userOffices.isEmpty();
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
@@ -1371,9 +1375,7 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.size() == allOffices.size()
-                && allOffices.stream()
-                        .allMatch(office -> userOfficeIds.contains(office.getId().toString()));
+        boolean hasAllOffices = userOffices.isEmpty();
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
@@ -1626,6 +1628,19 @@ public class UserController {
         return "redirect:/admin/users/manage/" + id;
     }
 
+    /**
+     * Handle authorization exceptions when user lacks permissions to access
+     * specific users
+     */
+    @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
+    public RedirectView handleAuthorizationException(Exception ex, HttpSession session) {
+        log.warn("Authorization denied while accessing user: {}", ex.getMessage());
+        return new RedirectView("/not-authorised");
+    }
+
+    /**
+     * Handle general exceptions
+     */
     @ExceptionHandler(Exception.class)
     public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
