@@ -12,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -120,6 +121,42 @@ public class FirmService {
             cache.put(ALL_FIRMS, allFirms);
         }
         return allFirms;
+    }
+
+    public List<FirmDto> getUserAccessibleFirms(EntraUser entraUser, String searchTerm) {
+
+        List<FirmDto> userAccessibleFirms = null;
+
+        UserType userType = entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getUserType)
+                .orElseThrow(() -> new UnsupportedOperationException("User type not found"));
+
+        switch (userType) {
+            case INTERNAL -> {
+                userAccessibleFirms = getAllFirmsFromCache();
+            }
+            case EXTERNAL_SINGLE_FIRM_ADMIN -> {
+                userAccessibleFirms = getUserAllFirms(entraUser);
+            }
+            default -> {
+                throw new UnsupportedOperationException("User type not supported");
+            }
+        }
+
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return getAllFirmsFromCache();
+        }
+
+        String trimmedSearchTerm = searchTerm.trim();
+
+        return userAccessibleFirms
+                .parallelStream()
+                .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
+                        || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+                .collect(Collectors.toList());
+
     }
 
 }
