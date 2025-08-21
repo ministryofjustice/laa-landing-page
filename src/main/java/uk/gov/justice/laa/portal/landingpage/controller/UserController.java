@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -88,9 +89,15 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
 
-    /**
-     * Retrieves a list of users from Microsoft Graph API.
-     */
+    @GetMapping("/user/firms/search")
+    @ResponseBody
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
+    public List<FirmDto> getFirms(Authentication authentication, @RequestParam(value = "q", defaultValue = "") String query) {
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        return firmService.getUserAccessibleFirms(entraUser, query);
+    }
+
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
@@ -102,30 +109,42 @@ public class UserController {
             @RequestParam(name = "usertype", required = false) String usertype,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
+            FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
+        UUID firmUuid = firmSearchForm == null ? null : firmSearchForm.getSelectedFirmId() == null ?
+                null : UUID.fromString(firmSearchForm.getSelectedFirmId());
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         if (canSeeAllUsers) {
             paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    search, null, null, showFirmAdmins, page, size, sort, direction);
+                    search, firmUuid, null, showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, firmUuid,
                     List.of(UserType.INTERNAL),
                     showFirmAdmins, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
+            List<FirmDto> userFirms = firmService.getUserAllFirms(entraUser);
+            boolean hasFirmAccess = userFirms.stream()
+                    .anyMatch(firm -> firm.getId().equals(firmUuid));
+            if (firmUuid != null && !hasFirmAccess) {
+                log.error("Unauthorized firm access for firm id: {}", firmUuid);
+                throw new AccessDeniedException("Unauthorized firm access for firm id: " + firmUuid);
+            }
+
+            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, firmUuid,
                     UserType.EXTERNAL_TYPES,
                     showFirmAdmins, page, size, sort, direction);
         } else {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
+                // If a firm filter is selected, use that instead of the user's firm
                 paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search,
-                        firm.getId(), UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
+                        firmUuid, UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();
@@ -153,7 +172,23 @@ public class UserController {
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+
+
+
+            // If firmSearchForm is already populated from session (e.g., validation
+            // errors), keep it
+            FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+            if (existingForm != null) {
+                firmSearchForm = existingForm;
+                session.removeAttribute("firmSearchForm");
+            }
+
+            model.addAttribute("firmSearchForm", firmSearchForm);
+
+
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
+
+
 
         return "users";
     }
