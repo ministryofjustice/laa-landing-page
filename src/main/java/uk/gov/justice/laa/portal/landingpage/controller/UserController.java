@@ -1055,12 +1055,12 @@ public class UserController {
             }
         }
 
-        userService.updateUserOffices(id, selectedOffices);
+        String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                changed, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
@@ -1467,12 +1467,12 @@ public class UserController {
             }
         }
 
-        userService.updateUserOffices(id, selectedOffices);
+        String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                changed, "office");
         eventService.logEvent(updateUserAuditEvent);
 
         // Clear grant access session data
@@ -1543,7 +1543,7 @@ public class UserController {
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     currentUserDto,
                     userProfileDto.getEntraUser(),
-                    List.of("Removed app role: " + roleName + " for app: " + appId),
+                    "Removed app role: " + roleName + " for app: " + appId,
                     "app_role_removed");
             eventService.logEvent(updateUserAuditEvent);
 
@@ -1574,7 +1574,7 @@ public class UserController {
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     currentUserDto,
                     userProfileDto.getEntraUser(),
-                    List.of("Access granted"),
+                    "Access granted",
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 

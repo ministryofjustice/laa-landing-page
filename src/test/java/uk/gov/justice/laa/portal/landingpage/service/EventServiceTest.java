@@ -79,13 +79,13 @@ class EventServiceTest {
         entraUser.setFullName("oldUser");
         entraUser.setId(userId.toString());
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
-        List<String> updatedOffices = List.of("Office1", "Office2");
+        String updatedOffices = "Removed : Office1, Added : Office2";
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto, entraUser, updatedOffices, "office");
         eventService.logEvent(updateUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User admin with user id " + adminUuid
-                + ", Existing user oldUser updated, user id " + userId + ", with office Office1, Office2\n"
+                + ", Existing user oldUser updated, user id " + userId + ", with office Removed : Office1, Added : Office2\n"
                 + "\n");
     }
 }
