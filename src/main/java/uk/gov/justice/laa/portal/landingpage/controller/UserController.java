@@ -721,7 +721,9 @@ public class UserController {
             String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto != null ? userProfileDto.getId() : null,
+                    currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     changed, "apps");
             eventService.logEvent(updateUserAuditEvent);
@@ -914,7 +916,9 @@ public class UserController {
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 String changed = userService.updateUserRoles(id, allSelectedRoles);
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
                         user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
@@ -1058,7 +1062,9 @@ public class UserController {
         String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                userProfileDto != null ? userProfileDto.getId() : null,
+                currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
@@ -1171,7 +1177,9 @@ public class UserController {
             String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto != null ? userProfileDto.getId() : null,
+                    currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     changed, "roles");
             eventService.logEvent(updateUserAuditEvent);
@@ -1339,7 +1347,9 @@ public class UserController {
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 String changed = userService.updateUserRoles(id, allSelectedRoles);
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
                         user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
@@ -1470,7 +1480,9 @@ public class UserController {
         String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                userProfileDto != null ? userProfileDto.getId() : null,
+                currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
@@ -1541,6 +1553,7 @@ public class UserController {
             // Create audit event for the app role removal
             UserProfileDto userProfileDto = userService.getUserProfileById(userId).orElseThrow();
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto.getId(),
                     currentUserDto,
                     userProfileDto.getEntraUser(),
                     "Removed app role: " + roleName + " for app: " + appId,
@@ -1572,6 +1585,7 @@ public class UserController {
 
             // Create audit event for the final access grant
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto.getId(),
                     currentUserDto,
                     userProfileDto.getEntraUser(),
                     "Access granted",
