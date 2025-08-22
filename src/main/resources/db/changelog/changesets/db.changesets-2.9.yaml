@@ -1,0 +1,85 @@
+databaseChangeLog:
+    - changeSet:
+          id: 1755695455401-1
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              name: firm_id
+                    indexName: idx_userprofile_firm_id
+                    tableName: user_profile
+                    using: btree
+    - changeSet:
+          id: 1755695455401-2
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              name: user_type
+                    indexName: idx_user_profile_user_type
+                    tableName: user_profile
+                    using: btree
+    - changeSet:
+          id: 1755695455401-3
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              name: firm_id
+                        - column:
+                              name: user_type
+                    indexName: idx_user_profile_firm_user_type
+                    tableName: user_profile
+                    using: btree
+    - changeSet:
+          id: 1755695455401-4
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              computed: true
+                              name: lower((email)::text)
+                    indexName: idx_entra_user_email_lower
+                    tableName: entra_user
+                    using: btree
+    - changeSet:
+          id: 1755695455401-5
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              computed: true
+                              name: lower((first_name)::text)
+                    indexName: idx_entra_user_first_name_lower
+                    tableName: entra_user
+                    using: btree
+    - changeSet:
+          id: 1755695455401-6
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              computed: true
+                              name: lower((last_name)::text)
+                    indexName: idx_entra_user_last_name_lower
+                    tableName: entra_user
+                    using: btree
+    - changeSet:
+          id: 1755695455401-7
+          author: suresh.kavali (generated)
+          changes:
+              - createIndex:
+                    columns:
+                        - column:
+                              computed: true
+                              name: lower((((first_name)::text || ' '::text) || (last_name)::text))
+                    indexName: idx_entra_user_fullname_lower
+                    tableName: entra_user
+                    using: btree
+

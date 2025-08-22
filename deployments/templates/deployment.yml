@@ -184,3 +184,7 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
             - name: CCMS_USER_MANAGEMENT_API_KEY
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
+            - name: ENABLE_DISTRIBUTED_DB_LOCKING
+              value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
+            - name: DISTRIBUTED_DB_LOCKING_PERIOD
+              value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"

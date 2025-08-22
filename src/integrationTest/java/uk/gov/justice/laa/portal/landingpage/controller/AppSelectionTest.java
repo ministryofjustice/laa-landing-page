@@ -10,10 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,7 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpSession;
-//import uk.gov.justice.laa.portal.landingpage.config.TestSecurityConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -94,7 +92,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
                 .andReturn();
 
         assertNotNull(result.getResponse().getRedirectedUrl());
-        assertEquals("/error", result.getResponse().getRedirectedUrl());
+        assertEquals("/not-authorised", result.getResponse().getRedirectedUrl());
     }
 
     @Test
