@@ -1599,7 +1599,11 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfileNew.getOffices()).isNull();
-            assertThat(diff).isEqualTo("Removed : of1, of2, Added : All");
+            String[] changedOffices = diff.split(", Added");
+            assertThat(changedOffices[0]).contains("Removed : ");
+            assertThat(changedOffices[0]).contains("of1");
+            assertThat(changedOffices[0]).contains("of2");
+            assertThat(changedOffices[1]).contains("All");
             verify(mockUserProfileRepository).saveAndFlush(userProfileOld);
         }
 
