@@ -1,38 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.microsoft.graph.models.User;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpSession;
@@ -45,15 +27,6 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-
-import com.microsoft.graph.models.User;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -65,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
@@ -90,6 +64,33 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -128,6 +129,67 @@ class UserControllerTest {
     }
 
     @Test
+    void getFirms_WithSearchQuery_ReturnsFilteredFirms() {
+        // Arrange
+        String searchQuery = "Firm 1";
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        List<FirmDto> allFirms = List.of(firm1, firm2);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm1));
+
+        // Act
+        List<FirmDto> result = userController.getFirms(authentication, searchQuery);
+
+        // Assert
+        assertThat(result).isEqualTo(List.of(firm1));
+        verify(firmService).getUserAccessibleFirms(entraUser, searchQuery);
+    }
+
+    @Test
+    void getFirms_WithSearchQuery_ReturnsFilteredFirms_By_Code() {
+        // Arrange
+        String searchQuery = "F2";
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        List<FirmDto> allFirms = List.of(firm1, firm2);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm2));
+
+        // Act
+        List<FirmDto> result = userController.getFirms(authentication, searchQuery);
+
+        // Assert
+        assertThat(result).isEqualTo(List.of(firm2));
+        verify(firmService).getUserAccessibleFirms(entraUser, searchQuery);
+    }
+
+    @Test
+    void getFirms_WithoutSearchQuery_ReturnsAllFirms() {
+        // Arrange
+        String searchQuery = "";
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> expectedFirms = List.of(
+                new FirmDto(UUID.randomUUID(), "Firm A", "F1"),
+                new FirmDto(UUID.randomUUID(), "Firm B", "F2")
+        );
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(expectedFirms);
+
+        // Act
+        List<FirmDto> result = userController.getFirms(authentication, searchQuery);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedFirms);
+        verify(firmService).getUserAccessibleFirms(entraUser, searchQuery);
+    }
+
+    @Test
     void displayAllUsers() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
@@ -151,6 +213,169 @@ class UserControllerTest {
         assertThat(model.getAttribute("page")).isEqualTo(1);
         assertThat(model.getAttribute("totalUsers")).isEqualTo(100L);
         assertThat(model.getAttribute("totalPages")).isEqualTo(10);
+    }
+
+    @Nested
+    class DisplayAllUsersTest {
+        private final UUID testFirmId = UUID.randomUUID();
+        private final UUID userFirmId = UUID.randomUUID();
+        private final String testFirmIdString = testFirmId.toString();
+        private final String invalidFirmId = "invalid-uuid";
+        private EntraUser internalUser;
+        private EntraUser externalUser;
+        private FirmSearchForm firmSearchForm;
+        private PaginatedUsers paginatedUsers;
+
+        @BeforeEach
+        void setUp() {
+            paginatedUsers = new PaginatedUsers();
+            paginatedUsers.setUsers(new ArrayList<>());
+            paginatedUsers.setTotalUsers(0);
+            paginatedUsers.setTotalPages(0);
+
+            // Setup internal user (can see all firms)
+            internalUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .userType(UserType.INTERNAL)
+                                    .build()
+                    ))
+                    .build();
+
+            // Setup external user (can only see their firm)
+            externalUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                                    .firm(Firm.builder()
+                                            .id(userFirmId)
+                                            .name("User's Firm")
+                                            .build())
+                                    .build()
+                    ))
+                    .build();
+
+            firmSearchForm = new FirmSearchForm();
+            firmSearchForm.setSelectedFirmId(testFirmIdString);
+
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(internalUser);
+            when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(true);
+            when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
+        }
+
+        @Test
+        void whenInternalUser_withFirmId_filtersUsersByFirm() {
+            // Given
+            when(userService.isInternal(internalUser.getId())).thenReturn(true);
+            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    any(), eq(testFirmId), isNull(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            )).thenReturn(paginatedUsers);
+
+            // When
+            String viewName = userController.displayAllUsers(
+                    10, 1, null, null, null, "", false, firmSearchForm, model, session, authentication
+            );
+
+            // Then
+            assertThat(viewName).isEqualTo("users");
+            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    "", testFirmId, null, false, 1, 10, null, null
+            );
+            assertThat(model.getAttribute("firmSearchForm")).isSameAs(firmSearchForm);
+        }
+
+        @Test
+        void whenExternalUser_withOwnFirmId_filtersUsersByFirm() {
+            // Given
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+            when(userService.isInternal(externalUser.getId())).thenReturn(false);
+
+            // Set the firm ID to the user's own firm
+            firmSearchForm.setSelectedFirmId(userFirmId.toString());
+
+            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    any(), eq(userFirmId), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            )).thenReturn(paginatedUsers);
+
+            // When
+            String viewName = userController.displayAllUsers(
+                    10, 1, null, null, null, "", false, firmSearchForm, model, session, authentication
+            );
+
+            // Then
+            assertThat(viewName).isEqualTo("users");
+        }
+
+        @Test
+        void whenExternalUser_withUnauthorizedFirmId_throwsAccessDenied() {
+            // Given
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+            when(userService.isInternal(externalUser.getId())).thenReturn(false);
+            when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(false);
+            when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
+
+            // Set up the user's firms (different from the one being accessed)
+            when(firmService.getUserAllFirms(externalUser)).thenReturn(List.of(
+                    new FirmDto(userFirmId, "User's Firm", "UF1")
+            ));
+
+            // When / Then
+            assertThrows(AccessDeniedException.class, () ->
+                    userController.displayAllUsers(
+                            10, 1, null, null, null, "", false, firmSearchForm, model, session, authentication
+                    )
+            );
+        }
+
+        @Test
+        void whenInvalidFirmIdFormat_usesDefaultFirm() {
+            // Given
+            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1");
+            firmSearchForm.setSelectedFirmId(invalidFirmId);
+
+            when(userService.isInternal(internalUser.getId())).thenReturn(true);
+            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            )).thenReturn(paginatedUsers);
+
+            // When
+            String viewName = userController.displayAllUsers(
+                    10, 1, null, null, null, "", false, firmSearchForm, model, session, authentication
+            );
+
+            // Then
+            assertThat(viewName).isEqualTo("users");
+            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    "", null, null, false, 1, 10, null, null
+            );
+        }
+
+        @Test
+        void whenNoFirmSelected_usesDefaultFirm() {
+            // Given
+            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1");
+            firmSearchForm.setSelectedFirmId(null);
+
+            when(userService.isInternal(internalUser.getId())).thenReturn(true);
+            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    anyString(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            )).thenReturn(paginatedUsers);
+
+            // When
+            String viewName = userController.displayAllUsers(
+                    10, 1, null, null, null, "", false, firmSearchForm, model, session, authentication
+            );
+
+            // Then
+            assertThat(viewName).isEqualTo("users");
+            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
+                    "", null, null, false, 1, 10, null, null
+            );
+        }
     }
 
     @Test

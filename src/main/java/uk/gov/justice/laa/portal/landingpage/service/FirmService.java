@@ -146,7 +146,7 @@ public class FirmService {
         }
 
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
-            return getAllFirmsFromCache();
+            return userAccessibleFirms;
         }
 
         String trimmedSearchTerm = searchTerm.trim();

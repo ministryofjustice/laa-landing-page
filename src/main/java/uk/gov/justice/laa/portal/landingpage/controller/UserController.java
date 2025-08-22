@@ -1,17 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,11 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
-
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -66,11 +53,24 @@ import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -114,8 +114,7 @@ public class UserController {
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
-        UUID firmUuid = firmSearchForm == null ? null : firmSearchForm.getSelectedFirmId() == null ?
-                null : UUID.fromString(firmSearchForm.getSelectedFirmId());
+        UUID firmUuid = firmSearchForm == null ? null : parseUuidString(firmSearchForm.getSelectedFirmId());
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
@@ -146,7 +145,7 @@ public class UserController {
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 FirmDto firm = optionalFirm.get();
-                UUID firmId = firmUuid == null? firm.getId() : firmUuid;
+                UUID firmId = firmUuid == null ? firm.getId() : firmUuid;
                 // If a firm filter is selected, use that instead of the user's firm
                 paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search,
                         firmId, UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
@@ -1676,5 +1675,14 @@ public class UserController {
     public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
         return new RedirectView("/error");
+    }
+
+    private UUID parseUuidString(String uuidString) {
+        try {
+            return uuidString == null ? null : UUID.fromString(uuidString);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid firm id supplied: {}", uuidString);
+            return null;
+        }
     }
 }
