@@ -51,7 +51,7 @@
 
                                     </label>
                                     <input class="govuk-input govuk-!-width-full" id="search" name="search"
-                                        type="search" th:value="${param.search}" autocomplete="off">
+                                        type="search" th:value="${search}" autocomplete="off">
                                 </div>
                                 <button type="submit" class="govuk-button moj-search__button"
                                     data-module="govuk-button">
@@ -67,9 +67,9 @@
                         <fieldset class="govuk-fieldset">
                             <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="show-firm-admins" name="show-firm-admins"
+                                    <input class="govuk-checkboxes__input" id="show-firm-admins" name="showFirmAdmins"
                                         type="checkbox" value="true" onchange="handleShowFirmAdmins(this)"
-                                        th:checked="${param.showFirmAdmins != null && param.showFirmAdmins[0] == 'true'}">
+                                        th:checked="${showFirmAdmins}">
                                     <label class="govuk-label govuk-checkboxes__label" for="organisation">
                                         Show firm admins
                                     </label>

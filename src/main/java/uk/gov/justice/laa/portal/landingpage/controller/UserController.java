@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -104,7 +105,58 @@ public class UserController {
             @RequestParam(name = "usertype", required = false) String usertype,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
-            Model model, HttpSession session, Authentication authentication) {
+            Model model, HttpSession session, Authentication authentication, HttpServletRequest request) {
+
+        // Check if this is a back navigation (no explicit filters in request)
+        boolean isBackNavigation = request.getParameter("size") == null && 
+                                 request.getParameter("page") == null && 
+                                 request.getParameter("sort") == null && 
+                                 request.getParameter("direction") == null && 
+                                 request.getParameter("usertype") == null && 
+                                 request.getParameter("search") == null && 
+                                 request.getParameter("showFirmAdmins") == null;
+        
+        @SuppressWarnings("unchecked")
+        Map<String, Object> sessionFilters = (Map<String, Object>) session.getAttribute("userListFilters");
+        
+        // Only use session values if this is back navigation and session has values
+        if (isBackNavigation && sessionFilters != null) {
+            if (sessionFilters.containsKey("size")) {
+                size = (Integer) sessionFilters.get("size");
+            }
+            if (sessionFilters.containsKey("page")) {
+                page = (Integer) sessionFilters.get("page");
+            }
+            if (sessionFilters.containsKey("sort")) {
+                sort = (String) sessionFilters.get("sort");
+                if (sort.isEmpty()) sort = null;
+            }
+            if (sessionFilters.containsKey("direction")) {
+                direction = (String) sessionFilters.get("direction");
+                if (direction.isEmpty()) direction = null;
+            }
+            if (sessionFilters.containsKey("usertype")) {
+                usertype = (String) sessionFilters.get("usertype");
+                if (usertype.isEmpty()) usertype = null;
+            }
+            if (sessionFilters.containsKey("search")) {
+                search = (String) sessionFilters.get("search");
+            }
+            if (sessionFilters.containsKey("showFirmAdmins")) {
+                showFirmAdmins = (Boolean) sessionFilters.get("showFirmAdmins");
+            }
+        }
+
+        // Store current filter state in session for back navigation
+        session.setAttribute("userListFilters", Map.of(
+            "size", size,
+            "page", page,
+            "sort", sort != null ? sort : "",
+            "direction", direction != null ? direction : "",
+            "search", search,
+            "showFirmAdmins", showFirmAdmins,
+            "usertype", usertype != null ? usertype : ""
+        ));
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -160,17 +212,33 @@ public class UserController {
         return "users";
     }
 
+    /**
+     * Helper method to check if filters contain any active (non-default) values
+     */
+    private boolean hasActiveFilters(Map<String, Object> filters) {
+        if (filters == null) return false;
+        
+        // Check if any filter has a non-default value
+        String search = (String) filters.get("search");
+        String usertype = (String) filters.get("usertype");
+        String sort = (String) filters.get("sort");
+        String direction = (String) filters.get("direction");
+        Boolean showFirmAdmins = (Boolean) filters.get("showFirmAdmins");
+        Integer size = (Integer) filters.get("size");
+        Integer page = (Integer) filters.get("page");
+        
+        return (search != null && !search.isEmpty()) ||
+               (usertype != null && !usertype.isEmpty()) ||
+               (sort != null && !sort.isEmpty()) ||
+               (direction != null && !direction.isEmpty()) ||
+               (showFirmAdmins != null && showFirmAdmins) ||
+               (size != null && size != 10) ||
+               (page != null && page != 1);
+    }
+
     @GetMapping("/users/edit/{id}")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String editUser(@PathVariable String id, 
-            @RequestParam(name = "size", required = false) Integer size,
-            @RequestParam(name = "page", required = false) Integer page,
-            @RequestParam(name = "sort", required = false) String sort,
-            @RequestParam(name = "direction", required = false) String direction,
-            @RequestParam(name = "search", required = false) String search,
-            @RequestParam(name = "showFirmAdmins", required = false) Boolean showFirmAdmins,
-            @RequestParam(name = "usertype", required = false) String usertype,
-            Model model, HttpSession session) {
+    public String editUser(@PathVariable String id, Model model, HttpSession session) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isPresent()) {
             UserProfileDto user = optionalUser.get();
@@ -179,27 +247,16 @@ public class UserController {
             model.addAttribute("roles", roles);
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user - " + user.getFullName());
             
-            // Store filter parameters for "Back to Filter" functionality
-            if (size != null || page != null || sort != null || direction != null
-                    || search != null || showFirmAdmins != null || usertype != null) {
-                session.setAttribute("userListFilters", Map.of(
-                    "size", size != null ? size : 10,
-                    "page", page != null ? page : 1,
-                    "sort", sort != null ? sort : "",
-                    "direction", direction != null ? direction : "",
-                    "search", search != null ? search : "",
-                    "showFirmAdmins", showFirmAdmins != null ? showFirmAdmins : false,
-                    "usertype", usertype != null ? usertype : ""
-                ));
-            }
-            
             // Add filter state to model for "Back to Filter" button
             @SuppressWarnings("unchecked")
             Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-            model.addAttribute("hasFilters", filters != null);
+            boolean hasFilters = filters != null && hasActiveFilters(filters);
+            model.addAttribute("hasFilters", hasFilters);
             model.addAttribute("filterParams", filters);
+            
+            return "edit-user";
         }
-        return "edit-user";
+        return "redirect:/admin/users";
     }
 
     /**
@@ -217,15 +274,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, 
-            @RequestParam(name = "size", required = false) Integer size,
-            @RequestParam(name = "page", required = false) Integer page,
-            @RequestParam(name = "sort", required = false) String sort,
-            @RequestParam(name = "direction", required = false) String direction,
-            @RequestParam(name = "search", required = false) String search,
-            @RequestParam(name = "showFirmAdmins", required = false) Boolean showFirmAdmins,
-            @RequestParam(name = "usertype", required = false) String usertype,
-            Model model, HttpSession session) {
+    public String manageUser(@PathVariable String id, Model model, HttpSession session) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
@@ -241,24 +290,11 @@ public class UserController {
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
         
-        // Store filter parameters for "Back to Filter" functionality
-        if (size != null || page != null || sort != null || direction != null
-                || search != null || showFirmAdmins != null || usertype != null) {
-            session.setAttribute("userListFilters", Map.of(
-                "size", size != null ? size : 10,
-                "page", page != null ? page : 1,
-                "sort", sort != null ? sort : "",
-                "direction", direction != null ? direction : "",
-                "search", search != null ? search : "",
-                "showFirmAdmins", showFirmAdmins != null ? showFirmAdmins : false,
-                "usertype", usertype != null ? usertype : ""
-            ));
-        }
-        
         // Add filter state to model for "Back to Filter" button
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        model.addAttribute("hasFilters", filters != null);
+        boolean hasFilters = filters != null && hasActiveFilters(filters);
+        model.addAttribute("hasFilters", hasFilters);
         model.addAttribute("filterParams", filters);
         
         return "manage-user";
@@ -1095,7 +1131,6 @@ public class UserController {
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
         if (!selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available offices by firm
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1116,8 +1151,7 @@ public class UserController {
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                userProfileDto != null ? userProfileDto.getEntraUser() : null, selectOfficesDisplay, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");

@@ -54,6 +54,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -98,6 +99,9 @@ class UserControllerTest {
 
     @Mock
     private LoginService loginService;
+    
+    @Mock
+    private HttpServletRequest request;
     @Mock
     private UserService userService;
     @Mock
@@ -135,15 +139,21 @@ class UserControllerTest {
         paginatedUsers.setPreviousPageLink("previousPageLink");
         paginatedUsers.setTotalUsers(100);
         paginatedUsers.setTotalPages(10);
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(session.getAttribute("successMessage")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
-                authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, model, session,
+                authentication, request);
 
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
@@ -168,14 +178,14 @@ class UserControllerTest {
         when(userService.getUserProfileById(anyString())).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppRolesByUserId(anyString())).thenReturn(roles);
 
-        String view = userController.editUser("userId", null, null, null, null, null, null, null, model, session);
+        String view = userController.editUser("userId", model, session);
 
         assertThat(view).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
-    void editUser_withFilterParameters_shouldStoreFiltersInSession() {
+    void editUser_withExistingFiltersInSession_shouldAddFiltersToModel() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
         EntraUserDto entraUser = new EntraUserDto();
@@ -189,27 +199,34 @@ class UserControllerTest {
         List<AppRoleDto> roles = List.of(new AppRoleDto());
         MockHttpSession testSession = new MockHttpSession();
         
+        // Pre-populate session with filters (as would be set by displayAllUsers)
+        Map<String, Object> existingFilters = Map.of(
+            "size", 20,
+            "page", 2,
+            "sort", "firstName",
+            "direction", "desc",
+            "search", "test@example.com",
+            "showFirmAdmins", true,
+            "usertype", "EXTERNAL"
+        );
+        testSession.setAttribute("userListFilters", existingFilters);
+        
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppRolesByUserId("550e8400-e29b-41d4-a716-446655440000")).thenReturn(roles);
         
         // When
-        String view = userController.editUser(userId, 20, 2, "firstName", "desc", "test@example.com", true, "EXTERNAL", model, testSession);
+        String view = userController.editUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
         assertThat(model.getAttribute("hasFilters")).isEqualTo(true);
+        assertThat(model.getAttribute("filterParams")).isEqualTo(existingFilters);
         
+        // Session filters should remain unchanged (editUser doesn't modify them)
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) testSession.getAttribute("userListFilters");
-        assertThat(filters).isNotNull();
-        assertThat(filters.get("size")).isEqualTo(20);
-        assertThat(filters.get("page")).isEqualTo(2);
-        assertThat(filters.get("sort")).isEqualTo("firstName");
-        assertThat(filters.get("direction")).isEqualTo("desc");
-        assertThat(filters.get("search")).isEqualTo("test@example.com");
-        assertThat(filters.get("showFirmAdmins")).isEqualTo(true);
-        assertThat(filters.get("usertype")).isEqualTo("EXTERNAL");
+        assertThat(filters).isEqualTo(existingFilters);
     }
 
     @Test
@@ -231,7 +248,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(roles);
         
         // When
-        String view = userController.editUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.editUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("edit-user");
@@ -241,7 +258,7 @@ class UserControllerTest {
     }
 
     @Test
-    void editUser_withExistingFiltersInSession_shouldAddFiltersToModel() {
+    void editUser_withNullFilterParametersAndExistingSession_shouldPreserveExistingFilters() {
         // Given
         String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
@@ -258,7 +275,11 @@ class UserControllerTest {
         Map<String, Object> existingFilters = Map.of(
             "size", 15,
             "page", 3,
-            "search", "existing@test.com"
+            "search", "existing@test.com",
+            "sort", "",
+            "direction", "",
+            "usertype", "",
+            "showFirmAdmins", false
         );
         testSession.setAttribute("userListFilters", existingFilters);
         
@@ -266,7 +287,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId("550e8400-e29b-41d4-a716-446655440000")).thenReturn(roles);
         
         // When
-        String view = userController.editUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.editUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("edit-user");
@@ -284,19 +305,25 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(session.getAttribute("successMessage")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), eq(10), any(),
                 any())).thenReturn(mockPaginatedUsers);
 
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
-                authentication);
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, "", false, model, session,
+                authentication, request);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(isNull(), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(),
+        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(""), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(),
                 eq(1), eq(10), isNull(),
                 isNull());
     }
@@ -313,15 +340,20 @@ class UserControllerTest {
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(UUID.randomUUID()).build());
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(session.getAttribute("successMessage")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session,
-                authentication);
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, "", false, model, session,
+                authentication, request);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(isNull(), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(), eq(1), eq(10), isNull(), isNull());
+        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(""), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(), eq(1), eq(10), isNull(), isNull());
     }
 
     @Test
@@ -334,10 +366,10 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(UUID.randomUUID()).build());
         // Act
         String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "Test", false, model, session,
-                authentication);
+                authentication, request);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -351,7 +383,13 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(session.getAttribute("successMessage")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(anyString(), any(), anyList(), anyBoolean(), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         FirmDto firmDto = new FirmDto();
@@ -360,7 +398,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "", false, model, session,
-                authentication);
+                authentication, request);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -384,7 +422,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // Act
-        String viewName = userController.editUser(userId, null, null, null, null, null, null, null, model, session);
+        String viewName = userController.editUser(userId, model, session);
 
         // Assert
         assertThat(viewName).isEqualTo("edit-user");
@@ -400,7 +438,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
 
         // Act
-        String viewName = userController.editUser(userId, null, null, null, null, null, null, null, model, session);
+        String viewName = userController.editUser(userId, model, session);
 
         verify(userService).getUserProfileById(userId);
     }
@@ -438,7 +476,7 @@ class UserControllerTest {
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.manageUser(userId, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -448,7 +486,7 @@ class UserControllerTest {
     }
 
     @Test
-    void manageUser_withFilterParameters_shouldStoreFiltersInSession() {
+    void manageUser_withExistingFiltersInSession_shouldDetectActiveFilters() {
         // Given
         String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
@@ -464,28 +502,35 @@ class UserControllerTest {
                 .build();
         
         MockHttpSession testSession = new MockHttpSession();
+        // Pre-populate session with filters (as would be set by displayAllUsers)
+        Map<String, Object> existingFilters = Map.of(
+            "size", 25,
+            "page", 3,
+            "sort", "lastName",
+            "direction", "asc",
+            "search", "manager@test.com",
+            "showFirmAdmins", false,
+            "usertype", "external"
+        );
+        testSession.setAttribute("userListFilters", existingFilters);
         
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
         
         // When
-        String view = userController.manageUser(userId, 25, 3, "lastName", "asc", "manager@test.com", false, "INTERNAL", model, testSession);
+        String view = userController.manageUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("hasFilters")).isEqualTo(true);
+        assertThat(model.getAttribute("filterParams")).isEqualTo(existingFilters);
         
+        // Session filters should remain unchanged (manageUser doesn't modify them)
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) testSession.getAttribute("userListFilters");
-        assertThat(filters).isNotNull();
-        assertThat(filters.get("size")).isEqualTo(25);
-        assertThat(filters.get("page")).isEqualTo(3);
-        assertThat(filters.get("sort")).isEqualTo("lastName");
-        assertThat(filters.get("direction")).isEqualTo("asc");
-        assertThat(filters.get("search")).isEqualTo("manager@test.com");
-        assertThat(filters.get("showFirmAdmins")).isEqualTo(false);
-        assertThat(filters.get("usertype")).isEqualTo("INTERNAL");
+        assertThat(filters).isEqualTo(existingFilters);
+        assertThat(filters.get("usertype")).isEqualTo("external");
     }
 
     @Test
@@ -510,7 +555,7 @@ class UserControllerTest {
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         
         // When
-        String view = userController.manageUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.manageUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -551,7 +596,7 @@ class UserControllerTest {
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         
         // When
-        String view = userController.manageUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.manageUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -574,7 +619,7 @@ class UserControllerTest {
 
         // Act & Assert
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser(userId, null, null, null, null, null, null, null, model, session));
+                () -> userController.manageUser(userId, model, session));
 
         verify(userService).getUserProfileById(userId);
     }
@@ -1032,7 +1077,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserRolesOutputMatchesInput() {
+    void testEditUserRolesOutputMatchesInput() {
         // Given
         final String userId = "12345";
         // Setup test user call
@@ -1041,12 +1086,10 @@ class UserControllerTest {
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUser));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
         List<AppRoleDto> testUserRoles = List.of(testUserRole);
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
@@ -1067,6 +1110,8 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3, testRole4);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUser));
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
         when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any())).thenReturn(allRoles);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
@@ -1080,7 +1125,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserRoles_view_external_user() {
+    void testEditUserRoles_view_external_user() {
         // Given
         final String userId = "12345";
         // Setup test user call
@@ -1091,7 +1136,6 @@ class UserControllerTest {
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
         List<AppRoleDto> testUserRoles = List.of(testUserRole);
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
@@ -1122,7 +1166,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserRoles_view_internal_user() {
+    void testEditUserRoles_view_internal_user() {
         // Given
         final String userId = "12345";
         // Setup test user call
@@ -1133,7 +1177,6 @@ class UserControllerTest {
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
         List<AppRoleDto> testUserRoles = List.of(testUserRole);
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
@@ -1167,7 +1210,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserRolesThrowsExceptionWhenNoUserProvided() {
+    void testEditUserRolesThrowsExceptionWhenNoUserProvided() {
         // Given
         final String userId = "12345";
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
@@ -1177,7 +1220,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testUpdateUserRolesReturnsCorrectView() {
+    void testUpdateUserRolesReturnsCorrectView() {
         // Given
         final String userId = UUID.randomUUID().toString();
         final RolesForm rolesForm = new RolesForm();
@@ -1204,7 +1247,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testEditUserAppsReturnsCorrectViewAndAttributes() throws ServletException {
+    void testEditUserAppsReturnsCorrectViewAndAttributes() throws ServletException {
         // Given
         final UUID userId = UUID.randomUUID();
         EntraUserDto entraUser = new EntraUserDto();
@@ -1245,7 +1288,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
+    void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
         // Given
         UUID userId = UUID.randomUUID();
         UUID appId = UUID.randomUUID();
@@ -1264,7 +1307,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
+    void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
@@ -1287,7 +1330,7 @@ class UserControllerTest {
     }
 
     @Test
-    public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
+    void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
         // Given
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
@@ -1653,43 +1696,41 @@ class UserControllerTest {
     }
 
     @Test
-    void manageUser_withPartialFilterParameters_shouldStoreOnlyProvidedFilters() {
+    void manageUser_withPartialFiltersInSession_shouldDetectActiveFilters() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        entraUser.setFullName("Managed User");
-        
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString(userId))
-                .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .entraUser(EntraUserDto.builder().fullName("Test User").build())
+                .appRoles(List.of())
                 .offices(List.of())
                 .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .build();
         
         MockHttpSession testSession = new MockHttpSession();
         
+        // Pre-populate session with partial filters (page != 1 makes it active)
+        Map<String, Object> partialFilters = Map.of(
+            "size", 10,
+            "page", 5, // Non-default page makes it active
+            "sort", "",
+            "direction", "desc",
+            "search", "",
+            "usertype", "",
+            "showFirmAdmins", false
+        );
+        testSession.setAttribute("userListFilters", partialFilters);
+        
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.isAccessGranted(userId)).thenReturn(false);
         
-        // When - only provide page and direction parameters
-        String view = userController.manageUser(userId, null, 5, null, "desc", null, null, null, model, testSession);
+        // When
+        String view = userController.manageUser(userId, model, testSession);
         
         // Then
         assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("hasFilters")).isEqualTo(true);
-        
-        @SuppressWarnings("unchecked")
-        Map<String, Object> filters = (Map<String, Object>) testSession.getAttribute("userListFilters");
-        assertThat(filters).isNotNull();
-        assertThat(filters.get("size")).isEqualTo(10); // Default value
-        assertThat(filters.get("page")).isEqualTo(5);
-        assertThat(filters.get("sort")).isEqualTo(""); // Default empty string
-        assertThat(filters.get("direction")).isEqualTo("desc");
-        assertThat(filters.get("search")).isEqualTo(""); // Default empty string
-        assertThat(filters.get("showFirmAdmins")).isEqualTo(false); // Default value
-        assertThat(filters.get("usertype")).isEqualTo(""); // Default empty string
+        assertThat(model.getAttribute("hasFilters")).isEqualTo(true); // Should be true due to page != 1
+        assertThat(model.getAttribute("filterParams")).isEqualTo(partialFilters);
     }
 
     @Test
@@ -1855,19 +1896,23 @@ class UserControllerTest {
         paginatedUsers.setTotalUsers(5);
         paginatedUsers.setTotalPages(1);
 
-        EntraUser externalUser = EntraUser.builder().build();
+        EntraUser externalUser = EntraUser.builder().id(UUID.randomUUID()).build();
         FirmDto userFirm = FirmDto.builder().id(UUID.randomUUID()).name("Firm 1").build();
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
         when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(null), any(), anyList(), anyBoolean(), eq(1), eq(10), eq(null),
+        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(""), eq(userFirm.getId()), eq(UserType.EXTERNAL_TYPES), eq(true), eq(1), eq(10), eq(null),
                 eq(null)))
                 .thenReturn(paginatedUsers);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
 
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, true, model, session,
-                authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", true, model, session,
+                authentication, request);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -1878,7 +1923,7 @@ class UserControllerTest {
     }
 
     @Test
-    void editUser_withNullFilterParametersAndExistingSession_shouldPreserveExistingFilters() {
+    void editUser_shouldPreserveExistingFiltersFromSession() {
         // Given
         String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
@@ -1904,7 +1949,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId("550e8400-e29b-41d4-a716-446655440000")).thenReturn(roles);
         
         // When - all filter parameters are null
-        String view = userController.editUser(userId, null, null, null, null, null, null, null, model, testSession);
+        String view = userController.editUser(userId, model, testSession);
         
         // Then - existing filters should be preserved and added to model
         assertThat(view).isEqualTo("edit-user");
@@ -1933,7 +1978,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, model, session, authentication, request);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -2078,7 +2123,7 @@ class UserControllerTest {
                 .build();
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
-        String view = userController.manageUser("id1", null, null, null, null, null, null, null, model, session);
+        String view = userController.manageUser("id1", model, session);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -2090,7 +2135,7 @@ class UserControllerTest {
 
         // Expect exception since controller calls .get() on empty Optional
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser("id2", null, null, null, null, null, null, null, model, session));
+                () -> userController.manageUser("id2", model, session));
     }
 
     @Test
@@ -2552,18 +2597,16 @@ class UserControllerTest {
     }
 
     @Test
-    void editUser_shouldNotAddRolesAttributeWhenUserNotFound() {
+    void editUser_shouldRedirectWhenUserNotFound() {
         // Given
         String userId = "nonexistent";
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
 
         // When
-        String view = userController.editUser(userId, null, null, null, null, null, null, null, model, session);
+        String view = userController.editUser(userId, model, session);
 
         // Then
-        assertThat(view).isEqualTo("edit-user");
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(model.getAttribute("roles")).isNull();
+        assertThat(view).isEqualTo("redirect:/admin/users");
         verify(userService, Mockito.never()).getUserAppRolesByUserId(anyString());
     }
 
@@ -2694,16 +2737,24 @@ class UserControllerTest {
         // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
-
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(EntraUser.builder().build());
+        
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(firmService.getUserFirm(any())).thenReturn(Optional.of(new FirmDto()));
+        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
+            .thenReturn(paginatedUsers);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(session.getAttribute("successMessage")).thenReturn(null);
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(request.getParameter(anyString())).thenReturn(null);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, model, session,
+                authentication, request);
 
         // Then
         assertThat(view).isEqualTo("users");
-        assertThat(model.getAttribute("successMessage")).isNull();
         verify(session, Mockito.never()).removeAttribute("successMessage");
     }
 
@@ -2724,7 +2775,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.manageUser(userId, null, null, null, null, null, null, null, model, session);
+        String view = userController.manageUser(userId, model, session);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
