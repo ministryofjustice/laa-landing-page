@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public abstract class AuditEvent {
     @Getter
-    protected UUID userId;//modifier id
+    protected UUID userId; //modifier id
     @Getter
     protected String userName;
     private final LocalDateTime createdDate;

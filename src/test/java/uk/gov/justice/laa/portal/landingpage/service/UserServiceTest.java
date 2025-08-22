@@ -1576,17 +1576,17 @@ class UserServiceTest {
                     .offices(Set.of(office1, office2))
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfileOld))
+                    .build();
+            userProfileOld.setEntraUser(entraUser);
             UserProfile userProfileNew = UserProfile.builder()
                     .id(userProfileId)
                     .activeProfile(true)
                     .firm(userFirm)
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
-            EntraUser entraUser = EntraUser.builder()
-                    .id(entraUserId)
-                    .userProfiles(Set.of(userProfileOld))
-                    .build();
-            userProfileOld.setEntraUser(entraUser);
 
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfileOld));
             when(mockOfficeRepository.findAllById(any())).thenReturn(List.of());
