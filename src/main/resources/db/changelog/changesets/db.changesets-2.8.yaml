@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755520094956-1
+      author: suresh.kavali (generated)
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: distributed_lock_pkey
+                  name: lock_key
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: locked_until
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  constraints:
+                    nullable: false
+                  name: locked_by
+                  type: VARCHAR(255)
+            tableName: distributed_lock
+  - changeSet:
+      id: 1755520094956-2
+      author: suresh.kavali (generated)
+      changes:
+        - createIndex:
+            columns:
+              - column:
+                  name: locked_until
+            indexName: idx_distributed_lock_locked_until
+            tableName: distributed_lock
+            using: btree

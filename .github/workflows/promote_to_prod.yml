@@ -6,13 +6,12 @@ on:
 jobs:
   create-prod-pr:
     runs-on: ubuntu-latest
-    if: github.actor == 'github-actions[bot]'
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        ref: test
         fetch-depth: 0
     
     - name: Configure Git
@@ -22,12 +21,11 @@ jobs:
     
     - name: Check for merge conflicts
       run: |
-        # Fetch both branches
-        git fetch origin test:test
-        git fetch origin prd:prd
+        # Fetch the prd branch without checking it out
+        git fetch origin prd:refs/remotes/origin/prd
         
         # Try to merge test into prd (dry run)
-        if git merge-tree $(git merge-base test prd) test prd | grep -q "<<<<<<<"; then
+        if git merge-tree $(git merge-base HEAD origin/prd) HEAD origin/prd | grep -q "<<<<<<<"; then
           echo "❌ Merge conflicts detected! Aborting PR creation."
           echo "Please resolve conflicts between test and prd branches manually."
           exit 1
