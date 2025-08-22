@@ -132,6 +132,8 @@ jobs:
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
           CCMS_USER_MANAGEMENT_API_BASE_URL : ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
           CCMS_USER_MANAGEMENT_API_KEY : ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
+          ENABLE_DISTRIBUTED_DB_LOCKING : ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
+          DISTRIBUTED_DB_LOCKING_PERIOD : ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
 
       - name: Deploy to Cloud Platform
         run: |

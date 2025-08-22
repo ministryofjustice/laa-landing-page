@@ -84,7 +84,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             // Add the default security group
             securityGroups.add(defaultSecurityGroup);
 
-            UpdateSecurityGroupsRequest request = builder.requiredGroups(securityGroups).build();
+            UpdateSecurityGroupsRequest request = builder.groups(securityGroups).build();
 
             logger.info("Sending update security groups request to tech services: {}", request);
 
@@ -130,7 +130,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .verificationMethod(techServicesVerificationMethod)
-                    .requiredGroups(securityGroups).build();
+                    .groups(securityGroups).build();
 
             logger.info("Sending create new user request with security groups to tech services: {}", request);
 
