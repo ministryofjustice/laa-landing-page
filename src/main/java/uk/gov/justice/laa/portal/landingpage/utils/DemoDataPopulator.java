@@ -329,7 +329,7 @@ public class DemoDataPopulator {
                 }
             } catch (Exception ex) {
                 log.error("Unable to add user to the list of users in the database, the user may not present in entra: "
-                        + userPrincipal, ex);
+                        + userPrincipal.getEmail(), ex);
                 System.err.println("Continuing with the list of users in the database");
             }
 

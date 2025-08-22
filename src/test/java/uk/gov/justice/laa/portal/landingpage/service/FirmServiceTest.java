@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.anyList;
@@ -176,6 +178,214 @@ class FirmServiceTest {
         assertThat(result.get(1).getCode()).isEqualTo("JSMITH002");
         verify(firmRepository, never()).findByNameOrCodeContaining(searchTerm.trim());
         verify(firmRepository).findAll();
+    }
+
+    @Nested
+    class GetUserAccessibleFirmsTest {
+        private static final String CACHE_NAME = CachingConfig.LIST_OF_FIRMS_CACHE;
+        private static final String ALL_FIRMS_KEY = "all_firms";
+        private Cache cache;
+        private EntraUser internalUser;
+        private EntraUser externalSingleFirmAdminUser;
+        private List<FirmDto> allFirms;
+
+        @BeforeEach
+        void setUp() {
+            // Setup test data
+            internalUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .userType(UserType.INTERNAL)
+                                    .build()
+                    ))
+                    .build();
+
+            externalSingleFirmAdminUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                                    .firm(Firm.builder()
+                                            .id(UUID.randomUUID())
+                                            .name("Test Firm 1")
+                                            .code("TF1")
+                                            .build())
+                                    .build()
+                    ))
+                    .build();
+
+            allFirms = List.of(
+                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1"),
+                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2"),
+                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1")
+            );
+
+            // Setup cache mock
+            cache = mock(Cache.class);
+        }
+
+        @Test
+        void whenInternalUser_returnsAllFirms() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            Cache.ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(valueWrapper);
+            when(valueWrapper.get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "");
+
+            // Then
+            assertThat(result).hasSize(3);
+            verify(cache).get(ALL_FIRMS_KEY);
+        }
+
+        @Test
+        void whenInternalUser_withSearchTerm_filtersFirms() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(mock(ValueWrapper.class));
+            when(cache.get(ALL_FIRMS_KEY).get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "Test");
+
+            // Then
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FirmDto::getName)
+                    .containsExactlyInAnyOrder("Test Firm 1", "Test Firm 2");
+        }
+
+        @Test
+        void whenInternalUser_withCodeSearch_filtersFirmsByCode() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            Cache.ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(valueWrapper);
+            when(valueWrapper.get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "TF");
+
+            // Then
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FirmDto::getCode)
+                    .containsExactlyInAnyOrder("TF1", "TF2");
+        }
+
+        @Test
+        void whenExternalSingleFirmAdmin_returnsOnlyAssignedFirm() {
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(externalSingleFirmAdminUser, "");
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("Test Firm 1");
+        }
+
+        @Test
+        void whenExternalSingleFirmAdmin_withMatchingSearch_returnsFirm() {
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(externalSingleFirmAdminUser, "Firm 1");
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("Test Firm 1");
+        }
+
+        @Test
+        void whenExternalSingleFirmAdmin_withNonMatchingSearch_returnsEmptyList() {
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(externalSingleFirmAdminUser, "NonMatching");
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void whenNullSearchTerm_returnsAllFirms() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            Cache.ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(valueWrapper);
+            when(valueWrapper.get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, null);
+
+            // Then
+            assertThat(result).hasSize(3);
+        }
+
+        @Test
+        void whenEmptySearchTerm_returnsAllFirms() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            Cache.ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(valueWrapper);
+            when(valueWrapper.get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "   ");
+
+            // Then
+            assertThat(result).hasSize(3);
+        }
+
+        @Test
+        void whenSearchIsCaseInsensitive_returnsMatchingFirms() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            Cache.ValueWrapper valueWrapper = mock(ValueWrapper.class);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(valueWrapper);
+            when(valueWrapper.get()).thenReturn(allFirms);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "fIrM");
+
+            // Then
+            assertThat(result).hasSize(3);
+        }
+
+        @Test
+        void whenUnsupportedUserType_throwsUnsupportedOperationException() {
+            // Given
+            EntraUser unsupportedUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .userType(UserType.EXTERNAL_SINGLE_FIRM) // Unsupported type
+                                    .build()
+                    ))
+                    .build();
+
+            // When / Then
+            assertThrows(UnsupportedOperationException.class, () ->
+                    firmService.getUserAccessibleFirms(unsupportedUser, "")
+            );
+        }
+
+        @Test
+        void whenCacheMiss_loadsFirmsFromRepository() {
+            // Given
+            when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
+            when(cache.get(ALL_FIRMS_KEY)).thenReturn(null);
+            when(firmRepository.findAll()).thenReturn(List.of(
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm").build()
+            ));
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "");
+
+            // Then
+            assertThat(result).hasSize(1);
+            verify(firmRepository).findAll();
+            verify(cache).put(ALL_FIRMS_KEY, result);
+        }
     }
 
     @Test
