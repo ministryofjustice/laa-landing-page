@@ -2400,7 +2400,7 @@ class UserControllerTest {
     }
 
     @Test
-    void editUser_shouldRedirectWhenUserNotFound() {
+    void editUser_shouldNotAddRolesAttributeWhenUserNotFound() {
         // Given
         String userId = "nonexistent";
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
@@ -2409,7 +2409,9 @@ class UserControllerTest {
         String view = userController.editUser(userId, model, session);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users");
+        assertThat(view).isEqualTo("edit-user");
+        assertThat(model.getAttribute("user")).isNull();
+        assertThat(model.getAttribute("roles")).isNull();
         verify(userService, Mockito.never()).getUserAppRolesByUserId(anyString());
     }
 
