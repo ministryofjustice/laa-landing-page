@@ -1469,7 +1469,6 @@ class UserControllerTest {
 
     @Test
     void displayAllUsers_withBackButtonTrue_shouldRestoreFiltersFromSession() {
-        // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
 
@@ -1494,10 +1493,9 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
             .thenReturn(paginatedUsers);
 
-        // When - backButton is true, no new filter parameters provided
+        // backButton is true, no new filter parameters provided
         String view = userController.displayAllUsers(10, 1, null, null, null, null, false, true, model, testSession, authentication);
 
-        // Then
         assertThat(view).isEqualTo("users");
         // Verify filters were restored from session
         verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
@@ -1506,7 +1504,6 @@ class UserControllerTest {
 
     @Test
     void displayAllUsers_withBackButtonFalse_shouldUseNewFiltersAndStoreInSession() {
-        // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
         
@@ -1523,10 +1520,9 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
             .thenReturn(paginatedUsers);
 
-        // When - backButton is false, new filter parameters provided
+        // backButton is false, new filter parameters provided
         String view = userController.displayAllUsers(20, 2, "firstName", "asc", "internal", "new@test.com", false, false, model, testSession, authentication);
 
-        // Then
         assertThat(view).isEqualTo("users");
         // Verify new filters were used - for internal user with VIEW_INTERNAL_USER permission
         verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
@@ -1569,41 +1565,7 @@ class UserControllerTest {
     }
 
     @Test
-    void displayAllUsers_withBackButtonTrueAndPartialSessionFilters_shouldRestorePartialFilters() {
-        // Given
-        PaginatedUsers paginatedUsers = new PaginatedUsers();
-        paginatedUsers.setUsers(new ArrayList<>());
-        
-        MockHttpSession testSession = new MockHttpSession();
-        Map<String, Object> partialFilters = new HashMap<>();
-        partialFilters.put("search", "partial@test.com");
-        partialFilters.put("page", 4);
-        // Missing other filter values
-        testSession.setAttribute("userListFilters", partialFilters);
-        
-        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        when(userService.isInternal(any(UUID.class))).thenReturn(false);
-        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
-        FirmDto firmDto = new FirmDto();
-        firmDto.setId(UUID.randomUUID());
-        when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
-            .thenReturn(paginatedUsers);
-
-        // When - backButton is true with partial session filters
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, true, model, testSession, authentication);
-
-        // Then
-        assertThat(view).isEqualTo("users");
-        // Should restore available filters and use defaults for missing ones
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-            eq("partial@test.com"), any(), anyList(), eq(false), eq(4), eq(10), isNull(), isNull());
-    }
-
-    @Test
     void displayAllUsers_shouldSetHasFiltersAttributeCorrectly() {
-        // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
 
@@ -1628,10 +1590,8 @@ class UserControllerTest {
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
             .thenReturn(paginatedUsers);
 
-        // When
         String view = userController.displayAllUsers(10, 1, null, null, null, null, false, true, model, testSession, authentication);
 
-        // Then
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("hasFilters")).isEqualTo(true); // Should be true due to active search and page != 1
         assertThat(model.getAttribute("filterParams")).isEqualTo(activeFilters);

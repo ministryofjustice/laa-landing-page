@@ -222,10 +222,8 @@ public class UserController {
             boolean hasFilters = filters != null && hasActiveFilters(filters);
             model.addAttribute("hasFilters", hasFilters);
             model.addAttribute("filterParams", filters);
-
-            return "edit-user";
         }
-        return "redirect:/admin/users";
+        return "edit-user";
     }
 
     /**
@@ -1100,6 +1098,7 @@ public class UserController {
         List<String> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
         if (!selectedOffices.contains("ALL")) {
+            // If "ALL" is selected, get all available offices by firm
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
