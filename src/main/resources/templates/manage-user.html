@@ -2,24 +2,17 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'home'},
+      pageCategory=${'manage-user'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <title>Homepage</title>
+    <title>Manage User</title>
 </head>
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">Home</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
-                        th:text="${user.fullName}"></span></a>
-            </li>
-        </ol>
+        <a class="govuk-back-link govuk-!-margin-bottom-3" href="/admin/users">
+            Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
@@ -142,16 +135,21 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
-                                        <dt class="govuk-summary-list__key" th:text="${office.address.addressLine1}"></dt>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine1}"></dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine2}"></dd>
+                                        <dt class="govuk-summary-list__key" th:text="${office.address.addressLine1}">
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine1}">
+                                        </dd>
+                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine2}">
+                                        </dd>
                                         <dd class="govuk-summary-list__value" th:text="${office.address.city}"></dd>
                                         <dd class="govuk-summary-list__value" th:text="${office.address.postcode}"></dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}" class="govuk-summary-list__row">
+                                    <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}"
+                                        class="govuk-summary-list__row">
                                         <dd class="govuk-summary-list__value">No offices assigned</dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}" class="govuk-summary-list__row">
+                                    <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}"
+                                        class="govuk-summary-list__row">
                                         <dd class="govuk-summary-list__value">Access to All Offices</dd>
                                     </div>
                                 </dl>

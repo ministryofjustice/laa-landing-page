@@ -2,13 +2,19 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'users'})}" xmlns:th="http://www.thymeleaf.org">
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
 
 <head>
     <title>Users</title>
 </head>
 
 <body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/home}">
+            Back </a>
+    </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
         <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
             aria-label="success: User added successfully" data-module="moj-alert">
@@ -96,83 +102,73 @@
                             <thead class="govuk-table__head">
                                 <tr class="govuk-table__row">
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'firstName' ? direction : 'none'}" style="width: 20%; min-width: 120px;">
+                                        th:aria-sort="${sort == 'firstName' ? direction : 'none'}"
+                                        style="width: 20%; min-width: 120px;">
                                         <button type="button" data-index="0"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             Name
-                                            <img th:if="${sort == 'firstName' and direction == 'asc'}" 
-                                                 th:src="@{/assets/images/sort-asc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort == 'firstName' and direction == 'desc'}" 
-                                                 th:src="@{/assets/images/sort-desc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort != 'firstName'}" 
-                                                 th:src="@{/assets/images/sort-none.svg}" 
-                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firstName' and direction == 'asc'}"
+                                                th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firstName' and direction == 'desc'}"
+                                                th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort != 'firstName'}" th:src="@{/assets/images/sort-none.svg}"
+                                                width="22" height="22" alt="">
                                         </button>
                                     </th>
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'firmName' ? direction : 'none'}" style="width: 20%; min-width: 120px;">
+                                        th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
+                                        style="width: 20%; min-width: 120px;">
                                         <button type="button" data-index="1"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firmName', direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             Firm
-                                            <img th:if="${sort == 'firmName' and direction == 'asc'}" 
-                                                 th:src="@{/assets/images/sort-asc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort == 'firmName' and direction == 'desc'}" 
-                                                 th:src="@{/assets/images/sort-desc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort != 'firmName'}" 
-                                                 th:src="@{/assets/images/sort-none.svg}" 
-                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firmName' and direction == 'asc'}"
+                                                th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort == 'firmName' and direction == 'desc'}"
+                                                th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
+                                                width="22" height="22" alt="">
                                         </button>
                                     </th>
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'email' ? direction : 'none'}" style="width: 35%; min-width: 200px;">
+                                        th:aria-sort="${sort == 'email' ? direction : 'none'}"
+                                        style="width: 35%; min-width: 200px;">
                                         <button type="button" data-index="2"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             Email
-                                            <img th:if="${sort == 'email' and direction == 'asc'}" 
-                                                 th:src="@{/assets/images/sort-asc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort == 'email' and direction == 'desc'}" 
-                                                 th:src="@{/assets/images/sort-desc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort != 'email'}" 
-                                                 th:src="@{/assets/images/sort-none.svg}" 
-                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'email' and direction == 'asc'}"
+                                                th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort == 'email' and direction == 'desc'}"
+                                                th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort != 'email'}" th:src="@{/assets/images/sort-none.svg}"
+                                                width="22" height="22" alt="">
                                         </button>
                                     </th>
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'userType' ? direction : 'none'}" style="width: 15%; min-width: 110px;">
+                                        th:aria-sort="${sort == 'userType' ? direction : 'none'}"
+                                        style="width: 15%; min-width: 110px;">
                                         <button type="button" data-index="3"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             User Type
-                                            <img th:if="${sort == 'userType' and direction == 'asc'}" 
-                                                 th:src="@{/assets/images/sort-asc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort == 'userType' and direction == 'desc'}" 
-                                                 th:src="@{/assets/images/sort-desc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort != 'userType'}" 
-                                                 th:src="@{/assets/images/sort-none.svg}" 
-                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userType' and direction == 'asc'}"
+                                                th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userType' and direction == 'desc'}"
+                                                th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}"
+                                                width="22" height="22" alt="">
                                         </button>
                                     </th>
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}" style="width: 10%; min-width: 90px;">
+                                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
+                                        style="width: 10%; min-width: 90px;">
                                         <button type="button" data-index="4"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             Status
-                                            <img th:if="${sort == 'userStatus' and direction == 'asc'}" 
-                                                 th:src="@{/assets/images/sort-asc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort == 'userStatus' and direction == 'desc'}" 
-                                                 th:src="@{/assets/images/sort-desc.svg}" 
-                                                 width="22" height="22" alt="">
-                                            <img th:if="${sort != 'userStatus'}" 
-                                                 th:src="@{/assets/images/sort-none.svg}" 
-                                                 width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userStatus' and direction == 'asc'}"
+                                                th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort == 'userStatus' and direction == 'desc'}"
+                                                th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                            <img th:if="${sort != 'userStatus'}"
+                                                th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
                                         </button>
                                     </th>
                                 </tr>
@@ -180,15 +176,19 @@
 
                             <tbody class="govuk-table__body">
                                 <tr class="govuk-table__row" th:each="user : ${users}">
-                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                    <td class="govuk-table__cell"
+                                        style="word-wrap: break-word; overflow-wrap: break-word;">
                                         <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
                                             th:text="${user.fullName}"></a>
                                     </td>
-                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                    <td class="govuk-table__cell"
+                                        style="word-wrap: break-word; overflow-wrap: break-word;"
                                         th:text="${user.firm != null ? user.firm.name : ''}"></td>
-                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                    <td class="govuk-table__cell"
+                                        style="word-wrap: break-word; overflow-wrap: break-word;"
                                         th:text="${user.entraUser.email}"></td>
-                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                    <td class="govuk-table__cell"
+                                        style="word-wrap: break-word; overflow-wrap: break-word;">
                                         <span th:switch="${#strings.trim(user.userType)}">
                                             <span th:case="'INTERNAL'">Internal</span>
                                             <span th:case="'EXTERNAL_SINGLE_FIRM_ADMIN'">Firm Admin</span>
@@ -210,11 +210,15 @@
                 </form>
                 <nav class="govuk-pagination" aria-label="Pagination">
                     <div class="govuk-pagination__prev" th:if="${page > 1}">
-                        <a class="govuk-link govuk-pagination__link" 
-                           th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}" 
-                           rel="prev">
-                            <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
-                                <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
+                        <a class="govuk-link govuk-pagination__link"
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            rel="prev">
+                            <svg class="govuk-pagination__icon govuk-pagination__icon--prev"
+                                xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true"
+                                focusable="false" viewBox="0 0 15 13">
+                                <path
+                                    d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                                </path>
                             </svg>
                             <span class="govuk-pagination__link-title">
                                 Previous<span class="govuk-visually-hidden"> page</span>
@@ -224,14 +228,14 @@
 
                     <ul class="govuk-pagination__list">
                         <!-- First page -->
-                        <li class="govuk-pagination__item" th:if="${totalPages > 0}" 
+                        <li class="govuk-pagination__item" th:if="${totalPages > 0}"
                             th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                             <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                               th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, sort=${search}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                               th:aria-label="'Page 1'">1</a>
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                th:aria-label="'Page 1'">1</a>
                             <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                               th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                               th:aria-label="'Page 1'" aria-current="page">1</a>
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                th:aria-label="'Page 1'" aria-current="page">1</a>
                         </li>
 
                         <!-- Left ellipses if needed -->
@@ -240,44 +244,50 @@
                         </li>
 
                         <!-- Pages around current page -->
-                        <th:block th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, page - 2), T(java.lang.Math).min(totalPages - 1, page + 2))}">
-                            <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}" 
+                        <th:block
+                            th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, page - 2), T(java.lang.Math).min(totalPages - 1, page + 2))}">
+                            <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                                 th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                                 <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                                   th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                                   th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                                    th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                    th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                                 <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                                   th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                                   th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
+                                    th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                    th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                             </li>
                         </th:block>
 
                         <!-- Right ellipses if needed -->
-                        <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page < totalPages - 3}">
+                        <li class="govuk-pagination__item govuk-pagination__item--ellipses"
+                            th:if="${page < totalPages - 3}">
                             &ctdot;
                         </li>
 
                         <!-- Last page -->
-                        <li class="govuk-pagination__item" th:if="${totalPages > 1}" 
+                        <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                             th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                             <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                               th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                               th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                             <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                               th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                               th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
+                                th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                                th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                         </li>
                     </ul>
 
                     <div class="govuk-pagination__next" th:if="${page < totalPages}">
                         <a class="govuk-link govuk-pagination__link"
-                           th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
-                           rel="next">
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            rel="next">
                             <span class="govuk-pagination__link-title">
                                 Next<span class="govuk-visually-hidden"> page</span>
                             </span>
-                            <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
-                                <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
+                            <svg class="govuk-pagination__icon govuk-pagination__icon--next"
+                                xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true"
+                                focusable="false" viewBox="0 0 15 13">
+                                <path
+                                    d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                                </path>
                             </svg>
                         </a>
                     </div>
@@ -285,13 +295,18 @@
                 <style>
                     /* Prevent visited link styling on pagination */
                     .govuk-pagination__link:visited {
-                        color: #1d70b8; /* Same as unvisited govuk-link color */
+                        color: #1d70b8;
+                        /* Same as unvisited govuk-link color */
                     }
+
                     .govuk-pagination__link:visited:hover {
-                        color: #003078; /* Same as unvisited govuk-link hover color */
+                        color: #003078;
+                        /* Same as unvisited govuk-link hover color */
                     }
+
                     .govuk-pagination__link:visited:focus {
-                        color: #0b0c0c; /* Same as unvisited govuk-link focus color */
+                        color: #0b0c0c;
+                        /* Same as unvisited govuk-link focus color */
                     }
                 </style>
                 <p class="moj-pagination__results">Showing <b
