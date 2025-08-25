@@ -1472,8 +1472,7 @@ class UserControllerTest {
         // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
-        
-        MockHttpSession testSession = new MockHttpSession();
+
         Map<String, Object> existingFilters = new HashMap<>();
         existingFilters.put("size", 25);
         existingFilters.put("page", 3);
@@ -1482,6 +1481,7 @@ class UserControllerTest {
         existingFilters.put("search", "test@example.com");
         existingFilters.put("usertype", "external");
         existingFilters.put("showFirmAdmins", true);
+        MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("userListFilters", existingFilters);
         
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
@@ -1546,32 +1546,24 @@ class UserControllerTest {
 
     @Test
     void displayAllUsers_withBackButtonTrueButNoSessionFilters_shouldUseDefaults() {
-        // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
-        
-        MockHttpSession testSession = new MockHttpSession();
-        // No existing filters in session
         
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         when(userService.isInternal(any(UUID.class))).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
-        // MockHttpSession doesn't need when() mocking, it handles getAttribute naturally
-        // when(testSession.getAttribute("userListFilters")).thenReturn(null);
-        // when(testSession.getAttribute("successMessage")).thenReturn(null);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(), any()))
             .thenReturn(paginatedUsers);
 
-        // When - backButton is true but no session filters exist
+        MockHttpSession testSession = new MockHttpSession();
+        // No existing filters in session
         String view = userController.displayAllUsers(10, 1, null, null, null, "", false, true, model, testSession, authentication);
 
-        // Then
         assertThat(view).isEqualTo("users");
-        // Should use default values when no session filters exist - external user calls with firm ID
         verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
             eq(""), any(UUID.class), eq(UserType.EXTERNAL_TYPES), eq(false), eq(1), eq(10), isNull(), isNull());
     }
@@ -1614,8 +1606,7 @@ class UserControllerTest {
         // Given
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
-        
-        MockHttpSession testSession = new MockHttpSession();
+
         Map<String, Object> activeFilters = new HashMap<>();
         activeFilters.put("search", "active@test.com");
         activeFilters.put("page", 2); // Non-default page makes it active
@@ -1624,6 +1615,7 @@ class UserControllerTest {
         activeFilters.put("direction", "");
         activeFilters.put("usertype", "");
         activeFilters.put("showFirmAdmins", false);
+        MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("userListFilters", activeFilters);
         
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
