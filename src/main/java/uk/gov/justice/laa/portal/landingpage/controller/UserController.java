@@ -183,7 +183,9 @@ public class UserController {
      * Helper method to check if filters contain any active (non-default) values
      */
     private boolean hasActiveFilters(Map<String, Object> filters) {
-        if (filters == null) return false;
+        if (filters == null) {
+            return false;
+        }
 
         // Check if any filter has a non-default value
         String search = (String) filters.get("search");
@@ -194,13 +196,13 @@ public class UserController {
         Integer size = (Integer) filters.get("size");
         Integer page = (Integer) filters.get("page");
 
-        return (search != null && !search.isEmpty()) ||
-               (usertype != null && !usertype.isEmpty()) ||
-               (sort != null && !sort.isEmpty()) ||
-               (direction != null && !direction.isEmpty()) ||
-               (showFirmAdmins != null && showFirmAdmins) ||
-               (size != null && size != 10) ||
-               (page != null && page != 1);
+        return (search != null && !search.isEmpty())
+                || (usertype != null && !usertype.isEmpty())
+                || (sort != null && !sort.isEmpty())
+                || (direction != null && !direction.isEmpty())
+                || (showFirmAdmins != null && showFirmAdmins)
+                || (size != null && size != 10)
+                || (page != null && page != 1);
     }
 
     @GetMapping("/users/edit/{id}")
@@ -1705,9 +1707,6 @@ public class UserController {
         return new RedirectView("/error");
     }
 
-    /**
-     * Process request filters and handle session-based filter restoration
-     */
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction, 
                                                      String usertype, String search, boolean showFirmAdmins, 
                                                      boolean backButton, HttpSession session) {
@@ -1727,9 +1726,15 @@ public class UserController {
                 showFirmAdmins = sessionFilters.containsKey("showFirmAdmins") ? (Boolean) sessionFilters.get("showFirmAdmins") : showFirmAdmins;
                 
                 // Handle empty strings for optional parameters
-                if (sort != null && sort.isEmpty()) sort = null;
-                if (direction != null && direction.isEmpty()) direction = null;
-                if (usertype != null && usertype.isEmpty()) usertype = null;
+                if (sort != null && sort.isEmpty()) {
+                    sort = null;
+                }
+                if (direction != null && direction.isEmpty()) {
+                    direction = null;
+                }
+                if (usertype != null && usertype.isEmpty()) {
+                    usertype = null;
+                }
             }
         } else {
             // Clear session filters when not using back button (new filter request)
