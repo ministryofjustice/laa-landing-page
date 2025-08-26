@@ -57,7 +57,7 @@ public class InternalUserPollingService {
                 allUsers.addAll(response.getValue());
                 nextLink = response.getOdataNextLink();
                 page++;
-                logger.info("Page {} of users retrieved and added to list of users from entra group", page);
+                logger.debug("Page {} of users retrieved and added to list of users from entra group", page);
             } else  {
                 break;
             }
