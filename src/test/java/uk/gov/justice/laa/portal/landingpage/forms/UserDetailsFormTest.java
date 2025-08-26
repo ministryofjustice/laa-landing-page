@@ -77,6 +77,18 @@ class UserDetailsFormTest {
     }
 
     @Test
+    void emailHasPlus_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirstName("John");
+        form.setLastName("Doe");
+        form.setEmail("john.doe+1@gmail.com");
+        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("Enter an email address in the correct format");
+    }
+
+    @Test
     void tooLongEmail_shouldTriggerSizeViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirstName("Jane");

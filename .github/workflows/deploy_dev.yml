@@ -78,13 +78,14 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
-      - name: Generate Deployment Files
+      - name: Generate Deployment the Files
         run: |
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
-          cat deployments/templates/ingress.yml | envsubst > deployments/ingress.yml
+          cat deployments/templates/landing-page-ingress.yml | envsubst > deployments/landing-page-ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
+          BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
@@ -131,6 +132,8 @@ jobs:
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
           CCMS_USER_MANAGEMENT_API_BASE_URL : ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
           CCMS_USER_MANAGEMENT_API_KEY : ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
+          ENABLE_DISTRIBUTED_DB_LOCKING : ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
+          DISTRIBUTED_DB_LOCKING_PERIOD : ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
 
       - name: Deploy to Cloud Platform
         run: |

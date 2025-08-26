@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -141,8 +142,10 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
+            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal && appRole.getRoleType().equals(RoleType.INTERNAL);
+            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal && appRole.getRoleType().equals(RoleType.EXTERNAL);
             roles = roles.stream()
-                    .filter(appRole -> (isInternal || appRole.getRoleType().equals(RoleType.EXTERNAL) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL)))
+                    .filter(appRole -> internalUserWithInternalRole.test(appRole) || externalUserWithExternalRole.test(appRole) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -282,11 +285,10 @@ public class UserService {
         return dto;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, List<Permission> permissions, UUID firmId,
-                                                                           List<UserType> userTypes, int page, int pageSize, String sort, String direction) {
+    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, UUID firmId,
+                                                                           List<UserType> userTypes, boolean showFirmAdmins, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, permissions.isEmpty() ? null : permissions, permissions.size(),
-                firmId, userTypes, pageRequest);
+        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, firmId, userTypes, showFirmAdmins, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
@@ -410,10 +412,14 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
-        Set<AppRole> appRoles = getAuthzAppRoleByUserType(userType).map(Set::of).orElseGet(Set::of);
+        Set<AppRole> appRoles = new HashSet<>();
+        if (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN) {
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            externalUserManagerRole.ifPresent(appRoles::add);
+        }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .userType(userType)
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
                 .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
@@ -635,8 +641,7 @@ public class UserService {
                 userProfile.setOffices(null);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
-                Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
-
+                Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 // Update user profile offices
                 userProfile.setOffices(offices);
             }
@@ -646,6 +651,25 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
         }
+    }
+
+    private Set<Office> validateOfficesByUserFirm(UserProfile userProfile, Iterable<UUID> officeIds) {
+        Set<Office> offices = new HashSet<>(officeRepository.findAllById(officeIds));
+        // Only allow offices that associated with the same firm as the user.
+        UUID userFirmId = userProfile.getFirm() != null ? userProfile.getFirm().getId() : null;
+        Set<Office> validOffices = offices.stream()
+                .filter(office -> office.getFirm() != null)
+                .filter(office -> office.getFirm().getId().equals(userFirmId))
+                .collect(Collectors.toSet());
+        Set<Office> invalidOffices = new HashSet<>(offices);
+        invalidOffices.removeAll(validOffices);
+        if (!invalidOffices.isEmpty()) {
+            String invalidOfficeIds = invalidOffices.stream()
+                    .map(office -> office.getId().toString())
+                    .collect(Collectors.joining(","));
+            logger.warn("There was an attempt to assign user with profile id \"{}\" the following offices not associated with their firm: {}", userProfile.getId().toString(), invalidOfficeIds);
+        }
+        return validOffices;
     }
 
     public boolean isInternal(String userId) {
@@ -761,13 +785,6 @@ public class UserService {
             }
         }
         return usersPersisted;
-    }
-
-    private Optional<AppRole> getAuthzAppRoleByUserType(UserType userType) {
-        if (userType.getAuthzRoleName() != null) {
-            return appRoleRepository.findByName(userType.getAuthzRoleName()).filter(AppRole::isAuthzRole);
-        }
-        return Optional.empty();
     }
 
     public Set<Permission> getUserPermissionsByUserId(String userId) {

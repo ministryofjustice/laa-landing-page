@@ -21,8 +21,8 @@ public class RegisterUserRequest {
     private String email;
     @JsonProperty("verification_method")
     private String verificationMethod;
-    @JsonProperty("requiredGroups")
-    private Set<String> requiredGroups;
+    @JsonProperty("groups")
+    private Set<String> groups;
     @JsonProperty("address")
     private Address address;
 

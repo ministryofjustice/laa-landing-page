@@ -13,7 +13,7 @@ jobs:
       - name: Run ZAP Weekly Full Scan
         uses: zaproxy/action-full-scan@v0.12.0
         with:
-          target: 'https://laa-landing-page-dev.apps.live.cloud-platform.service.justice.gov.uk/'
+          target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j -m 120'
           fail_action: false
 

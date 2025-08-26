@@ -16,16 +16,22 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +56,9 @@ class DemoDataPopulatorTest {
     private UserProfileRepository laaUserProfileRepository;
 
     @Mock
+    private DistributedLockRepository lockRepository;
+
+    @Mock
     private ApplicationReadyEvent applicationReadyEvent;
 
     @InjectMocks
@@ -57,6 +66,19 @@ class DemoDataPopulatorTest {
 
     @BeforeEach
     public void setUp() {
+        // Initialize the service with required dependencies
+        DistributedLockService lockService = new DistributedLockService(lockRepository);
+        this.demoDataPopulator = new DemoDataPopulator(
+                firmRepository,
+                officeRepository,
+                entraUserRepository,
+                laaAppRepository,
+                laaAppRoleRepository,
+                laaUserProfileRepository,
+                lockService
+        );
+
+        // Set up test data
         ReflectionTestUtils.setField(demoDataPopulator, "appCivilApplyName", "Civil Apply");
         ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyName", "Crime Apply");
         ReflectionTestUtils.setField(demoDataPopulator, "appPuiName", "PUI");
@@ -68,16 +90,23 @@ class DemoDataPopulatorTest {
                 "civil_apply_oid//AppReg-User-Access-LAAD-Apply-Civil-Legal-Aid//3e3003ee-2183-4058-8279-4a557daba8c8");
         ReflectionTestUtils.setField(demoDataPopulator, "ccmsAccountLinkDetails",
                 "ccms_account_link_oid//APPREG-User-Access-LAAD-CCMS transfer requests//8a9f8798-a581-4b75-b22b-ef1c32ca12ba");
+        
+        // Enable demo data population by default
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "enableDistributedDbLocking", true);
+
     }
 
     @Test
     void populateDummyDataDisabled() {
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", false);
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(0);
     }
 
     @Test
     void populateDummyDataAlreadyExists() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         when(firmRepository.findFirmByName("Firm One")).thenReturn(Firm.builder().name("Firm One").build());
 
@@ -88,6 +117,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataErrorAddingData() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
 
         // Mocked response from Graph API
@@ -95,16 +125,17 @@ class DemoDataPopulatorTest {
 
         demoDataPopulator.appReady(applicationReadyEvent);
 
-        Mockito.verify(firmRepository, Mockito.times(1)).saveAll(Mockito.anyList());
-        Mockito.verify(officeRepository, Mockito.times(0)).saveAll(Mockito.anyList());
-        Mockito.verify(entraUserRepository, Mockito.times(0)).saveAll(Mockito.anyList());
-        Mockito.verify(laaAppRepository, Mockito.times(0)).saveAll(Mockito.anyList());
-        Mockito.verify(laaAppRoleRepository, Mockito.times(0)).saveAll(Mockito.anyList());
-        Mockito.verify(laaUserProfileRepository, Mockito.times(0)).saveAll(Mockito.anyList());
+        verify(firmRepository, times(1)).saveAll(Mockito.anyList());
+        verify(officeRepository, times(0)).saveAll(Mockito.anyList());
+        verify(entraUserRepository, times(0)).saveAll(Mockito.anyList());
+        verify(laaAppRepository, times(0)).saveAll(Mockito.anyList());
+        verify(laaAppRoleRepository, times(0)).saveAll(Mockito.anyList());
+        verify(laaUserProfileRepository, times(0)).saveAll(Mockito.anyList());
     }
 
     @Test
     void populateDummyDataErrorAddingCustomApps() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
 
         // Mocked response from Graph API
@@ -118,6 +149,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataErrorAddingCustomUser() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("test"));
 
@@ -132,12 +164,23 @@ class DemoDataPopulatorTest {
     @Test
     void populateDummyDataEnabled() {
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
     }
 
     @Test
+    void populateDummyDataEnabledNoDistributedLock() {
+        ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "enableDistributedDbLocking", false);
+        demoDataPopulator.appReady(applicationReadyEvent);
+        verifyMockCalls(1);
+        verify(lockRepository, never()).acquireLock(anyString(), any(), anyString());
+    }
+
+    @Test
     void populateDummyDataEnabledWithAdditionalUsers() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
@@ -147,14 +190,15 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabledWithAdditionalAppsAndUsers() {
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
         ReflectionTestUtils.setField(demoDataPopulator, "internalUserPrincipals", Set.of("testinternaluser@email.com:1234"));
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
-        Mockito.verify(laaAppRepository, Mockito.times(5)).save(Mockito.any(App.class));
-        Mockito.verify(laaAppRoleRepository, Mockito.times(10)).save(Mockito.any(AppRole.class));
+        verify(laaAppRepository, times(5)).save(Mockito.any(App.class));
+        verify(laaAppRoleRepository, times(10)).save(Mockito.any(AppRole.class));
     }
 
     @Test
@@ -278,8 +322,19 @@ class DemoDataPopulatorTest {
 
     }
 
+    @Test
+    void shouldHandleLockAcquisitionFailure() {
+        // Given
+        when(lockRepository.save(any()))
+            .thenThrow(new RuntimeException("Lock acquisition failed"));
+
+        // When/Then
+        assertDoesNotThrow(() -> demoDataPopulator.appReady(applicationReadyEvent));
+        verify(firmRepository, never()).saveAll(anyList());
+    }
+
     private void verifyMockCalls(int times) {
-        Mockito.verify(firmRepository, Mockito.times(times)).saveAll(Mockito.anyList());
-        Mockito.verify(officeRepository, Mockito.times(times)).saveAll(Mockito.anyList());
+        verify(firmRepository, times(times)).saveAll(anyList());
+        verify(officeRepository, times(times)).saveAll(anyList());
     }
 }
