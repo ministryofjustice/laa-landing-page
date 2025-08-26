@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -103,27 +104,26 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser u
                         LEFT JOIN FETCH ups.firm f
-            WHERE (:userTypes IS NULL OR ups.userType IN :userTypes)
+            WHERE (:#{#criteria.userTypes} IS NULL OR ups.userType IN :#{#criteria.userTypes})
             AND (
-                (:search IS NULL OR :search = '') OR 
+                (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR 
                 EXISTS (
                     SELECT 1 FROM ups.entraUser u 
-                    WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%'))
+                    WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
+                    OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
                 )
             )
             AND (
-                (:firmSearch IS NULL OR :firmSearch = '') OR 
+                (:#{#criteria.firmSearch} IS NULL OR :#{#criteria.firmSearch} = '') OR 
                 (ups.firm IS NOT NULL AND 
-                 (LOWER(ups.firm.name) LIKE LOWER(CONCAT('%', :firmSearch, '%')) OR 
-                  LOWER(ups.firm.code) LIKE LOWER(CONCAT('%', :firmSearch, '%'))))
+                 (LOWER(ups.firm.name) LIKE LOWER(CONCAT('%', :#{#criteria.firmSearch}, '%')) OR 
+                  LOWER(ups.firm.code) LIKE LOWER(CONCAT('%', :#{#criteria.firmSearch}, '%'))))
             )
-            AND (:showFirmAdmins = false OR EXISTS (
+            AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
                 SELECT 1 FROM ups.appRoles ar 
                 WHERE ar.authzRole = true 
                 AND ar.name = 'External User Manager'
             ))
             """)
-    Page<UserProfile> findBySearchParam(@Param("search") String search, @Param("firmSearch") String firmSearch, @Param("userTypes") List<UserType> userTypes,
-                                                                   @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
+    Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 }

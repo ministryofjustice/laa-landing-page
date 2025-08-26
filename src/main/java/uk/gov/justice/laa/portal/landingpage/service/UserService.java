@@ -301,14 +301,8 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize, String sort, String direction) {
-        logger.info("UserService.getPageOfUsersBySearch - searchCriteria: {}", searchCriteria);
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParam(
-                searchCriteria.getSearchTerm(), 
-                searchCriteria.getFirmSearch(), 
-                searchCriteria.getUserTypes(),
-                searchCriteria.isShowFirmAdmins(), 
-                pageRequest);
+        Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
