@@ -19,6 +19,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -271,5 +272,14 @@ class SecurityConfigTest {
                             return request;
                         }))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void securityHeaders() throws Exception {
+        MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
+        String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
+        String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
+        assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
+        assertThat(csp).isEqualTo("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:; frame-src * self blob: data: gap:;");
     }
 }

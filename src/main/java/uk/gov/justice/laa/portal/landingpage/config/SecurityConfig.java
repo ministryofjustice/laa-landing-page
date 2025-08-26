@@ -130,11 +130,11 @@ public class SecurityConfig {
                 .httpStrictTransportSecurity(hsts -> hsts
                         .includeSubDomains(true)
                         .preload(true)
-                        .maxAgeInSeconds(31536000)
+                        .maxAgeInSeconds(63072000)
                         .requestMatcher(AnyRequestMatcher.INSTANCE)
                 )
                 .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
-                        .policyDirectives("form-action 'self'"))
+                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:; frame-src * self blob: data: gap:;"))
         );
         return http.build();
     }
