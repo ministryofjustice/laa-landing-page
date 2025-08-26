@@ -152,7 +152,8 @@ public class UserController {
                 }
                 
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
-                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+                UUID firmId = optionalFirm.get().getId();
+                paginatedUsers = userService.getPageOfUsersBySearch(firmId, searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();

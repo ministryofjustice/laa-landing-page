@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -2549,7 +2550,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class)))
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2560,7 +2561,7 @@ class UserServiceTest {
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
         verify(mockUserProfileRepository).findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class));
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
@@ -2584,7 +2585,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class)))
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2594,7 +2595,7 @@ class UserServiceTest {
         // Then
         assertThat(result.getUsers()).hasSize(0);
         verify(mockUserProfileRepository).findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class));
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
@@ -2664,7 +2665,7 @@ class UserServiceTest {
         );
 
         when(mockUserProfileRepository.findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class)))
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
@@ -2679,7 +2680,7 @@ class UserServiceTest {
 
         // Verify the repository was called with the search criteria
         verify(mockUserProfileRepository).findBySearchParams(
-                any(UserSearchCriteria.class), any(PageRequest.class));
+                isNull(), any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Nested

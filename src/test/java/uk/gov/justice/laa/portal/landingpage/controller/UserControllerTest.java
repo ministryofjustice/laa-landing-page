@@ -199,7 +199,7 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
         String view = userController.displayAllUsers(10, 1, null, null, null, null, "", false, null, model, session,
@@ -392,7 +392,7 @@ class UserControllerTest {
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(mockPaginatedUsers);
 
         // Act
@@ -403,7 +403,7 @@ class UserControllerTest {
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class),
+        verify(userService).getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class),
                 eq(1), eq(10), any(),
                 any());
     }
@@ -418,7 +418,7 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
@@ -428,7 +428,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), any(), any());
+        verify(userService).getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), eq(1), eq(10), any(), any());
     }
 
     @Test
@@ -436,7 +436,7 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
@@ -450,7 +450,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10),
+        verify(userService).getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), eq(1), eq(10),
                 eq("firstName"), any());
     }
 
@@ -460,7 +460,7 @@ class UserControllerTest {
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
@@ -474,7 +474,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class),
+        verify(userService).getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class),
                 eq(1), eq(10), eq("firstname"), eq("desc"));
     }
 
@@ -1828,7 +1828,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
         when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), any(),
+        when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), eq(1), eq(10), any(),
                 any()))
                 .thenReturn(paginatedUsers);
 
