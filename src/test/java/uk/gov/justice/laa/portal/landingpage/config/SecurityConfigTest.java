@@ -280,6 +280,9 @@ class SecurityConfigTest {
         String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
         String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
-        assertThat(csp).isEqualTo("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:; frame-src * self blob: data: gap:;");
+        assertThat(csp).isEqualTo("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
+                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
+                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
+                + " frame-src * self blob: data: gap:;");
     }
 }
