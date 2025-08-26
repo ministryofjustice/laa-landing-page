@@ -292,14 +292,6 @@ public class UserService {
         return dto;
     }
 
-    public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, UUID firmId,
-            List<UserType> userTypes, boolean showFirmAdmins, int page, int pageSize, String sort, String direction) {
-        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm,
-                firmId, userTypes, showFirmAdmins, pageRequest);
-        return getPageOfUsers(() -> userProfilePage);
-    }
-
     /**
      * Retrieves a paginated list of users based on the provided search criteria.
      * <p>
@@ -316,8 +308,8 @@ public class UserService {
      */
     public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize, String sort,
             String direction) {
-        // TODO: this should be the main method used for user search
-        // and UserSearchCriteria object should be extended to cover all the search
+        // this should be the main method used for user search
+        // UserSearchCriteria object should be extended to cover all the search
         // criteria needed
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria, pageRequest);

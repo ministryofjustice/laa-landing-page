@@ -37,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -201,10 +202,10 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(), any(),
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session,
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, "", false, null, model, session,
                 authentication);
 
         assertThat(view).isEqualTo("users");
@@ -271,8 +272,8 @@ class UserControllerTest {
         void whenInternalUser_withFirmId_filtersUsersByFirm() {
             // Given
             when(userService.isInternal(internalUser.getId())).thenReturn(true);
-            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    any(), eq(testFirmId), isNull(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            when(userService.getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), anyInt(), anyInt(), any(), any()
             )).thenReturn(paginatedUsers);
 
             // When
@@ -282,8 +283,8 @@ class UserControllerTest {
 
             // Then
             assertThat(viewName).isEqualTo("users");
-            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    "", testFirmId, null, false, 1, 10, null, null
+            verify(userService).getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), eq(1), eq(10), any(), any()
             );
             assertThat(model.getAttribute("firmSearchForm")).isSameAs(firmSearchForm);
         }
@@ -297,8 +298,8 @@ class UserControllerTest {
             // Set the firm ID to the user's own firm
             firmSearchForm.setSelectedFirmId(userFirmId.toString());
 
-            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    any(), eq(userFirmId), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            when(userService.getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), anyInt(), anyInt(), any(), any()
             )).thenReturn(paginatedUsers);
 
             // When
@@ -338,8 +339,8 @@ class UserControllerTest {
             firmSearchForm.setSelectedFirmId(invalidFirmId);
 
             when(userService.isInternal(internalUser.getId())).thenReturn(true);
-            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            when(userService.getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), anyInt(), anyInt(), any(), any()
             )).thenReturn(paginatedUsers);
 
             // When
@@ -349,8 +350,8 @@ class UserControllerTest {
 
             // Then
             assertThat(viewName).isEqualTo("users");
-            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    "", null, null, false, 1, 10, null, null
+            verify(userService).getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), eq(1), eq(10), any(), any()
             );
         }
 
@@ -361,8 +362,8 @@ class UserControllerTest {
             firmSearchForm.setSelectedFirmId(null);
 
             when(userService.isInternal(internalUser.getId())).thenReturn(true);
-            when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    anyString(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any()
+            when(userService.getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), anyInt(), anyInt(), any(), any()
             )).thenReturn(paginatedUsers);
 
             // When
@@ -372,8 +373,8 @@ class UserControllerTest {
 
             // Then
             assertThat(viewName).isEqualTo("users");
-            verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    "", null, null, false, 1, 10, null, null
+            verify(userService).getPageOfUsersBySearch(
+                    any(UserSearchCriteria.class), eq(1), eq(10), any(), any()
             );
         }
     }
@@ -410,7 +411,7 @@ class UserControllerTest {
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), eq(10), any(),
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(mockPaginatedUsers);
 
         // Act
@@ -421,9 +422,9 @@ class UserControllerTest {
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(isNull(), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(),
-                eq(1), eq(10), isNull(),
-                isNull());
+        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class),
+                eq(1), eq(10), any(),
+                any());
     }
 
     @Test
@@ -436,7 +437,7 @@ class UserControllerTest {
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(any(), any(), anyList(), anyBoolean(), anyInt(), anyInt(),
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
@@ -446,7 +447,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(isNull(), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(), eq(1), eq(10), isNull(), isNull());
+        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), any(), any());
     }
 
     @Test
@@ -454,8 +455,8 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq("Test"), any(), anyList(), anyBoolean(), anyInt(), anyInt(),
-                anyString(), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
+                any(), any())).thenReturn(mockPaginatedUsers);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
@@ -467,8 +468,8 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq("Test"), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(), eq(1), eq(10),
-                eq("firstName"), isNull());
+        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10),
+                eq("firstName"), any());
     }
 
     @Test
@@ -477,7 +478,7 @@ class UserControllerTest {
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(anyString(), any(), anyList(), anyBoolean(), anyInt(), anyInt(),
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
@@ -490,7 +491,7 @@ class UserControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("users");
         assertThat(model.getAttribute("users")).isEqualTo(new ArrayList<>());
-        verify(userService).getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(""), eq(firmDto.getId()), eq(UserType.EXTERNAL_TYPES), anyBoolean(),
+        verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class),
                 eq(1), eq(10), eq("firstname"), eq("desc"));
     }
 
@@ -1822,8 +1823,8 @@ class UserControllerTest {
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
         when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq(null), any(), anyList(), anyBoolean(), eq(1), eq(10), eq(null),
-                eq(null)))
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), any(),
+                any()))
                 .thenReturn(paginatedUsers);
 
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
@@ -1851,14 +1852,14 @@ class UserControllerTest {
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(internalUser);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
-        when(userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(eq("admin"), any(), anyList(), anyBoolean(), eq(1), eq(10), isNull(), isNull()))
+        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), any(), any()))
                 .thenReturn(paginatedUsers);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", false, null, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, "internal", "admin", "", false, null, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -2624,7 +2625,7 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn(null);
 
         // When
-        String view = userController.displayAllUsers(10, 1, null, null, null, null, false, null, model, session, authentication);
+        String view = userController.displayAllUsers(10, 1, null, null, null, null, "", false, null, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");

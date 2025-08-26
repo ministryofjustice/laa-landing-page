@@ -57,11 +57,11 @@ public class UserSearchCriteria {
 
     @Override
     public String toString() {
-        return "UserSearchCriteria{" +
-                "searchTerm='" + searchTerm + '\'' +
-                ", firmSearch='" + firmSearch + '\'' +
-                ", userTypes=" + userTypes +
-                ", showFirmAdmins=" + showFirmAdmins +
-                '}';
+        return "UserSearchCriteria{"
+                + "searchTerm='" + searchTerm + '\''
+                + ", firmSearch='" + firmSearch + '\''
+                + ", userTypes=" + userTypes
+                + ", showFirmAdmins=" + showFirmAdmins
+                + '}';
     }
 }

@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,6 +68,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -2517,15 +2517,18 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_returnsValidPage() {
+    void getPageOfUsersBySearch_returnsValidPage() {
         // Given
         String searchTerm = "test";
-        List<Permission> permissions = List.of(Permission.CREATE_EXTERNAL_USER);
-        UUID firmId = UUID.randomUUID();
+        String firmSearch = UUID.randomUUID().toString();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -2536,7 +2539,7 @@ class UserServiceTest {
                         .lastName("User")
                         .email("test@example.com")
                         .build())
-                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .firm(Firm.builder().id(UUID.fromString(firmSearch)).name("Test Firm").build())
                 .build();
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
@@ -2545,31 +2548,34 @@ class UserServiceTest {
                 1
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(
+                criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
+        verify(mockUserProfileRepository).findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_withEmptyPermissions() {
+    void getPageOfUsersBySearch_withEmptySearch() {
         // Given
         String searchTerm = "test";
-        List<Permission> permissions = List.of(); // Empty list
-        UUID firmId = UUID.randomUUID();
+        String firmSearch = UUID.randomUUID().toString();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
                 List.of(),
@@ -2577,18 +2583,18 @@ class UserServiceTest {
                 0
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(
+                criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), eq(false), any(PageRequest.class));
+        verify(mockUserProfileRepository).findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
@@ -2627,14 +2633,17 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_searchByFullName() {
+    void getPageOfUsersBySearch_searchByFullName() {
         String searchTerm = "Test Name";
-        List<Permission> permissions = List.of(Permission.VIEW_EXTERNAL_USER);
-        UUID firmId = UUID.randomUUID();
+        String firmSearch = UUID.randomUUID().toString();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -2645,7 +2654,7 @@ class UserServiceTest {
                         .lastName("Name")
                         .email("test.name@example.com")
                         .build())
-                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .firm(Firm.builder().id(UUID.fromString(firmSearch)).name("Test Firm").build())
                 .build();
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
@@ -2654,13 +2663,13 @@ class UserServiceTest {
                 1
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(
+                criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2668,9 +2677,9 @@ class UserServiceTest {
         assertThat(result.getUsers().get(0).getEntraUser().getFirstName()).isEqualTo("Test");
         assertThat(result.getUsers().get(0).getEntraUser().getLastName()).isEqualTo("Name");
 
-        // Verify the repository was called with the full name search term
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
+        // Verify the repository was called with the search criteria
+        verify(mockUserProfileRepository).findBySearchParams(
+                any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Nested
