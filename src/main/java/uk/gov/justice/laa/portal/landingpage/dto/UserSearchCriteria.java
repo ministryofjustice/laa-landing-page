@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import java.util.List;
+
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 /**

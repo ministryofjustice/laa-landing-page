@@ -300,7 +300,25 @@ public class UserService {
         return getPageOfUsers(() -> userProfilePage);
     }
 
-    public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize, String sort, String direction) {
+    /**
+     * Retrieves a paginated list of users based on the provided search criteria.
+     * <p>
+     * This method is intended to be the primary entry point for searching users.
+     * The {@link UserSearchCriteria} object should be extended to include all necessary search parameters.
+     * </p>
+     *
+     * @param searchCriteria the criteria to filter users by
+     * @param page the page number to retrieve (1-based index)
+     * @param pageSize the number of users per page
+     * @param sort the field to sort by
+     * @param direction the direction of sorting ("asc" or "desc")
+     * @return a {@link PaginatedUsers} object containing the users for the requested page
+     */
+    public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize, String sort,
+            String direction) {
+        // TODO: this should be the main method used for user search
+        // and UserSearchCriteria object should be extended to cover all the search
+        // criteria needed
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria, pageRequest);
         return getPageOfUsers(() -> userProfilePage);
