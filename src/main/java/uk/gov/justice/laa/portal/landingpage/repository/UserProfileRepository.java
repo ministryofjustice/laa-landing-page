@@ -17,7 +17,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 @Repository
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser u
                         LEFT JOIN FETCH ups.firm f
@@ -26,11 +26,11 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%'))
                         OR LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')))
                             """)
-        Page<UserProfile> findByNameEmailAndUserTypes(@Param("firstName") String firstName,
+    Page<UserProfile> findByNameEmailAndUserTypes(@Param("firstName") String firstName,
                         @Param("lastName") String lastName, @Param("email") String email,
                         @Param("userTypes") List<UserType> userTypes, Pageable pageable);
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.firm f
                         JOIN FETCH ups.entraUser u
@@ -40,45 +40,45 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :lastName, '%'))
                         OR LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')))
                             """)
-        Page<UserProfile> findByNameEmailAndUserTypesFirms(@Param("firstName") String firstName,
+    Page<UserProfile> findByNameEmailAndUserTypesFirms(@Param("firstName") String firstName,
                         @Param("lastName") String lastName, @Param("email") String email,
                         @Param("userTypes") List<UserType> userTypes, @Param("firmIds") List<UUID> firmIds,
                         Pageable pageable);
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.firm f
                         JOIN FETCH ups.entraUser u
                         WHERE ups.userType IN (:userTypes)
                         AND f.id IN (:firmIds)
                         """)
-        Page<UserProfile> findByUserTypesFirms(@Param("userTypes") List<UserType> userTypes,
+    Page<UserProfile> findByUserTypesFirms(@Param("userTypes") List<UserType> userTypes,
                         @Param("firmIds") List<UUID> firmIds, Pageable pageable);
 
-        @Query("SELECT ups FROM UserProfile ups "
+    @Query("SELECT ups FROM UserProfile ups "
                         + "LEFT JOIN FETCH ups.firm f "
                         + "JOIN FETCH ups.entraUser u "
                         + "WHERE ups.userType IN (:userTypes)")
-        Page<UserProfile> findByUserTypes(List<UserType> userTypes, Pageable pageable);
+    Page<UserProfile> findByUserTypes(List<UserType> userTypes, Pageable pageable);
 
-        @Query("""
+    @Query("""
                         SELECT DISTINCT u.entraOid FROM EntraUser u
                         JOIN u.userProfiles ups
                         WHERE ups.userType IN (:userType)
                         """)
-        List<UUID> findByUserTypes(@Param("userType") UserType userType);
+    List<UUID> findByUserTypes(@Param("userType") UserType userType);
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.firm f
                         JOIN FETCH ups.entraUser u
                         WHERE ups.userType IN (:userTypes)
                         AND f.id IN (:firmIds)
                         """)
-        Page<UserProfile> findByUserTypesAndFirms(@Param("userTypes") List<UserType> userTypes,
-                        @Param("firmIds") List<UUID> firmIds, Pageable pageable);
+    Page<UserProfile> findByUserTypesAndFirms(@Param("userTypes") List<UserType> userTypes,
+                    @Param("firmIds") List<UUID> firmIds, Pageable pageable);
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                         WHERE (:firmId IS NULL OR ups.firm.id = :firmId)
@@ -97,11 +97,11 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             AND ar.name = 'External User Manager'
                         ))
                         """)
-        Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
-                        @Param("firmId") UUID firmId, @Param("userTypes") List<UserType> userTypes,
-                        @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
+    Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
+                    @Param("firmId") UUID firmId, @Param("userTypes") List<UserType> userTypes,
+                    @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
 
-        @Query("""
+    @Query("""
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                                     LEFT JOIN FETCH ups.firm f
@@ -127,6 +127,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             AND ar.name = 'External User Manager'
                         ))
                         """)
-        Page<UserProfile> findBySearchParams(@Param("firmId") UUID firmId,
-                        @Param("criteria") UserSearchCriteria criteria, Pageable pageable);
+    Page<UserProfile> findBySearchParams(@Param("firmId") UUID firmId,
+                    @Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 }
