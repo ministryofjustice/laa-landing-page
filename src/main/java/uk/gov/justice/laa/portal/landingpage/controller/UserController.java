@@ -138,6 +138,19 @@ public class UserController {
             // External user - restrict to their firm only
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
+                // Check if user is trying to access a specific firm via firmSearchForm
+                String selectedFirmId = firmSearchForm != null ? firmSearchForm.getSelectedFirmId() : null;
+                if (selectedFirmId != null && !selectedFirmId.trim().isEmpty()) {
+                    // Validate that the external user has access to the selected firm
+                    List<FirmDto> userAccessibleFirms = firmService.getUserAllFirms(entraUser);
+                    boolean hasAccessToFirm = userAccessibleFirms.stream()
+                            .anyMatch(firm -> firm.getId().toString().equals(selectedFirmId.trim()));
+                    
+                    if (!hasAccessToFirm) {
+                        throw new AccessDeniedException("Access denied");
+                    }
+                }
+                
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
