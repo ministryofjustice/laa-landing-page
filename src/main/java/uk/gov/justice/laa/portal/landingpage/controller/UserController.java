@@ -1669,13 +1669,4 @@ public class UserController {
         log.error("Error while user management", ex);
         return new RedirectView("/error");
     }
-
-    private UUID parseUuidString(String uuidString) {
-        try {
-            return uuidString == null ? null : UUID.fromString(uuidString);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid firm id supplied: {}", uuidString);
-            return null;
-        }
-    }
 }
