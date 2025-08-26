@@ -20,7 +20,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +38,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
 
+import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -46,6 +46,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -142,10 +143,14 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
-            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal && appRole.getRoleType().equals(RoleType.INTERNAL);
-            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal && appRole.getRoleType().equals(RoleType.EXTERNAL);
+            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal
+                    && appRole.getRoleType().equals(RoleType.INTERNAL);
+            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal
+                    && appRole.getRoleType().equals(RoleType.EXTERNAL);
             roles = roles.stream()
-                    .filter(appRole -> internalUserWithInternalRole.test(appRole) || externalUserWithExternalRole.test(appRole) || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .filter(appRole -> internalUserWithInternalRole.test(appRole)
+                            || externalUserWithExternalRole.test(appRole)
+                            || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -156,16 +161,18 @@ public class UserService {
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>() : new HashSet<>(userProfile.getAppRoles());
+            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
+                    : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
             userProfile.setAppRoles(newRoles);
             diff = diffRole(oldRoles, newRoles);
-            
+
             // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
+                    oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
-            
+
             // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
@@ -286,9 +293,22 @@ public class UserService {
     }
 
     public PaginatedUsers getPageOfUsersByNameOrEmailAndPermissionsAndFirm(String searchTerm, UUID firmId,
-                                                                           List<UserType> userTypes, boolean showFirmAdmins, int page, int pageSize, String sort, String direction) {
+            List<UserType> userTypes, boolean showFirmAdmins, int page, int pageSize, String sort, String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm, firmId, userTypes, showFirmAdmins, pageRequest);
+        Page<UserProfile> userProfilePage = userProfileRepository.findByNameOrEmailAndPermissionsAndFirm(searchTerm,
+                firmId, userTypes, showFirmAdmins, pageRequest);
+        return getPageOfUsers(() -> userProfilePage);
+    }
+
+    public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize, String sort, String direction) {
+        logger.info("UserService.getPageOfUsersBySearch - searchCriteria: {}", searchCriteria);
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
+        Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParam(
+                searchCriteria.getSearchTerm(), 
+                searchCriteria.getFirmSearch(), 
+                searchCriteria.getUserTypes(),
+                searchCriteria.isShowFirmAdmins(), 
+                pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
@@ -563,7 +583,7 @@ public class UserService {
     }
 
     public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
-        Optional<UserProfileDto> userProfile =  getActiveProfileByUserId(id);
+        Optional<UserProfileDto> userProfile = getActiveProfileByUserId(id);
 
         if (userProfile.isEmpty()) {
             logger.error("Active user profile not found for user: {}", id);
@@ -667,7 +687,9 @@ public class UserService {
             String invalidOfficeIds = invalidOffices.stream()
                     .map(office -> office.getId().toString())
                     .collect(Collectors.joining(","));
-            logger.warn("There was an attempt to assign user with profile id \"{}\" the following offices not associated with their firm: {}", userProfile.getId().toString(), invalidOfficeIds);
+            logger.warn(
+                    "There was an attempt to assign user with profile id \"{}\" the following offices not associated with their firm: {}",
+                    userProfile.getId().toString(), invalidOfficeIds);
         }
         return validOffices;
     }
@@ -760,7 +782,7 @@ public class UserService {
             entraUser.setCreatedBy(createdBy);
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
-            //todo: security group to access authz app
+            // todo: security group to access authz app
         }
         return persistNewInternalUser(entraUsers);
     }
@@ -817,13 +839,11 @@ public class UserService {
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             Set<AppRole> currentRoles = new HashSet<>(userProfile.getAppRoles());
-            
+
             // Find and remove the specific role
-            boolean removed = currentRoles.removeIf(role -> 
-                role.getApp().getId().toString().equals(appId) 
-                && role.getName().equals(roleName)
-            );
-            
+            boolean removed = currentRoles.removeIf(role -> role.getApp().getId().toString().equals(appId)
+                    && role.getName().equals(roleName));
+
             if (removed) {
                 userProfile.setAppRoles(currentRoles);
                 userProfileRepository.saveAndFlush(userProfile);

@@ -1,12 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -15,11 +21,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * FirmService
@@ -94,10 +95,9 @@ public class FirmService {
 
         String trimmedSearchTerm = searchTerm.trim();
         
-        return getAllFirmsFromCache()
-                .parallelStream()
-                .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
-                        || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+        return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
+                .stream()
+                .map(firm -> mapper.map(firm, FirmDto.class))
                 .collect(Collectors.toList());
     }
 
@@ -125,38 +125,51 @@ public class FirmService {
 
     public List<FirmDto> getUserAccessibleFirms(EntraUser entraUser, String searchTerm) {
 
-        List<FirmDto> userAccessibleFirms = null;
-
         UserType userType = entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
                 .map(UserProfile::getUserType)
                 .orElseThrow(() -> new UnsupportedOperationException("User type not found"));
 
+        // If there's a search term, use database query for better performance
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            String trimmedSearchTerm = searchTerm.trim();
+            
+            switch (userType) {
+                case INTERNAL -> {
+                    // Internal users can search all firms via database
+                    return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
+                            .stream()
+                            .map(firm -> mapper.map(firm, FirmDto.class))
+                            .collect(Collectors.toList());
+                }
+                case EXTERNAL_SINGLE_FIRM_ADMIN -> {
+                    // External firm admins can only see their own firms, so filter their accessible firms
+                    List<FirmDto> userAccessibleFirms = getUserAllFirms(entraUser);
+                    return userAccessibleFirms
+                            .stream()
+                            .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
+                                    || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+                            .collect(Collectors.toList());
+                }
+                default -> {
+                    throw new UnsupportedOperationException("User type not supported");
+                }
+            }
+        }
+        
+        // No search term - return all accessible firms
         switch (userType) {
             case INTERNAL -> {
-                userAccessibleFirms = getAllFirmsFromCache();
+                return getAllFirmsFromCache();
             }
             case EXTERNAL_SINGLE_FIRM_ADMIN -> {
-                userAccessibleFirms = getUserAllFirms(entraUser);
+                return getUserAllFirms(entraUser);
             }
             default -> {
                 throw new UnsupportedOperationException("User type not supported");
             }
         }
-
-        if (searchTerm == null || searchTerm.trim().isEmpty()) {
-            return userAccessibleFirms;
-        }
-
-        String trimmedSearchTerm = searchTerm.trim();
-
-        return userAccessibleFirms
-                .parallelStream()
-                .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
-                        || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
-                .collect(Collectors.toList());
-
     }
 
 }

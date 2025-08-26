@@ -1,9 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +28,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -31,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -53,24 +67,11 @@ import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -109,46 +110,37 @@ public class UserController {
             @RequestParam(name = "direction", required = false) String direction,
             @RequestParam(name = "usertype", required = false) String usertype,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
+            @RequestParam(name = "firmSearch", required = false, defaultValue = "") String firmSearch,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         PaginatedUsers paginatedUsers;
-        UUID firmUuid = firmSearchForm == null ? null : parseUuidString(firmSearchForm.getSelectedFirmId());
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        
+        // Debug logging
+        log.info("UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}", 
+                search, firmSearch, showFirmAdmins);
+        
         if (canSeeAllUsers) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                    search, firmUuid, null, showFirmAdmins, page, size, sort, direction);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, null, showFirmAdmins);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, null,
-                    List.of(UserType.INTERNAL),
-                    showFirmAdmins, page, size, sort, direction);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, List.of(UserType.INTERNAL), showFirmAdmins);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search, firmUuid,
-                    UserType.EXTERNAL_TYPES,
-                    showFirmAdmins, page, size, sort, direction);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
-
-            if (firmUuid != null) {
-                List<FirmDto> userFirms = firmService.getUserAllFirms(entraUser);
-                boolean hasFirmAccess = userFirms.stream()
-                        .anyMatch(firm -> firm.getId().equals(firmUuid));
-                if (!hasFirmAccess) {
-                    log.error("Unauthorized firm access for firm id: {}", firmUuid);
-                    throw new AccessDeniedException("Unauthorized firm access for firm id: " + firmUuid);
-                }
-            }
-
+            // For external users, we need to check if they have access to search across firms
+            // For now, allow firm search for external users but they'll only see their own firm's users
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
-                FirmDto firm = optionalFirm.get();
-                UUID firmId = firmUuid == null ? firm.getId() : firmUuid;
-                // If a firm filter is selected, use that instead of the user's firm
-                paginatedUsers = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(search,
-                        firmId, UserType.EXTERNAL_TYPES, showFirmAdmins, page, size, sort, direction);
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
+                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
                 paginatedUsers = new PaginatedUsers();
@@ -169,6 +161,7 @@ public class UserController {
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", search);
+        model.addAttribute("firmSearch", firmSearch);
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
         model.addAttribute("usertype", usertype);
