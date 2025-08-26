@@ -135,8 +135,7 @@ public class UserController {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
-            // For external users, we need to check if they have access to search across firms
-            // For now, allow firm search for external users but they'll only see their own firm's users
+            // External user - restrict to their firm only
             Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
             if (optionalFirm.isPresent()) {
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearch, UserType.EXTERNAL_TYPES, showFirmAdmins);
