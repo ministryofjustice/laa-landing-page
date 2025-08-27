@@ -207,7 +207,7 @@ public class UserController {
 
     @GetMapping("/users/edit/{id}")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String editUser(@PathVariable String id, Model model, HttpSession session) {
+    public String editUser(@PathVariable String id, Model model) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isPresent()) {
             UserProfileDto user = optionalUser.get();
@@ -215,13 +215,6 @@ public class UserController {
             model.addAttribute("user", user);
             model.addAttribute("roles", roles);
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user - " + user.getFullName());
-
-            // Add filter state to model for "Back to Filter" button
-            @SuppressWarnings("unchecked")
-            Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-            boolean hasFilters = filters != null && hasActiveFilters(filters);
-            model.addAttribute("hasFilters", hasFilters);
-            model.addAttribute("filterParams", filters);
         }
         return "edit-user";
     }

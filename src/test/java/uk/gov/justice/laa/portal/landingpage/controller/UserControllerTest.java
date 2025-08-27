@@ -173,7 +173,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(anyString())).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppRolesByUserId(anyString())).thenReturn(roles);
 
-        String view = userController.editUser("userId", model, session);
+        String view = userController.editUser("userId", model);
 
         assertThat(view).isEqualTo("edit-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -299,7 +299,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
 
         // Act
-        String viewName = userController.editUser(userId, model, session);
+        String viewName = userController.editUser(userId, model);
 
         // Assert
         assertThat(viewName).isEqualTo("edit-user");
@@ -315,7 +315,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
 
         // Act
-        String viewName = userController.editUser(userId, model, session);
+        String viewName = userController.editUser(userId, model);
 
         verify(userService).getUserProfileById(userId);
     }
@@ -2406,7 +2406,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
 
         // When
-        String view = userController.editUser(userId, model, session);
+        String view = userController.editUser(userId, model);
 
         // Then
         assertThat(view).isEqualTo("edit-user");
