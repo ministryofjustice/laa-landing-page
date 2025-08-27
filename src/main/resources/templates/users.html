@@ -30,9 +30,8 @@
                     <form class="form" method="post" action="" th:if="${allowCreateUser}">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
-                                <button type="button" class="govuk-button"
-                                    data-module="govuk-button" data-govuk-button-init=""
-                                    onclick="location.href='/admin/user/create/details';">
+                                <button type="button" class="govuk-button" data-module="govuk-button"
+                                    data-govuk-button-init="" onclick="location.href='/admin/user/create/details';">
                                     Create a new user
                                 </button>
                             </div>
@@ -54,7 +53,7 @@
                                     <div class="govuk-hint">
                                         You can use both or either of the input boxes to search
                                     </div>
-                                    
+
                                     <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
                                         <div class="search-inputs-container">
                                             <!-- Search users by name, email -->
@@ -64,7 +63,7 @@
                                                         name, email
                                                     </label>
                                                     <input class="govuk-input" id="search" name="search" type="search"
-                                                        th:value="${param.search}" autocomplete="off">
+                                                        th:value="${search}" autocomplete="off">
                                                 </div>
                                             </div>
 
@@ -75,25 +74,31 @@
                                                         firm name, firm code
                                                     </label>
                                                     <div class="autocomplete__wrapper">
-                                                        <div class="autocomplete__status" aria-live="polite" role="status">
+                                                        <div class="autocomplete__status" aria-live="polite"
+                                                            role="status">
                                                             <span id="firmSearch__status--A"
                                                                 class="govuk-visually-hidden"></span>
                                                             <span id="firmSearch__status--B"
                                                                 class="govuk-visually-hidden"></span>
                                                         </div>
-                                                        <div style="position: relative; display: inline-block; width: 100%;">
-                                                            <input class="autocomplete__input govuk-input" id="firmSearch"
-                                                                name="firmSearch" type="text" autocomplete="off"
-                                                                aria-autocomplete="list" aria-expanded="false"
-                                                                aria-controls="firmSearch__listbox" aria-describedby="firm-hint"
+                                                        <div
+                                                            style="position: relative; display: inline-block; width: 100%;">
+                                                            <input class="autocomplete__input govuk-input"
+                                                                id="firmSearch" name="firmSearch" type="text"
+                                                                autocomplete="off" aria-autocomplete="list"
+                                                                aria-expanded="false"
+                                                                aria-controls="firmSearch__listbox"
+                                                                aria-describedby="firm-hint"
                                                                 aria-owns="firmSearch__listbox" role="combobox"
                                                                 th:value="${param.firmSearch}">
                                                             <div id="firmSearch__assistiveHint"
                                                                 class="govuk-hint govuk-visually-hidden" role="status">
-                                                                When autocomplete results are available, use up and down arrows
+                                                                When autocomplete results are available, use up and down
+                                                                arrows
                                                                 to
                                                                 review and enter to select.
-                                                                Touch device users, explore by touch or with swipe gestures.
+                                                                Touch device users, explore by touch or with swipe
+                                                                gestures.
                                                             </div>
                                                             <ul id="firmSearch__listbox"
                                                                 class="autocomplete__menu autocomplete__menu--hidden"
@@ -108,7 +113,8 @@
                                             <!-- Search button -->
                                             <div class="search-button-group">
                                                 <div class="govuk-form-group">
-                                                    <button type="submit" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+                                                    <button type="submit" class="govuk-button govuk-button--secondary"
+                                                        data-module="govuk-button">
                                                         Search
                                                     </button>
                                                 </div>
@@ -129,16 +135,15 @@
                                 <input type="hidden" name="direction" th:value="${direction}">
                                 <input type="hidden" name="page" th:value="${page}">
                                 <input type="hidden" name="size" th:value="${requestedPageSize}">
-                                
+
                                 <div class="govuk-form-group">
                                     <fieldset class="govuk-fieldset">
                                         <div class="govuk-checkboxes govuk-checkboxes--small"
                                             data-module="govuk-checkboxes">
                                             <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="show-firm-admins"
+                                                <input class="govuk-checkboxes__input" id="showFirmAdmins"
                                                     name="showFirmAdmins" type="checkbox" value="true"
-                                                    onchange="this.form.submit();"
-                                                    th:checked="${param.showFirmAdmins != null && param.showFirmAdmins[0] == 'true'}">
+                                                    onchange="this.form.submit();" th:checked="${showFirmAdmins}">
                                                 <label class="govuk-label govuk-checkboxes__label"
                                                     for="show-firm-admins">
                                                     Show firm admins
@@ -273,9 +278,11 @@
 
                     /* Search card styling */
                     .search-card {
-                        padding: 20px 20px 0px 20px; /* Reduced bottom padding */
+                        padding: 20px 20px 0px 20px;
+                        /* Reduced bottom padding */
                         border-radius: 0;
-                        background-color: #f3f2f1; /* govuk-colour("light-grey") */
+                        background-color: #f3f2f1;
+                        /* govuk-colour("light-grey") */
                     }
 
                     .search-card .govuk-fieldset__legend {
@@ -301,7 +308,8 @@
 
                     .search-button-group {
                         flex: 0 0 auto;
-                        margin-top: 30px; /* Position between input and card edge */
+                        margin-top: 30px;
+                        /* Position between input and card edge */
                         margin-left: 0px;
                         margin-right: 15px;
                     }
@@ -312,11 +320,11 @@
                             flex-direction: column;
                             gap: 20px;
                         }
-                        
+
                         .search-input-group {
                             min-width: 100%;
                         }
-                        
+
                         .search-button-group .govuk-form-group {
                             padding-top: 0 !important;
                         }
@@ -620,7 +628,8 @@
                     <tbody class="govuk-table__body">
                         <tr class="govuk-table__row" th:each="user : ${users}">
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
-                                <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
+                                <a class="govuk-link"
+                                    th:href="@{/admin/users/manage/{id}(id=${user.id}, size=${requestedPageSize}, page=${page}, search=${search}, sort=${sort}, direction=${direction}, showFirmAdmins=${showFirmAdmins}, usertype=${usertype})}"
                                     th:text="${user.fullName}"></a>
                             </td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
