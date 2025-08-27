@@ -79,11 +79,10 @@ public class ProdJwtDecoderConfig {
             OAuth2TokenValidator<Jwt> withoutAudience =
                 new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
 
-            jwtDecoder.setJwtValidator(issuerOnly);
+            // jwtDecoder.setJwtValidator(issuerOnly);
 
-            // test these later
-            // log.info("Using ISSUER + TIMESTAMP validation");
-            // jwtDecoder.setJwtValidator(issuerAndTimestamp);
+            log.info("Using ISSUER + TIMESTAMP validation");
+            jwtDecoder.setJwtValidator(issuerAndTimestamp);
 
             // log.info("Using ALL validators except AUDIENCE");
             // jwtDecoder.setJwtValidator(withoutAudience);
