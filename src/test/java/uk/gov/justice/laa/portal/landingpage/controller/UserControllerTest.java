@@ -141,7 +141,8 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("userListFilters")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);        FirmDto firmDto = new FirmDto();
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(userService.getPageOfUsersBySearch(any(UUID.class), any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
@@ -194,7 +195,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("userListFilters")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
         when(userService.getPageOfUsersBySearch(any(), any(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(mockPaginatedUsers);
 
@@ -227,7 +228,8 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("userListFilters")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);        // Act
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        // Act
         String viewName = userController.displayAllUsers(10, 1, null, null, null, "", "", false, false, new FirmSearchForm(), model, session, authentication);
 
         // Assert
@@ -267,7 +269,8 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("userListFilters")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);        FirmDto firmDto = new FirmDto();
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(userService.getPageOfUsersBySearch(any(), any(), anyInt(), anyInt(),
@@ -1741,7 +1744,8 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
         when(session.getAttribute("userListFilters")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);        when(userService.getPageOfUsersBySearch(any(), any(), eq(1), eq(10), isNull(),
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        when(userService.getPageOfUsersBySearch(any(), any(), eq(1), eq(10), isNull(),
                 isNull()))
                 .thenReturn(paginatedUsers);
 
