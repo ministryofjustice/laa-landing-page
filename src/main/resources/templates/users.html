@@ -2,13 +2,19 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'users'})}" xmlns:th="http://www.thymeleaf.org">
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
 
 <head>
     <title>Users</title>
 </head>
 
 <body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/home}">
+            Back </a>
+    </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
         <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
             aria-label="success: User added successfully" data-module="moj-alert">
