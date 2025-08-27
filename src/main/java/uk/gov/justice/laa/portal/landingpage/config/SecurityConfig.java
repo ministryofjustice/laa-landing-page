@@ -18,6 +18,13 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.filter.OncePerRequestFilter;
+import java.io.IOException;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
@@ -39,6 +46,43 @@ public class SecurityConfig {
     public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
+    }
+
+    @Bean
+    public OncePerRequestFilter jwtRequestLoggingFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+                    throws ServletException, IOException {
+                
+                if (request.getRequestURI().equals("/api/v1/claims/enrich")) {
+                    log.info("Request URI: {}", request.getRequestURI());
+                    log.info("Request Method: {}", request.getMethod());
+                    
+                    String authHeader = request.getHeader("Authorization");
+                    if (authHeader != null) {
+                        if (authHeader.startsWith("Bearer ")) {
+                            String token = authHeader.substring(7);
+                            log.info("Authorization header present: Bearer [token length: {}]", token.length());
+                            log.debug("JWT Token (first 50 chars): {}...", token.substring(0, Math.min(50, token.length())));
+                        } else {
+                            log.warn("Authorization header present but not in Bearer format: {}", authHeader.substring(0, Math.min(20, authHeader.length())));
+                        }
+                    } else {
+                        log.error("No Authorization header found in request");
+                    }
+                    
+                    log.info("Content-Type: {}", request.getContentType());
+                    log.info("User-Agent: {}", request.getHeader("User-Agent"));
+                }
+                
+                filterChain.doFilter(request, response);
+                
+                if (request.getRequestURI().equals("/api/v1/claims/enrich")) {
+                    log.info("Response Status: {}", response.getStatus());
+                }
+            }
+        };
     }
 
     @Bean
@@ -88,6 +132,8 @@ public class SecurityConfig {
                     jwt.jwtAuthenticationConverter(jwtAuthenticationConverter());
                 });
             })
+            // Add request logging filter before authentication
+            .addFilterBefore(jwtRequestLoggingFilter(), BasicAuthenticationFilter.class)
             // Disable form login and HTTP Basic to prevent redirects
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable);
