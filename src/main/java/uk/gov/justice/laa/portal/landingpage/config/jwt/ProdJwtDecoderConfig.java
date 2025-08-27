@@ -55,11 +55,11 @@ public class ProdJwtDecoderConfig {
             log.error("JWT audience is null or empty");
             throw new IllegalArgumentException("JWT audience cannot be null or empty");
         }
-        
+
         try {
             log.debug("Creating NimbusJwtDecoder with JWK Set URI: {}", jwkSetUri);
             NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-            
+
             log.debug("Creating JWT validators");
             // OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
             OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
@@ -87,7 +87,7 @@ public class ProdJwtDecoderConfig {
 
             // log.info("Using ALL validators except AUDIENCE");
             // jwtDecoder.setJwtValidator(withoutAudience);
-            
+
             log.info("JWT Decoder creation success");
             return jwtDecoder;
         } catch (Exception e) {
