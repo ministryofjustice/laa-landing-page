@@ -55,22 +55,39 @@ public class ProdJwtDecoderConfig {
             log.error("JWT audience is null or empty");
             throw new IllegalArgumentException("JWT audience cannot be null or empty");
         }
-        
+
         try {
             log.debug("Creating NimbusJwtDecoder with JWK Set URI: {}", jwkSetUri);
             NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-            
+
             log.debug("Creating JWT validators");
-            OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
+            // OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
             OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
             OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
-            
-            OAuth2TokenValidator<Jwt> withAudienceAndTimestamp = 
-                new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
-            
-            log.debug("Setting JWT validator chain");
-            jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
-            
+
+            // different validator combinations to isolate the issue
+            log.info("JWT validation with different validator combinations...");
+
+            // 1: Only issuer validation
+            OAuth2TokenValidator<Jwt> issuerOnly = withIssuer;
+
+            // 2: Issuer + timestamp
+            OAuth2TokenValidator<Jwt> issuerAndTimestamp =
+                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
+
+            // 3: All validators except audience
+            OAuth2TokenValidator<Jwt> withoutAudience =
+                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
+
+            jwtDecoder.setJwtValidator(issuerOnly);
+
+            // test these later
+            // log.info("Using ISSUER + TIMESTAMP validation");
+            // jwtDecoder.setJwtValidator(issuerAndTimestamp);
+
+            // log.info("Using ALL validators except AUDIENCE");
+            // jwtDecoder.setJwtValidator(withoutAudience);
+
             log.info("JWT Decoder creation success");
             return jwtDecoder;
         } catch (Exception e) {
