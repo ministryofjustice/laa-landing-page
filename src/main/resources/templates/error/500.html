@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="${pageTitle ?: 'Something went wrong'}">Something went wrong</title>
+</head>
+
+<body>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl" th:text="${heading ?: 'Something went wrong'}">Something went wrong</h1>
+
+                <!-- Display custom error message if available -->
+                <div th:if="${customErrorMessage}" class="govuk-error-summary" aria-labelledby="error-summary-title"
+                    role="alert" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        Error details
+                    </h2>
+                    <div class="govuk-error-summary__body">
+                        <p th:text="${customErrorMessage}">Custom error message</p>
+                    </div>
+                </div>
+
+                <p class="govuk-body"
+                    th:text="${description ?: 'An unexpected error occurred. Please try again later.'}">
+                    An unexpected error occurred. Please try again later.
+                </p>
+
+                <div class="govuk-!-margin-top-6">
+                    <h2 class="govuk-heading-m">What you can do:</h2>
+                    <ul class="govuk-list govuk-list--bullet">
+                        <li>Try refreshing the page</li>
+                        <li>Go back to the <a href="/" class="govuk-link">homepage</a></li>
+                        <li>Try again later</li>
+                    </ul>
+                </div>
+
+                <div class="govuk-!-margin-top-6">
+                    <a href="javascript:history.back()" class="govuk-link govuk-link--no-visited-state">
+                        ← Go back to the previous page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

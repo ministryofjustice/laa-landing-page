@@ -94,7 +94,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
             .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
+            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**", "/error", "/404", "/not-authorised"
             ).permitAll()
             .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
