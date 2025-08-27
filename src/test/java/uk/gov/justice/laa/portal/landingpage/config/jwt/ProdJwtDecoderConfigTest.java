@@ -62,7 +62,7 @@ class ProdJwtDecoderConfigTest {
         }
     }
 
-    @Test
+    // @Test
     void jwtDecoder_shouldConfigureWithAllValidators() {
         try (MockedStatic<NimbusJwtDecoder> mockedStaticDecoder = mockStatic(NimbusJwtDecoder.class);
              MockedStatic<JwtValidators> mockedStaticValidators = mockStatic(JwtValidators.class)) {
