@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.config.jwt;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
  *  JWT Decoder configuration for production environment
  * Provides a secure JWT decoder that validates token signature, issuer, and audience
  */
+@Slf4j
 @Configuration
 @Profile({"prod"})
 public class ProdJwtDecoderConfig {
@@ -33,16 +35,64 @@ public class ProdJwtDecoderConfig {
     @Bean
     @Primary
     public JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        log.info("Initializing JWT Decoder for production environment");
+        log.info("JWT Configuration - Issuer URI: {}", issuerUri);
+        log.info("JWT Configuration - JWK Set URI: {}", jwkSetUri);
+        log.info("JWT Configuration - Audience: {}", audience);
 
-        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
-        OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
-        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+        // try some validation
+        if (issuerUri == null || issuerUri.trim().isEmpty()) {
+            log.error("JWT issuer-uri is null or empty");
+            throw new IllegalArgumentException("JWT issuer-uri cannot be null or empty");
+        }
 
-        OAuth2TokenValidator<Jwt> withAudienceAndTimestamp = 
-            new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
+        if (jwkSetUri == null || jwkSetUri.trim().isEmpty()) {
+            log.error("JWT jwk-set-uri is null or empty");
+            throw new IllegalArgumentException("JWT jwk-set-uri cannot be null or empty");
+        }
 
-        jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
-        return jwtDecoder;
+        if (audience == null || audience.trim().isEmpty()) {
+            log.error("JWT audience is null or empty");
+            throw new IllegalArgumentException("JWT audience cannot be null or empty");
+        }
+        
+        try {
+            log.debug("Creating NimbusJwtDecoder with JWK Set URI: {}", jwkSetUri);
+            NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+            
+            log.debug("Creating JWT validators");
+            // OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
+            OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
+            OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+
+            // different validator combinations to isolate the issue
+            log.info("JWT validation with different validator combinations...");
+
+            // 1: Only issuer validation
+            OAuth2TokenValidator<Jwt> issuerOnly = withIssuer;
+
+            // 2: Issuer + timestamp
+            OAuth2TokenValidator<Jwt> issuerAndTimestamp =
+                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
+
+            // 3: All validators except audience
+            OAuth2TokenValidator<Jwt> withoutAudience =
+                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
+
+            jwtDecoder.setJwtValidator(issuerOnly);
+
+            // test these later
+            // log.info("Using ISSUER + TIMESTAMP validation");
+            // jwtDecoder.setJwtValidator(issuerAndTimestamp);
+
+            // log.info("Using ALL validators except AUDIENCE");
+            // jwtDecoder.setJwtValidator(withoutAudience);
+            
+            log.info("JWT Decoder creation success");
+            return jwtDecoder;
+        } catch (Exception e) {
+            log.error("Failed to create JWT Decoder: {}", e.getMessage(), e);
+            throw new RuntimeException("JWT Decoder configuration failed", e);
+        }
     }
 }
