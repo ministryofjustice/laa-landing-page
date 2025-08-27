@@ -2,21 +2,17 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
+      pageCategory=${'edit-user'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Offices</title>
+    <title>Edit - Offices</title>
 </head>
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    < Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
+            Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/users/edit/{id}/offices(id=${user.id})}" th:object="${officesForm}">

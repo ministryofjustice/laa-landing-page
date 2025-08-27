@@ -2,7 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
+      pageCategory=${'grant-access'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
@@ -11,13 +11,9 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-back-link govuk-!-margin-bottom-3"
-                    th:href="@{/admin/users/grant-access/{id}/offices(id=${user.id})}">
-                    Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link govuk-!-margin-bottom-3"
+            th:href="@{/admin/users/grant-access/{id}/offices(id=${user.id})}">
+            Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
@@ -35,10 +31,13 @@
                             </h2>
                         </div>
                         <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list" th:if="${groupedAppRoles != null and !groupedAppRoles.isEmpty()}">
+                            <dl class="govuk-summary-list"
+                                th:if="${groupedAppRoles != null and !groupedAppRoles.isEmpty()}">
                                 <th:block th:each="appEntry : ${groupedAppRoles}">
-                                    <div th:each="appRole, iterStat : ${appEntry.value}" class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key" th:text="${iterStat.first ? appEntry.key : ''}">App Name</dt>
+                                    <div th:each="appRole, iterStat : ${appEntry.value}"
+                                        class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key"
+                                            th:text="${iterStat.first ? appEntry.key : ''}">App Name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${appRole.name}">Role Name</dd>
                                         <dd class="govuk-summary-list__actions">
                                             <a class="govuk-link"
@@ -47,7 +46,8 @@
                                     </div>
                                 </th:block>
                             </dl>
-                            <div th:if="${groupedAppRoles == null or groupedAppRoles.isEmpty()}" class="govuk-inset-text">
+                            <div th:if="${groupedAppRoles == null or groupedAppRoles.isEmpty()}"
+                                class="govuk-inset-text">
                                 No user permissions assigned
                             </div>
                         </div>
@@ -76,10 +76,12 @@
                                     <dt class="govuk-summary-list__key govuk-visually-hidden"></dt>
                                 </div>
                             </dl>
-                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser}" class="govuk-inset-text">
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser}"
+                                class="govuk-inset-text">
                                 Access to All Offices
                             </div>
-                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and !externalUser}" class="govuk-inset-text">
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and !externalUser}"
+                                class="govuk-inset-text">
                                 No offices assigned
                             </div>
                         </div>
