@@ -64,7 +64,7 @@ public class SecurityConfig {
                         if (authHeader.startsWith("Bearer ")) {
                             String token = authHeader.substring(7);
                             log.info("Authorization header present: Bearer [token length: {}]", token.length());
-                            log.debug("JWT Token (first 50 chars): {}...", token.substring(0, Math.min(50, token.length())));
+                            log.info("JWT Token (first 50 chars): {}...", token.substring(0, Math.min(50, token.length())));
                         } else {
                             log.warn("Authorization header present but not in Bearer format: {}", authHeader.substring(0, Math.min(20, authHeader.length())));
                         }
@@ -118,7 +118,7 @@ public class SecurityConfig {
         log.info("security filter chain for /api/v1/claims/enrich");
         http.securityMatcher("/api/v1/claims/enrich")
             .authorizeHttpRequests(authorize -> {
-                log.debug("Configuring authorization for API endpoints");
+                log.info("Configuring authorization for API endpoints");
                 authorize.anyRequest().authenticated();
             })
             .csrf(AbstractHttpConfigurer::disable)
@@ -126,9 +126,9 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .oauth2ResourceServer(oauth2 -> {
-                log.debug("Configuring OAuth2 resource server with JWT");
+                log.info("Configuring OAuth2 resource server with JWT");
                 oauth2.jwt(jwt -> {
-                    log.debug("Setting JWT authentication converter");
+                    log.info("Setting JWT authentication converter");
                     jwt.jwtAuthenticationConverter(jwtAuthenticationConverter());
                 });
             })
