@@ -97,4 +97,28 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search, @Param("firmId") UUID firmId, @Param("userTypes") List<UserType> userTypes,
                                                              @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser u
+            WHERE ups.firm.id = :firmId
+            AND EXISTS (
+                SELECT 1 FROM ups.appRoles ar 
+                WHERE ar.authzRole = true 
+                AND ar.name = :role
+            )
+            """)
+    Page<UserProfile> findFirmUserByAuthzRoleAndFirm(@Param("firmId") UUID firmId, @Param("role") String role, Pageable pageable);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser u
+            WHERE ups.firm IS NULL
+            AND EXISTS (
+                SELECT 1 FROM ups.appRoles ar 
+                WHERE ar.authzRole = true 
+                AND ar.name = :role
+            )
+            """)
+    Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
 }
