@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -25,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
  * Security configuration for the application
  * Configures security filter chains, authentication, and authorization
  */
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -48,12 +51,16 @@ public class SecurityConfig {
      */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        log.info("Configuring JWT Authentication Converter");
+        
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
         grantedAuthoritiesConverter.setAuthorityPrefix("");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        
+        log.info("JWT Authentication Converter configured successfully");
         return jwtAuthenticationConverter;
     }
 
@@ -64,17 +71,23 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        log.info("security filter chain for /api/v1/claims/enrich");
         http.securityMatcher("/api/v1/claims/enrich")
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(authorize -> {
+                log.debug("Configuring authorization for API endpoints");
+                authorize.anyRequest().authenticated();
+            })
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-            )
+            .oauth2ResourceServer(oauth2 -> {
+                log.debug("Configuring OAuth2 resource server with JWT");
+                oauth2.jwt(jwt -> {
+                    log.debug("Setting JWT authentication converter");
+                    jwt.jwtAuthenticationConverter(jwtAuthenticationConverter());
+                });
+            })
             // Disable form login and HTTP Basic to prevent redirects
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable);
@@ -125,6 +138,18 @@ public class SecurityConfig {
             .permitAll()
         ).csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        ).headers(headers -> headers
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(63072000)
+                        .requestMatcher(AnyRequestMatcher.INSTANCE)
+                )
+                .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
+                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
+                                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
+                                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
+                                + " frame-src * self blob: data: gap:;"))
         );
         return http.build();
     }
