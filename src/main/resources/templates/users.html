@@ -36,7 +36,7 @@
                     <form class="form" method="post" action="" th:if="${allowCreateUser}">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
-                                <button type="button" class="govuk-button govuk-button--secondary"
+                                <button type="button" class="govuk-button govuk-button--primary"
                                     data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/user/create/details';">
                                     Create a new user
@@ -57,7 +57,7 @@
 
                                     </label>
                                     <input class="govuk-input govuk-!-width-full" id="search" name="search"
-                                        type="search" th:value="${param.search}" autocomplete="off">
+                                        type="search" th:value="${search}" autocomplete="off">
                                 </div>
                                 <button type="submit" class="govuk-button moj-search__button"
                                     data-module="govuk-button">
@@ -73,9 +73,9 @@
                         <fieldset class="govuk-fieldset">
                             <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="show-firm-admins" name="show-firm-admins"
+                                    <input class="govuk-checkboxes__input" id="show-firm-admins" name="showFirmAdmins"
                                         type="checkbox" value="true" onchange="handleShowFirmAdmins(this)"
-                                        th:checked="${param.showFirmAdmins != null && param.showFirmAdmins[0] == 'true'}">
+                                        th:checked="${showFirmAdmins}">
                                     <label class="govuk-label govuk-checkboxes__label" for="organisation">
                                         Show firm admins
                                     </label>
@@ -98,7 +98,7 @@
                 <form class="govuk-form-group govuk-!-margin-top-3">
                     <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                         <table class="govuk-table" data-id-prefix="users-"
-                            style="table-layout: fixed; min-width: 768px; width: 100%;">
+                            style="table-layout: fixed; min-width: 820px; width: 100%;">
                             <thead class="govuk-table__head">
                                 <tr class="govuk-table__row">
                                     <th scope="col" class="govuk-table__header"
@@ -158,8 +158,7 @@
                                         </button>
                                     </th>
                                     <th scope="col" class="govuk-table__header"
-                                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
-                                        style="width: 10%; min-width: 90px;">
+                                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}" style="width: 12%; min-width: 110px;">
                                         <button type="button" data-index="4"
                                             th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
                                             Status
@@ -176,9 +175,8 @@
 
                             <tbody class="govuk-table__body">
                                 <tr class="govuk-table__row" th:each="user : ${users}">
-                                    <td class="govuk-table__cell"
-                                        style="word-wrap: break-word; overflow-wrap: break-word;">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}"
+                                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}(id=${user.id}, size=${requestedPageSize}, page=${page}, search=${search}, sort=${sort}, direction=${direction}, showFirmAdmins=${showFirmAdmins}, usertype=${usertype})}"
                                             th:text="${user.fullName}"></a>
                                     </td>
                                     <td class="govuk-table__cell"
@@ -199,7 +197,7 @@
                                     </td>
                                     <td class="govuk-table__cell">
                                         <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
-                                            class="moj-badge moj-badge--red">PENDING</span>
+                                            class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                         <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
                                             class="moj-badge moj-badge--green">COMPLETE</span>
                                     </td>
