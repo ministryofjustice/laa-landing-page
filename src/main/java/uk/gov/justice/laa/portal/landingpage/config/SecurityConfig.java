@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -125,6 +126,18 @@ public class SecurityConfig {
             .permitAll()
         ).csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        ).headers(headers -> headers
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(63072000)
+                        .requestMatcher(AnyRequestMatcher.INSTANCE)
+                )
+                .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
+                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
+                                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
+                                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
+                                + " frame-src * self blob: data: gap:;"))
         );
         return http.build();
     }
