@@ -52,13 +52,13 @@ public class SecurityConfig {
     public OncePerRequestFilter jwtRequestLoggingFilter() {
         return new OncePerRequestFilter() {
             @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                     throws ServletException, IOException {
-                
+
                 if (request.getRequestURI().equals("/api/v1/claims/enrich")) {
                     log.info("Request URI: {}", request.getRequestURI());
                     log.info("Request Method: {}", request.getMethod());
-                    
+
                     String authHeader = request.getHeader("Authorization");
                     if (authHeader != null) {
                         if (authHeader.startsWith("Bearer ")) {
@@ -71,13 +71,13 @@ public class SecurityConfig {
                     } else {
                         log.error("No Authorization header found in request");
                     }
-                    
+
                     log.info("Content-Type: {}", request.getContentType());
                     log.info("User-Agent: {}", request.getHeader("User-Agent"));
                 }
-                
+
                 filterChain.doFilter(request, response);
-                
+
                 if (request.getRequestURI().equals("/api/v1/claims/enrich")) {
                     log.info("Response Status: {}", response.getStatus());
                 }
@@ -96,14 +96,14 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         log.info("Configuring JWT Authentication Converter");
-        
+
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
         grantedAuthoritiesConverter.setAuthorityPrefix("");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        
+
         log.info("JWT Authentication Converter configured successfully");
         return jwtAuthenticationConverter;
     }

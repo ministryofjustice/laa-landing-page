@@ -30,7 +30,7 @@
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
                         <strong th:if="${!isAccessGranted}"
-                            class="govuk-tag govuk-tag--yellow govuk-!-font-weight-bold govuk-!-margin-top-1">PENDING</strong>
+                            class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
                         <strong th:if="${isAccessGranted}"
                             class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
                     </div>
