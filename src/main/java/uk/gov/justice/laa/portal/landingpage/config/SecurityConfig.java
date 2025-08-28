@@ -165,7 +165,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
             .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
+            .requestMatchers("/", "/login", "/css/**", "/js/**", "/assets/**"
             ).permitAll()
             .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
