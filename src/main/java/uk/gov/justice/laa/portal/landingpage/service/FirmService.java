@@ -1,18 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-
-import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -21,6 +15,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * FirmService
@@ -45,7 +44,11 @@ public class FirmService {
     }
 
     public FirmDto getFirm(String id) {
-        return mapper.map(firmRepository.getReferenceById(UUID.fromString(id)), FirmDto.class);
+        return getFirm(UUID.fromString(id));
+    }
+
+    public FirmDto getFirm(UUID id) {
+        return mapper.map(firmRepository.getReferenceById(id), FirmDto.class);
     }
 
     public Optional<FirmDto> getUserFirm(EntraUser entraUser) {

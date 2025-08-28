@@ -96,7 +96,8 @@
                                                                 aria-controls="firmSearch__listbox"
                                                                 aria-describedby="firm-hint"
                                                                 aria-owns="firmSearch__listbox" role="combobox"
-                                                                th:value="${param.firmSearch}">
+                                                                th:value="${firmSearch.firmSearch}">
+                                                            <input type="hidden" id="selectedFirmId" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}"/>
                                                             <div id="firmSearch__assistiveHint"
                                                                 class="govuk-hint govuk-visually-hidden" role="status">
                                                                 When autocomplete results are available, use up and down
@@ -135,8 +136,9 @@
                         <div class="govuk-!-margin-top-4">
                             <form method="get" th:action="@{/admin/users}" role="search">
                                 <!-- Hidden inputs to preserve current search state -->
-                                <input type="hidden" name="search" th:value="${param.search}">
-                                <input type="hidden" name="firmSearch" th:value="${param.firmSearch}">
+                                <input type="hidden" name="search" th:value="${search}">
+                                <input type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
+                                <input type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
                                 <input type="hidden" name="sort" th:value="${sort}">
                                 <input type="hidden" name="direction" th:value="${direction}">
                                 <input type="hidden" name="page" th:value="${page}">
@@ -341,6 +343,7 @@
 
                     document.addEventListener('DOMContentLoaded', function () {
                         const firmSearchInput = document.getElementById('firmSearch');
+                        const firmSearchIdInput = document.getElementById('selectedFirmId');
                         const firmSearchListbox = document.getElementById('firmSearch__listbox');
                         const statusA = document.getElementById('firmSearch__status--A');
                         const statusB = document.getElementById('firmSearch__status--B');
@@ -501,6 +504,7 @@
 
                         function selectFirm(firm) {
                             firmSearchInput.value = firm.name;
+                            firmSearchIdInput.value = firm.id;
                             hideResults();
                             updateStatus(`${firm.name} selected`);
                         }
@@ -562,7 +566,7 @@
                                 th:aria-sort="${sort == 'firstName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" data-index="0"
-                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firstName', direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Name
                                     <img th:if="${sort == 'firstName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -576,7 +580,7 @@
                                 th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" data-index="1"
-                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firmName', direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='firmName', direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Firm
                                     <img th:if="${sort == 'firmName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -590,7 +594,7 @@
                                 th:aria-sort="${sort == 'email' ? direction : 'none'}"
                                 style="width: 35%; min-width: 200px;">
                                 <button type="button" data-index="2"
-                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Email
                                     <img th:if="${sort == 'email' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -604,7 +608,7 @@
                                 th:aria-sort="${sort == 'userType' ? direction : 'none'}"
                                 style="width: 15%; min-width: 110px;">
                                 <button type="button" data-index="3"
-                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     User Type
                                     <img th:if="${sort == 'userType' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -618,7 +622,7 @@
                                 th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
                                 style="width: 10%; min-width: 90px;">
                                 <button type="button" data-index="4"
-                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})} + '\''">
+                                    th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -635,7 +639,7 @@
                         <tr class="govuk-table__row" th:each="user : ${users}">
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
                                 <a class="govuk-link"
-                                    th:href="@{/admin/users/manage/{id}(id=${user.id}, size=${requestedPageSize}, page=${page}, search=${search}, sort=${sort}, direction=${direction}, showFirmAdmins=${showFirmAdmins}, usertype=${usertype})}"
+                                    th:href="@{/admin/users/manage/{id}(id=${user.id}, hasFilters=${hasFilters})}"
                                     th:text="${user.fullName}"></a>
                             </td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
@@ -665,7 +669,7 @@
         <nav class="govuk-pagination" aria-label="Pagination">
             <div class="govuk-pagination__prev" th:if="${page > 1}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                     rel="prev">
                     <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -684,10 +688,10 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 0}"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${param.firmSearch}, sort=${search}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${search}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                         th:aria-label="'Page 1'">1</a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                         th:aria-label="'Page 1'" aria-current="page">1</a>
                 </li>
 
@@ -702,10 +706,10 @@
                     <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                         th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                         <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                             th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                         <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                             th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                     </li>
                 </th:block>
@@ -719,17 +723,17 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                     th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                         th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                         th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                 </li>
             </ul>
 
             <div class="govuk-pagination__next" th:if="${page < totalPages}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${param.firmSearch}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                     rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>
