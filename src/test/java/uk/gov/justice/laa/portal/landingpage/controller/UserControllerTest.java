@@ -304,7 +304,6 @@ class UserControllerTest {
         mockPaginatedUsers.setUsers(new ArrayList<>());
         when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(),
                 any(), any())).thenReturn(mockPaginatedUsers);
-        FirmSearchForm firmSearchForm = FirmSearchForm.builder().firmSearch("Test").build();
         FirmDto firmDto = new FirmDto();
         firmDto.setId(UUID.randomUUID());
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
