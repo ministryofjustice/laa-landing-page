@@ -3361,7 +3361,7 @@ class UserControllerTest {
 
         AppDto regularApp = new AppDto();
         regularApp.setId("app1");
-        regularApp.setName("Requests to transfer CCMS cases");
+        regularApp.setName("CCMS case transfer requests");
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId("role1");
