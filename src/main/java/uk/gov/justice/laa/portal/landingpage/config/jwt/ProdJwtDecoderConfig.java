@@ -80,7 +80,7 @@ public class ProdJwtDecoderConfig {
             OAuth2TokenValidator<Jwt> withAudienceAndTimestamp =
                     new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
 
-            jwtDecoder.setJwtValidator(issuerAndTimestamp);
+            jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
 
             log.info("JWT Decoder creation success");
             return jwtDecoder;
