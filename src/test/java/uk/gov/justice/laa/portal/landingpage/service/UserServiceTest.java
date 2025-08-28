@@ -1,5 +1,67 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
+import com.microsoft.graph.core.requests.BatchRequestBuilder;
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
+import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
+import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.RequestInformation;
+import okhttp3.Request;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -16,79 +78,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.core.requests.BatchRequestBuilder;
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.users.UsersRequestBuilder;
-import com.microsoft.graph.users.item.UserItemRequestBuilder;
-import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
-import com.microsoft.kiota.RequestAdapter;
-import com.microsoft.kiota.RequestInformation;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import okhttp3.Request;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
-import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -2517,15 +2517,18 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_returnsValidPage() {
+    void getPageOfUsersBySearch_returnsValidPage() {
         // Given
         String searchTerm = "test";
-        List<Permission> permissions = List.of(Permission.CREATE_EXTERNAL_USER);
-        UUID firmId = UUID.randomUUID();
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -2536,7 +2539,7 @@ class UserServiceTest {
                         .lastName("User")
                         .email("test@example.com")
                         .build())
-                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
                 .build();
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
@@ -2545,31 +2548,31 @@ class UserServiceTest {
                 1
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
+        verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_withEmptyPermissions() {
+    void getPageOfUsersBySearch_withEmptySearch() {
         // Given
         String searchTerm = "test";
-        List<Permission> permissions = List.of(); // Empty list
-        UUID firmId = UUID.randomUUID();
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
                 List.of(),
@@ -2577,18 +2580,16 @@ class UserServiceTest {
                 0
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(
+                criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(0);
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), eq(false), any(PageRequest.class));
+        verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Test
@@ -2627,14 +2628,17 @@ class UserServiceTest {
     }
 
     @Test
-    void getPageOfUsersByNameOrEmailAndPermissionsAndFirm_searchByFullName() {
+    void getPageOfUsersBySearch_searchByFullName() {
         String searchTerm = "Test Name";
-        List<Permission> permissions = List.of(Permission.VIEW_EXTERNAL_USER);
-        UUID firmId = UUID.randomUUID();
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
+        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
+
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -2645,7 +2649,7 @@ class UserServiceTest {
                         .lastName("Name")
                         .email("test.name@example.com")
                         .build())
-                .firm(Firm.builder().id(firmId).name("Test Firm").build())
+                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
                 .build();
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
@@ -2654,13 +2658,12 @@ class UserServiceTest {
                 1
         );
 
-        when(mockUserProfileRepository.findByNameOrEmailAndPermissionsAndFirm(
-                eq(searchTerm), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class)))
+        when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
 
         // When
-        PaginatedUsers result = userService.getPageOfUsersByNameOrEmailAndPermissionsAndFirm(
-                searchTerm, firmId, UserType.EXTERNAL_TYPES, false, page, pageSize, sort, direction);
+        PaginatedUsers result = userService.getPageOfUsersBySearch(
+                criteria, page, pageSize, sort, direction);
 
         // Then
         assertThat(result.getUsers()).hasSize(1);
@@ -2668,9 +2671,8 @@ class UserServiceTest {
         assertThat(result.getUsers().get(0).getEntraUser().getFirstName()).isEqualTo("Test");
         assertThat(result.getUsers().get(0).getEntraUser().getLastName()).isEqualTo("Name");
 
-        // Verify the repository was called with the full name search term
-        verify(mockUserProfileRepository).findByNameOrEmailAndPermissionsAndFirm(
-                eq("Test Name"), eq(firmId), eq(UserType.EXTERNAL_TYPES), anyBoolean(), any(PageRequest.class));
+        // Verify the repository was called with the search criteria
+        verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
     }
 
     @Nested
