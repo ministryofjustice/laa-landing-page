@@ -25,7 +25,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import org.springframework.web.util.ContentCachingResponseWrapper;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -76,10 +79,19 @@ public class SecurityConfig {
                     log.info("User-Agent: {}", request.getHeader("User-Agent"));
                 }
 
-                filterChain.doFilter(request, response);
+
+                ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
+                ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
+
+                filterChain.doFilter(requestWrapper, responseWrapper);
+
+                String requestBody = new String(requestWrapper.getContentAsByteArray(), StandardCharsets.UTF_8);
+                log.info("claim enrichment entra request body: {}", requestBody);
+
+                responseWrapper.copyBodyToResponse();
 
                 if (request.getRequestURI().equals("/api/v1/claims/enrich")) {
-                    log.info("Response Status: {}", response.getStatus());
+                    log.info("Response Status to enrichment endpoint: {}", response.getStatus());
                 }
             }
         };
