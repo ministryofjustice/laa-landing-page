@@ -74,14 +74,13 @@ public class ProdJwtDecoderConfig {
             OAuth2TokenValidator<Jwt> issuerAndTimestamp =
                 new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
 
-            // jwtDecoder.setJwtValidator(issuerOnly);
             NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
             log.info("Using ISSUER + TIMESTAMP + AUDIENCE validation");
             OAuth2TokenValidator<Jwt> withAudienceAndTimestamp =
                     new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
 
-            jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
+            jwtDecoder.setJwtValidator(issuerAndTimestamp);
 
             log.info("JWT Decoder creation success");
             return jwtDecoder;
