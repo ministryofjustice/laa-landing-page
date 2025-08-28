@@ -49,13 +49,8 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login(@RequestParam(value = "message", required = false) String message, Model model) {
-        if (message != null && message.equals("logout")) {
-            String successMessage = "You have been securely logged out";
-            model.addAttribute("successMessage", successMessage);
-        }
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Sign in");
-        return "index";
+    public String index() {
+        return "redirect:/home";
     }
 
     /**

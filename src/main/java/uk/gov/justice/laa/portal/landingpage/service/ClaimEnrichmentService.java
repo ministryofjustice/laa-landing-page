@@ -89,6 +89,8 @@ public class ClaimEnrichmentService {
                     .distinct()
                     .collect(Collectors.toList());
 
+            log.info("claim enrichment office ids: {}", officeIds);
+
             boolean isInternalUser = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
@@ -113,6 +115,7 @@ public class ClaimEnrichmentService {
                             .filter(Objects::nonNull)
                             .distinct()
                             .collect(Collectors.toList());
+                    log.info("claim enrichment empty office ids: {}", officeIds);
                 }
             }
 

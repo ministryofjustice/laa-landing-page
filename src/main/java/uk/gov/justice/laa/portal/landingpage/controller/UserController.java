@@ -104,7 +104,18 @@ public class UserController {
             @RequestParam(name = "usertype", required = false) String usertype,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
+            @RequestParam(name = "backButton", required = false) boolean backButton,
             Model model, HttpSession session, Authentication authentication) {
+
+        // Process request parameters and handle session filters
+        Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search, showFirmAdmins, backButton, session);
+        size = (Integer) processedFilters.get("size");
+        page = (Integer) processedFilters.get("page");
+        sort = (String) processedFilters.get("sort");
+        direction = (String) processedFilters.get("direction");
+        usertype = (String) processedFilters.get("usertype");
+        search = (String) processedFilters.get("search");
+        showFirmAdmins = (Boolean) processedFilters.get("showFirmAdmins");
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -155,9 +166,43 @@ public class UserController {
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        
+        // Add filter state to model for UI display
+        @SuppressWarnings("unchecked")
+        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
+        boolean hasFilters = filters != null && hasActiveFilters(filters);
+        model.addAttribute("hasFilters", hasFilters);
+        model.addAttribute("filterParams", filters);
+        
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
+    }
+
+    /**
+     * Helper method to check if filters contain any active (non-default) values
+     */
+    private boolean hasActiveFilters(Map<String, Object> filters) {
+        if (filters == null) {
+            return false;
+        }
+
+        // Check if any filter has a non-default value
+        String search = (String) filters.get("search");
+        String usertype = (String) filters.get("usertype");
+        String sort = (String) filters.get("sort");
+        String direction = (String) filters.get("direction");
+        Boolean showFirmAdmins = (Boolean) filters.get("showFirmAdmins");
+        Integer size = (Integer) filters.get("size");
+        Integer page = (Integer) filters.get("page");
+
+        return (search != null && !search.isEmpty())
+                || (usertype != null && !usertype.isEmpty())
+                || (sort != null && !sort.isEmpty())
+                || (direction != null && !direction.isEmpty())
+                || (showFirmAdmins != null && showFirmAdmins)
+                || (size != null && size != 10)
+                || (page != null && page != 1);
     }
 
     @GetMapping("/users/edit/{id}")
@@ -189,7 +234,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model) {
+    public String manageUser(@PathVariable String id, Model model, HttpSession session) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
@@ -204,6 +249,14 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
+
+        // Add filter state to model for "Back to Filter" button
+        @SuppressWarnings("unchecked")
+        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
+        boolean hasFilters = filters != null && hasActiveFilters(filters);
+        model.addAttribute("hasFilters", hasFilters);
+        model.addAttribute("filterParams", filters);
+
         return "manage-user";
     }
 
@@ -804,7 +857,7 @@ public class UserController {
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
-                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
+                && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {
@@ -1059,8 +1112,7 @@ public class UserController {
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                userProfileDto != null ? userProfileDto.getEntraUser() : null, selectOfficesDisplay, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
@@ -1248,7 +1300,7 @@ public class UserController {
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
-                && !currentApp.getName().contains("Requests to transfer CCMS cases"))
+                && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
         if (isCcmsApp) {
@@ -1645,5 +1697,61 @@ public class UserController {
     public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
         return new RedirectView("/error");
+    }
+
+    private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction, 
+                                                     String usertype, String search, boolean showFirmAdmins, 
+                                                     boolean backButton, HttpSession session) {
+        
+        if (backButton) {
+            // Use session filters when back button is used
+            @SuppressWarnings("unchecked")
+            Map<String, Object> sessionFilters = (Map<String, Object>) session.getAttribute("userListFilters");
+            
+            if (sessionFilters != null) {
+                size = sessionFilters.containsKey("size") ? (Integer) sessionFilters.get("size") : size;
+                page = sessionFilters.containsKey("page") ? (Integer) sessionFilters.get("page") : page;
+                sort = sessionFilters.containsKey("sort") ? (String) sessionFilters.get("sort") : sort;
+                direction = sessionFilters.containsKey("direction") ? (String) sessionFilters.get("direction") : direction;
+                usertype = sessionFilters.containsKey("usertype") ? (String) sessionFilters.get("usertype") : usertype;
+                search = sessionFilters.containsKey("search") ? (String) sessionFilters.get("search") : search;
+                showFirmAdmins = sessionFilters.containsKey("showFirmAdmins") ? (Boolean) sessionFilters.get("showFirmAdmins") : showFirmAdmins;
+                
+                // Handle empty strings for optional parameters
+                if (sort != null && sort.isEmpty()) {
+                    sort = null;
+                }
+                if (direction != null && direction.isEmpty()) {
+                    direction = null;
+                }
+                if (usertype != null && usertype.isEmpty()) {
+                    usertype = null;
+                }
+            }
+        } else {
+            // Clear session filters when not using back button (new filter request)
+            session.removeAttribute("userListFilters");
+        }
+        
+        // Store current filter state in session for future back navigation
+        session.setAttribute("userListFilters", Map.of(
+            "size", size,
+            "page", page,
+            "sort", sort != null ? sort : "",
+            "direction", direction != null ? direction : "",
+            "search", search,
+            "showFirmAdmins", showFirmAdmins,
+            "usertype", usertype != null ? usertype : ""
+        ));
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("size", size);
+        result.put("page", page);
+        result.put("sort", sort);
+        result.put("direction", direction);
+        result.put("usertype", usertype);
+        result.put("search", search);
+        result.put("showFirmAdmins", showFirmAdmins);
+        return result;
     }
 }
