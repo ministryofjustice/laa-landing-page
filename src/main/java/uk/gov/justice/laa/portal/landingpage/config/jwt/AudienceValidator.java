@@ -19,16 +19,16 @@ public class AudienceValidator implements OAuth2TokenValidator<Jwt> {
 
     @Override
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
-        log.info("Expected audience: {}", audience);
-        log.info("JWT audiences: {}", jwt.getAudience());
-        log.info("JWT audience contains expected: {}", jwt.getAudience().contains(audience));
+        log.debug("Expected audience: {}", audience);
+        log.debug("JWT audiences: {}", jwt.getAudience());
+        log.debug("JWT audience contains expected: {}", jwt.getAudience().contains(audience));
         
         if (jwt.getAudience().contains(audience)) {
             log.info("Audience validation successful");
             return OAuth2TokenValidatorResult.success();
         }
         
-        log.error("Audience validation failed - Expected: {} | Found: {}", audience, jwt.getAudience());
+        log.debug("Audience validation failed - Expected: {} | Found: {}", audience, jwt.getAudience());
         return OAuth2TokenValidatorResult.failure(
             new OAuth2Error("invalid_token", "The required audience " + audience + " is missing", null));
     }
