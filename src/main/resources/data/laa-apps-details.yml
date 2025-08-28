@@ -31,7 +31,7 @@ laa-apps:
       laaApplicationDetails: ${app.submit.crime.form.details}
       ordinal: 3
     - name: ${app.ccms.account.link.name}
-      title: Requests to transfer CCMS cases
+      title: CCMS case transfer requests
       description: >-
         Transfer historical CCMS cases
       url: ${app.ccms.account.link.url}
