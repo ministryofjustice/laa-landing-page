@@ -932,6 +932,7 @@ class UserServiceTest {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
+        UUID modifierId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL_AND_EXTERNAL).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL_SINGLE_FIRM).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
@@ -941,7 +942,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -954,6 +955,7 @@ class UserServiceTest {
         // Arrange
         UUID userProfileId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
+        UUID modifierId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_MULTI_FIRM).build();
         EntraUser user = EntraUser.builder().id(userProfileId).userProfiles(Set.of(userProfile)).build();
@@ -963,7 +965,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()));
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -974,6 +976,7 @@ class UserServiceTest {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
+        UUID modifierId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
@@ -983,7 +986,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -994,6 +997,7 @@ class UserServiceTest {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
+        UUID modifierId = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
@@ -1003,7 +1007,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()));
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).isEmpty();
@@ -1014,10 +1018,11 @@ class UserServiceTest {
         // Arrange
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userProfileId = UUID.randomUUID();
+        UUID modifierId = UUID.randomUUID();
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()));
+        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()), modifierId);
 
         // Assert
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -1955,6 +1960,7 @@ class UserServiceTest {
         void updateUserRoles_handlesEmptyRolesList() {
             // Arrange
             UUID userId = UUID.randomUUID();
+            UUID modifierId = UUID.randomUUID();
             UserProfile userProfile = UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).build();
             EntraUser user = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
@@ -1963,7 +1969,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
             // Act
-            userService.updateUserRoles(userId.toString(), Collections.emptyList());
+            userService.updateUserRoles(userId.toString(), Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
@@ -2716,6 +2722,7 @@ class UserServiceTest {
 
             userProfile.setAppRoles(Set.of(oldRole));
             entraUser.setUserProfiles(Set.of(userProfile));
+            UUID modifierId = UUID.randomUUID();
 
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
@@ -2727,7 +2734,7 @@ class UserServiceTest {
                     any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
 
-            String changed = userService.updateUserRoles(userProfileId, selectedRoles);
+            String changed = userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2771,6 +2778,7 @@ class UserServiceTest {
 
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
+            UUID modifierId = UUID.randomUUID();
 
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
@@ -2782,7 +2790,7 @@ class UserServiceTest {
                     any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(false);
 
-            userService.updateUserRoles(userProfileId, selectedRoles);
+            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2796,11 +2804,12 @@ class UserServiceTest {
         void updateUserRoles_userProfileNotFound_logsWarning() {
             String userProfileId = UUID.randomUUID().toString();
             List<String> selectedRoles = List.of(UUID.randomUUID().toString());
+            UUID modifierId = UUID.randomUUID();
 
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.empty());
 
-            userService.updateUserRoles(userProfileId, selectedRoles);
+            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
 
             verify(mockUserProfileRepository, never()).save(any());
             verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
@@ -2834,6 +2843,7 @@ class UserServiceTest {
 
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
+            UUID modifierId = UUID.randomUUID();
 
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
@@ -2845,7 +2855,7 @@ class UserServiceTest {
                     any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
 
-            userService.updateUserRoles(userProfileId, selectedRoles);
+            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());

@@ -779,8 +779,8 @@ public class UserController {
             // Update user to have no roles (empty list)
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             try {
-                String changed = userService.updateUserRoles(id, new ArrayList<>());
                 CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                         userProfileDto != null ? userProfileDto.getEntraUser() : null,
                         changed, "apps");
@@ -984,7 +984,7 @@ public class UserController {
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 try {
-                    String changed = userService.updateUserRoles(id, allSelectedRoles);
+                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
                     UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                             user != null ? user.getEntraUser() : null, changed,
                             "role");
@@ -1242,9 +1242,9 @@ public class UserController {
         // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            String changed = userService.updateUserRoles(id, new ArrayList<>());
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     changed, "roles");
@@ -1412,7 +1412,7 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                         user != null ? user.getEntraUser() : null, changed,
                         "role");

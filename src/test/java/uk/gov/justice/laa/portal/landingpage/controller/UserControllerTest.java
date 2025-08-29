@@ -1075,7 +1075,7 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
     }
 
     @Test
@@ -1099,7 +1099,7 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
@@ -1709,7 +1709,7 @@ class UserControllerTest {
         // The controller flattens all roles from all apps and passes them to
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
-        verify(userService).updateUserRoles(userId, allSelectedRoles);
+        verify(userService).updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId());
         verify(eventService).logEvent(any());
     }
 
@@ -2774,7 +2774,7 @@ class UserControllerTest {
 
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserRoles(userId, new ArrayList<>());
+        verify(userService).updateUserRoles(userId, new ArrayList<>(), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
 
@@ -2956,7 +2956,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        verify(userService).updateUserRoles(userId, List.of("role1", "role2"));
+        verify(userService).updateUserRoles(userId, List.of("role1", "role2"), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();

@@ -133,7 +133,7 @@ public class UserService {
     }
 
     @Transactional
-    public String updateUserRoles(String userProfileId, List<String> selectedRoles) {
+    public String updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -141,6 +141,7 @@ public class UserService {
         String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
+            boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal && appRole.getRoleType().equals(RoleType.INTERNAL);
@@ -160,8 +161,8 @@ public class UserService {
             Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>() : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
+            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
             userProfile.setAppRoles(newRoles);
-            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString());
             diff = diffRole(oldRoles, newRoles);
             
             // Try to send role change notification with retry logic before saving
@@ -201,7 +202,7 @@ public class UserService {
         return changed;
     }
 
-    protected void roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId) {
+    protected void roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self) {
         if (oldRoles.isEmpty()) {
             return;
         }
@@ -215,6 +216,10 @@ public class UserService {
             if (externalUserManagerRole.isPresent()) {
                 Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
                 boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+                if (removeManager && self) {
+                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
+                    throw new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId);
+                }
                 if (existingManagers.getTotalElements() < 2 && removeManager) {
                     logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
                     throw new RoleCoverageException("External User Manager role could not be removed, this is the last External User Manager of " + firm.getName());
