@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: laa-landing-page-liquibase-tag-${VERSION//./-}
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+        - name: liquibase
+          image: liquibase/liquibase:4.27.0
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              memory: "1200Mi"
+              cpu: "300m"
+            limits:
+              memory: "3000Mi"
+              cpu: "1"
+          env:
+            - name: POSTGRES_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_name
+            - name: POSTGRES_DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_address
+            - name: POSTGRES_DB_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: rds_instance_endpoint
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_password
+          command: ["liquibase"]
+          args:
+            [
+              "--changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml",
+              "--url=jdbc:postgresql://$POSTGRES_DB_ADDRESS:$POSTGRES_DB_ENDPOINT/$POSTGRES_DB_NAME",
+              "--username=$(POSTGRES_USERNAME)",
+              "--password=$(POSTGRES_PASSWORD)",
+              "tag",
+              "${VERSION}"
+            ]
+      restartPolicy: Never
+  backoffLimit: 1
