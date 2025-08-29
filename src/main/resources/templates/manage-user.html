@@ -14,8 +14,8 @@
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" 
-                   th:href="${hasFilters} ? @{/admin/users(size=${filterParams.size}, page=${filterParams.page}, search=${filterParams.search}, sort=${filterParams.sort}, direction=${filterParams.direction}, showFirmAdmins=${filterParams.showFirmAdmins}, usertype=${filterParams.usertype})} : @{/admin/users}"
-                   th:text="${hasFilters} ? 'Back to filter' : 'Home'"></a>
+                   th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}"
+                   th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span

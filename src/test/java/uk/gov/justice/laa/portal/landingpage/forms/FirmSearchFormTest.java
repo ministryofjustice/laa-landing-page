@@ -22,7 +22,7 @@ public class FirmSearchFormTest {
 
     @Test
     void whenFirmSearchIsNull_thenValidationFails() {
-        FirmSearchForm form = new FirmSearchForm();
+        FirmSearchForm form = FirmSearchForm.builder().build();
         form.setFirmSearch(null);
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
@@ -31,7 +31,7 @@ public class FirmSearchFormTest {
 
     @Test
     void whenFirmSearchIsEmpty_thenValidationFails() {
-        FirmSearchForm form = new FirmSearchForm();
+        FirmSearchForm form = FirmSearchForm.builder().build();
         form.setFirmSearch("");
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
@@ -40,7 +40,7 @@ public class FirmSearchFormTest {
 
     @Test
     void whenTrimFirmSearchIsEmpty_thenValidationFails() {
-        FirmSearchForm form = new FirmSearchForm();
+        FirmSearchForm form = FirmSearchForm.builder().build();
         form.setFirmSearch("   ");
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());

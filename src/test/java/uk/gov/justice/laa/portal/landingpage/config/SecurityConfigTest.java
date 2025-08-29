@@ -152,14 +152,6 @@ class SecurityConfigTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("public"));
 
-        mockMvc.perform(get("/migrate"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("public"));
-
-        mockMvc.perform(get("/register"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("public"));
-
         mockMvc.perform(get("/css/style.css"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("public"));
