@@ -12,7 +12,7 @@ public class CreateUserAuditEvent extends AuditEvent {
     private final UserType userType;
 
     private static final String CREATE_USER_TEMPLATE = """
-            New user %s created, user id %s, with firm %s and user type %s
+            New user created, user id %s, with firm %s and user type %s
             """;
 
     public CreateUserAuditEvent(CurrentUserDto currentUserDto, EntraUser user,
@@ -32,6 +32,6 @@ public class CreateUserAuditEvent extends AuditEvent {
     @Override
     public String getDescription() {
         String userName = user.getFirstName() + " " + user.getLastName();
-        return String.format(CREATE_USER_TEMPLATE, userName, user.getId(), selectedFirm, userType.getFriendlyName());
+        return String.format(CREATE_USER_TEMPLATE, user.getId(), selectedFirm, userType.getFriendlyName());
     }
 }

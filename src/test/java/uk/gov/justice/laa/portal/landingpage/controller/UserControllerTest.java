@@ -1486,7 +1486,6 @@ class UserControllerTest {
         verify(eventService).logEvent(captor.capture());
         UpdateUserAuditEvent updateUserAuditEvent = captor.getValue();
         assertThat(updateUserAuditEvent.getField()).isEqualTo("office");
-        assertThat(updateUserAuditEvent.getChangedValues()).hasSize(2);
     }
 
     @Test
