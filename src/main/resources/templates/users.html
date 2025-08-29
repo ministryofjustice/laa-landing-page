@@ -364,6 +364,13 @@
                             assistiveHint.style.display = 'block';
                         });
 
+                        // Hide firmSearchIdInput when firm search box is empty
+                        firmSearchInput.addEventListener('blur', function () {
+                            if (firmSearchInput.value) {
+                                firmSearchIdInput.value = '';
+                            }
+                        });
+
                         // Handle input changes
                         firmSearchInput.addEventListener('input', function () {
                             clearTimeout(searchTimeout);
@@ -371,6 +378,7 @@
 
                             // If the input is empty, hide results
                             if (query.length < 3) {
+                                firmSearchIdInput.value = '';
                                 hideResults();
                                 return;
                             }
