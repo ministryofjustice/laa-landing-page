@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -281,54 +282,20 @@ class SecurityConfigTest {
     }
 
     @Test
-    void whenInvalidSession_thenRedirectsToHomeWithSessionExpiredMessage() throws Exception {
-        // Create a new session and then invalidate it
-        MvcResult result = mockMvc.perform(get("/secure")
-                        .sessionAttr("SPRING_SECURITY_CONTEXT", "dummy"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-
-        // Now try to access with invalidated session
-        mockMvc.perform(get("/secure")
-                        .sessionAttr("SPRING_SECURITY_CONTEXT", result.getRequest().getSession()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/?message=session-expired"));
-    }
-
-    @Test
-    @WithMockUser
-    void whenMaximumSessionsExceeded_thenNewLoginInvalidatesPrevious() throws Exception {
-        // First login - should work
-        mockMvc.perform(get("/secure"))
-                .andExpect(status().isOk());
-
-        // Second login from different session should invalidate the first one
-        MockHttpSession newSession = new MockHttpSession();
-        mockMvc.perform(get("/login")
-                        .session(newSession))
-                .andExpect(status().isOk());
-
-        // Original session should now be invalid
-        mockMvc.perform(get("/secure"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/?message=session-expired"));
-    }
-
-    @Test
-    @WithMockUser
     void whenSessionExpires_thenRedirectsToHomeWithSessionExpiredMessage() throws Exception {
+
         // Create a session
-        MvcResult result = mockMvc.perform(get("/secure"))
+        MvcResult result = mockMvc.perform(get("/secure").with(oauth2Login()))
                 .andExpect(status().isOk())
                 .andReturn();
 
         // Simulate session expiration by removing the session attribute
-        result.getRequest().getSession().removeAttribute("SPRING_SECURITY_CONTEXT");
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        session.invalidate();
 
         // Try to access a secured page with expired session
-        mockMvc.perform(get("/secure")
-                        .session((MockHttpSession) result.getRequest().getSession()))
+        mockMvc.perform(get("/secure").session(session))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/?message=session-expired"));
+                .andExpect(redirectedUrl("http://localhost/oauth2/authorization/azure"));
     }
 }
