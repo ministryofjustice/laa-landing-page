@@ -124,6 +124,10 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
                 .permitAll()
+        ).sessionManagement(session -> session
+                .invalidSessionUrl("/?message=session-expired")
+                .maximumSessions(1)
+                .expiredUrl("/?message=session-expired")
         ).csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).headers(headers -> headers

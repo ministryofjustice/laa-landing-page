@@ -148,7 +148,7 @@ public class LoginService {
 
     public void logout(Authentication authentication,
                        OAuth2AuthorizedClient authorizedClient) {
-        if (authentication == null) {
+        if (authentication == null || authorizedClient == null) {
             return;
         }
 
