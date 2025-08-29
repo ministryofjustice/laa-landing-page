@@ -332,4 +332,78 @@ class LoginControllerTest {
         verify(userService).setDefaultActiveProfile(any(), any());
         assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
     }
+
+    @Test
+    void home_userWithNoRoles_internalUser() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionDataWithNoRoles = UserSessionData.builder()
+                .laaApplications(null) // No roles assigned
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+        
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithNoRoles);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void home_userWithNoRoles_externalUser() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionDataWithNoRoles = UserSessionData.builder()
+                .laaApplications(Set.of()) // No roles assigned
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+        
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithNoRoles);
+        when(userService.isInternal(userId)).thenReturn(false);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(false);
+    }
+
+    @Test
+    void home_userWithRoles_shouldNotSetNoRolesFlags() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        UserSessionData userSessionDataWithRoles = UserSessionData.builder()
+                .laaApplications(Set.of(
+                    uk.gov.justice.laa.portal.landingpage.model.LaaApplication.builder()
+                        .name("Test App")
+                        .title("Test Application")
+                        .build()))
+                .user(EntraUserDto.builder().id(UUID.randomUUID().toString()).build())
+                .name("Test User")
+                .build();
+        
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithRoles);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(false);
+        assertThat(model.getAttribute("isInternalUser")).isNull();
+    }
 }
