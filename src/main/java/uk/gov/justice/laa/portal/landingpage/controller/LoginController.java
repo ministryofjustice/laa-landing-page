@@ -49,13 +49,8 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login(@RequestParam(value = "message", required = false) String message, Model model) {
-        if (message != null && message.equals("logout")) {
-            String successMessage = "You have been securely logged out";
-            model.addAttribute("successMessage", successMessage);
-        }
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Sign in");
-        return "index";
+    public String index() {
+        return "redirect:/home";
     }
 
     /**
@@ -106,6 +101,16 @@ public class LoginController {
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
                 }
                 model.addAttribute("isAdminUser", isAdmin);
+                
+                // Check if user has no roles assigned and determine user type for custom message
+                if (userSessionData.getUser() != null 
+                    && (userSessionData.getLaaApplications() == null || userSessionData.getLaaApplications().isEmpty())) {
+                    boolean isInternal = userService.isInternal(userSessionData.getUser().getId());
+                    model.addAttribute("userHasNoRoles", true);
+                    model.addAttribute("isInternalUser", isInternal);
+                } else {
+                    model.addAttribute("userHasNoRoles", false);
+                }
             } else {
                 logger.info("No access token found");
             }

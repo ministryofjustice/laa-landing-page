@@ -2,22 +2,18 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
+      pageCategory=${'manage-access'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Grant Access - Roles</title>
+    <title>Manage Access - Roles</title>
 </head>
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-back-link govuk-!-margin-bottom-3"
-                    th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">
-                    Back </a>
-            </li>
-        </ol>
+        <a class="govuk-back-link govuk-!-margin-bottom-3"
+            th:href="@{/admin/users/grant-access/{id}/apps(id=${user.id})}">
+            Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/users/grant-access/{id}/roles(id=${user.id})}" th:object="${rolesForm}">

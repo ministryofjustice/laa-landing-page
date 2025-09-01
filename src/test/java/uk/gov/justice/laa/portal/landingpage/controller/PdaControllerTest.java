@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -88,7 +89,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(UUID.randomUUID()).build());
         when(userService.isInternal(any(UUID.class)))
                 .thenReturn(true);
-        when(firmService.getFirm(any()))
+        when(firmService.getFirm(anyString()))
                 .thenReturn(FirmDto.builder().build());
         Model model = new ConcurrentModel();
         String view = controller.getFirm(UUID.randomUUID().toString(), model, authentication);

@@ -1,15 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
+@Builder
 public class FirmSearchForm {
 
     @NotBlank(message = "Enter a firm name to search")
     private String firmSearch;
 
-    private String selectedFirmId;
+    private UUID selectedFirmId;
 
     public void setFirmSearch(String firmSearch) {
         if (firmSearch != null) {
