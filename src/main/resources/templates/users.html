@@ -57,16 +57,16 @@
                                         </h2>
                                     </legend>
                                     <div class="govuk-hint">
-                                        You can use both or either of the input boxes to search
+                                        You can search using one or both boxes
                                     </div>
 
                                     <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
                                         <div class="search-inputs-container">
-                                            <!-- Search users by name, email -->
+                                            <!-- Search users by name or email -->
                                             <div class="search-input-group">
                                                 <div class="govuk-form-group">
                                                     <label class="govuk-label govuk-label--s" for="search">
-                                                        name, email
+                                                        Name or email
                                                     </label>
                                                     <input class="govuk-input" id="search" name="search" type="search"
                                                         th:value="${search}" autocomplete="off">
@@ -77,7 +77,7 @@
                                             <div class="search-input-group">
                                                 <div class="govuk-form-group">
                                                     <label class="govuk-label govuk-label--s" for="firmSearch">
-                                                        firm name, firm code
+                                                        Firm name or firm code
                                                     </label>
                                                     <div class="autocomplete__wrapper">
                                                         <div class="autocomplete__status" aria-live="polite"
@@ -366,7 +366,7 @@
 
                         // Hide firmSearchIdInput when firm search box is empty
                         firmSearchInput.addEventListener('blur', function () {
-                            if (firmSearchInput.value) {
+                            if (!firmSearchInput.value) {
                                 firmSearchIdInput.value = '';
                             }
                         });
