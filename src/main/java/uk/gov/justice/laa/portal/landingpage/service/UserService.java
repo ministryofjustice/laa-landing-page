@@ -160,17 +160,17 @@ public class UserService {
             Set<AppRole> newRoles = new HashSet<>(roles);
             Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
                     : new HashSet<>(userProfile.getAppRoles());
+            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
+
+            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
 
             // Update roles
-            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
             userProfile.setAppRoles(newRoles);
             diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
-            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
-                    oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
             // Save user profile with ccms sync status
