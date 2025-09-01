@@ -816,7 +816,8 @@ public class UserController {
                 String errorMessage = e.getMessage();
                 redirectAttributes.addFlashAttribute("errorMessage",
                         errorMessage);
-                return new RedirectView(String.format("/admin/users/edit/%s/apps", id));
+                UUID uuid = UUID.fromString(id);
+                return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
             }
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
