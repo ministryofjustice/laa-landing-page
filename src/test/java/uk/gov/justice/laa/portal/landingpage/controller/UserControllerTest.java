@@ -44,6 +44,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.microsoft.graph.models.User;
@@ -71,6 +72,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -1102,6 +1104,27 @@ class UserControllerTest {
         verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
     }
 
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleException() {
+        // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        UUID userId = UUID.randomUUID();
+        List<String> apps = new ArrayList<>(); // Empty list
+        HttpSession session = new MockHttpSession();
+        when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        RedirectAttributes attrs = new RedirectAttributesModelMap();
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, attrs);
+
+        // Then - should redirect back when role coverage exception thrown
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/apps", userId));
+        assertThat(attrs.getFlashAttributes().get("errorMessage")).isEqualTo("Attempt to remove own External User Manager, from user profile " + userId);
+    }
+
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
 
     @Test
@@ -1711,6 +1734,43 @@ class UserControllerTest {
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
         verify(userService).updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId());
         verify(eventService).logEvent(any());
+    }
+
+    @Test
+    void updateUserRoles_shouldHandleRoleCoverageException() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role3"));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1", "role2"));
+        existingRoles.put(1, null);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        // The controller flattens all roles from all apps and passes them to
+        // updateUserRoles
+        List<String> allSelectedRoles = List.of("role1", "role2", "role3");
+        when(userService.updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        // When - updating roles for last app (index 1)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
+                testSession);
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?errorMessage=" + "Attempt to remove own External User Manager, from user profile " + userId);
     }
 
     @Test
