@@ -35,60 +35,21 @@ public class ProdJwtDecoderConfig {
     @Bean
     @Primary
     public JwtDecoder jwtDecoder() {
-        log.info("Initializing JWT Decoder for production environment");
-        log.info("JWT Configuration - Issuer URI: {}", issuerUri);
-        log.info("JWT Configuration - JWK Set URI: {}", jwkSetUri);
-        log.info("JWT Configuration - Audience: {}", audience);
-
-        // try some validation
-        if (issuerUri == null || issuerUri.trim().isEmpty()) {
-            log.error("JWT issuer-uri is null or empty");
-            throw new IllegalArgumentException("JWT issuer-uri cannot be null or empty");
-        }
-
-        if (jwkSetUri == null || jwkSetUri.trim().isEmpty()) {
-            log.error("JWT jwk-set-uri is null or empty");
-            throw new IllegalArgumentException("JWT jwk-set-uri cannot be null or empty");
-        }
-
-        if (audience == null || audience.trim().isEmpty()) {
-            log.error("JWT audience is null or empty");
-            throw new IllegalArgumentException("JWT audience cannot be null or empty");
-        }
+        log.debug("JWT Configuration - Issuer URI: {}", issuerUri);
+        log.debug("JWT Configuration - JWK Set URI: {}", jwkSetUri);
+        log.debug("JWT Configuration - Audience: {}", audience);
 
         try {
-            log.debug("Creating NimbusJwtDecoder with JWK Set URI: {}", jwkSetUri);
-            NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-
-            log.debug("Creating JWT validators");
-            // OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
+            OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
             OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
             OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
 
-            // different validator combinations to isolate the issue
-            log.info("JWT validation with different validator combinations...");
+            NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
-            // 1: Only issuer validation
-            OAuth2TokenValidator<Jwt> issuerOnly = withIssuer;
+            OAuth2TokenValidator<Jwt> withAudienceAndTimestamp =
+                    new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
 
-            // 2: Issuer + timestamp
-            OAuth2TokenValidator<Jwt> issuerAndTimestamp =
-                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
-
-            // 3: All validators except audience
-            OAuth2TokenValidator<Jwt> withoutAudience =
-                new DelegatingOAuth2TokenValidator<>(withIssuer, timestampValidator);
-
-            jwtDecoder.setJwtValidator(issuerOnly);
-
-            // test these later
-            // log.info("Using ISSUER + TIMESTAMP validation");
-            // jwtDecoder.setJwtValidator(issuerAndTimestamp);
-
-            // log.info("Using ALL validators except AUDIENCE");
-            // jwtDecoder.setJwtValidator(withoutAudience);
-
-            log.info("JWT Decoder creation success");
+            jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
             return jwtDecoder;
         } catch (Exception e) {
             log.error("Failed to create JWT Decoder: {}", e.getMessage(), e);
