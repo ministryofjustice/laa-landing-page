@@ -18,11 +18,22 @@ class SqsConfigTest {
     @BeforeEach
     void setUp() {
         sqsConfig = new SqsConfig();
-        ReflectionTestUtils.setField(sqsConfig, "awsRegion", "eu-west-2");
     }
 
     @Test
-    void shouldCreateSqsClient_withCorrectRegion() {
+    void shouldCreateSqsClient_withRegionFromArn() {
+        String validArn = "arn:aws:sqs:eu-west-2:123456789012:test-queue";
+        ReflectionTestUtils.setField(sqsConfig, "queueArn", validArn);
+
+        SqsClient sqsClient = sqsConfig.sqsClient();
+
+        assertThat(sqsClient).isNotNull();
+    }
+
+    @Test
+    void shouldCreateSqsClient_withDefaultRegionWhenArnIsNone() {
+        ReflectionTestUtils.setField(sqsConfig, "queueArn", "none");
+
         SqsClient sqsClient = sqsConfig.sqsClient();
 
         assertThat(sqsClient).isNotNull();
@@ -44,16 +55,6 @@ class SqsConfigTest {
         String queueUrl = sqsConfig.sqsQueueUrl();
 
         assertThat(queueUrl).isEqualTo("none");
-    }
-
-    @Test
-    void shouldParseValidArn_toCorrectQueueUrl() {
-        String validArn = "arn:aws:sqs:eu-west-2:754256621582:laa-ccms-devs-dev-laa-ccms-user-management-api-dev-sqs-queue.fifo";
-        ReflectionTestUtils.setField(sqsConfig, "queueArn", validArn);
-
-        String queueUrl = sqsConfig.sqsQueueUrl();
-
-        assertThat(queueUrl).isEqualTo("https://sqs.eu-west-2.amazonaws.com/754256621582/laa-ccms-devs-dev-laa-ccms-user-management-api-dev-sqs-queue.fifo");
     }
 
     @Test

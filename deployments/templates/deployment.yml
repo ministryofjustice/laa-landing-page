@@ -14,7 +14,7 @@ spec:
       labels:
         app: laa-landing-page # this should match the selector in service.yml
     spec:
-      serviceAccountName: irsa-laa-landing-page-dev # todo: update this to not use namespace in cloud platform
+      serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
         runAsUser: 1000
         runAsNonRoot: true

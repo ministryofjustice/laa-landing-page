@@ -14,14 +14,12 @@ public class SqsConfig {
     @Value("${ccms.user.api.sqs.arn}")
     private String queueArn;
 
-    @Value("${ccms.sqs.region}")
-    private String awsRegion;
-
     @Bean
     public SqsClient sqsClient() {
         log.info("Creating SQS client");
+        String region = parseRegionFromArn(queueArn);
         return SqsClient.builder()
-                .region(Region.of(awsRegion))
+                .region(Region.of(region))
                 .build();
     }
 
@@ -35,6 +33,23 @@ public class SqsConfig {
         String queueUrl = parseQueueUrlFromArn(queueArn);
         log.info("SQS queue URL from ARN: {}", queueUrl);
         return queueUrl;
+    }
+
+    private String parseRegionFromArn(String arn) {
+        if ("none".equalsIgnoreCase(arn)) {
+            return "none";
+        }
+        
+        if (arn == null || !arn.startsWith("arn:aws:sqs:")) {
+            throw new IllegalArgumentException("Invalid SQS ARN format: " + arn);
+        }
+
+        String[] parts = arn.split(":");
+        if (parts.length != 6) {
+            throw new IllegalArgumentException("Invalid SQS ARN format, expected 6 parts: " + arn);
+        }
+
+        return parts[3];
     }
 
     private String parseQueueUrlFromArn(String arn) {
