@@ -128,6 +128,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     @Query("""
             SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.firm f
                         JOIN FETCH ups.entraUser u
             WHERE ups.firm.id = :firmId
             AND EXISTS (
