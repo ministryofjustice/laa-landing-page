@@ -1,5 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -9,6 +13,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,31 +21,29 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = TestController.class)
 @Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class})
@@ -151,14 +154,6 @@ class SecurityConfigTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("public"));
 
-        mockMvc.perform(get("/migrate"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("public"));
-
-        mockMvc.perform(get("/register"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("public"));
-
         mockMvc.perform(get("/css/style.css"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("public"));
@@ -206,7 +201,8 @@ class SecurityConfigTest {
         csrfMockMvc.perform(post("/secure")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED))
                 .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isForbidden());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?message=session-expired"));
         
         csrfMockMvc.perform(post("/secure")
                         .with(csrf())
@@ -238,17 +234,17 @@ class SecurityConfigTest {
     }
 
     @Test
-    void logoutRedirectsToHomePagePost() throws Exception {
+    void logoutRedirectsToLogoutSuccessPagePost() throws Exception {
         mockMvc.perform(post("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/?message=logout"));
+                .andExpect(redirectedUrl("/logout-success"));
     }
 
     @Test
-    void logoutRedirectsToHomePageGet() throws Exception {
+    void logoutRedirectsToLogoutSuccessPageGet() throws Exception {
         mockMvc.perform(get("/logout").with(jwt()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/?message=logout"));
+                .andExpect(redirectedUrl("/logout-success"));
     }
 
     @ParameterizedTest
@@ -271,5 +267,35 @@ class SecurityConfigTest {
                             return request;
                         }))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void securityHeaders() throws Exception {
+        MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
+        String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
+        String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
+        assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
+        assertThat(csp).isEqualTo("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
+                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
+                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
+                + " frame-src * self blob: data: gap:;");
+    }
+
+    @Test
+    void whenSessionExpires_thenRedirectsToHomeWithSessionExpiredMessage() throws Exception {
+
+        // Create a session
+        MvcResult result = mockMvc.perform(get("/secure").with(oauth2Login()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Simulate session expiration by removing the session attribute
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        session.invalidate();
+
+        // Try to access a secured page with expired session
+        mockMvc.perform(get("/secure").session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("http://localhost/oauth2/authorization/azure"));
     }
 }

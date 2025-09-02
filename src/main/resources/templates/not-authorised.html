@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Not Authorised</title>
+</head>
+
+<body>
+    <div class="govuk-width-container">
+        <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+            <a class="govuk-back-link" href="/admin/users">
+                Back </a>
+        </nav>
+        <main class="govuk-main-wrapper govuk-main-wrapper--l" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-l">You're not authorised to access this page</h1>
+                    <p class="govuk-body">You don't have permission to view this user or perform this action.</p>
+                    <p class="govuk-body">
+                        This could be because:
+                    </p>
+                    <ul class="govuk-list govuk-list--bullet">
+                        <li>you don't have the required permissions for this user</li>
+                        <li>your access level doesn't allow this operation</li>
+                    </ul>
+                    <p class="govuk-body">
+                        If you think you should have access to this page, contact your system administrator.
+                    </p>
+                    <a href="/admin/users" class="govuk-button">Return to users list</a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

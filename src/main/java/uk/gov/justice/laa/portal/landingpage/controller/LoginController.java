@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -48,12 +49,8 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String login(@RequestParam(value = "message", required = false) String message, Model model) {
-        if (message != null && message.equals("logout")) {
-            String successMessage = "You have been securely logged out";
-            model.addAttribute("successMessage", successMessage);
-        }
-        return "index";
+    public String index() {
+        return "redirect:/home";
     }
 
     /**
@@ -86,7 +83,8 @@ public class LoginController {
      * @return the view for home
      */
     @GetMapping("/home")
-    public String home(Model model, Authentication authentication, HttpSession session, @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+    public String home(Model model, Authentication authentication, HttpSession session,
+            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
         try {
             UserSessionData userSessionData = loginService.processUserSession(authentication, authClient, session);
 
@@ -97,10 +95,22 @@ public class LoginController {
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
                 if (userSessionData.getUser() != null) {
-                    Set<Permission> permissions = userService.getUserPermissionsByUserId(userSessionData.getUser().getId());
-                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER) || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                    Set<Permission> permissions = userService
+                            .getUserPermissionsByUserId(userSessionData.getUser().getId());
+                    isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
+                            || permissions.contains(Permission.VIEW_INTERNAL_USER);
                 }
                 model.addAttribute("isAdminUser", isAdmin);
+                
+                // Check if user has no roles assigned and determine user type for custom message
+                if (userSessionData.getUser() != null 
+                    && (userSessionData.getLaaApplications() == null || userSessionData.getLaaApplications().isEmpty())) {
+                    boolean isInternal = userService.isInternal(userSessionData.getUser().getId());
+                    model.addAttribute("userHasNoRoles", true);
+                    model.addAttribute("isInternalUser", isInternal);
+                } else {
+                    model.addAttribute("userHasNoRoles", false);
+                }
             } else {
                 logger.info("No access token found");
             }
@@ -118,13 +128,19 @@ public class LoginController {
 
     @PostMapping("/switchfirm")
     public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication,
-                                   HttpSession session,
-                                   @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
+            HttpSession session,
+            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        
-        // For switchFirm, we want to do full Azure logout, so redirect to logout with Azure logout parameter
+
+        // For switchFirm, we want to do full Azure logout, so redirect to logout with
+        // Azure logout parameter
         return new RedirectView("/logout?azure_logout=true");
+    }
+
+    @GetMapping("/logout-success")
+    public String logoutSuccess() {
+        return "logout";
     }
 
     @GetMapping("/switchfirm")
@@ -132,12 +148,14 @@ public class LoginController {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
         for (FirmDto firmDto : firmDtoList) {
-            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
+            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                    .orElse(null);
             if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
                 firmDto.setName(firmDto.getName() + " - Active");
             }
         }
         model.addAttribute("firmDtoList", firmDtoList);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
         return "switch-firm";
     }
 

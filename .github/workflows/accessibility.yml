@@ -24,7 +24,7 @@ jobs:
       ENTRA_PASSWORD: ${{ secrets.ENTRA_PASSWORD }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5.0.0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

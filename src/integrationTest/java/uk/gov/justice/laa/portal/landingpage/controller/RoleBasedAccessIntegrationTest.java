@@ -1,20 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
+
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -23,15 +21,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 
 public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest {
 
@@ -85,9 +74,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
     protected void setupFirms() {
         Firm firm1 = buildFirm("firm1", "firm1");
-        testFirm1 = firmRepository.save(firm1);
+        testFirm1 = firmRepository.saveAndFlush(firm1);
+        Office firm1Office1 = buildOffice(testFirm1, "Firm1Office1", "Firm 1 Office 1", "123456789", "F1Office1Code");
+        Office firm1Office2 = buildOffice(testFirm1, "Firm1Office2", "Firm 1 Office 2", "123456789", "F1Office2Code");
+        firm1Office1 = officeRepository.saveAndFlush(firm1Office1);
+        firm1Office2 = officeRepository.saveAndFlush(firm1Office2);
+        testFirm1.setOffices(Set.of(firm1Office1, firm1Office2));
+        firmRepository.save(testFirm1);
         Firm firm2 = buildFirm("firm2", "firm2");
-        testFirm2 = firmRepository.save(firm2);
+        testFirm2 = firmRepository.saveAndFlush(firm2);
+        Office firm2Office1 = buildOffice(testFirm2, "Firm2Office1", "Firm 2 Office 1", "123456789", "F2Office1Code");
+        Office firm2Office2 = buildOffice(testFirm2, "Firm2Office2", "Firm 2 Office 2", "123456789", "F2Office2Code");
+        firm2Office1 = officeRepository.saveAndFlush(firm2Office1);
+        firm2Office2 = officeRepository.saveAndFlush(firm2Office2);
+        testFirm2.setOffices(Set.of(firm2Office1, firm2Office2));
+        testFirm2 = firmRepository.save(testFirm2);
     }
 
     protected void setupTestUsers() {
@@ -240,7 +241,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected void clearRepositories() {
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
-        officeRepository.deleteAll();
+        officeRepository.deleteAll(); // Delete offices first to avoid foreign key constraint violation
         firmRepository.deleteAll();
     }
 }

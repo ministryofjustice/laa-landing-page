@@ -1,7 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.exception;
 
-import jakarta.validation.ConstraintViolationException;
-import lombok.extern.slf4j.Slf4j;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -9,9 +9,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 
-import java.util.stream.Collectors;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 
 /**
  * Global exception handler for the application.
@@ -43,16 +44,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CreateUserDetailsIncompleteException.class)
     public RedirectView handleCreateUserDetailsIncompleteException(CreateUserDetailsIncompleteException ex) {
-        log.warn("A user has tried to skip parts of user creation (usually by changing the URL). Redirecting to user creation screen...");
+        log.warn(
+                "A user has tried to skip parts of user creation (usually by changing the URL). Redirecting to user creation screen...");
         return new RedirectView("/admin/user/create/details");
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ClaimEnrichmentResponse> handleGenericException(Exception ex) {
         return createErrorResponse(
-            HttpStatus.INTERNAL_SERVER_ERROR, 
-            "An unexpected error occurred: " + ex.getMessage()
-        );
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred: " + ex.getMessage());
     }
 
     private ResponseEntity<ClaimEnrichmentResponse> createErrorResponse(HttpStatus status, String message) {

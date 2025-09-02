@@ -170,7 +170,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
@@ -232,7 +232,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office1.getCode()));
@@ -279,7 +279,7 @@ class ClaimEnrichmentServiceTest {
         // Verify claims
         Map<String, Object> claims = action.getClaims();
         assertNotNull(claims);
-        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
@@ -347,7 +347,7 @@ class ClaimEnrichmentServiceTest {
 
         assertTrue(response.isSuccess());
         assertNotNull(response.getData());
-        assertEquals(LEGACY_USER_ID.toString(), claims.get("USER_NAME"));
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
