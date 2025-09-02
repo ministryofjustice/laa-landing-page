@@ -76,6 +76,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1125,15 +1126,21 @@ class UserServiceTest {
                 .build();
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
+                .ordinal(2)
                 .roleType(RoleType.INTERNAL)
+                .app(testApp)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
+                .ordinal(3)
                 .roleType(RoleType.EXTERNAL)
+                .app(testApp)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
+                .ordinal(1)
                 .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .app(testApp)
                 .build();
 
         testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
@@ -1145,6 +1152,8 @@ class UserServiceTest {
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.EXTERNAL)));
+        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
     }
 
     @Test
@@ -1155,14 +1164,20 @@ class UserServiceTest {
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
                 .roleType(RoleType.INTERNAL)
+                .app(testApp)
+                .ordinal(2)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
                 .roleType(RoleType.EXTERNAL)
+                .app(testApp)
+                .ordinal(3)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
                 .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .ordinal(1)
+                .app(testApp)
                 .build();
 
         testApp.setAppRoles(Set.of(internalRole, externalRole, internalAndExternalRole));
@@ -1174,6 +1189,8 @@ class UserServiceTest {
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.INTERNAL)));
+        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
     }
 
     @Test
@@ -2215,11 +2232,13 @@ class UserServiceTest {
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .roleType(RoleType.INTERNAL)
+                .ordinal(2)
                 .app(App.builder().id(UUID.randomUUID()).name("Internal App").build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .ordinal(1)
                 .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
                 .build();
         when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
@@ -2231,7 +2250,7 @@ class UserServiceTest {
         // Then
         assertThat(result).hasSize(2);
         assertThat(result.stream().map(AppDto::getName))
-                .containsExactlyInAnyOrder("Internal App", "Common App");
+                .containsExactly("Internal App", "Common App");
         verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
     }
 
@@ -2240,13 +2259,15 @@ class UserServiceTest {
         // Given
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
+                .ordinal(2)
                 .roleType(RoleType.EXTERNAL)
-                .app(App.builder().id(UUID.randomUUID()).name("External App").build())
+                .app(App.builder().id(UUID.randomUUID()).name("External App").ordinal(2).build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
+                .ordinal(1)
                 .roleType(RoleType.INTERNAL_AND_EXTERNAL)
-                .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
+                .app(App.builder().id(UUID.randomUUID()).name("Common App").ordinal(1).build())
                 .build();
         when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
                 .thenReturn(List.of(appRole1, appRole2));
@@ -2256,8 +2277,10 @@ class UserServiceTest {
 
         // Then
         assertThat(result).hasSize(2);
-        assertThat(result.stream().map(AppDto::getName))
-                .containsExactlyInAnyOrder("External App", "Common App");
+        assertThat(
+                IntStream.range(0, 2)
+                        .allMatch(i -> result.get(i).getName().equals(Arrays.asList("Common App", "External App").get(i))))
+                .isTrue();
         verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
     }
 

@@ -458,6 +458,46 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldReturnApprolesInOrdinalSortingOrder() {
+        // Arrange
+        String userId = "user52";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        AppDto appDto = AppDto.builder().build();
+        AppRoleDto appRoleDto1 = AppRoleDto.builder().name("Role One").ordinal(3).app(appDto).build();
+        AppRoleDto appRoleDto2 = AppRoleDto.builder().name("Role Two").ordinal(2).app(appDto).build();
+        AppRoleDto appRoleDto3 = AppRoleDto.builder().name("Role Three").ordinal(1).app(appDto).build();
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto1, appRoleDto2, appRoleDto3))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        String view = userController.manageUser(userId, model, session);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull();
+        List<AppRoleDto> appRoles = (List<AppRoleDto>) model.getAttribute("userAppRoles");
+        assertThat(appRoles.stream().map(AppRoleDto::getName))
+                .containsExactly("Role Three", "Role Two", "Role One");
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
     void manageUser_whenUserNotFound_shouldAddNullUserAndReturnManageUserView() {
         // Arrange
         String userId = "notfound";
@@ -3327,18 +3367,22 @@ class UserControllerTest {
         AppRoleDto providerRole = new AppRoleDto();
         providerRole.setId("provider1");
         providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
+        providerRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         AppRoleDto otherRole = new AppRoleDto();
         otherRole.setId("other1");
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
+        otherRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -3573,26 +3617,32 @@ class UserControllerTest {
         AppRoleDto firmRole = new AppRoleDto();
         firmRole.setId("firm1");
         firmRole.setCcmsCode("XXCCMS_FIRM_USER");
+        firmRole.setApp(ccmsApp);
 
         AppRoleDto officeRole = new AppRoleDto();
         officeRole.setId("office1");
         officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
+        officeRole.setApp(ccmsApp);
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
         crossOfficeRole.setId("cross1");
         crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
+        crossOfficeRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto counselRole = new AppRoleDto();
         counselRole.setId("counsel1");
         counselRole.setCcmsCode("XXCCMS_COUNSEL");
+        counselRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole, advocateRole);
         MockHttpSession testSession = new MockHttpSession();
