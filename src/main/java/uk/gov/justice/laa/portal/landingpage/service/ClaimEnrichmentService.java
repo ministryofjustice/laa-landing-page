@@ -16,6 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collection;
@@ -35,6 +36,7 @@ public class ClaimEnrichmentService {
     private final EntraUserRepository entraUserRepository;
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
+    private final FirmRepository firmRepository;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -42,6 +44,7 @@ public class ClaimEnrichmentService {
         String userPrincipalName = userDetails.getUserPrincipalName();
         String userId = userDetails.getId();
         String appEntraId = request.getData().getAuthenticationContext().getClientServicePrincipal().getAppId();
+        List<Firm> externalFirms = List.of();
         
         log.info("Processing claim enrichment for user: {}", userPrincipalName);
 
@@ -105,6 +108,8 @@ public class ClaimEnrichmentService {
 
                 if (firms.isEmpty()) {
                     throw new ClaimEnrichmentException("User has no firm assigned");
+                } else {
+                    externalFirms = firms;
                 }
 
                 //External user and offices are not found - fetch all offices for the user's firm
@@ -119,7 +124,7 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds);
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -137,7 +142,8 @@ public class ClaimEnrichmentService {
 
     private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUser entraUser,
                                                                         List<String> userRoles,
-                                                                        List<String> officeIds) {
+                                                                        List<String> officeIds,
+                                                                        List<Firm> externalFirms) {
 
         String legacyUserId = entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
@@ -152,6 +158,15 @@ public class ClaimEnrichmentService {
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
+
+
+        if(!externalFirms.isEmpty()) {
+            List<String> code = externalFirms.stream().map(Firm::getCode).collect(Collectors.toList());
+            List<String> names = externalFirms.stream().map(Firm::getName).collect(Collectors.toList());
+
+            claims.put("FIRM_NAME", names);
+            claims.put("FIRM_CODE", code);
+        }
 
         ClaimEnrichmentResponse.ResponseAction action = ClaimEnrichmentResponse.ResponseAction.builder()
                 .odataType("microsoft.graph.tokenIssuanceStart.provideClaimsForToken")
