@@ -38,13 +38,13 @@ class EventServiceTest {
         EntraUser entraUser = EntraUser.builder().firstName("new").lastName("User").id(userId).build();
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
         String selectedFirm = "Firm";
-        UserType selectedUserType = UserType.EXTERNAL_SINGLE_FIRM;
-        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirm, selectedUserType);
+        boolean isUserManager = true;
+        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirm, isUserManager);
         eventService.logEvent(createUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User with user id " + adminUuid
-                + ", New user created, user id " + userId + ", with firm Firm and user type " + selectedUserType.getFriendlyName());
+                + ", New user created, user id " + userId + ", with firm Firm and user type External User Manager");
     }
 
     @Test

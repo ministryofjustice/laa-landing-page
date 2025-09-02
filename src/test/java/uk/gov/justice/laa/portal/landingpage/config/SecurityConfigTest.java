@@ -57,24 +57,6 @@ class SecurityConfigTest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().is3xxRedirection());
 
-        // With admin role - should be allowed
-        mockMvc.perform(get("/admin/dashboard")
-                        .with(jwt().authorities(Arrays.stream(UserType.ADMIN_TYPES)
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList()))))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isOk())
-                .andExpect(content().string("admin"));
-
-        // With external roles - users create should be blocked
-        mockMvc.perform(get("/admin/user/create")
-                        .with(jwt().authorities(UserType.EXTERNAL_TYPES.stream()
-                                .map(UserType::name)
-                                .map(SimpleGrantedAuthority::new)
-                                .collect(Collectors.toList()))))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isForbidden());
-
         // With create external user permission - should be allowed to create users
         mockMvc.perform(get("/admin/user/create")
                         .with(jwt().authorities(Arrays.stream(new String[]{Permission.CREATE_EXTERNAL_USER.name()})

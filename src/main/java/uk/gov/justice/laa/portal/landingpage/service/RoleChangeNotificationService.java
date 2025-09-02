@@ -55,7 +55,7 @@ public class RoleChangeNotificationService {
             sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
-            log.warn("CCMS notification attempt failed for user: {}: {}", 
+            log.warn("CCMS notification attempt failed for user: {}: {}",
                 userProfile.getEntraUser().getEntraOid(), e.getMessage());
             throw new RuntimeException("CCMS notification failed", e);
         }
@@ -65,7 +65,7 @@ public class RoleChangeNotificationService {
     private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)
-                && !UserType.INTERNAL_TYPES.contains(userProfile.getUserType())) {
+                && userProfile.getUserType() != UserType.INTERNAL) {
             CcmsMessage message = CcmsMessage.builder()
                     .userName(userProfile.getLegacyUserId().toString())
                     .vendorNumber(userProfile.getFirm().getCode())
@@ -94,7 +94,7 @@ public class RoleChangeNotificationService {
 
     @Recover
     public boolean recoverFromRetryFailure(RuntimeException e, UserProfile userProfile) {
-        log.error("All retry attempts failed for CCMS notification for user: {}, saving roles to db and moving on", 
+        log.error("All retry attempts failed for CCMS notification for user: {}, saving roles to db and moving on",
             userProfile.getEntraUser().getEntraOid(), e);
         return false;
     }

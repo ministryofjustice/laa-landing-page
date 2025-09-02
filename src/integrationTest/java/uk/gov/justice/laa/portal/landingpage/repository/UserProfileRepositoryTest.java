@@ -71,8 +71,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser(entraUserId, "test6@email.com", "First Name6", "Last Name6");
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile1.setFirm(firm1);
         userProfile2.setFirm(firm2);
         entraUser.getUserProfiles().add(userProfile1);
@@ -103,8 +103,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test7@email.com", "First Name7", "Last Name7");
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile1.setFirm(firm1);
         userProfile2.setFirm(firm2);
         userProfile1.setActiveProfile(true);
@@ -120,30 +120,6 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testNoMultipleProfilesForNonMultiFirmUser() {
-        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
-        Firm firm2 = buildFirm("Firm2", "Firm Code 2");
-        firmRepository.saveAll(Arrays.asList(firm1, firm2));
-
-        EntraUser entraUser = buildEntraUser(generateEntraId(), "test8@email.com", "First Name8", "Last Name8");
-        entraUserRepository.save(entraUser);
-
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
-        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
-        userProfile1.setFirm(firm1);
-        userProfile2.setFirm(firm2);
-        entraUser.getUserProfiles().add(userProfile1);
-        entraUser.getUserProfiles().add(userProfile2);
-
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
-                "DataIntegrityViolationException expected");
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_non_multi_firm_user");
-
-    }
-
-    @Test
     public void testOneUserProfilePerFirm() {
         Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firmRepository.save(firm1);
@@ -151,8 +127,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test9@email.com", "First Name9", "Last Name9");
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
-        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        UserProfile userProfile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile1.setFirm(firm1);
         userProfile2.setFirm(firm1);
         entraUser.getUserProfiles().add(userProfile1);
@@ -162,7 +138,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
                 () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
         Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_firm_for_multi_firm_user");
+        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_firm_for_external_user");
 
     }
 
@@ -171,7 +147,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test10@email.com", "First Name10", "Last Name10");
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL_SINGLE_FIRM);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         entraUser.getUserProfiles().add(userProfile1);
 
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
@@ -248,7 +224,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         EntraUser entraUser = buildEntraUser(expectedOid.toString(), "test6@email.com", "First Name6", "Last Name6");
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile.setFirm(firm);
         entraUser.getUserProfiles().add(userProfile);
         repository.saveAndFlush(userProfile);

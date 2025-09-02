@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755695455402-1
+      author: niall.mcmahon
+      changes:
+        # Update External User Manager type restriction to use EXTERNAL user type.
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL', 'EXTERNAL'] WHERE authz_role = true AND name = 'External User Manager'"
+        # Remove old constraint that checks user_type is INTERNAL, EXTERNAL_SINGLE_FIRM or EXTERNAL_SINGLE_FIRM_ADMIN.
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_profile DROP CONSTRAINT user_profile_user_type_check"
+        # Update all user profiles with an external type so their user_type is now just EXTERNAL
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE user_profile SET user_type = 'EXTERNAL' WHERE user_type != 'INTERNAL' AND firm_id IS NOT NULL;"
+        # Re-add constraint to now check only for INTERNAL and EXTERNAL user types.
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_profile ADD CONSTRAINT user_profile_user_type_check check ((user_type)::text = ANY ((ARRAY['INTERNAL'::character varying, 'EXTERNAL'::character varying])::text[]))"
+        # Remove user type constraint blocking multiple profiles for single firm users.
+        - sql:
+            dbms: postgresql
+            sql: "DROP INDEX one_profile_per_non_multi_firm_user"
+        - sql:
+            dbms: postgresql
+            sql: "DROP INDEX one_profile_per_firm_for_multi_firm_user"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_external_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL'"
+
+
+
