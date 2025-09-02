@@ -95,11 +95,7 @@ public class RoleChangeNotificationService {
             }
         }
     }
-    
-    /**
-     * Generate a unique deduplication ID for FIFO queue messages
-     * This ensures that duplicate messages with the same content are not processed multiple times
-     */
+
     private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {
         String content = userProfile.getEntraUser().getEntraOid() + "-"
                 + userProfile.getLegacyUserId() + "-"

@@ -187,8 +187,6 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
             - name: CCMS_USER_API_SQS_ARN
               value: "${CCMS_USER_API_SQS_ARN}"
-            - name: AWS_REGION
-              value: "${CCMS_SQS_REGION}"
             - name: ENABLE_DISTRIBUTED_DB_LOCKING
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
