@@ -50,9 +50,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public String handleGenericException(Exception e) {
-        log.error("An unexpected error occurred: ", e.getMessage());
-        return "error";
+    public ResponseEntity<ClaimEnrichmentResponse> handleGenericException(Exception ex) {
+        return createErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred: " + ex.getMessage());
     }
 
     private ResponseEntity<ClaimEnrichmentResponse> createErrorResponse(HttpStatus status, String message) {

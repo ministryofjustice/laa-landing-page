@@ -58,7 +58,7 @@ class GlobalExceptionHandlerTest {
         MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         FieldError fieldError = new FieldError("object", "field", "Field validation failed");
-
+        
         when(exception.getBindingResult()).thenReturn(bindingResult);
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
@@ -101,7 +101,7 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertNotNull(response);
         assertEquals("/admin/user/create/details", response.getUrl());
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+        List<ILoggingEvent> warningLogs =  LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertEquals(1, warningLogs.size());
     }
 
@@ -112,10 +112,12 @@ class GlobalExceptionHandlerTest {
         Exception exception = new Exception(errorMessage);
 
         // Act
-        String response = exceptionHandler.handleGenericException(exception);
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleGenericException(exception);
 
         // Assert
         assertNotNull(response);
-        assertEquals("error", response);
+        assertEquals(500, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
     }
 }
