@@ -146,7 +146,7 @@ public class FirmService {
                             .map(firm -> mapper.map(firm, FirmDto.class))
                             .collect(Collectors.toList());
                 }
-                case EXTERNAL_SINGLE_FIRM_ADMIN -> {
+                case EXTERNAL -> {
                     // External firm admins can only see their own firms, so filter their accessible firms
                     List<FirmDto> userAccessibleFirms = getUserAllFirms(entraUser);
                     return userAccessibleFirms
@@ -166,7 +166,7 @@ public class FirmService {
             case INTERNAL -> {
                 return getAllFirmsFromCache();
             }
-            case EXTERNAL_SINGLE_FIRM_ADMIN -> {
+            case EXTERNAL -> {
                 return getUserAllFirms(entraUser);
             }
             default -> {

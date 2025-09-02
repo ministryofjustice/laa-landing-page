@@ -207,7 +207,7 @@ class FirmServiceTest {
                     .userProfiles(Set.of(
                             UserProfile.builder()
                                     .activeProfile(true)
-                                    .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                                    .userType(UserType.EXTERNAL)
                                     .firm(Firm.builder()
                                             .id(UUID.randomUUID())
                                             .name("Test Firm 1")
@@ -356,25 +356,6 @@ class FirmServiceTest {
             // Then
             assertThat(result).hasSize(3);
             verify(firmRepository).findByNameOrCodeContaining("fIrM");
-        }
-
-        @Test
-        void whenUnsupportedUserType_throwsUnsupportedOperationException() {
-            // Given
-            EntraUser unsupportedUser = EntraUser.builder()
-                    .id(UUID.randomUUID())
-                    .userProfiles(Set.of(
-                            UserProfile.builder()
-                                    .activeProfile(true)
-                                    .userType(UserType.EXTERNAL_SINGLE_FIRM) // Unsupported type
-                                    .build()
-                    ))
-                    .build();
-
-            // When / Then
-            assertThrows(UnsupportedOperationException.class, () ->
-                    firmService.getUserAccessibleFirms(unsupportedUser, "")
-            );
         }
 
         @Test

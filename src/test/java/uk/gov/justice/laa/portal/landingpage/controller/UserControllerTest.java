@@ -86,6 +86,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -4343,7 +4344,7 @@ class UserControllerTest {
                     .userProfiles(Set.of(
                             UserProfile.builder()
                                     .activeProfile(true)
-                                    .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                                    .userType(UserType.EXTERNAL)
                                     .firm(Firm.builder()
                                             .id(userFirmId)
                                             .name("User's Firm")

@@ -2625,14 +2625,14 @@ class UserServiceTest {
         // Given
         String searchTerm = "test";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -2669,7 +2669,7 @@ class UserServiceTest {
         // Given
         String searchTerm = "test";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userTypes = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
@@ -2735,14 +2735,14 @@ class UserServiceTest {
     void getPageOfUsersBySearch_searchByFullName() {
         String searchTerm = "Test Name";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
