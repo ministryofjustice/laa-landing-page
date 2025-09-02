@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,7 +27,7 @@ public class LogoutServiceTest {
         String result = logoutService.buildAzureLogoutUrl();
 
         // Assert
-        String expectedUrl = "https://login.microsoftonline.com/test-tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=https://example.com/?message=logout";
+        String expectedUrl = "https://login.microsoftonline.com/test-tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=https://example.com/logout-success";
         assertThat(result).isEqualTo(expectedUrl);
     }
 
@@ -43,7 +44,7 @@ public class LogoutServiceTest {
         String result = logoutService.buildAzureLogoutUrl();
 
         // Assert
-        String expectedUrl = "https://login.microsoftonline.com/localhost-tenant/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:8080/?message=logout";
+        String expectedUrl = "https://login.microsoftonline.com/localhost-tenant/oauth2/v2.0/logout?post_logout_redirect_uri=http://localhost:8080/logout-success";
         assertThat(result).isEqualTo(expectedUrl);
     }
 
@@ -60,7 +61,7 @@ public class LogoutServiceTest {
         String result = logoutService.buildAzureLogoutUrl();
 
         // Assert
-        String expectedUrl = "https://login.microsoftonline.com/path-tenant/oauth2/v2.0/logout?post_logout_redirect_uri=https://app.example.com/portal/?message=logout";
+        String expectedUrl = "https://login.microsoftonline.com/path-tenant/oauth2/v2.0/logout?post_logout_redirect_uri=https://app.example.com/portal/logout-success";
         assertThat(result).isEqualTo(expectedUrl);
     }
 
@@ -78,7 +79,7 @@ public class LogoutServiceTest {
 
         // Assert
         assertThat(result).contains("tenant-with-special-chars_123");
-        assertThat(result).contains("https://secure.example.com/?message=logout");
+        assertThat(result).contains("https://secure.example.com/logout-success");
         assertThat(result).startsWith("https://login.microsoftonline.com/");
         assertThat(result).contains("/oauth2/v2.0/logout");
     }
@@ -98,7 +99,7 @@ public class LogoutServiceTest {
         // Assert
         assertThat(result).contains("post_logout_redirect_uri=");
         assertThat(result).contains("test.com/app-normal");
-        assertThat(result).contains("?message=logout");
+        assertThat(result).contains("/logout-success");
         assertThat(result).startsWith("https://login.microsoftonline.com/encode-test/oauth2/v2.0/logout");
     }
 }

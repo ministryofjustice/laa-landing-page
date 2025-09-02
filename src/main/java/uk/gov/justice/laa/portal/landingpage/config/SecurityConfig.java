@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -65,19 +66,19 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http.securityMatcher("/api/v1/claims/enrich")
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().authenticated()
-            )
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-            )
-            // Disable form login and HTTP Basic to prevent redirects
-            .formLogin(AbstractHttpConfigurer::disable)
-            .httpBasic(AbstractHttpConfigurer::disable);
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().authenticated()
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                )
+                // Disable form login and HTTP Basic to prevent redirects
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable);
         return http.build();
     }
 
@@ -90,41 +91,57 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
-            .requestMatchers("/admin/users/**", "/pda/**")
+                .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-            .requestMatchers("/admin/user/**")
+                .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-            .requestMatchers("/", "/login", "/migrate", "/register", "/css/**", "/js/**", "/assets/**"
-            ).permitAll()
-            .requestMatchers("/actuator/**")
+                .requestMatchers("/", "/login", "/logout-success", "/css/**", "/js/**", "/assets/**"
+                ).permitAll()
+                .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
                     boolean allowed =
                             new IpAddressMatcher("127.0.0.1").matches(context.getRequest())
-                            || new IpAddressMatcher("::1").matches(context.getRequest())
-                            || new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest())
-                            || new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest())
-                            || new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
+                                    || new IpAddressMatcher("::1").matches(context.getRequest())
+                                    || new IpAddressMatcher("10.0.0.0/8").matches(context.getRequest())
+                                    || new IpAddressMatcher("172.16.0.0/12").matches(context.getRequest())
+                                    || new IpAddressMatcher("192.168.0.0/16").matches(context.getRequest());
                     return new AuthorizationDecision(allowed);
                 })
-            .anyRequest()
+                .anyRequest()
                 .authenticated()
         ).oauth2Login(oauth2 -> oauth2
-            .userInfoEndpoint(userInfo -> userInfo
-                .oidcUserService(authzOidcUserDetailsService)
-            )
-            .loginPage("/oauth2/authorization/azure")
-            .defaultSuccessUrl("/home", true)
-            .permitAll()
+                .userInfoEndpoint(userInfo -> userInfo
+                        .oidcUserService(authzOidcUserDetailsService)
+                )
+                .loginPage("/oauth2/authorization/azure")
+                .defaultSuccessUrl("/home", true)
+                .permitAll()
         ).logout(logout -> logout
-            .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-            .addLogoutHandler(logoutHandler)
-            .logoutSuccessUrl("/?message=logout")
-            .clearAuthentication(true)
-            .deleteCookies("JSESSIONID")
-            .invalidateHttpSession(true)
-            .permitAll()
+                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .addLogoutHandler(logoutHandler)
+                .logoutSuccessUrl("/logout-success")
+                .clearAuthentication(true)
+                .deleteCookies("JSESSIONID")
+                .invalidateHttpSession(true)
+                .permitAll()
+        ).sessionManagement(session -> session
+                .invalidSessionUrl("/?message=session-expired")
+                .maximumSessions(1)
+                .expiredUrl("/?message=session-expired")
         ).csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        ).headers(headers -> headers
+                .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(63072000)
+                        .requestMatcher(AnyRequestMatcher.INSTANCE)
+                )
+                .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
+                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
+                                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
+                                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
+                                + " frame-src * self blob: data: gap:;"))
         );
         return http.build();
     }

@@ -20,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
@@ -88,6 +89,8 @@ public class ClaimEnrichmentService {
                     .distinct()
                     .collect(Collectors.toList());
 
+            log.info("claim enrichment office ids: {}", officeIds);
+
             boolean isInternalUser = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
@@ -112,6 +115,7 @@ public class ClaimEnrichmentService {
                             .filter(Objects::nonNull)
                             .distinct()
                             .collect(Collectors.toList());
+                    log.info("claim enrichment empty office ids: {}", officeIds);
                 }
             }
 
@@ -144,7 +148,7 @@ public class ClaimEnrichmentService {
                 .orElse(null);
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("USER_NAME", legacyUserId);
+        claims.put("USER_NAME", legacyUserId.toUpperCase());
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);

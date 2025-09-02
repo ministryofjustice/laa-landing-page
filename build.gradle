@@ -46,6 +46,9 @@ sourceSets {
 configurations {
     playwrightImplementation.extendsFrom testImplementation
     playwrightRuntimeOnly.extendsFrom testRuntimeOnly
+    configureEach {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
 }
 
 dependencies {

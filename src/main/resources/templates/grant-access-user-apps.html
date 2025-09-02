@@ -2,25 +2,22 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
+      pageCategory=${'manage-access'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Grant Access - Services</title>
+    <title>Manage Access - Services</title>
 </head>
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="@{'/admin/users/manage/' + ${user.id}}">
+            Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form method="post" th:action="@{/admin/users/grant-access/{id}/apps(id=${user.id})}" th:object="${applicationsForm}">
-            
+        <form method="post" th:action="@{/admin/users/grant-access/{id}/apps(id=${user.id})}"
+            th:object="${applicationsForm}">
+
             <div th:if="${#fields.hasErrors()}">
                 <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                     aria-describedby="error-summary-description" data-module="govuk-error-summary">

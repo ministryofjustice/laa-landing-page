@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.config.jwt;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
  *  JWT Decoder configuration for production environment
  * Provides a secure JWT decoder that validates token signature, issuer, and audience
  */
+@Slf4j
 @Configuration
 @Profile({"prod"})
 public class ProdJwtDecoderConfig {
@@ -33,16 +35,25 @@ public class ProdJwtDecoderConfig {
     @Bean
     @Primary
     public JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        log.debug("JWT Configuration - Issuer URI: {}", issuerUri);
+        log.debug("JWT Configuration - JWK Set URI: {}", jwkSetUri);
+        log.debug("JWT Configuration - Audience: {}", audience);
 
-        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
-        OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
-        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+        try {
+            OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(audience);
+            OAuth2TokenValidator<Jwt> timestampValidator = new JwtTimestampValidator();
+            OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
 
-        OAuth2TokenValidator<Jwt> withAudienceAndTimestamp = 
-            new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
+            NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
-        jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
-        return jwtDecoder;
+            OAuth2TokenValidator<Jwt> withAudienceAndTimestamp =
+                    new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, timestampValidator);
+
+            jwtDecoder.setJwtValidator(withAudienceAndTimestamp);
+            return jwtDecoder;
+        } catch (Exception e) {
+            log.error("Failed to create JWT Decoder: {}", e.getMessage(), e);
+            throw new RuntimeException("JWT Decoder configuration failed", e);
+        }
     }
 }
