@@ -138,6 +138,11 @@ public class LoginController {
         return new RedirectView("/logout?azure_logout=true");
     }
 
+    @GetMapping("/logout-success")
+    public String logoutSuccess() {
+        return "logout";
+    }
+
     @GetMapping("/switchfirm")
     public String userFirmsPage(Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
