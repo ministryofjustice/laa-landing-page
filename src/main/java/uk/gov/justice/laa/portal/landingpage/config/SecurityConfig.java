@@ -95,7 +95,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-                .requestMatchers("/", "/login", "/css/**", "/js/**", "/assets/**"
+                .requestMatchers("/", "/login", "/logout-success", "/css/**", "/js/**", "/assets/**"
                 ).permitAll()
                 .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
@@ -119,7 +119,7 @@ public class SecurityConfig {
         ).logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                 .addLogoutHandler(logoutHandler)
-                .logoutSuccessUrl("/?message=logout")
+                .logoutSuccessUrl("/logout-success")
                 .clearAuthentication(true)
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
