@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
@@ -53,21 +54,22 @@ public class GlobalExceptionHandler {
 
     /**
      * Handle access denied exceptions for API requests only
-     * Web requests will be handled by Spring Security's access denied handler or error controller
+     * Web requests will be handled by Spring Security's access denied handler or
+     * error controller
      */
     @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
-    public ResponseEntity<ClaimEnrichmentResponse> handleAccessException(Exception ex, jakarta.servlet.http.HttpServletRequest request) {
+    public ResponseEntity<ClaimEnrichmentResponse> handleAccessException(Exception ex, HttpServletRequest request) {
         // Only handle API requests (requests that expect JSON responses)
         String acceptHeader = request.getHeader("Accept");
         String contentType = request.getHeader("Content-Type");
-        
+
         if (isApiRequest(acceptHeader, contentType, request.getRequestURI())) {
             log.warn("Access denied in API request: {}", ex.getMessage());
             return createErrorResponse(
                     HttpStatus.UNAUTHORIZED,
                     "An unauthorized error occurred: " + ex.getMessage());
         }
-        
+
         // Let web requests be handled by Spring Security's error handling
         throw new RuntimeException(ex);
     }
@@ -77,18 +79,18 @@ public class GlobalExceptionHandler {
      * Web requests will be handled by the error controller
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ClaimEnrichmentResponse> handleGenericException(Exception ex, jakarta.servlet.http.HttpServletRequest request) {
+    public ResponseEntity<ClaimEnrichmentResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         // Only handle API requests (requests that expect JSON responses)
         String acceptHeader = request.getHeader("Accept");
         String contentType = request.getHeader("Content-Type");
-        
+
         if (isApiRequest(acceptHeader, contentType, request.getRequestURI())) {
             log.error("Unexpected error in API request", ex);
             return createErrorResponse(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "An unexpected error occurred: " + ex.getMessage());
         }
-        
+
         // Let web requests be handled by the error controller
         throw new RuntimeException(ex);
     }
@@ -101,12 +103,12 @@ public class GlobalExceptionHandler {
         if (acceptHeader != null && acceptHeader.contains("application/json")) {
             return true;
         }
-        
+
         // Check if request sends JSON
         if (contentType != null && contentType.contains("application/json")) {
             return true;
         }
-        
+
         // Check if URI indicates API endpoint
         return requestUri != null && requestUri.startsWith("/api/");
     }
