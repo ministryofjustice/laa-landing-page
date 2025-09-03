@@ -1,34 +1,59 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
-@SpringBootTest
-@TestPropertySource(properties = {
-    "app.test.error-pages.enabled=false",
-    "spring.main.allow-bean-definition-overriding=true"
-})
 class ErrorTestControllerConditionalTest {
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(ErrorTestController.class);
 
     @Test
     void errorTestController_whenPropertyDisabled_shouldNotBeLoaded() {
-        // Verify that ErrorTestController bean is not created when property is false
-        boolean beanExists = applicationContext.containsBean("errorTestController");
-        assertFalse(beanExists, "ErrorTestController should not be loaded when app.test.error-pages.enabled=false");
+        contextRunner
+            .withPropertyValues("app.test.error-pages.enabled=false")
+            .run(context -> {
+                assertFalse(context.containsBean("errorTestController"), 
+                    "ErrorTestController should not be loaded when app.test.error-pages.enabled=false");
+            });
     }
 
     @Test
-    void errorTestController_whenPropertyDisabled_shouldNotHaveControllerInContext() {
-        // Alternative check using bean type
-        String[] beanNames = applicationContext.getBeanNamesForType(ErrorTestController.class);
-        assertFalse(beanNames.length > 0, "No ErrorTestController beans should exist when property is disabled");
+    void errorTestController_whenPropertyEnabled_shouldBeLoaded() {
+        contextRunner
+            .withPropertyValues("app.test.error-pages.enabled=true")
+            .run(context -> {
+                assertTrue(context.containsBean("errorTestController"), 
+                    "ErrorTestController should be loaded when app.test.error-pages.enabled=true");
+            });
+    }
+
+    @Test
+    void errorTestController_whenPropertyNotSet_shouldNotBeLoaded() {
+        contextRunner
+            .run(context -> {
+                assertFalse(context.containsBean("errorTestController"), 
+                    "ErrorTestController should not be loaded when property is not set");
+            });
+    }
+
+    @Test
+    void shouldHaveCorrectConditionalOnPropertyAnnotation() {
+        // Verify the controller has the correct conditional annotation
+        ConditionalOnProperty annotation = ErrorTestController.class.getAnnotation(ConditionalOnProperty.class);
+        assertThat(annotation).isNotNull();
+    }
+
+    @Test
+    void shouldHaveCorrectConditionalAnnotationProperties() {
+        ConditionalOnProperty annotation = ErrorTestController.class.getAnnotation(ConditionalOnProperty.class);
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.name()).containsExactly("app.test.error-pages.enabled");
+        assertThat(annotation.havingValue()).isEqualTo("true");
     }
 }
