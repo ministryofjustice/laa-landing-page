@@ -159,8 +159,7 @@ public class ClaimEnrichmentService {
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
 
-
-        if(!externalFirms.isEmpty()) {
+        if (!externalFirms.isEmpty()) {
             List<String> code = externalFirms.stream().map(Firm::getCode).collect(Collectors.toList());
             List<String> names = externalFirms.stream().map(Firm::getName).collect(Collectors.toList());
 
