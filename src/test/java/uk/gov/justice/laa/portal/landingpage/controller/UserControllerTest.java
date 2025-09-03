@@ -483,7 +483,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
@@ -3932,7 +3932,7 @@ class UserControllerTest {
         final String userId = "550e8400-e29b-41d4-a716-446655440011";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        user.setUserType(UserType.EXTERNAL);
 
         AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
         AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
