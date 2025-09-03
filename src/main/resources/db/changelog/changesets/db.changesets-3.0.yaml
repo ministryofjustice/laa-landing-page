@@ -23,12 +23,19 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "DROP INDEX one_profile_per_non_multi_firm_user"
+        # Remove one profile per firm constraint as it's based on an old user type that no longer exists.
         - sql:
             dbms: postgresql
             sql: "DROP INDEX one_profile_per_firm_for_multi_firm_user"
+        # Re-add a constraint to external users so they can only have one profile per firm
         - sql:
             dbms: postgresql
             sql: "CREATE UNIQUE INDEX one_profile_per_firm_for_external_user ON user_profile(entra_user_id, firm_id) WHERE user_type = 'EXTERNAL'"
+        # Add a constraint to internal users so they only have one user profile.
+        - sql:
+            dbms: postgresql
+            sql: "CREATE UNIQUE INDEX one_profile_per_internal_user ON user_profile(entra_user_id) WHERE user_type = 'INTERNAL'"
+
 
 
 

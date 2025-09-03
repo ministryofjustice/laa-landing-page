@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import jakarta.transaction.Transactional;
 import org.assertj.core.api.Assertions;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,9 +14,12 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
@@ -50,15 +54,15 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         UserProfile result = repository.findById(userProfile.getId()).orElseThrow();
 
-        Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
-        Assertions.assertThat(result.getEntraUser()).isNotNull();
-        Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
-        Assertions.assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
-        Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
-        Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
-        Assertions.assertThat(result.getLegacyUserId()).isNotNull();
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userProfile.getId());
+        assertThat(result.getEntraUser()).isNotNull();
+        assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
+        assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
+        assertThat(result.getEntraUser().getEmail()).isEqualTo(entraUser.getEmail());
+        assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name5");
+        assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name5");
+        assertThat(result.getLegacyUserId()).isNotNull();
     }
 
     @Test
@@ -82,15 +86,15 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         UserProfile result = repository.findById(userProfile1.getId()).orElseThrow();
 
-        Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(userProfile1.getId());
-        Assertions.assertThat(result.getEntraUser()).isNotNull();
-        Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
-        Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name6");
-        Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name6");
-        Assertions.assertThat(result.getEntraUser().getUserProfiles()).isNotEmpty();
-        Assertions.assertThat(result.getEntraUser().getUserProfiles()).containsExactlyInAnyOrder(userProfile1, userProfile2);
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userProfile1.getId());
+        assertThat(result.getEntraUser()).isNotNull();
+        assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
+        assertThat(result.getEntraUser().getEntraOid()).isEqualTo(entraUserId);
+        assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name6");
+        assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name6");
+        assertThat(result.getEntraUser().getUserProfiles()).isNotEmpty();
+        assertThat(result.getEntraUser().getUserProfiles()).containsExactlyInAnyOrder(userProfile1, userProfile2);
 
     }
 
@@ -115,8 +119,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
                 () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_active_profile_per_user");
+        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
+        assertThat(diEx.getCause().getMessage()).contains("one_active_profile_per_user");
     }
 
     @Test
@@ -137,8 +141,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
                 () -> repository.saveAllAndFlush(Arrays.asList(userProfile1, userProfile2)),
                 "DataIntegrityViolationException expected");
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("one_profile_per_firm_for_external_user");
+        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
+        assertThat(diEx.getCause().getMessage()).contains("one_profile_per_firm_for_external_user");
 
     }
 
@@ -153,8 +157,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(userProfile1),
                 "DataIntegrityViolationException expected");
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
+        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
+        assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
 
     }
 
@@ -173,8 +177,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(userProfile1),
                 "DataIntegrityViolationException expected");
-        Assertions.assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        Assertions.assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
+        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
+        assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
 
     }
 
@@ -191,13 +195,13 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         UserProfile result = repository.findById(userProfile.getId()).orElseThrow();
 
-        Assertions.assertThat(result).isNotNull();
-        Assertions.assertThat(result.getId()).isEqualTo(userProfile.getId());
-        Assertions.assertThat(result.getFirm()).isNull();
-        Assertions.assertThat(result.getEntraUser()).isNotNull();
-        Assertions.assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
-        Assertions.assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name12");
-        Assertions.assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name12");
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userProfile.getId());
+        assertThat(result.getFirm()).isNull();
+        assertThat(result.getEntraUser()).isNotNull();
+        assertThat(result.getEntraUser().getId()).isEqualTo(entraUser.getId());
+        assertThat(result.getEntraUser().getFirstName()).isEqualTo("First Name12");
+        assertThat(result.getEntraUser().getLastName()).isEqualTo("Last Name12");
 
     }
 
@@ -213,7 +217,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         repository.saveAndFlush(userProfile);
 
         List<UUID> result = repository.findByUserTypes(UserType.INTERNAL);
-        Assertions.assertThat(result).containsExactly(UUID.fromString(entraUser.getEntraOid()));
+        assertThat(result).containsExactly(UUID.fromString(entraUser.getEntraOid()));
     }
 
     @Test
@@ -230,6 +234,31 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         repository.saveAndFlush(userProfile);
 
         List<UUID> result = repository.findByUserTypes(UserType.INTERNAL);
-        Assertions.assertThat(result).isEmpty();
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    public void testInternalUserCanOnlyHaveOneProfile() {
+        // Setup internal user
+        EntraUser internalUser = buildEntraUser(UUID.randomUUID().toString(), "internaluser@test.com", "Internal", "User");
+
+        // Persist user
+        internalUser = entraUserRepository.saveAndFlush(internalUser);
+
+        // create new profile and persist
+        UserProfile internalUserProfile = buildLaaUserProfile(internalUser, UserType.INTERNAL, true);
+        repository.saveAndFlush(internalUserProfile);
+
+        // Link to user.
+        Set<UserProfile> internalUserProfiles = new HashSet<>();
+        internalUserProfiles.add(internalUserProfile);
+        internalUser.setUserProfiles(internalUserProfiles);
+        entraUserRepository.saveAndFlush(internalUser);
+
+        // Try to add another profile to user and assert it throws exception
+        UserProfile additionalProfile = buildLaaUserProfile(internalUser, UserType.INTERNAL, false);
+        DataIntegrityViolationException exception = assertThrows(DataIntegrityViolationException.class, () -> repository.saveAndFlush(additionalProfile));
+        assertThat(exception.getCause().getMessage()).contains("one_profile_per_internal_user");
     }
 }
