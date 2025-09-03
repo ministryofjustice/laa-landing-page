@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Sorry, there is a problem with the service</title>
+</head>
+
+<body>
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper govuk-main-wrapper--l" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-l">Sorry, there is a problem with the service</h1>
+                    <p class="govuk-body">Try again later.</p>
+                    <p class="govuk-body">
+                        We saved your answers. They will be available for 30 days.
+                    </p>
+                    <p class="govuk-body">
+                        To enable the LAA to investigate the issue, please contact our online support team if you need
+                        to speak to someone.
+                    </p>
+                    <details class="govuk-details" data-module="govuk-details">
+                        <summary class="govuk-details__summary">
+                            <span class="govuk-details__summary-text">
+                                What you can do
+                            </span>
+                        </summary>
+                        <div class="govuk-details__text">
+                            <ul class="govuk-list govuk-list--bullet">
+                                <li>Check your internet connection</li>
+                                <li>Refresh the page</li>
+                                <li>Try again in a few minutes</li>
+                                <li>Contact support if the problem continues</li>
+                            </ul>
+                        </div>
+                    </details>
+                    <div class="govuk-button-group">
+                        <a href="/home" class="govuk-button">Go to homepage</a>
+                        <a href="javascript:window.location.reload()" class="govuk-button govuk-button--secondary">
+                            Try again
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

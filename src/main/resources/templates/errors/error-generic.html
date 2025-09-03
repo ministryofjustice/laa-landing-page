@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title th:text="${errorTitle ?: 'Error'}">Error</title>
+</head>
+
+<body>
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper govuk-main-wrapper--l" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-l" th:text="${errorTitle ?: 'Sorry, there is a problem with the service'}">
+                        Sorry, there is a problem with the service
+                    </h1>
+                    <p class="govuk-body" th:text="${errorMessage ?: 'An unexpected error occurred.'}">
+                        An unexpected error occurred.
+                    </p>
+                    <p class="govuk-body" th:if="${errorType}">
+                        Error code: <span th:text="${errorType}">Unknown</span>
+                    </p>
+                    <p class="govuk-body">
+                        If this problem continues, please contact our online support team.
+                    </p>
+                    <div class="govuk-button-group">
+                        <a href="/home" class="govuk-button">Go to homepage</a>
+                        <a href="javascript:history.back()" class="govuk-button govuk-button--secondary">
+                            Go back
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

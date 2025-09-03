@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Access forbidden</title>
+</head>
+
+<body>
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper govuk-main-wrapper--l" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-l">Access forbidden</h1>
+                    <p class="govuk-body">
+                        You don't have permission to access this page.
+                    </p>
+                    <p class="govuk-body">
+                        This could be because:
+                    </p>
+                    <ul class="govuk-list govuk-list--bullet">
+                        <li>you don't have the required permissions for this resource</li>
+                        <li>your access level doesn't allow this operation</li>
+                        <li>you need to be logged in with the correct account</li>
+                    </ul>
+                    <p class="govuk-body">
+                        If you think you should have access to this page, contact your system administrator.
+                    </p>
+                    <div class="govuk-button-group">
+                        <a href="/home" class="govuk-button">Go to homepage</a>
+                        <a href="/logout" class="govuk-button govuk-button--secondary">
+                            Sign out and try again
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>
