@@ -1,13 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -15,17 +16,18 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RoleChangeNotificationService {
 
-    private final CcmsApiClient ccmsApiClient;
-    
-    @Value("${ccms.user.management.api.base-url}")
-    private String ccmsApiBaseUrl;
+    private final SqsClient sqsClient;
+    private final ObjectMapper objectMapper;
+    private final String sqsQueueUrl;
 
     /**
      * This method will automatically retry up to 3 times with 0.1 second delays
@@ -41,40 +43,25 @@ public class RoleChangeNotificationService {
         backoff = @Backoff(delay = 100)
     )
     public boolean sendMessage(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
-        // skip for now in prod as api isn't ready yet
-        if (ccmsApiBaseUrl != null && ccmsApiBaseUrl.toLowerCase().contains("none")) {
-            log.info("Skipping CCMS sync for user as api isn't ready for env: {}",
+        // Skip until queue is ready for env
+        if ("none".equalsIgnoreCase(sqsQueueUrl)) {
+            log.info("Skipping CCMS update for user: {}",
                 userProfile.getEntraUser().getEntraOid());
             return false;
         }
         
         try {
-            sendRoleChangeNotification(userProfile, newPuiRoles, oldPuiRoles);
+            sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
-            log.warn("Failed to send CCMS role change for user: {}: {}, saving roles to db and moving on",
+            log.warn("Failed to send CCMS role change message to SQS for user: {}: {}, saving roles to db and moving on",
                 userProfile.getEntraUser().getEntraOid(), e.getMessage());
             throw e;
         }
     }
     
-    /**
-     * Recovery method called when all retry attempts fail.
-     * 
-     * @param ex The exception that caused the failure
-     * @param userProfile The user profile
-     * @param newPuiRoles New PUI roles
-     * @param oldPuiRoles Old PUI roles
-     * @return false to indicate failure
-     */
-    @Recover
-    public boolean recoverFromRoleChangeNotificationFailure(Exception ex, UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
-        log.warn("All retry attempts failed to send CCMS role change  for user: {}. Updated roles will be saved with lastCcmsSyncSuccessful=false.",
-            userProfile.getEntraUser().getEntraOid(), ex);
-        return false;
-    }
 
-    private void sendRoleChangeNotification(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
+    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)
                 && !UserType.INTERNAL_TYPES.contains(userProfile.getUserType())) {
@@ -89,13 +76,35 @@ public class RoleChangeNotificationService {
                         .responsibilityKey(newPuiRoles.stream().map(AppRole::getCcmsCode).toList())
                         .build();
 
-                ccmsApiClient.sendUserRoleChange(message);
-                log.info("CCMS role change sent for user: {}", entraUser.getEntraOid());
+                String messageBody = objectMapper.writeValueAsString(message);
+
+                SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
+                        .queueUrl(sqsQueueUrl)
+                        .messageBody(messageBody)
+                        .messageGroupId("ccms-role-changes")
+                        .messageDeduplicationId(generateDeduplicationId(userProfile, newPuiRoles))
+                        .build();
+
+                SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
+                log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
+                    entraUser.getEntraOid(), response.messageId());
                 
             } catch (Exception e) {
-                log.error("Failed to send role change for user: {}", entraUser.getEntraOid(), e);
+                log.error("Failed to send CCMS role change message to queue for user: {}", entraUser.getEntraOid(), e);
                 throw new RuntimeException("Failed to send message", e);
             }
         }
+    }
+
+    private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {
+        String content = userProfile.getEntraUser().getEntraOid() + "-"
+                + userProfile.getLegacyUserId() + "-"
+                + newPuiRoles.stream()
+                            .map(AppRole::getCcmsCode)
+                            .sorted()
+                            .reduce("", (a, b) -> a + b) + "-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"));
+
+        return UUID.nameUUIDFromBytes(content.getBytes()).toString();
     }
 }
