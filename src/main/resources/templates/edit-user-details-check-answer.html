@@ -21,32 +21,44 @@
                     User details - Check your answers and confirm
                 </h1>
             </legend>
-            <form th:action="@{/admin/users/edit/{id}/details(id=${id})}" th:method="post"
+            <form th:action="@{/admin/users/edit/{id}/details-check-answer(id=${id})}" th:method="post"
                 th:object="${editUserDetailsForm}" class="govuk-form">
-                <div class="govuk-form-group">
-                    <label class="govuk-label govuk-label--m" for="email">
-                        Email address
-                    </label>
-                    <p class="govuk-hint">
-                        Email address can not be edited.
-                    </p>
-                    <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email" readonly
-                        style="background-color: #f3f2f1; color: #505a5f; cursor: not-allowed;" />
-                </div>
-                <div class="govuk-form-group"
-                    th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
-                    <label class="govuk-label govuk-label--m" for="firstName">
-                        First name
-                    </label>
-                    <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
-                        th:value="*{firstName}" id="firstName" readonly />
-                </div>
-                <div class="govuk-form-group">
-                    <label class="govuk-label govuk-label--m" for="lastName">
-                        Last name
-                    </label>
-                    <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
-                        th:value="*{lastName}" id="lastName" readonly />
+
+
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">
+                            User details
+                        </h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl class="govuk-summary-list">
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{email}"></span>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{firstName}"></span>
+                                </dd>
+                                <dd class="govuk-summary-list__actions">
+                                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}" class="govuk-link">Change</a>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{lastName}"></span>
+                                </dd>
+                                <dd class="govuk-summary-list__actions">
+                                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}" class="govuk-link">Change</a>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Confirm</button>
