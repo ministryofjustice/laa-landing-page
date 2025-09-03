@@ -7,21 +7,21 @@ laa-apps:
         For special children act, public law family, domestic abuse and section 8 proceedings only
       url: ${app.civil.apply.url}
       laaApplicationDetails: ${app.civil.apply.details}
-      ordinal: 0
+      ordinal: 2
     - name: ${app.crime.apply.name}
       oidGroupName: CRIMEAPPLY
       title: Apply for criminal legal aid
       description: Make an application to represent clients charged with a criminal offence
       url: ${app.crime.apply.url}
       laaApplicationDetails: ${app.crime.apply.details}
-      ordinal: 1
+      ordinal: 0
     - name: ${app.pui.name}
       oidGroupName: PUI
       title: Client and Cost Management System
       description: For all remaining civil legal aid proceedings, managing applications, billing and payments
       url: ${app.pui.url}
       laaApplicationDetails: ${app.pui.details}
-      ordinal: 2
+      ordinal: 3
     - name: ${app.submit.crime.form.name}
       oidGroupName: NEWCRM7
       title: Submit a crime form
@@ -29,7 +29,7 @@ laa-apps:
         Apply for prior authority to incur disbursements, extension of upper limit, or to claim a non-standard magistrates' court payment
       url: ${app.submit.crime.form.url}
       laaApplicationDetails: ${app.submit.crime.form.details}
-      ordinal: 3
+      ordinal: 1
     - name: ${app.ccms.account.link.name}
       title: CCMS case transfer requests
       description: >-

@@ -50,6 +50,9 @@ public class AppRole extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application role name must be between 1 and 255 characters")
     private String name;
 
+    @Column(name = "ordinal", nullable = false, unique = false)
+    private int ordinal;
+
     @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
     @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
     private String ccmsCode;
