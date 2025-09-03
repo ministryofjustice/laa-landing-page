@@ -1853,7 +1853,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
