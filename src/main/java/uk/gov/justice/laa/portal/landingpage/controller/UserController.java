@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -38,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -767,7 +769,9 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String editUserApps(@PathVariable String id, Model model) {
+    public String editUserApps(@PathVariable String id,
+                               @RequestParam(value = "errorMessage", required = false) String errorMessage,
+                               Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
@@ -782,7 +786,9 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
-
+        if (errorMessage != null) {
+            model.addAttribute("errorMessage", errorMessage);
+        }
         return "edit-user-apps";
     }
 
@@ -791,20 +797,28 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             Authentication authentication,
-            HttpSession session) {
+            HttpSession session, RedirectAttributes redirectAttributes) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
 
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    changed, "apps");
-            eventService.logEvent(updateUserAuditEvent);
+            try {
+                CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                        userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                        changed, "apps");
+                eventService.logEvent(updateUserAuditEvent);
+            } catch (RoleCoverageException e) {
+                String errorMessage = e.getMessage();
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        errorMessage);
+                UUID uuid = UUID.fromString(id);
+                return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
+            }
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
@@ -831,6 +845,7 @@ public class UserController {
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
             Model model, HttpSession session) {
 
@@ -913,6 +928,9 @@ public class UserController {
         // currently selected app.
         session.setAttribute("userEditRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
+        if (errorMessage != null) {
+            model.addAttribute("errorMessage", errorMessage);
+        }
         return "edit-user-roles";
     }
 
@@ -993,11 +1011,16 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles);
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, changed,
-                        "role");
-                eventService.logEvent(updateUserAuditEvent);
+                try {
+                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                    UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                            user != null ? user.getEntraUser() : null, changed,
+                            "role");
+                    eventService.logEvent(updateUserAuditEvent);
+                }  catch (RoleCoverageException e) {
+                    String errorMessage = e.getMessage();
+                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
+                }
             }
             return "redirect:/admin/users/manage/" + uuid;
         } else {
@@ -1248,9 +1271,9 @@ public class UserController {
         // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            String changed = userService.updateUserRoles(id, new ArrayList<>());
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     changed, "roles");
@@ -1418,7 +1441,7 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles);
+                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
                         user != null ? user.getEntraUser() : null, changed,
                         "role");

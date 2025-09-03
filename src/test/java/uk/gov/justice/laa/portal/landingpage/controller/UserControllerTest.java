@@ -26,6 +26,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -46,6 +47,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -963,7 +965,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
@@ -1005,7 +1007,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -1050,7 +1052,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -1064,7 +1066,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
         // When
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, session));
+                () -> userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, session));
     }
 
     @Test
@@ -1118,7 +1120,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp));
 
         // When
-        String view = userController.editUserApps(userId.toString(), model);
+        String view = userController.editUserApps(userId.toString(), null, model);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");
@@ -1144,7 +1146,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, redirectAttributes);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
@@ -1164,7 +1166,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         HttpSession session = new MockHttpSession();
         // When - passing null for apps (simulates no checkboxes selected)
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session, redirectAttributes);
 
         // Then - should redirect to manage user page when no apps selected
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -1174,7 +1176,7 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
     }
 
     @Test
@@ -1188,7 +1190,7 @@ class UserControllerTest {
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, redirectAttributes);
 
         // Then - should redirect to manage user page when empty apps list
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -1198,7 +1200,28 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
+    }
+
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleException() {
+        // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        UUID userId = UUID.randomUUID();
+        List<String> apps = new ArrayList<>(); // Empty list
+        HttpSession session = new MockHttpSession();
+        when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        RedirectAttributes attrs = new RedirectAttributesModelMap();
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, attrs);
+
+        // Then - should redirect back when role coverage exception thrown
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/apps", userId));
+        assertThat(attrs.getFlashAttributes().get("errorMessage")).isEqualTo("Attempt to remove own External User Manager, from user profile " + userId);
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
@@ -1327,7 +1350,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allApps);
 
         // When
-        String view = userController.editUserApps(userId, model);
+        String view = userController.editUserApps(userId, null, model);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");
@@ -1348,7 +1371,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, authentication, testSession);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, authentication, testSession, redirectAttributes);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
@@ -1703,7 +1726,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -1775,8 +1798,45 @@ class UserControllerTest {
         // The controller flattens all roles from all apps and passes them to
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
-        verify(userService).updateUserRoles(userId, allSelectedRoles);
+        verify(userService).updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId());
         verify(eventService).logEvent(any());
+    }
+
+    @Test
+    void updateUserRoles_shouldHandleRoleCoverageException() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role3"));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1", "role2"));
+        existingRoles.put(1, null);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        // The controller flattens all roles from all apps and passes them to
+        // updateUserRoles
+        List<String> allSelectedRoles = List.of("role1", "role2", "role3");
+        when(userService.updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        // When - updating roles for last app (index 1)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
+                testSession);
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?errorMessage=" + "Attempt to remove own External User Manager, from user profile " + userId);
     }
 
     @Test
@@ -2350,7 +2410,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -2382,7 +2442,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
-        String view = userController.editUserRoles(userId, 5, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -2824,7 +2884,7 @@ class UserControllerTest {
 
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserRoles(userId, new ArrayList<>());
+        verify(userService).updateUserRoles(userId, new ArrayList<>(), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
 
@@ -3006,7 +3066,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        verify(userService).updateUserRoles(userId, List.of("role1", "role2"));
+        verify(userService).updateUserRoles(userId, List.of("role1", "role2"), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
@@ -3264,7 +3324,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3301,7 +3361,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3352,7 +3412,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3394,7 +3454,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3429,7 +3489,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3468,7 +3528,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
