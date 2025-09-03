@@ -722,7 +722,7 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
@@ -747,21 +747,64 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
             @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
             HttpSession session) throws IOException {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        session.setAttribute("user", user);
+        session.setAttribute("editUserDetailsForm", editUserDetailsForm);
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user details page with
             // errors
-            UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+            return "edit-user-details";
+        }
+        // Update user details
+        //userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        return "redirect:/admin/users/edit/" + id + "/details-check-answer";
+    }
+
+    @GetMapping("/users/edit/{id}/details-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String updateUserDetailsCheck(@PathVariable String id, Model model,
+                                          HttpSession session) throws IOException {
+        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
+        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
+        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
+        return "edit-user-details-check-answer";
+    }
+
+    /**
+     * Update user details
+     *
+     * @param id                  User ID
+     * @param editUserDetailsForm User details form
+     * @param result              Binding result for validation errors
+     * @param session             HttpSession to store user details
+     * @return Redirect to user management page
+     * @throws IOException              If an error occurs during user update
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+    @PostMapping("/users/edit/{id}/details-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String updateUserDetailsSubmit(@PathVariable String id,
+                                    @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
+                                    HttpSession session) throws IOException {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
+            // If there are validation errors, return to the edit user details page with
+            // errors
             session.setAttribute("user", user);
             session.setAttribute("editUserDetailsForm", editUserDetailsForm);
             return "edit-user-details";
         }
         // Update user details
-        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        //TODO audit log needed
+        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
         return "redirect:/admin/users/manage/" + id;
     }
 
