@@ -438,6 +438,7 @@ public class UserService {
                 .map(AppRole::getApp)
                 .distinct()
                 .map(app -> mapper.map(app, AppDto.class))
+                .sorted()
                 .toList();
     }
 
@@ -608,6 +609,7 @@ public class UserService {
                     .filter(appRole -> appRole.getRoleType().equals(userRoleType)
                             || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .sorted()
                     .toList();
         }
         return appRoles;

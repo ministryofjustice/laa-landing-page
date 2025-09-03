@@ -1,0 +1,35 @@
+databaseChangeLog:
+- changeSet:
+    id: 1756761028834-1
+    author: suresh.kavali (generated)
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            defaultValueNumeric: "0"
+            name: ordinal
+            type: INTEGER
+        tableName: app
+- changeSet:
+    id: 1756761028834-2
+    author: suresh.kavali (generated)
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            defaultValueBoolean: true
+            name: enabled
+            type: BOOLEAN
+        tableName: app
+- changeSet:
+    id: 1756761028834-3
+    author: suresh.kavali (generated)
+    changes:
+    - addColumn:
+        columns:
+        - column:
+            defaultValueNumeric: "0"
+            name: ordinal
+            type: INTEGER
+        tableName: app_role
+

@@ -71,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -460,6 +461,46 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldReturnApprolesInOrdinalSortingOrder() {
+        // Arrange
+        String userId = "user52";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        AppDto appDto = AppDto.builder().build();
+        AppRoleDto appRoleDto1 = AppRoleDto.builder().name("Role One").ordinal(3).app(appDto).build();
+        AppRoleDto appRoleDto2 = AppRoleDto.builder().name("Role Two").ordinal(2).app(appDto).build();
+        AppRoleDto appRoleDto3 = AppRoleDto.builder().name("Role Three").ordinal(1).app(appDto).build();
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto1, appRoleDto2, appRoleDto3))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        String view = userController.manageUser(userId, model, session);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull();
+        List<AppRoleDto> appRoles = (List<AppRoleDto>) model.getAttribute("userAppRoles");
+        assertThat(appRoles.stream().map(AppRoleDto::getName))
+                .containsExactly("Role Three", "Role Two", "Role One");
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
     void manageUser_whenUserNotFound_shouldAddNullUserAndReturnManageUserView() {
         // Arrange
         String userId = "notfound";
@@ -643,6 +684,41 @@ class UserControllerTest {
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
         assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    void getSelectedRolesGet_Should_present_appRoles_in_order() {
+        List<String> selectedApps = new ArrayList<>(Arrays.asList("app1", "app2"));
+        List<String> selectedRoles = new ArrayList<>(Arrays.asList("a1r2", "a1r3", "a2r2", "a2r3"));
+        AppDto app1 = AppDto.builder().id("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().id("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().id("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().name("a1r3").app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().name("a1r4").app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().name("a2r1").app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().name("a2r2").app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().name("a2r3").app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
+
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new EntraUserDto());
+        List<AppRoleDto> roles = new ArrayList<>(Arrays.asList(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2));
+        when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        String view = userController.getSelectedRoles(new RolesForm(), authentication, model, session);
+        assertThat(view).isEqualTo("add-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
+                .containsExactly("a2r3", "a2r1", "a2r2", "a1r3", "a1r4", "a1r1", "a1r2", "a3r1", "a3r2");
     }
 
     @Test
@@ -1733,6 +1809,58 @@ class UserControllerTest {
         @SuppressWarnings("unchecked")
         List<String> selectedApps = (List<String>) testSession.getAttribute("selectedApps");
         assertThat(selectedApps).containsExactlyInAnyOrder("app1", "app2");
+    }
+
+    @Test
+    void editUserRoles_shouldShowAppsAndRolesInOrder() {
+        // Given
+        String userId = "user123";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+
+        AppDto app1 = AppDto.builder().id("app-one").name("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().id("app-two").name("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().id("app-three").name("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().id("a1r1").name("a1r1").roleType(RoleType.EXTERNAL).app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().id("a1r2").name("a1r2").roleType(RoleType.EXTERNAL).app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().id("a1r3").name("a1r3").roleType(RoleType.EXTERNAL).app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().id("a1r4").name("a1r4").roleType(RoleType.EXTERNAL).app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().id("a2r1").name("a2r1").roleType(RoleType.EXTERNAL).app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().id("a2r2").name("a2r2").roleType(RoleType.EXTERNAL).app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().id("a2r3").name("a2r3").roleType(RoleType.EXTERNAL).app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().id("a3r1").name("a3r1").roleType(RoleType.EXTERNAL).app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().id("a3r2").name("a3r2").roleType(RoleType.EXTERNAL).app(app3).ordinal(2).build();
+
+        Set<AppDto> userApps = new LinkedHashSet<>(Arrays.asList(app1, app2, app3));
+
+        List<AppRoleDto> appRoles = List.of(a1r1, a1r2, a1r3, a1r4);
+
+        final UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppByAppId("app-one")).thenReturn(Optional.of(app1));
+        lenient().when(userService.getAppByAppId("app-two")).thenReturn(Optional.of(app2));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app-one"), any())).thenReturn(appRoles);
+        lenient().when(userService.getAppRolesByAppId("app-two")).thenReturn(List.of(a2r1, a2r2, a2r3));
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(appRoles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+
+        MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
+
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<AppRoleViewModel> roles = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(roles.stream().map(AppRoleViewModel::getName)).containsExactly("a1r3", "a1r4", "a1r1", "a1r2");
     }
 
     @Test
@@ -3387,18 +3515,22 @@ class UserControllerTest {
         AppRoleDto providerRole = new AppRoleDto();
         providerRole.setId("provider1");
         providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
+        providerRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         AppRoleDto otherRole = new AppRoleDto();
         otherRole.setId("other1");
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
+        otherRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -3633,26 +3765,32 @@ class UserControllerTest {
         AppRoleDto firmRole = new AppRoleDto();
         firmRole.setId("firm1");
         firmRole.setCcmsCode("XXCCMS_FIRM_USER");
+        firmRole.setApp(ccmsApp);
 
         AppRoleDto officeRole = new AppRoleDto();
         officeRole.setId("office1");
         officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
+        officeRole.setApp(ccmsApp);
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
         crossOfficeRole.setId("cross1");
         crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
+        crossOfficeRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto counselRole = new AppRoleDto();
         counselRole.setId("counsel1");
         counselRole.setCcmsCode("XXCCMS_COUNSEL");
+        counselRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole, advocateRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -3803,6 +3941,60 @@ class UserControllerTest {
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
         assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void grantAccessCheckAnswers_shouldShowAppsAndRolesInOrder() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().name("a1r3").app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().name("a1r4").app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().name("a2r1").app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().name("a2r2").app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().name("a2r3").app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
+
+        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
+
+        Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
+        List<OfficeDto> userOffices = List.of(officeDto);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+
+        // When
+        String view = userController.grantAccessCheckAnswers(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-check-answers");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        assertThat(
+                userRoles.entrySet().stream()
+                        .flatMap(entry -> entry.getValue().stream()
+                                .map(role -> entry.getKey() + " : " + role.getName()))
+                        .collect(Collectors.toList())).containsExactly("app-two : a2r3",
+                "app-two : a2r1",
+                "app-two : a2r2",
+                "app-one : a1r3",
+                "app-one : a1r4",
+                "app-one : a1r1",
+                "app-one : a1r2",
+                "app-three : a3r1",
+                "app-three : a3r2");
     }
 
     @Test
