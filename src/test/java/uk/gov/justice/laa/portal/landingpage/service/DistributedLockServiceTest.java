@@ -97,13 +97,4 @@ class DistributedLockServiceTest {
         verify(lockRepository).releaseLock(eq(testKey), anyString());
     }
 
-    @Test
-    void extendActiveLocks_ShouldExtendLock() {
-        // When
-        lockService.extendActiveLocks();
-
-        // Then - Just verify the method completes without exceptions
-        // Actual implementation would verify lock extension logic
-        verify(lockRepository, never()).delete(any());
-    }
 }

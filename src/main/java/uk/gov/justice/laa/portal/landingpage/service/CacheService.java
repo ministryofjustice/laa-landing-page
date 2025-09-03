@@ -17,17 +17,17 @@ public class CacheService {
 
     @Scheduled(fixedRateString = "${app.tech.services.clear.cache.interval:3300000}")
     public void clearTechServicesCache() {
-        log.debug("Clearing tech services cache");
-        Cache cache = cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
-        if (cache != null) {
-            cache.clear();
-        }
+        clearCacheByName(CachingConfig.TECH_SERVICES_DETAILS_CACHE, "tech services cache");
     }
 
     @Scheduled(cron = "${app.firms.clear.cache.schedule}")
     public void clearCache() {
-        log.debug("Clearing Firms Cache");
-        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
+        clearCacheByName(CachingConfig.LIST_OF_FIRMS_CACHE, "Firms Cache");
+    }
+
+    private void clearCacheByName(String cacheName, String cacheDescription) {
+        log.debug("Clearing {}", cacheDescription);
+        Cache cache = cacheManager.getCache(cacheName);
         if (cache != null) {
             cache.clear();
         }

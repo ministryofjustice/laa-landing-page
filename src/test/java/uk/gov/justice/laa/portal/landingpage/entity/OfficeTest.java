@@ -12,6 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class OfficeTest extends BaseEntityTest {
 
+    private void assertViolations(Set<ConstraintViolation<Office>> violations, int expectedCount, 
+                                  Set<String> expectedMessages, String... expectedPaths) {
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(expectedCount);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(expectedMessages);
+        Set<String> violationPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
+        assertThat(violationPaths).contains(expectedPaths);
+    }
+
     @Test
     public void testOffice() {
         Office office = buildTestOffice();
@@ -81,13 +91,11 @@ public class OfficeTest extends BaseEntityTest {
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(3);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office address line 1 must be provided",
-                "Office postcode must be provided", "Office city must be provided"));
-        Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
-        assertThat(volitionalPaths).contains("address.city", "address.postcode", "address.addressLine1");
+        assertViolations(violations, 3, 
+                Set.of("Office address line 1 must be provided",
+                       "Office postcode must be provided", 
+                       "Office city must be provided"),
+                "address.city", "address.postcode", "address.addressLine1");
     }
 
     @Test
@@ -103,14 +111,12 @@ public class OfficeTest extends BaseEntityTest {
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(4);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office address must be between 1 and 255 characters",
-                "Office address line 2 must be between 1 and 255 characters",
-                "Office city must be between 1 and 255 characters", "Office postcode must be between 2 and 20 characters"));
-        Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
-        assertThat(volitionalPaths).contains("address.city", "address.postcode", "address.addressLine2", "address.addressLine1");
+        assertViolations(violations, 4,
+                Set.of("Office address must be between 1 and 255 characters",
+                       "Office address line 2 must be between 1 and 255 characters",
+                       "Office city must be between 1 and 255 characters", 
+                       "Office postcode must be between 2 and 20 characters"),
+                "address.city", "address.postcode", "address.addressLine2", "address.addressLine1");
     }
 
 }

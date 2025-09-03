@@ -135,7 +135,7 @@ public class UserService {
     public String updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
-                .collect(Collectors.toList()));
+                .toList());
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         String diff = "";
         if (optionalUserProfile.isPresent()) {
@@ -255,7 +255,7 @@ public class UserService {
                 .stream()
                 .filter(obj -> obj instanceof DirectoryRole)
                 .map(obj -> (DirectoryRole) obj)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public Optional<UserProfileDto> getActiveProfileByUserId(String userId) {
@@ -388,7 +388,7 @@ public class UserService {
         }
 
         return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getUserType).collect(Collectors.toList());
+                .map(UserProfile::getUserType).toList();
 
     }
 
@@ -422,7 +422,7 @@ public class UserService {
     public List<AppDto> getApps() {
         return appRepository.findAll().stream()
                 .map(app -> mapper.map(app, AppDto.class))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<AppDto> getAppsByUserType(UserType userType) {
@@ -446,12 +446,12 @@ public class UserService {
         // Fetch selected apps
         List<App> apps = appRepository.findAllById(selectedApps.stream()
                 .map(UUID::fromString)
-                .collect(Collectors.toList()));
+                .toList());
         // Return roles
         return apps.stream()
                 .flatMap(app -> app.getAppRoles().stream())
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
@@ -509,7 +509,7 @@ public class UserService {
     public List<AppRoleDto> getAllAvailableRoles() {
         return appRoleRepository.findAll().stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -705,7 +705,7 @@ public class UserService {
                 diff = diffOffices(userProfile.getOffices(), null);
                 userProfile.setOffices(null);
             } else {
-                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).toList();
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
@@ -721,34 +721,35 @@ public class UserService {
     }
 
     protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices) {
-        String removed = "";
-        String added = "";
-        if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
+        boolean oldEmpty = Objects.isNull(oldOffices) || oldOffices.isEmpty();
+        boolean newEmpty = Objects.isNull(newOffices) || newOffices.isEmpty();
+        
+        String removed;
+        String added;
+        
+        if (oldEmpty && newEmpty) {
             removed = "Removed : All";
-            if (!Objects.isNull(newOffices)) {
-                added = "Added : " + newOffices.stream()
-                        .map(Office::getCode)
-                        .collect(Collectors.joining(", "));
-            }
-        }
-        if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
             added = "Added : All";
-            if (!Objects.isNull(oldOffices)) {
-                removed = "Removed : " + oldOffices.stream()
-                        .map(Office::getCode)
-                        .collect(Collectors.joining(", "));
-            }
-        }
-        if (Objects.nonNull(oldOffices) && !oldOffices.isEmpty()
-                && Objects.nonNull(newOffices) && !newOffices.isEmpty()) {
+        } else if (oldEmpty) {
+            removed = "Removed : All";
+            added = "Added : " + newOffices.stream()
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+        } else if (newEmpty) {
+            removed = "Removed : " + oldOffices.stream()
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+            added = "Added : All";
+        } else {
+            // Both sets have content - calculate actual differences
             List<UUID> oldIds = oldOffices.stream().map(Office::getId).toList();
             List<UUID> newIds = newOffices.stream().map(Office::getId).toList();
             removed = "Removed : " + oldOffices.stream()
-                    .filter(role -> !newIds.contains(role.getId()))
+                    .filter(office -> !newIds.contains(office.getId()))
                     .map(Office::getCode)
                     .collect(Collectors.joining(", "));
             added = "Added : " + newOffices.stream()
-                    .filter(role -> !oldIds.contains(role.getId()))
+                    .filter(office -> !oldIds.contains(office.getId()))
                     .map(Office::getCode)
                     .collect(Collectors.joining(", "));
         }

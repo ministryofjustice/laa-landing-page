@@ -82,13 +82,6 @@ public class DistributedLockService {
         }
     }
 
-    @Scheduled(fixedDelay = 30000) // Extend lock every 30 seconds
-    @Transactional
-    public void extendActiveLocks() {
-        // This would be called periodically to extend active locks
-        // Implementation depends on your specific requirements
-    }
-
     public static class LockAcquisitionException extends RuntimeException {
         public LockAcquisitionException(String message) {
             super(message);

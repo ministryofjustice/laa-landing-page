@@ -34,11 +34,11 @@ public class CcmsRoleGroupsUtil {
         // Collect any remaining CCMS roles that don't match the known patterns
         List<AppRoleDto> categorizedRoles = organizedRoles.values().stream()
                 .flatMap(List::stream)
-                .collect(Collectors.toList());
+                .toList();
         
         List<AppRoleDto> otherRoles = ccmsRoles.stream()
                 .filter(role -> !categorizedRoles.contains(role))
-                .collect(Collectors.toList());
+                .toList();
         
         if (!otherRoles.isEmpty()) {
             organizedRoles.put(OTHER_SECTION, otherRoles);
@@ -116,7 +116,7 @@ public class CcmsRoleGroupsUtil {
     private static List<AppRoleDto> filterRolesByPattern(List<AppRoleDto> roles, List<String> patterns) {
         return roles.stream()
             .filter(role -> matchesAnyPattern(role.getCcmsCode(), patterns))
-            .collect(Collectors.toList());
+            .toList();
     }
     
     /**
