@@ -77,6 +77,7 @@ public class RoleChangeNotificationService {
                     .build();
 
             String messageBody = objectMapper.writeValueAsString(message);
+            log.info("CCMS role change message: {}", messageBody);
 
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
                     .queueUrl(sqsQueueUrl)
