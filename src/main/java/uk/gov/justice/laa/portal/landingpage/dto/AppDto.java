@@ -1,18 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
-import java.util.Objects;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppDto implements Comparable<AppDto>{
+public class AppDto implements Comparable<AppDto> {
     private String id;
     private String name;
     private int ordinal;

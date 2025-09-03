@@ -4,7 +4,7 @@ import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 
 @Data
-public class AppRoleViewModel implements Comparable<AppRoleViewModel>{
+public class AppRoleViewModel implements Comparable<AppRoleViewModel> {
     private String id;
     private int ordinal;
     private String name;
@@ -21,4 +21,5 @@ public class AppRoleViewModel implements Comparable<AppRoleViewModel>{
         }
         return Integer.compare(this.ordinal, o.ordinal);
     }
+
 }

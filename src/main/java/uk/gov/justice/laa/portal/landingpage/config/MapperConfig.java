@@ -7,8 +7,10 @@ import org.modelmapper.PropertyMap;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 @Configuration
 public class MapperConfig {
@@ -23,7 +25,22 @@ public class MapperConfig {
                 .setMatchingStrategy(MatchingStrategies.STRICT);
         modelMapper.addMappings(graphUserToEntraUserPropertyMap);
         addEntraUserToEntraUserDtoTypeMap(modelMapper);
+        addAppRoleDtoToAppRoleViewModel(modelMapper);
         return modelMapper;
+    }
+
+    private void addAppRoleDtoToAppRoleViewModel(ModelMapper modelMapper) {
+        modelMapper.addMappings(new PropertyMap<AppRoleDto, AppRoleViewModel>() {
+            @Override
+            protected void configure() {
+                map().setId(source.getId());
+                map().setDescription(source.getDescription());
+                map().setName(source.getName());
+                map().setOrdinal(source.getOrdinal());
+                map().setAppName(source.getApp().getName());
+                map().setAppOrdinal(source.getApp().getOrdinal());
+            }
+        });
     }
 
     public void addEntraUserToEntraUserDtoTypeMap(ModelMapper modelMapper) {
