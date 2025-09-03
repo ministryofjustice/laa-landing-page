@@ -270,6 +270,7 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
                 .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                .sorted()
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
@@ -503,7 +504,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
         EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
@@ -897,7 +898,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
@@ -908,7 +909,7 @@ public class UserController {
             // Filter to only CCMS roles for organization
             List<AppRoleDto> ccmsRoles = roles.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
-                    .collect(Collectors.toList());
+                    .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
@@ -1355,7 +1356,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
@@ -1366,7 +1367,7 @@ public class UserController {
             // Filter to only CCMS roles for organization
             List<AppRoleDto> ccmsRoles = roles.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
-                    .collect(Collectors.toList());
+                    .sorted().collect(Collectors.toList());
 
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
@@ -1612,7 +1613,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
 
         // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream()
+        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream().sorted()
                 .collect(Collectors.groupingBy(
                         appRole -> appRole.getApp().getName(),
                         LinkedHashMap::new, // Preserve insertion order
@@ -1620,7 +1621,6 @@ public class UserController {
 
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
