@@ -136,23 +136,21 @@ class RoleChangeNotificationServiceTest {
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
             return request.queueUrl().equals(QUEUE_URL)
-                    && request.messageGroupId().equals("ccms-role-changes")
+                    && request.messageGroupId().equals(userProfile.getLegacyUserId().toString())
                     && request.messageDeduplicationId() != null
                     && request.messageBody().equals("{\"test\":\"message\"}");
         }));
     }
 
     @Test
-    void shouldThrowRuntimeException_whenSqsClientFails() throws Exception {
+    void shouldReturnFalse_whenSqsClientFails() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
         doThrow(new RuntimeException("SQS send failed"))
                 .when(sqsClient).sendMessage(any(SendMessageRequest.class));
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
-        assertThat(exception.getMessage()).isEqualTo("Failed to send message");
-        assertThat(exception.getCause().getMessage()).isEqualTo("SQS send failed");
+        assertThat(result).isFalse();
     }
 
     @Test
