@@ -48,7 +48,7 @@
                 <div class="govuk-grid-row">
                     <div class="govuk-grid-column-full">
                         <!-- Search Card -->
-                        <div class="govuk-!-margin-bottom-6 search-card">
+                        <div class="search-card">
                             <div class="govuk-form-group">
                                 <fieldset class="govuk-fieldset">
                                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
@@ -71,27 +71,27 @@
                                                     </label>
                                                     <div class="autocomplete__wrapper">
                                                         <div class="autocomplete__status" aria-live="polite"
-                                                             role="status">
+                                                            role="status">
                                                             <span id="firmSearch__status--A"
-                                                                  class="govuk-visually-hidden"></span>
+                                                                class="govuk-visually-hidden"></span>
                                                             <span id="firmSearch__status--B"
-                                                                  class="govuk-visually-hidden"></span>
+                                                                class="govuk-visually-hidden"></span>
                                                         </div>
                                                         <div
-                                                                style="position: relative; display: inline-block; width: 100%;">
+                                                            style="position: relative; display: inline-block; width: 100%;">
                                                             <input class="autocomplete__input govuk-input"
-                                                                   id="firmSearch" name="firmSearch" type="text"
-                                                                   autocomplete="off" aria-autocomplete="list"
-                                                                   aria-expanded="false"
-                                                                   aria-controls="firmSearch__listbox"
-                                                                   aria-describedby="firm-hint"
-                                                                   aria-owns="firmSearch__listbox" role="combobox"
-                                                                   th:value="${firmSearch.firmSearch}">
+                                                                id="firmSearch" name="firmSearch" type="text"
+                                                                autocomplete="off" aria-autocomplete="list"
+                                                                aria-expanded="false"
+                                                                aria-controls="firmSearch__listbox"
+                                                                aria-describedby="firm-hint"
+                                                                aria-owns="firmSearch__listbox" role="combobox"
+                                                                th:value="${firmSearch.firmSearch}">
                                                             <input type="hidden" id="selectedFirmId"
-                                                                   name="selectedFirmId"
-                                                                   th:value="${firmSearch.selectedFirmId}" />
+                                                                name="selectedFirmId"
+                                                                th:value="${firmSearch.selectedFirmId}" />
                                                             <div id="firmSearch__assistiveHint"
-                                                                 class="govuk-hint govuk-visually-hidden" role="status">
+                                                                class="govuk-hint govuk-visually-hidden" role="status">
                                                                 When autocomplete results are available, use up and down
                                                                 arrows
                                                                 to
@@ -131,34 +131,44 @@
                                             </div>
                                         </div>
 
-                                        <!-- Show firm admins checkbox -->
-                                        <div >
-                                            <!-- Hidden inputs to preserve current search state -->
-                                            <input type="hidden" name="sort" th:value="${sort}">
-                                            <input type="hidden" name="direction" th:value="${direction}">
-                                            <input type="hidden" name="page" th:value="${page}">
-                                            <input type="hidden" name="size" th:value="${requestedPageSize}">
-
-                                            <div class="govuk-form-group">
-                                                <fieldset class="govuk-fieldset">
-                                                    <div class="govuk-checkboxes govuk-checkboxes--small"
-                                                         data-module="govuk-checkboxes">
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="showFirmAdmins"
-                                                                   name="showFirmAdmins" type="checkbox" value="true"
-                                                                   onchange="this.form.submit();" th:checked="${showFirmAdmins}">
-                                                            <label class="govuk-label govuk-checkboxes__label"
-                                                                   for="showFirmAdmins">
-                                                                Provider admin
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
-                                            </div>
-                                        </div>
+                                        <!-- Hidden inputs to preserve current search state -->
+                                        <input type="hidden" name="sort" th:value="${sort}">
+                                        <input type="hidden" name="direction" th:value="${direction}">
+                                        <input type="hidden" name="page" th:value="${page}">
+                                        <input type="hidden" name="size" th:value="${requestedPageSize}">
                                     </form>
                                 </fieldset>
                             </div>
+                        </div>
+
+                        <!-- Show firm admins checkbox -->
+                        <div class="govuk-!-padding-top-2 govuk-!-padding-left-2">
+                            <form method="get" th:action="@{/admin/users}" role="search">
+                                <!-- Hidden inputs to preserve current search state -->
+                                <input type="hidden" name="sort" th:value="${sort}">
+                                <input type="hidden" name="direction" th:value="${direction}">
+                                <input type="hidden" name="page" th:value="${page}">
+                                <input type="hidden" name="size" th:value="${requestedPageSize}">
+                                <input type="hidden" name="search" th:value="${search}">
+                                <input type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
+                                <input type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
+
+                                <div class="govuk-form-group">
+                                    <fieldset class="govuk-fieldset">
+                                        <div class="govuk-checkboxes govuk-checkboxes--small"
+                                            data-module="govuk-checkboxes">
+                                            <div class="govuk-checkboxes__item">
+                                                <input class="govuk-checkboxes__input" id="showFirmAdmins"
+                                                    name="showFirmAdmins" type="checkbox" value="true"
+                                                    onchange="this.form.submit();" th:checked="${showFirmAdmins}">
+                                                <label class="govuk-label govuk-checkboxes__label" for="showFirmAdmins">
+                                                    Provider admin
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -284,7 +294,7 @@
 
                     /* Search card styling */
                     .search-card {
-                        padding-right: 20px;
+                        padding-right: 0px;
                         border-radius: 0;
                         border-bottom: 1px solid #0b0c0c;
                     }
@@ -315,7 +325,8 @@
                         margin-top: 30px;
                         /* Position between input and card edge */
                         margin-left: 0px;
-                        margin-right: 15px;
+                        margin-right: 50px;
+                        margin-bottom: -30px;
                     }
 
                     /* Responsive adjustments */
@@ -560,7 +571,7 @@
         </div>
 
 
-        <form class="govuk-form-group govuk-!-margin-top-3">
+        <form class="govuk-form-group">
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
