@@ -1320,7 +1320,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.editUserDetails(userId, model);
+        String view = userController.editUserDetails(userId, model, session);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
@@ -1343,7 +1343,7 @@ class UserControllerTest {
 
         // When & Then
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.editUserDetails(userId, model));
+                () -> userController.editUserDetails(userId, model, session));
     }
 
     @Test
