@@ -48,7 +48,7 @@
                 <div class="govuk-grid-row">
                     <div class="govuk-grid-column-full">
                         <!-- Search Card -->
-                        <div class="govuk-!-margin-bottom-6 search-card">
+                        <div class="govuk-!-margin-bottom-6">
                             <div class="govuk-form-group">
                                 <fieldset class="govuk-fieldset">
                                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
@@ -62,16 +62,6 @@
 
                                     <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
                                         <div class="search-inputs-container">
-                                            <!-- Search users by name or email -->
-                                            <div class="search-input-group">
-                                                <div class="govuk-form-group">
-                                                    <label class="govuk-label govuk-label--s" for="search">
-                                                        Name or email
-                                                    </label>
-                                                    <input class="govuk-input" id="search" name="search" type="search"
-                                                        th:value="${search}" autocomplete="off">
-                                                </div>
-                                            </div>
 
                                             <!-- Search by firm name or firm code -->
                                             <div class="search-input-group">
@@ -81,27 +71,27 @@
                                                     </label>
                                                     <div class="autocomplete__wrapper">
                                                         <div class="autocomplete__status" aria-live="polite"
-                                                            role="status">
+                                                             role="status">
                                                             <span id="firmSearch__status--A"
-                                                                class="govuk-visually-hidden"></span>
+                                                                  class="govuk-visually-hidden"></span>
                                                             <span id="firmSearch__status--B"
-                                                                class="govuk-visually-hidden"></span>
+                                                                  class="govuk-visually-hidden"></span>
                                                         </div>
                                                         <div
-                                                            style="position: relative; display: inline-block; width: 100%;">
+                                                                style="position: relative; display: inline-block; width: 100%;">
                                                             <input class="autocomplete__input govuk-input"
-                                                                id="firmSearch" name="firmSearch" type="text"
-                                                                autocomplete="off" aria-autocomplete="list"
-                                                                aria-expanded="false"
-                                                                aria-controls="firmSearch__listbox"
-                                                                aria-describedby="firm-hint"
-                                                                aria-owns="firmSearch__listbox" role="combobox"
-                                                                th:value="${firmSearch.firmSearch}">
+                                                                   id="firmSearch" name="firmSearch" type="text"
+                                                                   autocomplete="off" aria-autocomplete="list"
+                                                                   aria-expanded="false"
+                                                                   aria-controls="firmSearch__listbox"
+                                                                   aria-describedby="firm-hint"
+                                                                   aria-owns="firmSearch__listbox" role="combobox"
+                                                                   th:value="${firmSearch.firmSearch}">
                                                             <input type="hidden" id="selectedFirmId"
-                                                                name="selectedFirmId"
-                                                                th:value="${firmSearch.selectedFirmId}" />
+                                                                   name="selectedFirmId"
+                                                                   th:value="${firmSearch.selectedFirmId}" />
                                                             <div id="firmSearch__assistiveHint"
-                                                                class="govuk-hint govuk-visually-hidden" role="status">
+                                                                 class="govuk-hint govuk-visually-hidden" role="status">
                                                                 When autocomplete results are available, use up and down
                                                                 arrows
                                                                 to
@@ -116,6 +106,17 @@
                                                             </ul>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Search users by name or email -->
+                                            <div class="search-input-group">
+                                                <div class="govuk-form-group">
+                                                    <label class="govuk-label govuk-label--s" for="search">
+                                                        Name or Email
+                                                    </label>
+                                                    <input class="govuk-input" id="search" name="search" type="search"
+                                                        th:value="${search}" autocomplete="off">
                                                 </div>
                                             </div>
 
@@ -148,7 +149,7 @@
                                                                    onchange="this.form.submit();" th:checked="${showFirmAdmins}">
                                                             <label class="govuk-label govuk-checkboxes__label"
                                                                    for="showFirmAdmins">
-                                                                Show firm admins
+                                                                Provider admin
                                                             </label>
                                                         </div>
                                                     </div>
