@@ -1530,10 +1530,11 @@ class UserServiceTest {
             List<String> selectedOffices = List.of("ALL");
 
             // Act
-            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+            String diff = userService.updateUserOffices(userProfileId.toString(), selectedOffices);
 
             // Assert
             assertThat(userProfile.getOffices()).isNull();
+            assertThat(diff).isEqualTo("Removed : All, Added : All");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -1549,8 +1550,8 @@ class UserServiceTest {
             Firm userFirm = Firm.builder().id(firmId).build();
 
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
-            Office office2 = Office.builder().id(officeId2).address(address).firm(userFirm).build();
+            Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).code("of2").address(address).firm(userFirm).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1571,11 +1572,67 @@ class UserServiceTest {
             List<String> selectedOffices = List.of(officeId1.toString(), officeId2.toString());
 
             // Act
-            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+            String diff = userService.updateUserOffices(userProfileId.toString(), selectedOffices);
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
+            assertThat(diff).contains("Removed : All, Added : ");
+            assertThat(diff).contains("of1");
+            assertThat(diff).contains("of2");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
+        void updateUserOffices_updatesOffices_addAll() throws IOException {
+            // Arrange
+            UUID firmId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            UUID officeId1 = UUID.randomUUID();
+            UUID officeId2 = UUID.randomUUID();
+
+            Firm userFirm = Firm.builder().id(firmId).build();
+
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).code("of2").address(address).firm(userFirm).build();
+
+            UserProfile userProfileOld = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .firm(userFirm)
+                    .offices(Set.of(office1, office2))
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfileOld))
+                    .build();
+            userProfileOld.setEntraUser(entraUser);
+            UserProfile userProfileNew = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .firm(userFirm)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfileOld));
+            when(mockOfficeRepository.findAllById(any())).thenReturn(List.of());
+            when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfileNew);
+
+            List<String> selectedOffices = List.of();
+
+            // Act
+            String diff = userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+
+            // Assert
+            assertThat(userProfileNew.getOffices()).isNull();
+            String[] changedOffices = diff.split(", Added");
+            assertThat(changedOffices[0]).contains("Removed : ");
+            assertThat(changedOffices[0]).contains("of1");
+            assertThat(changedOffices[0]).contains("of2");
+            assertThat(changedOffices[1]).contains("All");
+            verify(mockUserProfileRepository).saveAndFlush(userProfileOld);
         }
 
         @Test
@@ -1590,8 +1647,8 @@ class UserServiceTest {
             Firm userFirm = Firm.builder().id(firmId).build();
 
             Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-            Office office1 = Office.builder().id(officeId1).address(address).firm(userFirm).build();
-            Office office2 = Office.builder().id(officeId2).address(address).build();
+            Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
+            Office office2 = Office.builder().id(officeId2).code("of2").address(address).build();
 
             UserProfile userProfile = UserProfile.builder()
                     .id(userProfileId)
@@ -1612,10 +1669,11 @@ class UserServiceTest {
             List<String> selectedOffices = List.of(officeId1.toString(), officeId2.toString());
 
             // Act
-            userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+            String diff = userService.updateUserOffices(userProfileId.toString(), selectedOffices);
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
+            assertThat(diff).isEqualTo("Removed : All, Added : of1");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -1670,11 +1728,35 @@ class UserServiceTest {
             when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfile);
 
             // Act
-            userService.updateUserOffices(userProfileId.toString(), Collections.emptyList());
+            String diff = userService.updateUserOffices(userProfileId.toString(), Collections.emptyList());
 
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
+            assertThat(diff).isEqualTo("Removed : All, Added : All");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
+        void diffOffices_diff_old_new() {
+            UUID old1 = UUID.fromString("5fcc67ed-ad22-4ce2-addc-74c974975958");
+            Office o1 = Office.builder().id(old1).code("old1").build();
+            UUID old2 = UUID.fromString("b07911a3-964a-4281-8808-6f87f3f17bad");
+            Office o2 = Office.builder().id(old2).code("old2").build();
+            UUID keep = UUID.fromString("14bf95e1-e315-4138-9aad-fca5faf41884");
+            Office k1 = Office.builder().id(keep).code("kep1").build();
+            UUID new1 = UUID.fromString("e9d43cb2-3a6f-4d7b-a383-bfd82302abfa");
+            Office n1 = Office.builder().id(new1).code("new1").build();
+            UUID new2 = UUID.fromString("6b7fc00d-68f1-4a4b-b902-9998614e6a95");
+            Office n2 = Office.builder().id(new2).code("new2").build();
+            Set<Office> oldOffices = Set.of(o1, o2, k1);
+            Set<Office> newOffices = Set.of(k1, n1, n2);
+            String changed = userService.diffOffices(oldOffices, newOffices);
+            assertThat(changed).doesNotContain("kep1");
+            String[] changedOffices = changed.split(", Added");
+            assertThat(changedOffices[0]).contains("old1");
+            assertThat(changedOffices[0]).contains("old2");
+            assertThat(changedOffices[1]).contains("new1");
+            assertThat(changedOffices[1]).contains("new2");
         }
     }
 

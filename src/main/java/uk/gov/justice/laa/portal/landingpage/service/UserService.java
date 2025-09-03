@@ -696,15 +696,18 @@ public class UserService {
      * @param selectedOffices List of selected office IDs
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
+    public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
+        String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {
+                diff = diffOffices(userProfile.getOffices(), null);
                 userProfile.setOffices(null);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
+                diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
                 userProfile.setOffices(offices);
             }
@@ -714,6 +717,43 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
         }
+        return diff;
+    }
+
+    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices) {
+        String removed = "";
+        String added = "";
+        if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
+            removed = "Removed : All";
+            if (!Objects.isNull(newOffices)) {
+                added = "Added : " + newOffices.stream()
+                        .map(Office::getCode)
+                        .collect(Collectors.joining(", "));
+            }
+        }
+        if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
+            added = "Added : All";
+            if (!Objects.isNull(oldOffices)) {
+                removed = "Removed : " + oldOffices.stream()
+                        .map(Office::getCode)
+                        .collect(Collectors.joining(", "));
+            }
+        }
+        if (Objects.nonNull(oldOffices) && !oldOffices.isEmpty()
+                && Objects.nonNull(newOffices) && !newOffices.isEmpty()) {
+            List<UUID> oldIds = oldOffices.stream().map(Office::getId).toList();
+            List<UUID> newIds = newOffices.stream().map(Office::getId).toList();
+            removed = "Removed : " + oldOffices.stream()
+                    .filter(role -> !newIds.contains(role.getId()))
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+            added = "Added : " + newOffices.stream()
+                    .filter(role -> !oldIds.contains(role.getId()))
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+        }
+
+        return removed + ", " + added;
     }
 
     private Set<Office> validateOfficesByUserFirm(UserProfile userProfile, Iterable<UUID> officeIds) {
