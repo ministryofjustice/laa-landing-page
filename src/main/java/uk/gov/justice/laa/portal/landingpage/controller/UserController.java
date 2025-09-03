@@ -1280,7 +1280,6 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto != null ? userProfileDto.getId() : null,
                     currentUserDto,
