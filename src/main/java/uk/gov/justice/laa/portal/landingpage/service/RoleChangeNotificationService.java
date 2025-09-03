@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -38,7 +39,7 @@ public class RoleChangeNotificationService {
      * @return true if successful
      */
     @Retryable(
-        retryFor = {Exception.class},
+        retryFor = {RuntimeException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 100)
     )
@@ -54,9 +55,9 @@ public class RoleChangeNotificationService {
             sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
-            log.warn("Failed to send CCMS role change message to SQS for user: {}: {}, saving roles to db and moving on",
+            log.warn("CCMS notification attempt failed for user: {}: {}", 
                 userProfile.getEntraUser().getEntraOid(), e.getMessage());
-            return false;
+            throw new RuntimeException("CCMS notification failed", e);
         }
     }
     
@@ -88,6 +89,13 @@ public class RoleChangeNotificationService {
             log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
                 entraUser.getEntraOid(), response.messageId());
         }
+    }
+
+    @Recover
+    public boolean recoverFromRetryFailure(RuntimeException e, UserProfile userProfile) {
+        log.error("All retry attempts failed for CCMS notification for user: {}, saving roles to db and moving on", 
+            userProfile.getEntraUser().getEntraOid(), e);
+        return false;
     }
 
     private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {
