@@ -291,6 +291,15 @@ class LoginControllerTest {
     }
 
     @Test
+    void whenLogoutSuccess_thenReturnsLogoutTemplate() {
+        // Arrange & Act
+        String result = controller.logoutSuccess();
+
+        // Assert
+        assertThat(result).isEqualTo("logout");
+    }
+
+    @Test
     void switchFirm_get_active() {
         UUID firmId = UUID.randomUUID();
         UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)

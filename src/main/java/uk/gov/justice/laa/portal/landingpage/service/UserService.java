@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -131,7 +132,7 @@ public class UserService {
     }
 
     @Transactional
-    public String updateUserRoles(String userProfileId, List<String> selectedRoles) {
+    public String updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -139,6 +140,7 @@ public class UserService {
         String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
+            boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
             boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
             int before = roles.size();
             Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal
@@ -156,19 +158,19 @@ public class UserService {
             }
 
             Set<AppRole> newRoles = new HashSet<>(roles);
+            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
+                    : new HashSet<>(userProfile.getAppRoles());
+            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
-                    : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
             userProfile.setAppRoles(newRoles);
             diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
-                    oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
             // Save user profile with ccms sync status
@@ -202,6 +204,42 @@ public class UserService {
             changed += "Added: " + String.join(", ", added);
         }
         return changed;
+    }
+
+    protected void roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self) {
+        if (oldRoles.isEmpty()) {
+            return;
+        }
+        List<UUID> newIds = newRoles.stream().map(AppRole::getId).toList();
+        List<AppRole> removed = oldRoles.stream()
+                .filter(role -> !newIds.contains(role.getId()))
+                .toList();
+        PageRequest pageRequest = PageRequest.of(0, 2);
+        if (Objects.nonNull(firm)) {
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            if (externalUserManagerRole.isPresent()) {
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
+                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+                if (removeManager && self) {
+                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
+                    throw new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId);
+                }
+                if (existingManagers.getTotalElements() < 2 && removeManager) {
+                    logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
+                    throw new RoleCoverageException("External User Manager role could not be removed, this is the last External User Manager of " + firm.getName());
+                }
+            }
+        } else {
+            Optional<AppRole> globalAdminRole = appRoleRepository.findByName("Global Admin");
+            if (globalAdminRole.isPresent()) {
+                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin", pageRequest);
+                boolean removeGlobalAdmin = removed.stream().anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
+                if (existingAdmins.getTotalElements() < 2 && removeGlobalAdmin) {
+                    logger.warn("Attempt to remove last Global Admin, from user profile {}.", userId);
+                    throw new RoleCoverageException("Global Admin role could not be removed, this is the last Global Admin");
+                }
+            }
+        }
     }
 
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {

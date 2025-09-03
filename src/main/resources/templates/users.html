@@ -57,16 +57,16 @@
                                         </h2>
                                     </legend>
                                     <div class="govuk-hint">
-                                        You can use both or either of the input boxes to search
+                                        You can search using one or both boxes
                                     </div>
 
                                     <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
                                         <div class="search-inputs-container">
-                                            <!-- Search users by name, email -->
+                                            <!-- Search users by name or email -->
                                             <div class="search-input-group">
                                                 <div class="govuk-form-group">
                                                     <label class="govuk-label govuk-label--s" for="search">
-                                                        name, email
+                                                        Name or email
                                                     </label>
                                                     <input class="govuk-input" id="search" name="search" type="search"
                                                         th:value="${search}" autocomplete="off">
@@ -77,7 +77,7 @@
                                             <div class="search-input-group">
                                                 <div class="govuk-form-group">
                                                     <label class="govuk-label govuk-label--s" for="firmSearch">
-                                                        firm name, firm code
+                                                        Firm name or firm code
                                                     </label>
                                                     <div class="autocomplete__wrapper">
                                                         <div class="autocomplete__status" aria-live="polite"
@@ -97,7 +97,9 @@
                                                                 aria-describedby="firm-hint"
                                                                 aria-owns="firmSearch__listbox" role="combobox"
                                                                 th:value="${firmSearch.firmSearch}">
-                                                            <input type="hidden" id="selectedFirmId" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}"/>
+                                                            <input type="hidden" id="selectedFirmId"
+                                                                name="selectedFirmId"
+                                                                th:value="${firmSearch.selectedFirmId}" />
                                                             <div id="firmSearch__assistiveHint"
                                                                 class="govuk-hint govuk-visually-hidden" role="status">
                                                                 When autocomplete results are available, use up and down
@@ -128,39 +130,39 @@
                                             </div>
                                         </div>
                                     </form>
+
+                                    <!-- Show firm admins checkbox -->
+                                    <div >
+                                        <form method="get" th:action="@{/admin/users}" role="search">
+                                            <!-- Hidden inputs to preserve current search state -->
+                                            <input type="hidden" name="search" th:value="${search}">
+                                            <input type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
+                                            <input type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
+                                            <input type="hidden" name="sort" th:value="${sort}">
+                                            <input type="hidden" name="direction" th:value="${direction}">
+                                            <input type="hidden" name="page" th:value="${page}">
+                                            <input type="hidden" name="size" th:value="${requestedPageSize}">
+
+                                            <div class="govuk-form-group">
+                                                <fieldset class="govuk-fieldset">
+                                                    <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                        data-module="govuk-checkboxes">
+                                                        <div class="govuk-checkboxes__item">
+                                                            <input class="govuk-checkboxes__input" id="showFirmAdmins"
+                                                                name="showFirmAdmins" type="checkbox" value="true"
+                                                                onchange="this.form.submit();" th:checked="${showFirmAdmins}">
+                                                            <label class="govuk-label govuk-checkboxes__label"
+                                                                for="show-firm-admins">
+                                                                Show firm admins
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </fieldset>
                             </div>
-                        </div>
-
-                        <!-- Show firm admins checkbox -->
-                        <div class="govuk-!-margin-top-4">
-                            <form method="get" th:action="@{/admin/users}" role="search">
-                                <!-- Hidden inputs to preserve current search state -->
-                                <input type="hidden" name="search" th:value="${search}">
-                                <input type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
-                                <input type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
-                                <input type="hidden" name="sort" th:value="${sort}">
-                                <input type="hidden" name="direction" th:value="${direction}">
-                                <input type="hidden" name="page" th:value="${page}">
-                                <input type="hidden" name="size" th:value="${requestedPageSize}">
-
-                                <div class="govuk-form-group">
-                                    <fieldset class="govuk-fieldset">
-                                        <div class="govuk-checkboxes govuk-checkboxes--small"
-                                            data-module="govuk-checkboxes">
-                                            <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="showFirmAdmins"
-                                                    name="showFirmAdmins" type="checkbox" value="true"
-                                                    onchange="this.form.submit();" th:checked="${showFirmAdmins}">
-                                                <label class="govuk-label govuk-checkboxes__label"
-                                                    for="show-firm-admins">
-                                                    Show firm admins
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </fieldset>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -287,10 +289,8 @@
                     /* Search card styling */
                     .search-card {
                         padding: 20px 20px 0px 20px;
-                        /* Reduced bottom padding */
                         border-radius: 0;
-                        background-color: #f3f2f1;
-                        /* govuk-colour("light-grey") */
+                        border-bottom: 1px solid #0b0c0c;
                     }
 
                     .search-card .govuk-fieldset__legend {
@@ -366,7 +366,7 @@
 
                         // Hide firmSearchIdInput when firm search box is empty
                         firmSearchInput.addEventListener('blur', function () {
-                            if (firmSearchInput.value) {
+                            if (!firmSearchInput.value) {
                                 firmSearchIdInput.value = '';
                             }
                         });
@@ -600,7 +600,7 @@
                             </th>
                             <th scope="col" class="govuk-table__header"
                                 th:aria-sort="${sort == 'email' ? direction : 'none'}"
-                                style="width: 35%; min-width: 200px;">
+                                style="width: 30%; min-width: 200px;">
                                 <button type="button" data-index="2"
                                     th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='email', direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Email
@@ -628,7 +628,7 @@
                             </th>
                             <th scope="col" class="govuk-table__header"
                                 th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
-                                style="width: 10%; min-width: 90px;">
+                                style="width: 15%; min-width: 90px;">
                                 <button type="button" data-index="4"
                                     th:onclick="'window.location.href=\'' + @{/admin/users(size=${requestedPageSize ?: 10}, page=${page ?: 1}, search=${search}, sort='userStatus', direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId})} + '\''">
                                     Status
