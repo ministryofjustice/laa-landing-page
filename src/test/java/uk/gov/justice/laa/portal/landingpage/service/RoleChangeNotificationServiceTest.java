@@ -5,7 +5,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +16,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
@@ -28,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @ExtendWith(MockitoExtension.class)
+@SpringJUnitConfig
 class RoleChangeNotificationServiceTest {
 
     @Mock
@@ -136,23 +137,18 @@ class RoleChangeNotificationServiceTest {
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
             return request.queueUrl().equals(QUEUE_URL)
-                    && request.messageGroupId().equals("ccms-role-changes")
+                    && request.messageGroupId().equals(userProfile.getLegacyUserId().toString())
                     && request.messageDeduplicationId() != null
                     && request.messageBody().equals("{\"test\":\"message\"}");
         }));
     }
 
     @Test
-    void shouldThrowRuntimeException_whenSqsClientFails() throws Exception {
-        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
-        doThrow(new RuntimeException("SQS send failed"))
-                .when(sqsClient).sendMessage(any(SendMessageRequest.class));
+    void shouldReturnFalse_whenRecoverMethodCalled() {
+        boolean result = roleChangeNotificationService.recoverFromRetryFailure(
+            new RuntimeException("SQS send failed"), userProfile);
 
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
-
-        assertThat(exception.getMessage()).isEqualTo("Failed to send message");
-        assertThat(exception.getCause().getMessage()).isEqualTo("SQS send failed");
+        assertThat(result).isFalse();
     }
 
     @Test
