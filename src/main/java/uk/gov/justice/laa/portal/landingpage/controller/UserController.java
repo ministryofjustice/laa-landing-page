@@ -61,15 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
@@ -1091,7 +1083,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
+        session.removeAttribute("editUserOfficesModel");
         // Get user's current offices
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
@@ -1106,6 +1098,28 @@ public class UserController {
         // Check if user has access to all offices
         boolean hasAllOffices = userOffices.isEmpty();
 
+        // Create form object or load from session if exist
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            officesForm = new OfficesForm();
+            List<String> selectedOffices = new ArrayList<>();
+            if (hasAllOffices) {
+                selectedOffices.add("ALL");
+            } else {
+                selectedOffices.addAll(userOfficeIds);
+            }
+            officesForm.setOffices(selectedOffices);
+        } else {
+            if (officesForm.getOffices() != null) {
+                if (officesForm.getOffices().contains("ALL")) {
+                    hasAllOffices = true;
+                } else {
+                    hasAllOffices = false;
+                    userOfficeIds = new HashSet<String> (officesForm.getOffices());
+                }
+            }
+        }
+        Set<String> finalUserOfficeIds = userOfficeIds;
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
@@ -1113,20 +1127,8 @@ public class UserController {
                                 office.getAddress().getAddressLine2(),
                                 office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
-                        userOfficeIds.contains(office.getId().toString())))
+                        finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
-
-        // Create form object
-        OfficesForm officesForm = new OfficesForm();
-        List<String> selectedOffices = new ArrayList<>();
-
-        if (hasAllOffices) {
-            selectedOffices.add("ALL");
-        } else {
-            selectedOffices.addAll(userOfficeIds);
-        }
-
-        officesForm.setOffices(selectedOffices);
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
@@ -1154,8 +1156,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
-            Authentication authentication,
-            Model model, HttpSession session) throws IOException {
+            Model model, HttpSession session) {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user offices page with
@@ -1182,10 +1183,21 @@ public class UserController {
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
             return "edit-user-offices";
         }
+        session.setAttribute("officesForm", officesForm);
+        return "redirect:/admin/users/edit/" + id + "/offices-check-answer";
+    }
 
+    @GetMapping("/users/edit/{id}/offices-check-answer")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    public String updateUserOfficesCheck(@PathVariable String id,
+                                    Model model, HttpSession session) {
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            return "redirect:/admin/users/edit/" + id + "/offices";
+        }
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-        List<String> selectOfficesDisplay = new ArrayList<>();
+        List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
         // Handle "ALL" option
         if (!selectedOffices.contains("ALL")) {
             // If "ALL" is selected, get all available offices by firm
@@ -1198,12 +1210,29 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getCode());
+                            selectOfficesDisplay.add(office);
                         }
                     }
                 }
             }
         }
+        Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+        model.addAttribute("userOffices", selectOfficesDisplay);
+        model.addAttribute("user", modelFromSession.getAttribute("user"));
+        return "edit-user-offices-check-answer";
+    }
+
+    @PostMapping("/users/edit/{id}/offices-check-answer")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    public String updateUserOfficesSubmit(@PathVariable String id,
+                                    Authentication authentication,
+                                    HttpSession session) throws IOException {
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            return "redirect:/admin/users/edit/" + id + "/offices";
+        }
+        // Update user offices
+        List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
 
         String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1216,7 +1245,7 @@ public class UserController {
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
-
+        session.removeAttribute("officesForm");
         return "redirect:/admin/users/manage/" + id;
     }
 

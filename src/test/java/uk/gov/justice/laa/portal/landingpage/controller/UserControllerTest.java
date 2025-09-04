@@ -1576,7 +1576,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         String userId = "user123";
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -1602,7 +1602,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         MockHttpSession testSession = new MockHttpSession();
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -1632,7 +1632,7 @@ class UserControllerTest {
         testSession.setAttribute("editUserOfficesModel", sessionModel);
 
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
@@ -2638,7 +2638,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         MockHttpSession testSession = new MockHttpSession();
         // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, authentication, model, testSession);
+        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
