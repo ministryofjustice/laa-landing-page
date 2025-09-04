@@ -14,6 +14,7 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -117,6 +118,22 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleAccessException() {
+        // Arrange
+        String errorMessage = "unauthorized error";
+        AccessDeniedException exception = new AccessDeniedException(errorMessage);
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleAccessException(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(401, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
         assertTrue(response.getBody().getMessage().contains(errorMessage));
     }

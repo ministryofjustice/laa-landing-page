@@ -4,6 +4,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -47,6 +49,13 @@ public class GlobalExceptionHandler {
         log.warn(
                 "A user has tried to skip parts of user creation (usually by changing the URL). Redirecting to user creation screen...");
         return new RedirectView("/admin/user/create/details");
+    }
+
+    @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
+    public ResponseEntity<ClaimEnrichmentResponse> handleAccessException(Exception ex) {
+        return createErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "An unauthorized error occurred: " + ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

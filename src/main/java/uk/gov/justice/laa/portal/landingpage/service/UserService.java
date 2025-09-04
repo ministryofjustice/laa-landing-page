@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -131,7 +132,7 @@ public class UserService {
     }
 
     @Transactional
-    public String updateUserRoles(String userProfileId, List<String> selectedRoles) {
+    public String updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
@@ -139,7 +140,8 @@ public class UserService {
         String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
-            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
+            boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
+            boolean isInternal = userProfile.getUserType() == UserType.INTERNAL;
             int before = roles.size();
             Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal
                     && appRole.getRoleType().equals(RoleType.INTERNAL);
@@ -156,19 +158,19 @@ public class UserService {
             }
 
             Set<AppRole> newRoles = new HashSet<>(roles);
+            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
+                    : new HashSet<>(userProfile.getAppRoles());
+            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
-                    : new HashSet<>(userProfile.getAppRoles());
 
             // Update roles
             userProfile.setAppRoles(newRoles);
             diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
-                    oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
             // Save user profile with ccms sync status
@@ -202,6 +204,42 @@ public class UserService {
             changed += "Added: " + String.join(", ", added);
         }
         return changed;
+    }
+
+    protected void roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self) {
+        if (oldRoles.isEmpty()) {
+            return;
+        }
+        List<UUID> newIds = newRoles.stream().map(AppRole::getId).toList();
+        List<AppRole> removed = oldRoles.stream()
+                .filter(role -> !newIds.contains(role.getId()))
+                .toList();
+        PageRequest pageRequest = PageRequest.of(0, 2);
+        if (Objects.nonNull(firm)) {
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            if (externalUserManagerRole.isPresent()) {
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
+                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+                if (removeManager && self) {
+                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
+                    throw new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId);
+                }
+                if (existingManagers.getTotalElements() < 2 && removeManager) {
+                    logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
+                    throw new RoleCoverageException("External User Manager role could not be removed, this is the last External User Manager of " + firm.getName());
+                }
+            }
+        } else {
+            Optional<AppRole> globalAdminRole = appRoleRepository.findByName("Global Admin");
+            if (globalAdminRole.isPresent()) {
+                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin", pageRequest);
+                boolean removeGlobalAdmin = removed.stream().anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
+                if (existingAdmins.getTotalElements() < 2 && removeGlobalAdmin) {
+                    logger.warn("Attempt to remove last Global Admin, from user profile {}.", userId);
+                    throw new RoleCoverageException("Global Admin role could not be removed, this is the last Global Admin");
+                }
+            }
+        }
     }
 
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
@@ -400,6 +438,7 @@ public class UserService {
                 .map(AppRole::getApp)
                 .distinct()
                 .map(app -> mapper.map(app, AppDto.class))
+                .sorted()
                 .toList();
     }
 
@@ -416,7 +455,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-            UserType userType, String createdBy) {
+            boolean isUserManager, String createdBy) {
 
         RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
@@ -427,22 +466,22 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, userType, createdBy);
+        return persistNewUser(user, firm, isUserManager, createdBy);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-            UserType userType, String createdBy) {
+            boolean isUserManager, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
         Set<AppRole> appRoles = new HashSet<>();
-        if (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN) {
+        if (isUserManager) {
             Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
             externalUserManagerRole.ifPresent(appRoles::add);
         }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
@@ -570,6 +609,7 @@ public class UserService {
                     .filter(appRole -> appRole.getRoleType().equals(userRoleType)
                             || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                    .sorted()
                     .toList();
         }
         return appRoles;
@@ -656,15 +696,18 @@ public class UserService {
      * @param selectedOffices List of selected office IDs
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
+    public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
+        String diff = "";
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {
+                diff = diffOffices(userProfile.getOffices(), null);
                 userProfile.setOffices(null);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
+                diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
                 userProfile.setOffices(offices);
             }
@@ -674,6 +717,43 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
         }
+        return diff;
+    }
+
+    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices) {
+        String removed = "";
+        String added = "";
+        if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
+            removed = "Removed : All";
+            if (!Objects.isNull(newOffices)) {
+                added = "Added : " + newOffices.stream()
+                        .map(Office::getCode)
+                        .collect(Collectors.joining(", "));
+            }
+        }
+        if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
+            added = "Added : All";
+            if (!Objects.isNull(oldOffices)) {
+                removed = "Removed : " + oldOffices.stream()
+                        .map(Office::getCode)
+                        .collect(Collectors.joining(", "));
+            }
+        }
+        if (Objects.nonNull(oldOffices) && !oldOffices.isEmpty()
+                && Objects.nonNull(newOffices) && !newOffices.isEmpty()) {
+            List<UUID> oldIds = oldOffices.stream().map(Office::getId).toList();
+            List<UUID> newIds = newOffices.stream().map(Office::getId).toList();
+            removed = "Removed : " + oldOffices.stream()
+                    .filter(role -> !newIds.contains(role.getId()))
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+            added = "Added : " + newOffices.stream()
+                    .filter(role -> !oldIds.contains(role.getId()))
+                    .map(Office::getCode)
+                    .collect(Collectors.joining(", "));
+        }
+
+        return removed + ", " + added;
     }
 
     private Set<Office> validateOfficesByUserFirm(UserProfile userProfile, Iterable<UUID> officeIds) {
@@ -699,7 +779,7 @@ public class UserService {
 
     public boolean isInternal(String userId) {
         Optional<UserType> userType = getUserTypeByUserId(userId);
-        return userType.map(UserType.INTERNAL_TYPES::contains).orElse(false);
+        return userType.isPresent() && userType.get() == UserType.INTERNAL;
     }
 
     public boolean isInternal(UUID userId) {
@@ -741,11 +821,6 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not grant access.", userId);
             return false;
         }
-    }
-
-    public boolean isUserCreationAllowed(EntraUser entraUser) {
-        Optional<UserType> userType = getUserTypeByEntraUser(entraUser);
-        return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
     }
 
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {

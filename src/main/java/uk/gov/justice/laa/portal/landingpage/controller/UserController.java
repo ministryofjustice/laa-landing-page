@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -38,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -141,10 +143,10 @@ public class UserController {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, List.of(UserType.INTERNAL), showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL_TYPES, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -157,7 +159,7 @@ public class UserController {
                 }
                 FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm).orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL_TYPES, showFirmAdmins);
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL, showFirmAdmins);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -268,6 +270,7 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
                 .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                .sorted()
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
@@ -275,7 +278,7 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
+        boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
 
@@ -296,7 +299,6 @@ public class UserController {
             user = new EntraUserDto();
         }
         UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
-        model.addAttribute("userTypes", List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN, UserType.EXTERNAL_SINGLE_FIRM));
         model.addAttribute("selectedUserType", selectedUserType);
         // If user is already in session, populate the form with existing user details
         userDetailsForm = UserUtils.populateUserDetailsFormWithSession(userDetailsForm, user, session);
@@ -324,14 +326,6 @@ public class UserController {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
 
-        // Validate selected User Type
-        UserType selectedUserType = userDetailsForm.getUserType();
-        // Add a check to stop users injecting internal user types into create external
-        // user post request.
-        if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
-            result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
-        }
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
@@ -341,7 +335,6 @@ public class UserController {
             }
 
             model.addAttribute("userTypes", modelFromSession.getAttribute("userTypes"));
-            model.addAttribute("selectedUserType", userDetailsForm.getUserType());
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-details";
         }
@@ -352,7 +345,7 @@ public class UserController {
         user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
         user.setEmail(userDetailsForm.getEmail());
         session.setAttribute("user", user);
-        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+        session.setAttribute("isUserManager", userDetailsForm.getUserManager());
 
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
@@ -449,7 +442,7 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         // TODO: Make this use the selected user type rather than a hard-coded type. Our
         // user creation flow is only for external users right now.
-        List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM).stream()
+        List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL).stream()
                 .map(appDto -> {
                     AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
                     appViewModel.setSelected(selectedApps.contains(appDto.getId()));
@@ -491,7 +484,7 @@ public class UserController {
         // TODO: Make this use the selected user type rather than a hard-coded type. Our
         // user creation flow is only for external users right now.
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex),
-                UserType.EXTERNAL_SINGLE_FIRM);
+                UserType.EXTERNAL);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
@@ -501,7 +494,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
         EntraUserDto user = getObjectFromHttpSession(session, "user", EntraUserDto.class)
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         model.addAttribute("user", user);
@@ -641,8 +634,8 @@ public class UserController {
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
 
-        UserType userType = (UserType) session.getAttribute("selectedUserType");
-        model.addAttribute("userType", userType);
+        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+        model.addAttribute("isUserManager", isUserManager);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
     }
@@ -652,18 +645,17 @@ public class UserController {
     public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
-        UserType userType = getObjectFromHttpSession(session, "selectedUserType", UserType.class).orElseThrow();
-
+        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
             FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedFirm,
-                    userType, currentUserDto.getName());
+                    userManager, currentUserDto.getName());
             session.setAttribute("userProfile",
                     mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                    selectedFirm.getName(), userType);
+                    selectedFirm.getName(), userManager);
             eventService.logEvent(createUserAuditEvent);
         } else {
             log.error("No user attribute was present in request. User not created.");
@@ -767,7 +759,9 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String editUserApps(@PathVariable String id, Model model) {
+    public String editUserApps(@PathVariable String id,
+                               @RequestParam(value = "errorMessage", required = false) String errorMessage,
+                               Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
@@ -782,7 +776,9 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
-
+        if (errorMessage != null) {
+            model.addAttribute("errorMessage", errorMessage);
+        }
         return "edit-user-apps";
     }
 
@@ -791,20 +787,30 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             Authentication authentication,
-            HttpSession session) {
+            HttpSession session, RedirectAttributes redirectAttributes) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
 
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            String changed = userService.updateUserRoles(id, new ArrayList<>());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    changed, "apps");
-            eventService.logEvent(updateUserAuditEvent);
+            try {
+                CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        userProfileDto != null ? userProfileDto.getId() : null,
+                        currentUserDto,
+                        userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                        changed, "apps");
+                eventService.logEvent(updateUserAuditEvent);
+            } catch (RoleCoverageException e) {
+                String errorMessage = e.getMessage();
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        errorMessage);
+                UUID uuid = UUID.fromString(id);
+                return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
+            }
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
@@ -831,6 +837,7 @@ public class UserController {
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
             Model model, HttpSession session) {
 
@@ -880,7 +887,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
@@ -891,7 +898,7 @@ public class UserController {
             // Filter to only CCMS roles for organization
             List<AppRoleDto> ccmsRoles = roles.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
-                    .collect(Collectors.toList());
+                    .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
@@ -913,6 +920,9 @@ public class UserController {
         // currently selected app.
         session.setAttribute("userEditRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
+        if (errorMessage != null) {
+            model.addAttribute("errorMessage", errorMessage);
+        }
         return "edit-user-roles";
     }
 
@@ -993,11 +1003,18 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles);
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
-                        user != null ? user.getEntraUser() : null, changed,
-                        "role");
-                eventService.logEvent(updateUserAuditEvent);
+                try {
+                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                    UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                            editorProfile.getId(),
+                            currentUserDto,
+                            user != null ? user.getEntraUser() : null, changed,
+                            "role");
+                    eventService.logEvent(updateUserAuditEvent);
+                }  catch (RoleCoverageException e) {
+                    String errorMessage = e.getMessage();
+                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
+                }
             }
             return "redirect:/admin/users/manage/" + uuid;
         } else {
@@ -1135,12 +1152,14 @@ public class UserController {
             }
         }
 
-        userService.updateUserOffices(id, selectedOffices);
+        String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                userProfileDto != null ? userProfileDto.getId() : null,
+                currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                changed, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
@@ -1248,10 +1267,12 @@ public class UserController {
         // manage user page
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
-            String changed = userService.updateUserRoles(id, new ArrayList<>());
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+            String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto != null ? userProfileDto.getId() : null,
+                    currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
                     changed, "roles");
             eventService.logEvent(updateUserAuditEvent);
@@ -1324,7 +1345,7 @@ public class UserController {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
-                }).toList();
+                }).sorted().toList();
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
@@ -1335,7 +1356,7 @@ public class UserController {
             // Filter to only CCMS roles for organization
             List<AppRoleDto> ccmsRoles = roles.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
-                    .collect(Collectors.toList());
+                    .sorted().collect(Collectors.toList());
 
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
@@ -1418,8 +1439,10 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles);
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
                         user != null ? user.getEntraUser() : null, changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
@@ -1547,12 +1570,14 @@ public class UserController {
             }
         }
 
-        userService.updateUserOffices(id, selectedOffices);
+        String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(currentUserDto,
+        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                userProfileDto != null ? userProfileDto.getId() : null,
+                currentUserDto,
                 userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                selectOfficesDisplay, "office");
+                changed, "office");
         eventService.logEvent(updateUserAuditEvent);
 
         // Clear grant access session data
@@ -1577,7 +1602,7 @@ public class UserController {
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
 
         // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream()
+        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream().sorted()
                 .collect(Collectors.groupingBy(
                         appRole -> appRole.getApp().getName(),
                         LinkedHashMap::new, // Preserve insertion order
@@ -1585,7 +1610,6 @@ public class UserController {
 
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
@@ -1599,7 +1623,7 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
-        model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
+        model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";
@@ -1621,9 +1645,10 @@ public class UserController {
             // Create audit event for the app role removal
             UserProfileDto userProfileDto = userService.getUserProfileById(userId).orElseThrow();
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto.getId(),
                     currentUserDto,
                     userProfileDto.getEntraUser(),
-                    List.of("Removed app role: " + roleName + " for app: " + appId),
+                    "Removed app role: " + roleName + " for app: " + appId,
                     "app_role_removed");
             eventService.logEvent(updateUserAuditEvent);
 
@@ -1652,9 +1677,10 @@ public class UserController {
 
             // Create audit event for the final access grant
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto.getId(),
                     currentUserDto,
                     userProfileDto.getEntraUser(),
-                    List.of("Access granted"),
+                    "Access granted",
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 
