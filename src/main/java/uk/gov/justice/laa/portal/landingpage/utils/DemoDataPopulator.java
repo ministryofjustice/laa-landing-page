@@ -300,8 +300,8 @@ public class DemoDataPopulator {
 
         // Users
         Set<UserPrincipal> userPrinciples = new HashSet<>();
-        userPrinciples.addAll(getUserPrincipals(adminUserPrincipals, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
-        userPrinciples.addAll(getUserPrincipals(nonAdminUserPrincipals, UserType.EXTERNAL_SINGLE_FIRM));
+        userPrinciples.addAll(getUserPrincipals(adminUserPrincipals, UserType.EXTERNAL));
+        userPrinciples.addAll(getUserPrincipals(nonAdminUserPrincipals, UserType.EXTERNAL));
         userPrinciples.addAll(getUserPrincipals(internalUserPrincipals, UserType.INTERNAL));
 
         List<AppRole> appRoles = laaAppRoleRepository.findAll();

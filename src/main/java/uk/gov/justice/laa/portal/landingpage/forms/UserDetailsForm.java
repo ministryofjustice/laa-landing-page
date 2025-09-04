@@ -26,5 +26,5 @@ public class UserDetailsForm {
     private String email;
 
     @NotNull(message = "Select a user type")
-    private UserType userType;
+    private Boolean userManager;
 }

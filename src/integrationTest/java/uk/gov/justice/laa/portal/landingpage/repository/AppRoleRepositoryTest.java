@@ -76,7 +76,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
-        appRole1.setUserTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN});
+        appRole1.setUserTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL});
         repository.saveAndFlush(appRole1);
 
 
@@ -87,7 +87,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
         Assertions.assertThat(result.getUserTypeRestriction()).hasSize(2);
         Assertions.assertThat(result.getUserTypeRestriction())
-                .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
+                .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL));
 
     }
 
