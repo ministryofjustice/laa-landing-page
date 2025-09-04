@@ -33,7 +33,7 @@ laa-apps:
     - name: ${app.ccms.account.link.name}
       title: CCMS case transfer requests
       description: >-
-        Transfer historical CCMS cases
+        Make and manage requests to transfer CCMS cases from legacy accounts to the new accounts
       url: ${app.ccms.account.link.url}
       laaApplicationDetails: ${app.ccms.account.link.details}
       ordinal: 4
