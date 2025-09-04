@@ -94,7 +94,7 @@ public class AccessControlServiceTest {
         EntraUser entraUser = EntraUser.builder().id(userId).email("test@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL).build();
         entraUser.getUserProfiles().add(userProfile);
 
         UUID firmId = UUID.randomUUID();
@@ -123,7 +123,7 @@ public class AccessControlServiceTest {
         UserProfileDto accessedUserProfile = UserProfileDto.builder()
                 .activeProfile(true)
                 .id(accessedUserId)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(accessedUser)
                 .build();
 
@@ -162,7 +162,7 @@ public class AccessControlServiceTest {
         UserProfileDto accessedUserProfile = UserProfileDto.builder()
                 .activeProfile(true)
                 .id(accessedUserId)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(accessedUser)
                 .build();
 
@@ -200,7 +200,7 @@ public class AccessControlServiceTest {
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).appRoles(Set.of(appRole)).build();
+                .entraUser(entraUser).userType(UserType.EXTERNAL).appRoles(Set.of(appRole)).build();
         entraUser.getUserProfiles().add(userProfile);
 
         CurrentUserDto entraUserDto = new CurrentUserDto();
@@ -235,7 +235,7 @@ public class AccessControlServiceTest {
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).appRoles(Set.of(appRole)).build();
+                .entraUser(entraUser).userType(UserType.EXTERNAL).appRoles(Set.of(appRole)).build();
         entraUser.getUserProfiles().add(userProfile);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
@@ -296,7 +296,7 @@ public class AccessControlServiceTest {
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .entraUser(entraUser).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).appRoles(Set.of(appRole)).build();
+                .entraUser(entraUser).userType(UserType.EXTERNAL).appRoles(Set.of(appRole)).build();
         entraUser.getUserProfiles().add(userProfile);
 
         UUID firmId = UUID.randomUUID();
@@ -327,7 +327,7 @@ public class AccessControlServiceTest {
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL).build();
         entraUser.getUserProfiles().add(userProfile);
 
         CurrentUserDto entraUserDto = new CurrentUserDto();

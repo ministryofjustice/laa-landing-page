@@ -95,7 +95,7 @@ class RoleChangeNotificationServiceTest {
         userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .legacyUserId(UUID.randomUUID())
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(entraUser)
                 .firm(firm)
                 .appRoles(Set.of(puiRole1, puiRole2, nonPuiRole))

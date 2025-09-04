@@ -159,7 +159,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Setup 5 external users with external user manager role.
         for (int i = 0; i < 5; i++) {
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "ExternalUserManager");
-            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
             profile.setFirm(testFirm1);
             AppRole externalUserManagerRole = allAppRoles.stream()
                     .filter(AppRole::isAuthzRole)
@@ -175,7 +175,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Setup 5 Firm1 External Users
         for (int i = 0; i < 5; i++) {
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
-            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
             profile.setAppRoles(Set.of());
             profile.setFirm(testFirm1);
             user.setUserProfiles(Set.of(profile));
@@ -186,7 +186,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Setup 5 Firm2 External Users
         for (int i = 0; i < 5; i++) {
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwo");
-            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL_SINGLE_FIRM, true);
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
             profile.setAppRoles(Set.of());
             profile.setFirm(testFirm2);
             user.setUserProfiles(Set.of(profile));

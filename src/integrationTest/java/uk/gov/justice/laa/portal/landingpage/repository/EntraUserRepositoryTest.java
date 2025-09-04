@@ -92,9 +92,9 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         entraUser1.setUserStatus(UserStatus.ACTIVE);
         entraUser1.setCreatedDate(LocalDateTime.now());
         repository.save(entraUser1);
-        UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
         userProfile11.setFirm(firm1);
-        UserProfile userProfile12 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile12 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
         userProfile12.setFirm(firm2);
         entraUser1.getUserProfiles().add(userProfile11);
         entraUser1.getUserProfiles().add(userProfile12);
@@ -105,7 +105,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         entraUser2.setUserStatus(UserStatus.AWAITING_USER_APPROVAL);
         entraUser2.setCreatedDate(LocalDateTime.now().minusDays(1));
         repository.save(entraUser2);
-        UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL_SINGLE_FIRM);
+        UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL);
         userProfile21.setFirm(firm1);
         entraUser2.getUserProfiles().add(userProfile21);
         userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile21));

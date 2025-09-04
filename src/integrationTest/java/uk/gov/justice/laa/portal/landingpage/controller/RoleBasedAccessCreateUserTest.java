@@ -34,6 +34,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
                 .findFirst();
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
+        assertThat(createdUserProfile.getAppRoles()).hasSize(0);
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -41,9 +42,9 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     @Transactional
-    public void testGlobalAdminCannotCreateInternalUser() throws Exception {
-        String email = "globalAdmin@creatinginternal.com";
-        MvcResult result = createUser(globalAdmins.getFirst(), email, UserType.INTERNAL, status().is3xxRedirection());
+    public void testGlobalAdminCanCreateExternalUserManager() throws Exception {
+        String email = "globalAdmin@creatingexternal.com";
+        MvcResult result = createUser(globalAdmins.getFirst(), email, true, status().is3xxRedirection());
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/user/create/confirmation");
 
@@ -53,7 +54,8 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
                 .findFirst();
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
-        assertThat(createdUserProfile.getUserType()).isNotEqualTo(UserType.INTERNAL);
+        assertThat(createdUserProfile.getAppRoles()).hasSize(1);
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -73,6 +75,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
                 .findFirst();
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
+        assertThat(createdUserProfile.getAppRoles()).hasSize(0);
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -80,9 +83,9 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     @Transactional
-    public void testExternalUserAdminCannotCreateInternalUser() throws Exception {
-        String email = "externalUserAdmin@creatinginternal.com";
-        MvcResult result = createUser(externalUserAdmins.getFirst(), email, UserType.INTERNAL, status().is3xxRedirection());
+    public void testExternalUserAdminCanCreateExternalUserManager() throws Exception {
+        String email = "externalUserAdmin@creatingexternal.com";
+        MvcResult result = createUser(externalUserAdmins.getFirst(), email, true, status().is3xxRedirection());
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/user/create/confirmation");
 
@@ -92,7 +95,8 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
                 .findFirst();
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
-        assertThat(createdUserProfile.getUserType()).isNotEqualTo(UserType.INTERNAL);
+        assertThat(createdUserProfile.getAppRoles()).hasSize(1);
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -143,10 +147,10 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
     }
 
     private MvcResult createUser(EntraUser loggedInUser, String email, ResultMatcher expectedResult) throws Exception {
-        return createUser(loggedInUser, email, UserType.EXTERNAL_SINGLE_FIRM, expectedResult);
+        return createUser(loggedInUser, email, false, expectedResult);
     }
 
-    private MvcResult createUser(EntraUser loggedInUser, String email, UserType userType, ResultMatcher expectedResult) throws Exception {
+    private MvcResult createUser(EntraUser loggedInUser, String email, boolean isUserManager, ResultMatcher expectedResult) throws Exception {
         MockHttpSession session = new MockHttpSession();
         // Create session user
         EntraUserDto user = EntraUserDto.builder()
@@ -164,8 +168,8 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
                 .build();
         session.setAttribute("firm", firmDto);
 
-        // Create session userType
-        session.setAttribute("selectedUserType", userType);
+        // Create session user manager
+        session.setAttribute("isUserManager", isUserManager);
 
         return this.mockMvc.perform(post("/admin/user/create/check-answers")
                         .with(userOauth2Login(loggedInUser))

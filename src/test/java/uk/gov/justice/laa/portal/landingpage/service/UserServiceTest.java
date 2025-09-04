@@ -231,7 +231,7 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, firm, UserType.EXTERNAL_SINGLE_FIRM, "admin");
+        userService.createUser(entraUserDto, firm, true, "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
     }
@@ -261,14 +261,14 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, firm, UserType.EXTERNAL_SINGLE_FIRM, "admin");
+        userService.createUser(entraUserDto, firm, false, "admin");
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
         assertThat(savedUser.getFirstName()).isEqualTo("Test");
         assertThat(savedUser.getLastName()).isEqualTo("User");
         assertThat(savedUser.getUserProfiles().iterator().next().getFirm().getName()).isEqualTo("Firm");
-        assertThat(savedUser.getUserProfiles().iterator().next().getUserType()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(savedUser.getUserProfiles().iterator().next().getUserType()).isEqualTo(UserType.EXTERNAL);
         verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
     }
 
@@ -500,7 +500,7 @@ class UserServiceTest {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
-                .userType(UserType.EXTERNAL_MULTI_FIRM).userProfileStatus(UserProfileStatus.COMPLETE).build();
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -508,7 +508,7 @@ class UserServiceTest {
         // Assert
         assertThat(userTypeByUsername).isNotNull();
         assertThat(userTypeByUsername).hasSize(1);
-        assertThat(userTypeByUsername.getFirst()).isEqualTo(UserType.EXTERNAL_MULTI_FIRM);
+        assertThat(userTypeByUsername.getFirst()).isEqualTo(UserType.EXTERNAL);
 
     }
 
@@ -517,9 +517,9 @@ class UserServiceTest {
         // Arrange
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
         UserProfile userProfile1 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
-                .userType(UserType.EXTERNAL_MULTI_FIRM).userProfileStatus(UserProfileStatus.COMPLETE).build();
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).userProfileStatus(UserProfileStatus.COMPLETE).build();
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile1, userProfile2));
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -527,7 +527,7 @@ class UserServiceTest {
         // Assert
         assertThat(userTypeByUsername).isNotNull();
         assertThat(userTypeByUsername).hasSize(2);
-        assertThat(userTypeByUsername).contains(UserType.EXTERNAL_MULTI_FIRM, UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        assertThat(userTypeByUsername).contains(UserType.EXTERNAL, UserType.EXTERNAL);
 
     }
 
@@ -550,7 +550,7 @@ class UserServiceTest {
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).entraUser(entraUser)
-                .userType(UserType.EXTERNAL_MULTI_FIRM).userProfileStatus(UserProfileStatus.COMPLETE).build();
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -937,7 +937,7 @@ class UserServiceTest {
         UUID profileId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL_AND_EXTERNAL).build();
-        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL_SINGLE_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -961,7 +961,7 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
-        UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).userType(UserType.EXTERNAL_MULTI_FIRM).build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1005,7 +1005,7 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
-        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1119,7 +1119,7 @@ class UserServiceTest {
                 .app(testApp)
                 .build();
         when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
-        List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL);
         Assertions.assertEquals(1, apps.size());
         Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
         ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
@@ -1195,7 +1195,7 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL_SINGLE_FIRM);
+                UserType.EXTERNAL);
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
@@ -1208,7 +1208,7 @@ class UserServiceTest {
     public void testGetAppRolesByAppIdAndUserTypeReturnsEmptyListWhenAppIdIsNotFound() {
         when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL_SINGLE_FIRM);
+                UserType.EXTERNAL);
         Assertions.assertEquals(0, returnedAppRoles.size());
     }
 
@@ -1317,26 +1317,11 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM)
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL)
                 .appRoles(Set.of(appRole)).userProfileStatus(UserProfileStatus.COMPLETE).build());
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isFalse();
-    }
-
-    @Test
-    void isUserCreationAllowed_Ok() {
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
-        assertThat(userService.isUserCreationAllowed(entraUser)).isTrue();
-    }
-
-    @Test
-    void isUserCreationAllowed_Failed() {
-        Set<UserProfile> userProfiles = Set
-                .of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN).userProfileStatus(UserProfileStatus.COMPLETE).build());
-        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
-        assertThat(userService.isUserCreationAllowed(entraUser)).isFalse();
     }
 
     @Nested
@@ -1998,7 +1983,7 @@ class UserServiceTest {
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            EntraUser result = userService.createUser(user, firmDto, UserType.EXTERNAL_SINGLE_FIRM, "admin");
+            EntraUser result = userService.createUser(user, firmDto, false, "admin");
 
             // Assert
             assertThat(result).isNotNull();
@@ -2024,13 +2009,13 @@ class UserServiceTest {
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            userService.createUser(user, firmDto, UserType.EXTERNAL_SINGLE_FIRM, "admin");
+            userService.createUser(user, firmDto, false, "admin");
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
             assertThat(capturedUser.getUserProfiles()).hasSize(1);
             UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+            assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
         }
     }
 
@@ -2091,7 +2076,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .userStatus(UserStatus.DEACTIVE) // Use DEACTIVE instead of INACTIVE
                     .userProfiles(Set.of(UserProfile.builder()
-                            .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                            .userType(UserType.EXTERNAL)
                             .build()))
                     .build();
             when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
@@ -2135,7 +2120,7 @@ class UserServiceTest {
 
             Set<UserProfile> userProfiles = Set.of(
                     UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).userType(UserType.INTERNAL).build(),
-                    UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM).build());
+                    UserProfile.builder().userType(UserType.EXTERNAL).build());
             UUID userId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
             when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
@@ -2369,7 +2354,7 @@ class UserServiceTest {
                 .thenReturn(List.of(appRole1, appRole2));
 
         // When
-        List<AppDto> result = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        List<AppDto> result = userService.getAppsByUserType(UserType.EXTERNAL);
 
         // Then
         assertThat(result).hasSize(2);
@@ -2640,19 +2625,19 @@ class UserServiceTest {
         // Given
         String searchTerm = "test";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(EntraUser.builder()
                         .firstName("Test")
                         .lastName("User")
@@ -2684,7 +2669,7 @@ class UserServiceTest {
         // Given
         String searchTerm = "test";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userTypes = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
@@ -2750,19 +2735,19 @@ class UserServiceTest {
     void getPageOfUsersBySearch_searchByFullName() {
         String searchTerm = "Test Name";
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
-        List<UserType> userTypes = UserType.EXTERNAL_TYPES;
+        UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(EntraUser.builder()
                         .firstName("Test")
                         .lastName("Name")
@@ -2810,7 +2795,7 @@ class UserServiceTest {
 
             UserProfile userProfile = UserProfile.builder()
                     .id(UUID.fromString(userProfileId))
-                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .userType(UserType.EXTERNAL)
                     .entraUser(entraUser)
                     .legacyUserId(UUID.randomUUID())
                     .build();
@@ -2876,7 +2861,7 @@ class UserServiceTest {
 
             UserProfile userProfile = UserProfile.builder()
                     .id(UUID.fromString(userProfileId))
-                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .userType(UserType.EXTERNAL)
                     .entraUser(entraUser)
                     .legacyUserId(UUID.randomUUID())
                     .build();
@@ -2943,7 +2928,7 @@ class UserServiceTest {
 
             UserProfile userProfile = UserProfile.builder()
                     .id(UUID.fromString(userProfileId))
-                    .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                    .userType(UserType.EXTERNAL)
                     .entraUser(entraUser)
                     .legacyUserId(UUID.randomUUID())
                     .build();
