@@ -143,6 +143,12 @@ jobs:
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
+      - name: Wait for new deployment to finish
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
       # Get DB identifier to use for Prometheus alerts & Grafana configuration
       - name: Get DB identifier
         run: |

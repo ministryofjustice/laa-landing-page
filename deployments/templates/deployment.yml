@@ -6,13 +6,18 @@ metadata:
     app: laa-landing-page
 spec:
   replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
-      app: laa-landing-page # this should match the selector in service.yml
+      app: laa-landing-page
   template:
     metadata:
       labels:
-        app: laa-landing-page # this should match the selector in service.yml
+        app: laa-landing-page
     spec:
       serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
@@ -44,13 +49,19 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            failureThreshold: 15
             periodSeconds: 10
           env:
             - name: JWT_URL
