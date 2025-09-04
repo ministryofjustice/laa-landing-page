@@ -665,9 +665,7 @@
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
                                 <span th:switch="${#strings.trim(user.userType)}">
                                     <span th:case="'INTERNAL'">Internal</span>
-                                    <span th:case="'EXTERNAL_SINGLE_FIRM_ADMIN'">Firm Admin</span>
-                                    <span th:case="'EXTERNAL_SINGLE_FIRM'">Firm User</span>
-                                    <span th:case="'EXTERNAL_MULTI_FIRM'">Multi Firm User</span>
+                                    <span th:case="'EXTERNAL'">External</span>
                                     <span th:case="*" th:text="${user.userType}"></span>
                                 </span>
                             </td>
