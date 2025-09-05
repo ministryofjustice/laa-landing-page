@@ -56,20 +56,20 @@ public class DistributedLockService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lockedUntil = now.plus(lockDuration);
 
-        int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
-        if (updated == 0) {
-            // Try to insert new lock
-            try {
+        try {
+            int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
+            if (updated == 0) {
+                // Try to insert new lock
                 DistributedLock lock = new DistributedLock();
                 lock.setKey(key);
                 lock.setLockedUntil(lockedUntil);
                 lock.setLockedBy(instanceId);
                 lockRepository.save(lock);
                 return true;
-            } catch (Exception e) {
-                log.debug("Failed to acquire lock for key: {}", key, e);
-                return false;
             }
+        } catch (Exception e) {
+            log.debug("Failed to acquire lock for key: {}", key, e);
+            return false;
         }
         return true;
     }
