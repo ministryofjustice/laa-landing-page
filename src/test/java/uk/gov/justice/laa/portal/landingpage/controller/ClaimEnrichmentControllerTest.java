@@ -103,7 +103,10 @@ class ClaimEnrichmentControllerTest {
         claims.put("user_email", "test@example.com");
         claims.put("laa_app_roles", testRoles);
         claims.put("laa_accounts", List.of("office-1", "office-2"));
-        
+        claims.put("firm_name", List.of("firm-1"));
+        claims.put("firm_id", List.of("123"));
+
+
         // Create response action
         ClaimEnrichmentResponse.ResponseAction action = ClaimEnrichmentResponse.ResponseAction.builder()
                 .odataType("microsoft.graph.tokenIssuanceStart.provideClaimsForToken")
@@ -143,6 +146,9 @@ class ClaimEnrichmentControllerTest {
         assertEquals("test@example.com", response.getBody().getData().getActions().get(0).getClaims().get("user_email"));
         assertEquals(testRoles, response.getBody().getData().getActions().get(0).getClaims().get("laa_app_roles"));
         assertEquals(List.of("office-1", "office-2"), response.getBody().getData().getActions().get(0).getClaims().get("laa_accounts"));
+        assertEquals(List.of("123"), response.getBody().getData().getActions().get(0).getClaims().get("firm_id"));
+        assertEquals(List.of("firm-1"), response.getBody().getData().getActions().get(0).getClaims().get("firm_name"));
+
 
         verify(claimEnrichmentService, times(1)).enrichClaim(testRequest);
     }

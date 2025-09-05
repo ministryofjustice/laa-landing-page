@@ -15,16 +15,16 @@ import java.util.List;
 public class UserSearchCriteria {
     private String searchTerm;
     private FirmSearchForm firmSearch;
-    private List<UserType> userTypes;
+    private UserType userType;
     private boolean showFirmAdmins;
 
     public UserSearchCriteria() {
     }
 
-    public UserSearchCriteria(String searchTerm, FirmSearchForm firmSearch, List<UserType> userTypes, boolean showFirmAdmins) {
+    public UserSearchCriteria(String searchTerm, FirmSearchForm firmSearch, UserType userType, boolean showFirmAdmins) {
         this.searchTerm = searchTerm;
         this.firmSearch = firmSearch;
-        this.userTypes = userTypes;
+        this.userType = userType;
         this.showFirmAdmins = showFirmAdmins;
     }
 
@@ -33,7 +33,7 @@ public class UserSearchCriteria {
         return "UserSearchCriteria{"
                 + "searchTerm='" + searchTerm + '\''
                 + ", firmSearch='" + firmSearch + '\''
-                + ", userTypes=" + userTypes
+                + ", userType=" + userType
                 + ", showFirmAdmins=" + showFirmAdmins
                 + '}';
     }

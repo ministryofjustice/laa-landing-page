@@ -26,6 +26,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -46,6 +47,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -69,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -83,6 +86,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -443,7 +447,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
@@ -454,6 +458,46 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_shouldReturnApprolesInOrdinalSortingOrder() {
+        // Arrange
+        String userId = "user52";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        AppDto appDto = AppDto.builder().build();
+        AppRoleDto appRoleDto1 = AppRoleDto.builder().name("Role One").ordinal(3).app(appDto).build();
+        AppRoleDto appRoleDto2 = AppRoleDto.builder().name("Role Two").ordinal(2).app(appDto).build();
+        AppRoleDto appRoleDto3 = AppRoleDto.builder().name("Role Three").ordinal(1).app(appDto).build();
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto1, appRoleDto2, appRoleDto3))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        String view = userController.manageUser(userId, model, session);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull();
+        List<AppRoleDto> appRoles = (List<AppRoleDto>) model.getAttribute("userAppRoles");
+        assertThat(appRoles.stream().map(AppRoleDto::getName))
+                .containsExactly("Role Three", "Role Two", "Role One");
         verify(userService).getUserProfileById(userId);
     }
 
@@ -485,7 +529,7 @@ class UserControllerTest {
         EntraUserDto mockUser = new EntraUserDto();
         mockUser.setFullName("Test User");
         when(session.getAttribute("user")).thenReturn(mockUser);
-        when(session.getAttribute("selectedUserType")).thenReturn(UserType.EXTERNAL_SINGLE_FIRM);
+        when(session.getAttribute("selectedUserType")).thenReturn(UserType.EXTERNAL);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         String view = userController.createUser(userDetailsForm, session, model);
         assertThat(model.getAttribute("user")).isNotNull();
@@ -500,7 +544,7 @@ class UserControllerTest {
         userDetailsForm.setFirstName("firstName");
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
-        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        userDetailsForm.setUserManager(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         HttpSession session = new MockHttpSession();
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
@@ -509,8 +553,8 @@ class UserControllerTest {
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
-        assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+        assertThat(isUserManager).isEqualTo(true);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
     }
 
@@ -524,7 +568,7 @@ class UserControllerTest {
         userDetailsForm.setFirstName("firstName");
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
-        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        userDetailsForm.setUserManager(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
         EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
@@ -533,8 +577,8 @@ class UserControllerTest {
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
-        UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
-        assertThat(selectedUserType).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+        assertThat(isUserManager).isEqualTo(true);
     }
 
     @Test
@@ -549,28 +593,10 @@ class UserControllerTest {
         userDetailsForm.setFirstName("firstName");
         userDetailsForm.setLastName("lastName");
         userDetailsForm.setEmail("email");
-        userDetailsForm.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        userDetailsForm.setUserManager(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
-    }
-
-    @Test
-    void testPostingInternalUserTypeGetRejected() {
-        EntraUserDto mockUser = new EntraUserDto();
-        mockUser.setFullName("Test User");
-        FirmDto firmDto = new FirmDto();
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("user", mockUser);
-        session.setAttribute("firm", firmDto);
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("firstName");
-        userDetailsForm.setLastName("lastName");
-        userDetailsForm.setEmail("email");
-        userDetailsForm.setUserType(UserType.INTERNAL);
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        userController.postUser(userDetailsForm, bindingResult, session, model);
-        verify(bindingResult).rejectValue(eq("userType"), eq("error.userType"), any());
     }
 
     @Test
@@ -641,6 +667,41 @@ class UserControllerTest {
         List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
         assertThat(sessionRoles.getFirst().isSelected()).isFalse();
         assertThat(sessionRoles.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    void getSelectedRolesGet_Should_present_appRoles_in_order() {
+        List<String> selectedApps = new ArrayList<>(Arrays.asList("app1", "app2"));
+        List<String> selectedRoles = new ArrayList<>(Arrays.asList("a1r2", "a1r3", "a2r2", "a2r3"));
+        AppDto app1 = AppDto.builder().id("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().id("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().id("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().name("a1r3").app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().name("a1r4").app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().name("a2r1").app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().name("a2r2").app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().name("a2r3").app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
+
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("apps", selectedApps);
+        session.setAttribute("roles", selectedRoles);
+        session.setAttribute("user", new EntraUserDto());
+        List<AppRoleDto> roles = new ArrayList<>(Arrays.asList(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2));
+        when(userService.getAppByAppId(any())).thenReturn(Optional.of(new AppDto()));
+        when(userService.getAppRolesByAppIdAndUserType(any(), any())).thenReturn(roles);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        String view = userController.getSelectedRoles(new RolesForm(), authentication, model, session);
+        assertThat(view).isEqualTo("add-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
+                .containsExactly("a2r3", "a2r1", "a2r2", "a1r3", "a1r4", "a1r1", "a1r2", "a3r1", "a3r2");
     }
 
     @Test
@@ -797,13 +858,13 @@ class UserControllerTest {
         selectedFirm.setId(firmId);
         selectedFirm.setName("Test Firm");
         session.setAttribute("firm", selectedFirm);
-        UserType selectedUserType = UserType.EXTERNAL_SINGLE_FIRM;
-        session.setAttribute("selectedUserType", selectedUserType);
+        session.setAttribute("isUserManager", true);
         String view = userController.getUserCheckAnswers(model, session);
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("firm")).isEqualTo(selectedFirm);
-        assertThat(model.getAttribute("userType")).isEqualTo(selectedUserType);
+        assertThat(model.getAttribute("isUserManager")).isEqualTo(true);
+
     }
 
     @Test
@@ -817,12 +878,12 @@ class UserControllerTest {
     void addUserCheckAnswersGetFirmAdmin() {
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", new EntraUserDto());
-        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("isUserManager", false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -843,12 +904,12 @@ class UserControllerTest {
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
         session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("isUserManager", false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -861,14 +922,14 @@ class UserControllerTest {
         EntraUserDto userDto = new EntraUserDto();
         session.setAttribute("user", userDto);
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
-        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("isUserManager", true);
         EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(entraUser);
+        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(entraUser);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), any(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -885,7 +946,7 @@ class UserControllerTest {
         session.setAttribute("roles", roles);
         List<String> selectedApps = List.of("app1");
         session.setAttribute("apps", selectedApps);
-        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("isUserManager", true);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication);
@@ -963,7 +1024,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         Assertions.assertEquals("edit-user-roles", view);
@@ -976,7 +1037,7 @@ class UserControllerTest {
         final String userId = "12345";
         // Setup test user call
         UserProfileDto testUserProfile = new UserProfileDto();
-        testUserProfile.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        testUserProfile.setUserType(UserType.EXTERNAL);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
@@ -1001,11 +1062,11 @@ class UserControllerTest {
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allRoles);
+        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL)).thenReturn(allRoles);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -1050,7 +1111,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         List<AppRoleViewModel> appRoleViewModels = (List<AppRoleViewModel>) model.getAttribute("roles");
@@ -1064,7 +1125,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.empty());
         // When
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, session));
+                () -> userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, session));
     }
 
     @Test
@@ -1105,7 +1166,7 @@ class UserControllerTest {
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(userId)
                 .entraUser(entraUser)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         UUID appId = UUID.randomUUID();
@@ -1118,7 +1179,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp));
 
         // When
-        String view = userController.editUserApps(userId.toString(), model);
+        String view = userController.editUserApps(userId.toString(), null, model);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");
@@ -1144,7 +1205,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, redirectAttributes);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
@@ -1164,7 +1225,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         HttpSession session = new MockHttpSession();
         // When - passing null for apps (simulates no checkboxes selected)
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), null, authentication, session, redirectAttributes);
 
         // Then - should redirect to manage user page when no apps selected
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -1174,7 +1235,7 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
     }
 
     @Test
@@ -1188,7 +1249,7 @@ class UserControllerTest {
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, redirectAttributes);
 
         // Then - should redirect to manage user page when empty apps list
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/manage/%s", userId));
@@ -1198,7 +1259,28 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
 
         // Verify that updateUserRoles was called with empty list to persist the change
-        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>());
+        verify(userService).updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId());
+    }
+
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleException() {
+        // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        UUID userId = UUID.randomUUID();
+        List<String> apps = new ArrayList<>(); // Empty list
+        HttpSession session = new MockHttpSession();
+        when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        RedirectAttributes attrs = new RedirectAttributesModelMap();
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, attrs);
+
+        // Then - should redirect back when role coverage exception thrown
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/apps", userId));
+        assertThat(attrs.getFlashAttributes().get("errorMessage")).isEqualTo("Attempt to remove own External User Manager, from user profile " + userId);
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
@@ -1319,15 +1401,15 @@ class UserControllerTest {
         final UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
-        when(userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(allApps);
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(allApps);
 
         // When
-        String view = userController.editUserApps(userId, model);
+        String view = userController.editUserApps(userId, null, model);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");
@@ -1348,7 +1430,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, authentication, testSession);
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, authentication, testSession, redirectAttributes);
 
         // Then
         assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
@@ -1486,7 +1568,6 @@ class UserControllerTest {
         verify(eventService).logEvent(captor.capture());
         UpdateUserAuditEvent updateUserAuditEvent = captor.getValue();
         assertThat(updateUserAuditEvent.getField()).isEqualTo("office");
-        assertThat(updateUserAuditEvent.getChangedValues()).hasSize(2);
     }
 
     @Test
@@ -1703,13 +1784,65 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
         @SuppressWarnings("unchecked")
         List<String> selectedApps = (List<String>) testSession.getAttribute("selectedApps");
         assertThat(selectedApps).containsExactlyInAnyOrder("app1", "app2");
+    }
+
+    @Test
+    void editUserRoles_shouldShowAppsAndRolesInOrder() {
+        // Given
+        String userId = "user123";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+
+        AppDto app1 = AppDto.builder().id("app-one").name("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().id("app-two").name("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().id("app-three").name("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().id("a1r1").name("a1r1").roleType(RoleType.EXTERNAL).app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().id("a1r2").name("a1r2").roleType(RoleType.EXTERNAL).app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().id("a1r3").name("a1r3").roleType(RoleType.EXTERNAL).app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().id("a1r4").name("a1r4").roleType(RoleType.EXTERNAL).app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().id("a2r1").name("a2r1").roleType(RoleType.EXTERNAL).app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().id("a2r2").name("a2r2").roleType(RoleType.EXTERNAL).app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().id("a2r3").name("a2r3").roleType(RoleType.EXTERNAL).app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().id("a3r1").name("a3r1").roleType(RoleType.EXTERNAL).app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().id("a3r2").name("a3r2").roleType(RoleType.EXTERNAL).app(app3).ordinal(2).build();
+
+        Set<AppDto> userApps = new LinkedHashSet<>(Arrays.asList(app1, app2, app3));
+
+        List<AppRoleDto> appRoles = List.of(a1r1, a1r2, a1r3, a1r4);
+
+        final UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppByAppId("app-one")).thenReturn(Optional.of(app1));
+        lenient().when(userService.getAppByAppId("app-two")).thenReturn(Optional.of(app2));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app-one"), any())).thenReturn(appRoles);
+        lenient().when(userService.getAppRolesByAppId("app-two")).thenReturn(List.of(a2r1, a2r2, a2r3));
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(appRoles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+
+        MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
+
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("roles")).isNotNull();
+        List<AppRoleViewModel> roles = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(roles.stream().map(AppRoleViewModel::getName)).containsExactly("a1r3", "a1r4", "a1r1", "a1r2");
     }
 
     @Test
@@ -1775,8 +1908,45 @@ class UserControllerTest {
         // The controller flattens all roles from all apps and passes them to
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
-        verify(userService).updateUserRoles(userId, allSelectedRoles);
+        verify(userService).updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId());
         verify(eventService).logEvent(any());
+    }
+
+    @Test
+    void updateUserRoles_shouldHandleRoleCoverageException() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role3"));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1", "role2"));
+        existingRoles.put(1, null);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("testUserName");
+        when(loginService.getCurrentUser(any())).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        // The controller flattens all roles from all apps and passes them to
+        // updateUserRoles
+        List<String> allSelectedRoles = List.of("role1", "role2", "role3");
+        when(userService.updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId()))
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+        // When - updating roles for last app (index 1)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
+                testSession);
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?errorMessage=" + "Attempt to remove own External User Manager, from user profile " + userId);
     }
 
     @Test
@@ -1916,7 +2086,7 @@ class UserControllerTest {
         List<AppRoleDto> roles = List.of(new AppRoleDto());
 
         when(userService.getAppByAppId("app2")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType("app2", UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType("app2", UserType.EXTERNAL)).thenReturn(roles);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
@@ -1952,6 +2122,7 @@ class UserControllerTest {
         testSession.setAttribute("apps", new ArrayList<String>()); // Empty apps list
         testSession.setAttribute("user", new EntraUserDto());
         testSession.setAttribute("officeData", new OfficeData());
+        testSession.setAttribute("isUserManager", false);
 
         // When
         String view = userController.getUserCheckAnswers(model, testSession);
@@ -1982,7 +2153,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .build();
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
@@ -2011,7 +2182,7 @@ class UserControllerTest {
 
         assertThat(view).isEqualTo("add-user-details");
         assertThat(model.getAttribute("user")).isNotNull();
-        assertThat(model.getAttribute("userTypes")).isNotNull();
+        assertThat(model.getAttribute("userTypes")).isNull();
         assertThat(model.getAttribute("selectedUserType")).isNull();
     }
 
@@ -2027,7 +2198,7 @@ class UserControllerTest {
 
         final Model model = new ExtendedModelMap();
         UserDetailsForm form = new UserDetailsForm();
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(false);
         String view = userController.postUser(form, result, session, model);
 
         assertThat(view).isEqualTo("add-user-details");
@@ -2043,7 +2214,7 @@ class UserControllerTest {
         form.setFirstName("A");
         form.setLastName("B");
         form.setEmail("a@b.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(false);
 
         final Model model = new ExtendedModelMap();
         HttpSession session = new MockHttpSession();
@@ -2051,7 +2222,7 @@ class UserControllerTest {
         String view = userController.postUser(form, result, session, model);
 
         assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
-        assertThat(session.getAttribute("selectedUserType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(session.getAttribute("isUserManager")).isEqualTo(false);
         assertThat(session.getAttribute("user")).isNotNull();
     }
 
@@ -2274,14 +2445,14 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("firm", FirmDto.builder().build());
-        session.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM);
+        session.setAttribute("isUserManager", false);
 
         String view = userController.getUserCheckAnswers(model, session);
 
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("firm")).isNotNull();
-        assertThat(model.getAttribute("userType")).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM);
+        assertThat(model.getAttribute("isUserManager")).isEqualTo(false);
     }
 
     @Test
@@ -2289,7 +2460,7 @@ class UserControllerTest {
         MockHttpSession mockSession = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
-        mockSession.setAttribute("selectedUserType", UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        mockSession.setAttribute("isUserManager", true);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -2297,7 +2468,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
                 .thenReturn(entraUser);
 
         // When
@@ -2305,7 +2476,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
-        verify(userService).createUser(eq(user), any(FirmDto.class), any(UserType.class), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
     }
 
     @Test
@@ -2350,7 +2521,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -2382,7 +2553,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
-        String view = userController.editUserRoles(userId, 5, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -2482,7 +2653,7 @@ class UserControllerTest {
         existingUser.setFirstName("Existing");
         existingUser.setLastName("User");
 
-        UserType existingUserType = UserType.EXTERNAL_SINGLE_FIRM;
+        UserType existingUserType = UserType.EXTERNAL;
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("user", existingUser);
@@ -2623,7 +2794,7 @@ class UserControllerTest {
 
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.randomUUID()) // Add ID to prevent null pointer
-                .userType(UserType.EXTERNAL_SINGLE_FIRM) // Add type to prevent null pointer
+                .userType(UserType.EXTERNAL) // Add type to prevent null pointer
                 .entraUser(user)
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
@@ -2751,7 +2922,7 @@ class UserControllerTest {
         final String userId = "550e8400-e29b-41d4-a716-446655440001";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        user.setUserType(UserType.EXTERNAL);
 
         AppDto app1 = new AppDto();
         app1.setId("app1");
@@ -2765,7 +2936,7 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
-        when(userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM)).thenReturn(availableApps);
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
 
         // When
         String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model, new MockHttpSession());
@@ -2824,7 +2995,7 @@ class UserControllerTest {
 
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserRoles(userId, new ArrayList<>());
+        verify(userService).updateUserRoles(userId, new ArrayList<>(), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
 
@@ -3006,7 +3177,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        verify(userService).updateUserRoles(userId, List.of("role1", "role2"));
+        verify(userService).updateUserRoles(userId, List.of("role1", "role2"), currentUserDto.getUserId());
         verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
@@ -3264,7 +3435,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3301,7 +3472,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3327,18 +3498,22 @@ class UserControllerTest {
         AppRoleDto providerRole = new AppRoleDto();
         providerRole.setId("provider1");
         providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
+        providerRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         AppRoleDto otherRole = new AppRoleDto();
         otherRole.setId("other1");
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
+        otherRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -3352,7 +3527,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3394,7 +3569,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3429,7 +3604,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3468,7 +3643,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.editUserRoles(userId, 0, new RolesForm(), authentication, model, testSession);
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
@@ -3573,26 +3748,32 @@ class UserControllerTest {
         AppRoleDto firmRole = new AppRoleDto();
         firmRole.setId("firm1");
         firmRole.setCcmsCode("XXCCMS_FIRM_USER");
+        firmRole.setApp(ccmsApp);
 
         AppRoleDto officeRole = new AppRoleDto();
         officeRole.setId("office1");
         officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
+        officeRole.setApp(ccmsApp);
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
         crossOfficeRole.setId("cross1");
         crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
+        crossOfficeRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId("chambers1");
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
+        chambersRole.setApp(ccmsApp);
 
         AppRoleDto counselRole = new AppRoleDto();
         counselRole.setId("counsel1");
         counselRole.setCcmsCode("XXCCMS_COUNSEL");
+        counselRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId("advocate1");
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setApp(ccmsApp);
 
         final List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole, advocateRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -3713,7 +3894,7 @@ class UserControllerTest {
         final String userId = "550e8400-e29b-41d4-a716-446655440011";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        user.setUserType(UserType.EXTERNAL);
 
         AppRoleDto appRole = new AppRoleDto();
         appRole.setId("role1");
@@ -3743,6 +3924,60 @@ class UserControllerTest {
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
         assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void grantAccessCheckAnswers_shouldShowAppsAndRolesInOrder() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().name("a1r3").app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().name("a1r4").app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().name("a2r1").app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().name("a2r2").app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().name("a2r3").app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
+
+        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
+
+        Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
+        List<OfficeDto> userOffices = List.of(officeDto);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
+        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+
+        // When
+        String view = userController.grantAccessCheckAnswers(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-check-answers");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        assertThat(
+                userRoles.entrySet().stream()
+                        .flatMap(entry -> entry.getValue().stream()
+                                .map(role -> entry.getKey() + " : " + role.getName()))
+                        .collect(Collectors.toList())).containsExactly("app-two : a2r3",
+                "app-two : a2r1",
+                "app-two : a2r2",
+                "app-one : a1r3",
+                "app-one : a1r4",
+                "app-one : a1r1",
+                "app-one : a1r2",
+                "app-three : a3r1",
+                "app-three : a3r2");
     }
 
     @Test
@@ -4109,7 +4344,7 @@ class UserControllerTest {
                     .userProfiles(Set.of(
                             UserProfile.builder()
                                     .activeProfile(true)
-                                    .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                                    .userType(UserType.EXTERNAL)
                                     .firm(Firm.builder()
                                             .id(userFirmId)
                                             .name("User's Firm")
