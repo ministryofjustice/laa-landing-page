@@ -63,7 +63,7 @@
                                 <div class="govuk-summary-list__row">
                                     <dt class="govuk-summary-list__key">User type</dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${userType.friendlyName}"></span>
+                                        <span th:text="${isUserManager} ? 'Provider Admin' : 'Provider User'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link" href="/admin/user/create/details">Change</a>

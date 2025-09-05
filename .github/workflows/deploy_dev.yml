@@ -94,6 +94,7 @@ jobs:
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
           POPULATE_TEST_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
           TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
           TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
@@ -139,6 +140,12 @@ jobs:
       - name: Deploy to Cloud Platform
         run: |
           kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
+      - name: Wait for new deployment to finish
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 

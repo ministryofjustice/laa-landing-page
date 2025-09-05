@@ -47,7 +47,7 @@ class UserProfileDtoTest {
         // Given
         UUID id = UUID.randomUUID();
         boolean activeProfile = true;
-        UserType userType = UserType.EXTERNAL_SINGLE_FIRM;
+        UserType userType = UserType.EXTERNAL;
         String legacyUserId = "legacy123";
         UserProfileStatus userProfileStatus = UserProfileStatus.COMPLETE;
         EntraUserDto entraUser = EntraUserDto.builder()
@@ -186,14 +186,14 @@ class UserProfileDtoTest {
         UserProfileDto userProfile1 = UserProfileDto.builder()
                 .id(id)
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .legacyUserId("legacy123")
                 .build();
 
         UserProfileDto userProfile2 = UserProfileDto.builder()
                 .id(id)
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .legacyUserId("legacy123")
                 .build();
 
@@ -208,7 +208,7 @@ class UserProfileDtoTest {
         UserProfileDto userProfile1 = UserProfileDto.builder()
                 .id(UUID.randomUUID())
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         UserProfileDto userProfile2 = UserProfileDto.builder()
@@ -229,7 +229,7 @@ class UserProfileDtoTest {
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(id)
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .legacyUserId("legacy123")
                 .build();
 
@@ -240,7 +240,7 @@ class UserProfileDtoTest {
         assertThat(toString).contains("UserProfileDto");
         assertThat(toString).contains(id.toString());
         assertThat(toString).contains("activeProfile=true");
-        assertThat(toString).contains("userType=EXTERNAL_SINGLE_FIRM");
+        assertThat(toString).contains("userType=EXTERNAL");
         assertThat(toString).contains("legacyUserId=legacy123");
     }
 
@@ -258,7 +258,7 @@ class UserProfileDtoTest {
         // When
         userProfile.setId(id);
         userProfile.setActiveProfile(true);
-        userProfile.setUserType(UserType.EXTERNAL_MULTI_FIRM);
+        userProfile.setUserType(UserType.EXTERNAL);
         userProfile.setLegacyUserId("legacy789");
         userProfile.setUserProfileStatus(UserProfileStatus.PENDING);
         userProfile.setEntraUser(entraUser);
@@ -273,7 +273,7 @@ class UserProfileDtoTest {
         // Then
         assertThat(userProfile.getId()).isEqualTo(id);
         assertThat(userProfile.isActiveProfile()).isTrue();
-        assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL_MULTI_FIRM);
+        assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
         assertThat(userProfile.getLegacyUserId()).isEqualTo("legacy789");
         assertThat(userProfile.getUserProfileStatus()).isEqualTo(UserProfileStatus.PENDING);
         assertThat(userProfile.getEntraUser()).isEqualTo(entraUser);
@@ -321,7 +321,7 @@ class UserProfileDtoTest {
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(userId)
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                .userType(UserType.EXTERNAL)
                 .legacyUserId("complex123")
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .entraUser(entraUser)
@@ -337,7 +337,7 @@ class UserProfileDtoTest {
         // Then
         assertThat(userProfile.getId()).isEqualTo(userId);
         assertThat(userProfile.isActiveProfile()).isTrue();
-        assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL_SINGLE_FIRM_ADMIN);
+        assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
         assertThat(userProfile.getLegacyUserId()).isEqualTo("complex123");
         assertThat(userProfile.getUserProfileStatus()).isEqualTo(UserProfileStatus.COMPLETE);
         

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -38,7 +39,7 @@ public class RoleChangeNotificationService {
      * @return true if successful
      */
     @Retryable(
-        retryFor = {Exception.class},
+        retryFor = {RuntimeException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 100)
     )
@@ -54,46 +55,48 @@ public class RoleChangeNotificationService {
             sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
-            log.warn("Failed to send CCMS role change message to SQS for user: {}: {}, saving roles to db and moving on",
+            log.warn("CCMS notification attempt failed for user: {}: {}",
                 userProfile.getEntraUser().getEntraOid(), e.getMessage());
-            throw e;
+            throw new RuntimeException("CCMS notification failed", e);
         }
     }
     
 
-    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
+    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)
-                && !UserType.INTERNAL_TYPES.contains(userProfile.getUserType())) {
-            try {
-                CcmsMessage message = CcmsMessage.builder()
-                        .userName(userProfile.getLegacyUserId().toString())
-                        .vendorNumber(userProfile.getFirm().getCode())
-                        .firstName(entraUser.getFirstName())
-                        .lastName(entraUser.getLastName())
-                        .timestamp(LocalDateTime.now())
-                        .email(entraUser.getEmail())
-                        .responsibilityKey(newPuiRoles.stream().map(AppRole::getCcmsCode).toList())
-                        .build();
+                && userProfile.getUserType() != UserType.INTERNAL) {
+            CcmsMessage message = CcmsMessage.builder()
+                    .userName(userProfile.getLegacyUserId().toString())
+                    .vendorNumber(userProfile.getFirm().getCode())
+                    .firstName(entraUser.getFirstName())
+                    .lastName(entraUser.getLastName())
+                    .timestamp(LocalDateTime.now())
+                    .email(entraUser.getEmail())
+                    .responsibilityKey(newPuiRoles.stream().map(AppRole::getCcmsCode).toList())
+                    .build();
 
-                String messageBody = objectMapper.writeValueAsString(message);
+            String messageBody = objectMapper.writeValueAsString(message);
+            log.info("CCMS role change message: {}", messageBody);
 
-                SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
-                        .queueUrl(sqsQueueUrl)
-                        .messageBody(messageBody)
-                        .messageGroupId("ccms-role-changes")
-                        .messageDeduplicationId(generateDeduplicationId(userProfile, newPuiRoles))
-                        .build();
+            SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
+                    .queueUrl(sqsQueueUrl)
+                    .messageBody(messageBody)
+                    .messageGroupId(userProfile.getLegacyUserId().toString())
+                    .messageDeduplicationId(generateDeduplicationId(userProfile, newPuiRoles))
+                    .build();
 
-                SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
-                log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
-                    entraUser.getEntraOid(), response.messageId());
-                
-            } catch (Exception e) {
-                log.error("Failed to send CCMS role change message to queue for user: {}", entraUser.getEntraOid(), e);
-                throw new RuntimeException("Failed to send message", e);
-            }
+            SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
+            log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
+                entraUser.getEntraOid(), response.messageId());
         }
+    }
+
+    @Recover
+    public boolean recoverFromRetryFailure(RuntimeException e, UserProfile userProfile) {
+        log.error("All retry attempts failed for CCMS notification for user: {}, saving roles to db and moving on",
+            userProfile.getEntraUser().getEntraOid(), e);
+        return false;
     }
 
     private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {

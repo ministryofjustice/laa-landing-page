@@ -177,7 +177,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any()))
                 .thenReturn(EntraUser.builder()
                         .id(UUID.randomUUID())
-                        .userProfiles(Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                        .userProfiles(Set.of(UserProfile.builder().activeProfile(true).userType(UserType.EXTERNAL)
                                 .userProfileStatus(UserProfileStatus.COMPLETE).firm(firm).build())).build());
         when(officeService.getOffice(any()))
                 .thenReturn(Office.builder().id(UUID.randomUUID()).firm(firm).build());
@@ -198,7 +198,7 @@ public class PdaControllerTest {
         when(loginService.getCurrentEntraUser(any()))
                 .thenReturn(EntraUser.builder()
                         .id(UUID.randomUUID())
-                        .userProfiles(Set.of(UserProfile.builder().userType(UserType.EXTERNAL_SINGLE_FIRM_ADMIN)
+                        .userProfiles(Set.of(UserProfile.builder().userType(UserType.EXTERNAL)
                                 .userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build())).build());
         when(officeService.getOffice(any()))
                 .thenReturn(Office.builder().id(UUID.randomUUID()).firm(firm2).build());

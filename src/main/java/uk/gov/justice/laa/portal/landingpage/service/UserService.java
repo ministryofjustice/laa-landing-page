@@ -141,7 +141,7 @@ public class UserService {
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
-            boolean isInternal = UserType.INTERNAL_TYPES.contains(userProfile.getUserType());
+            boolean isInternal = userProfile.getUserType() == UserType.INTERNAL;
             int before = roles.size();
             Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal
                     && appRole.getRoleType().equals(RoleType.INTERNAL);
@@ -222,7 +222,7 @@ public class UserService {
                 boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
                 if (removeManager && self) {
                     logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    throw new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId);
+                    throw new RoleCoverageException("You cannot remove your own External User Manager role");
                 }
                 if (existingManagers.getTotalElements() < 2 && removeManager) {
                     logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
@@ -455,7 +455,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-            UserType userType, String createdBy) {
+            boolean isUserManager, String createdBy) {
 
         RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
@@ -466,22 +466,22 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, userType, createdBy);
+        return persistNewUser(user, firm, isUserManager, createdBy);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-            UserType userType, String createdBy) {
+            boolean isUserManager, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         Firm firm = mapper.map(firmDto, Firm.class);
         Set<AppRole> appRoles = new HashSet<>();
-        if (userType == UserType.EXTERNAL_SINGLE_FIRM_ADMIN) {
+        if (isUserManager) {
             Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
             externalUserManagerRole.ifPresent(appRoles::add);
         }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
@@ -779,7 +779,7 @@ public class UserService {
 
     public boolean isInternal(String userId) {
         Optional<UserType> userType = getUserTypeByUserId(userId);
-        return userType.map(UserType.INTERNAL_TYPES::contains).orElse(false);
+        return userType.isPresent() && userType.get() == UserType.INTERNAL;
     }
 
     public boolean isInternal(UUID userId) {
@@ -821,11 +821,6 @@ public class UserService {
             logger.warn("User profile with id {} not found. Could not grant access.", userId);
             return false;
         }
-    }
-
-    public boolean isUserCreationAllowed(EntraUser entraUser) {
-        Optional<UserType> userType = getUserTypeByEntraUser(entraUser);
-        return userType.map(UserType::isAllowedToCreateUsers).orElse(false);
     }
 
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {

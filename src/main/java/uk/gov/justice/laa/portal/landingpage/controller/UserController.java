@@ -135,10 +135,10 @@ public class UserController {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, List.of(UserType.INTERNAL), showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL_TYPES, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -151,7 +151,7 @@ public class UserController {
                 }
                 FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm).orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL_TYPES, showFirmAdmins);
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL, showFirmAdmins);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -270,7 +270,7 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL_TYPES.contains(optionalUser.get().getUserType());
+        boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
 
@@ -291,7 +291,6 @@ public class UserController {
             user = new EntraUserDto();
         }
         UserType selectedUserType = (UserType) session.getAttribute("selectedUserType");
-        model.addAttribute("userTypes", List.of(UserType.EXTERNAL_SINGLE_FIRM_ADMIN, UserType.EXTERNAL_SINGLE_FIRM));
         model.addAttribute("selectedUserType", selectedUserType);
         // If user is already in session, populate the form with existing user details
         userDetailsForm = UserUtils.populateUserDetailsFormWithSession(userDetailsForm, user, session);
@@ -319,14 +318,6 @@ public class UserController {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
 
-        // Validate selected User Type
-        UserType selectedUserType = userDetailsForm.getUserType();
-        // Add a check to stop users injecting internal user types into create external
-        // user post request.
-        if (selectedUserType != null && !UserType.EXTERNAL_TYPES.contains(selectedUserType)) {
-            result.rejectValue("userType", "error.userType", "User type given must be Provider User or Provider Admin");
-        }
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
@@ -336,7 +327,6 @@ public class UserController {
             }
 
             model.addAttribute("userTypes", modelFromSession.getAttribute("userTypes"));
-            model.addAttribute("selectedUserType", userDetailsForm.getUserType());
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             return "add-user-details";
         }
@@ -347,7 +337,7 @@ public class UserController {
         user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
         user.setEmail(userDetailsForm.getEmail());
         session.setAttribute("user", user);
-        session.setAttribute("selectedUserType", userDetailsForm.getUserType());
+        session.setAttribute("isUserManager", userDetailsForm.getUserManager());
 
         // Clear the createUserDetailsModel from session to avoid stale data
         session.removeAttribute("createUserDetailsModel");
@@ -444,7 +434,7 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "apps", String.class).orElseGet(ArrayList::new);
         // TODO: Make this use the selected user type rather than a hard-coded type. Our
         // user creation flow is only for external users right now.
-        List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL_SINGLE_FIRM).stream()
+        List<AppViewModel> apps = userService.getAppsByUserType(UserType.EXTERNAL).stream()
                 .map(appDto -> {
                     AppViewModel appViewModel = mapper.map(appDto, AppViewModel.class);
                     appViewModel.setSelected(selectedApps.contains(appDto.getId()));
@@ -486,7 +476,7 @@ public class UserController {
         // TODO: Make this use the selected user type rather than a hard-coded type. Our
         // user creation flow is only for external users right now.
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(selectedAppIndex),
-                UserType.EXTERNAL_SINGLE_FIRM);
+                UserType.EXTERNAL);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<String> selectedRoles = getListFromHttpSession(session, "roles", String.class).orElseGet(ArrayList::new);
@@ -636,8 +626,8 @@ public class UserController {
         FirmDto selectedFirm = (FirmDto) session.getAttribute("firm");
         model.addAttribute("firm", selectedFirm);
 
-        UserType userType = (UserType) session.getAttribute("selectedUserType");
-        model.addAttribute("userType", userType);
+        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+        model.addAttribute("isUserManager", isUserManager);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
     }
@@ -647,18 +637,17 @@ public class UserController {
     public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
-        UserType userType = getObjectFromHttpSession(session, "selectedUserType", UserType.class).orElseThrow();
-
+        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
             FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUser entraUser = userService.createUser(user, selectedFirm,
-                    userType, currentUserDto.getName());
+                    userManager, currentUserDto.getName());
             session.setAttribute("userProfile",
                     mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
             CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                    selectedFirm.getName(), userType);
+                    selectedFirm.getName(), userManager);
             eventService.logEvent(createUserAuditEvent);
         } else {
             log.error("No user attribute was present in request. User not created.");
@@ -1705,7 +1694,7 @@ public class UserController {
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
-        model.addAttribute("externalUser", UserType.EXTERNAL_TYPES.contains(user.getUserType()));
+        model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";
