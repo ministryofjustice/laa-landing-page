@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'error'})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Page not found</title>
+</head>
+
+<body>
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper govuk-main-wrapper--l" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-l">Page not found</h1>
+                    <p class="govuk-body">
+                        If you typed the web address, check it is correct.
+                    </p>
+                    <p class="govuk-body">
+                        If you pasted the web address, check you copied the entire address.
+                    </p>
+                    <p class="govuk-body">
+                        If the web address is correct or you selected a link or button, contact our online support team if you need to speak to someone.
+                    </p>
+                    <div class="govuk-button-group">
+                        <a href="/home" class="govuk-button">Go to homepage</a>
+                        <a href="/admin/users" class="govuk-button govuk-button--secondary" sec:authorize="hasAnyAuthority('User.ReadWrite.All', 'User.Read.All')">
+                            Manage users
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

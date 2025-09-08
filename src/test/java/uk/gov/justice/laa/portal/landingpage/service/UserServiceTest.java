@@ -3067,7 +3067,7 @@ class UserServiceTest {
 
             RoleCoverageException rtEx = assertThrows(RoleCoverageException.class,
                     () -> userService.roleCoverage(oldRoles, newRoles, firm, userId, true));
-            assertThat(rtEx.getMessage()).contains("Attempt to remove own External User Manager, from user profile");
+            assertThat(rtEx.getMessage()).contains("You cannot remove your own External User Manager role");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
