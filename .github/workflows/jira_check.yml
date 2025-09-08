@@ -1,0 +1,16 @@
+name: 'Jira Ticket Check'
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check for Jira Ticket in PR Title'
+        uses: gsactions/pr-title-regex@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          regex: '([A-Z]+-[0-9]+)'
+          help-message: 'Please add a Jira ticket ID to the PR title (e.g., PROJ-123).'
