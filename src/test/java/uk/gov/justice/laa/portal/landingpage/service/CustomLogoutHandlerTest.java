@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -56,11 +55,14 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
+
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
         verify(loginService).logout(any(), any());
-        // Should not call LogoutService.buildAzureLogoutUrl() when azure_logout parameter is not present
+        // Should always call LogoutService.buildAzureLogoutUrl() now
+        verify(logoutService).buildAzureLogoutUrl();
     }
 
     @Test
@@ -74,7 +76,7 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
-        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
 
         logoutHandler.logout(request, response, realAuthToken);
         
@@ -94,7 +96,7 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
-        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
         
         // Mock the response to throw IOException when sendRedirect is called
         MockHttpServletResponse spyResponse = new MockHttpServletResponse() {
@@ -112,11 +114,11 @@ public class CustomLogoutHandlerTest {
         
         // Should set fallback response when IOException occurs
         assertThat(spyResponse.getStatus()).isEqualTo(302); // SC_FOUND
-        assertThat(spyResponse.getHeader("Location")).isEqualTo("/?message=logout");
+        assertThat(spyResponse.getHeader("Location")).isEqualTo("/?message=logout_partial");
     }
 
     @Test
-    public void logoutWithAzureLogoutParameterFalse_shouldNotRedirect() {
+    public void logoutWithAzureLogoutParameterFalse_shouldStillRedirect() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setParameter("azure_logout", "false");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -126,15 +128,18 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
+
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
         verify(loginService).logout(any(), any());
-        verify(logoutService, never()).buildAzureLogoutUrl();
+        // Should now always call buildAzureLogoutUrl regardless of parameter
+        verify(logoutService).buildAzureLogoutUrl();
     }
 
     @Test
-    public void logoutWithNullAzureLogoutParameter_shouldNotRedirect() {
+    public void logoutWithNullAzureLogoutParameter_shouldStillRedirect() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         // Don't set the parameter at all to test null case
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -144,15 +149,18 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
+
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
         verify(loginService).logout(any(), any());
-        verify(logoutService, never()).buildAzureLogoutUrl();
+        // Should now always call buildAzureLogoutUrl regardless of parameter
+        verify(logoutService).buildAzureLogoutUrl();
     }
 
     @Test
-    public void logoutWithEmptyAzureLogoutParameter_shouldNotRedirect() {
+    public void logoutWithEmptyAzureLogoutParameter_shouldStillRedirect() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setParameter("azure_logout", "");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -162,15 +170,18 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
+
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
         verify(loginService).logout(any(), any());
-        verify(logoutService, never()).buildAzureLogoutUrl();
+        // Should now always call buildAzureLogoutUrl regardless of parameter
+        verify(logoutService).buildAzureLogoutUrl();
     }
 
     @Test
-    public void logoutWithCaseInsensitiveAzureLogoutParameter_shouldOnlyWorkWithExactTrue() {
+    public void logoutWithCaseInsensitiveAzureLogoutParameter_shouldStillRedirect() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setParameter("azure_logout", "TRUE"); // uppercase
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -180,11 +191,13 @@ public class CustomLogoutHandlerTest {
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/login");
+
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
         verify(loginService).logout(any(), any());
-        // Should not call buildAzureLogoutUrl because "TRUE" != "true"
-        verify(logoutService, never()).buildAzureLogoutUrl();
+        // Should now always call buildAzureLogoutUrl regardless of parameter value
+        verify(logoutService).buildAzureLogoutUrl();
     }
 }

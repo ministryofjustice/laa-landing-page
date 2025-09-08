@@ -21,7 +21,7 @@ public class LogoutService {
      * @return The complete Azure AD logout URL
      */
     public String buildAzureLogoutUrl() {
-        String postLogoutRedirectUri = baseUrl + "/logout-success";
+        String postLogoutRedirectUri = baseUrl + "/login";
 
         return UriComponentsBuilder
                 .fromUri(URI.create("https://login.microsoftonline.com/" + tenantId + "/oauth2/v2.0/logout"))
