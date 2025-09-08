@@ -54,17 +54,16 @@ public class LoginController {
     }
 
     /**
-     * @param email input by user
-     * @return home view if successful, else login view
+     * @param email The user's email (optional)
+     * @return RedirectView to the Microsoft Entra ID login URL
      */
     @PostMapping("/login")
     public RedirectView handleLogin(@RequestParam("email") String email, RedirectAttributes redirectAttributes) {
-        if (email == null || email.trim().isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "An incorrect Username or Password was specified");
-            return new RedirectView("/");
-        }
         try {
+            if (email == null || email.trim().isEmpty()) {
+                String azureLoginUrl = loginService.buildAzureLoginUrl();
+                return new RedirectView(azureLoginUrl);
+            }
             String azureLoginUrl = loginService.buildAzureLoginUrl(email);
             return new RedirectView(azureLoginUrl);
         } catch (Exception e) {
@@ -101,10 +100,12 @@ public class LoginController {
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
                 }
                 model.addAttribute("isAdminUser", isAdmin);
-                
-                // Check if user has no roles assigned and determine user type for custom message
-                if (userSessionData.getUser() != null 
-                    && (userSessionData.getLaaApplications() == null || userSessionData.getLaaApplications().isEmpty())) {
+
+                // Check if user has no roles assigned and determine user type for custom
+                // message
+                if (userSessionData.getUser() != null
+                        && (userSessionData.getLaaApplications() == null
+                                || userSessionData.getLaaApplications().isEmpty())) {
                     boolean isInternal = userService.isInternal(userSessionData.getUser().getId());
                     model.addAttribute("userHasNoRoles", true);
                     model.addAttribute("isInternalUser", isInternal);
