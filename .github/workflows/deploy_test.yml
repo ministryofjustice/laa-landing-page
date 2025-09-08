@@ -11,6 +11,7 @@ concurrency:
 
 jobs:
   ecr:
+    if: github.ref == 'refs/heads/test'
     runs-on: ubuntu-latest
     environment: test
     permissions:
