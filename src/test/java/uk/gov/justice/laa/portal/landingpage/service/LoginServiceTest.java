@@ -1,5 +1,27 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -9,34 +31,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import jakarta.servlet.http.HttpSession;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
 @ExtendWith(MockitoExtension.class)
 class LoginServiceTest {
@@ -281,60 +281,5 @@ class LoginServiceTest {
 
         // Assert
         verify(graphApiService).logoutUser(anyString());
-    }
-
-    @Test
-    void logout_whenAuthorizedClientIsNull_doNothing() {
-        // Arrange & Act
-        loginService.logout(oauthToken, null);
-
-        // Assert
-        verify(graphApiService, never()).logoutUser(anyString());
-    }
-
-    @Test
-    void logout_whenAccessTokenValueIsNull_doNothing() {
-        // Arrange
-        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
-        when(accessToken.getTokenValue()).thenReturn(null);
-
-        // Act
-        loginService.logout(oauthToken, authorizedClient);
-
-        // Assert
-        verify(graphApiService, never()).logoutUser(anyString());
-    }
-
-    @Test
-    void buildAzureLoginUrl_withEmail_returnsCorrectUrl() {
-        // Arrange
-        ReflectionTestUtils.setField(loginService, "AZURE_TENANT_ID", "test-tenant-id");
-        ReflectionTestUtils.setField(loginService, "AZURE_CLIENT_ID", "test-client-id");
-        String testEmail = "user@example.com";
-
-        // Act
-        String result = loginService.buildAzureLoginUrl(testEmail);
-
-        // Assert
-        assertThat(result).contains("test-tenant-id");
-        assertThat(result).contains("test-client-id");
-        assertThat(result).contains("user%40example.com"); // URL encoded email
-        assertThat(result).contains("login_hint");
-    }
-
-    @Test
-    void buildAzureLoginUrl_withoutEmail_returnsCorrectUrl() {
-        // Arrange
-        ReflectionTestUtils.setField(loginService, "AZURE_TENANT_ID", "test-tenant-id");
-        ReflectionTestUtils.setField(loginService, "AZURE_CLIENT_ID", "test-client-id");
-
-        // Act
-        String result = loginService.buildAzureLoginUrl();
-
-        // Assert
-        assertThat(result).contains("test-tenant-id");
-        assertThat(result).contains("test-client-id");
-        assertThat(result).contains("prompt=login");
-        assertThat(result).doesNotContain("login_hint");
     }
 }

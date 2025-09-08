@@ -8,6 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -25,18 +26,13 @@ public class LogoutIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    public void testLogoutRedirectsToAzureLogout() throws Exception {
-        // Test that POST /logout redirects to Azure logout URL
+    public void testLogoutRedirectsToLogoutSuccessPage() throws Exception {
+        // Test that POST /logout redirects to /logout-success
         mockMvc.perform(post("/logout")
                 .with(oauth2Login())
                 .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(result -> {
-                    String redirectUrl = result.getResponse().getRedirectedUrl();
-                    assert redirectUrl != null && redirectUrl.contains("login.microsoftonline.com");
-                    assert redirectUrl.contains("oauth2/v2.0/logout");
-                    assert redirectUrl.contains("post_logout_redirect_uri");
-                });
+                .andExpect(redirectedUrl("/logout-success"));
     }
 
     @Test
