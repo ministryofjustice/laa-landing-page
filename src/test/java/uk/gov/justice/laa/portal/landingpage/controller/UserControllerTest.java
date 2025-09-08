@@ -2187,7 +2187,6 @@ class UserControllerTest {
                 .build();
         
         when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
-        when(userService.isInternal("internal-user-id")).thenReturn(true);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
@@ -2216,7 +2215,6 @@ class UserControllerTest {
                 .build();
         
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
-        when(userService.isInternal("external-user-id")).thenReturn(false);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
