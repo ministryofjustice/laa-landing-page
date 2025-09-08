@@ -1,12 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,14 +18,12 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import jakarta.servlet.http.HttpSession;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Service class for handling login-related logic.
@@ -48,6 +47,7 @@ public class LoginService {
     @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
     private String redirectUri;
 
+
     public LoginService(UserService userService, GraphApiService graphApiService) {
         this.userService = userService;
         this.graphApiService = graphApiService;
@@ -65,34 +65,21 @@ public class LoginService {
 
         return String.format(
                 "https://login.microsoftonline.com/%s/oauth2/v2.0/authorize?client_id=%s&response_type=code&scope=openid%%20profile%%20email&redirect_uri=%s&login_hint=%s&response_mode=query",
-                AZURE_TENANT_ID, AZURE_CLIENT_ID, encodedRedirectUri, encodedEmail);
-    }
-
-    /**
-     * Constructs the Microsoft Entra ID login URL without email.
-     *
-     * @return The login URL.
-     */
-    public String buildAzureLoginUrl() {
-        String encodedRedirectUri = URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
-
-        return String.format(
-                "https://login.microsoftonline.com/%s/oauth2/v2.0/authorize?client_id=%s&response_type=code&scope=openid%%20profile%%20email&redirect_uri=%s&response_mode=query&prompt=login",
-                AZURE_TENANT_ID, AZURE_CLIENT_ID, encodedRedirectUri);
+                AZURE_TENANT_ID, AZURE_CLIENT_ID, encodedRedirectUri, encodedEmail
+        );
     }
 
     /**
      * Will fetch user session data
      *
      * @param authentication   The authentication object containing user details.
-     * @param authorizedClient The authorized OAuth2 client providing the access
-     *                         token.
+     * @param authorizedClient The authorized OAuth2 client providing the access token.
      * @param session          The HTTP session used to store the access token.
      * @return A {@link UserSessionData} object containing the user data
      */
     public UserSessionData processUserSession(Authentication authentication,
-            OAuth2AuthorizedClient authorizedClient,
-            HttpSession session) {
+                                              OAuth2AuthorizedClient authorizedClient,
+                                              HttpSession session) {
         if (authentication == null) {
             return null;
         }
@@ -123,7 +110,7 @@ public class LoginService {
     /**
      * Will fetch current logged-in user
      *
-     * @param authentication The authentication object containing user details.
+     * @param authentication   The authentication object containing user details.
      * @return A {@link CurrentUserDto} object containing the user data
      */
     public CurrentUserDto getCurrentUser(Authentication authentication) {
@@ -160,7 +147,7 @@ public class LoginService {
     }
 
     public void logout(Authentication authentication,
-            OAuth2AuthorizedClient authorizedClient) {
+                       OAuth2AuthorizedClient authorizedClient) {
         if (authentication == null || authorizedClient == null) {
             return;
         }

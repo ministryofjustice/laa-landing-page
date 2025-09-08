@@ -87,45 +87,41 @@ class LoginControllerTest {
     }
 
     @Test
-    void givenBlankEmail_whenHandleLoginPost_thenRedirectsToAzure() {
+    void givenBlankEmail_whenHandleLoginPost_thenRedirectsWithErrorFlash() {
 
         // Arrange
-        String expectedUrl = "https://login.test/no-hint";
-        when(loginService.buildAzureLoginUrl()).thenReturn(expectedUrl);
         RedirectAttributes attrs = new RedirectAttributesModelMap();
 
         // Act
         RedirectView result = controller.handleLogin("   ", attrs);
 
         // Assert
-        assertThat(result.getUrl()).isEqualTo(expectedUrl);
-        verify(loginService).buildAzureLoginUrl();
-        assertThat(attrs.getFlashAttributes()).isEmpty();
+        assertThat(result.getUrl()).isEqualTo("/");
+        assertThat(attrs.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("An incorrect Username or Password was specified");
     }
 
     @Test
-    void givenNullEmail_whenHandleLoginPost_thenRedirectsToAzure() {
+    void givenNullEmail_whenHandleLoginPost_thenRedirectsWithErrorFlash() {
 
         // Arrange
-        String expectedUrl = "https://login.test/no-hint";
-        when(loginService.buildAzureLoginUrl()).thenReturn(expectedUrl);
         RedirectAttributes attrs = new RedirectAttributesModelMap();
 
         // Act
         RedirectView result = controller.handleLogin(null, attrs);
 
         // Assert
-        assertThat(result.getUrl()).isEqualTo(expectedUrl);
-        verify(loginService).buildAzureLoginUrl();
-        assertThat(attrs.getFlashAttributes()).isEmpty();
+        assertThat(result.getUrl()).isEqualTo("/");
+        assertThat(attrs.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("An incorrect Username or Password was specified");
     }
 
     @Test
-    void givenValidEmail_whenHandleLoginPost_thenRedirectsToAzureWithHint() {
+    void givenValidEmail_whenHandleLoginPost_thenRedirectsToAzure() {
 
         // Arrange
-        String email = "test@test.com";
-        String expectedUrl = "https://login.test/with-hint";
+        String email = "foo@bar.com";
+        String expectedUrl = "https://login.test/?hint=foo%40bar.com";
         when(loginService.buildAzureLoginUrl(email)).thenReturn(expectedUrl);
         RedirectAttributes attrs = new RedirectAttributesModelMap();
 
