@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Check for Jira Ticket in PR Title'
-        uses: gsactions/pr-title-regex@v1
+        uses: deepakputhraya/action-pr-title@v6
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           regex: '([A-Z]+-[0-9]+)'
