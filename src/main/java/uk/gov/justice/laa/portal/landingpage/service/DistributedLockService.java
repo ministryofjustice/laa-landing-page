@@ -26,8 +26,8 @@ public class DistributedLockService {
     private final String instanceId = UUID.randomUUID().toString();
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> T withLock(String lockKey, Duration lockDuration, Supplier<T> task) {
         if (acquireLock(lockKey, lockDuration)) {
@@ -42,8 +42,8 @@ public class DistributedLockService {
     }
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void withLock(String lockKey, Duration lockDuration, Runnable task) {
         withLock(lockKey, lockDuration, () -> {
