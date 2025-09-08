@@ -13,4 +13,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           regex: '([A-Z]+-[0-9]+)'
-          help-message: 'Please add a Jira ticket ID to the PR title (e.g., PROJ-123).'
+          allowed_prefixes: 'STB'
+          prefix_case_sensitive: false
+          verbal_description: 'Please add a Jira ticket ID to the PR title (e.g., STB-123).'
