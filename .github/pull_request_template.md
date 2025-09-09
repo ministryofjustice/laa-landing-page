@@ -17,6 +17,7 @@
 - [ ] I have taken into account the application runs as 3 replicas in live environments
 - [ ] I have created any relevant documentation for this change
 - [ ] I have a corresponding JIRA ticket for this change 
+- [ ] I have added relevant unit & integration tests where applicable
 
 ---
 
