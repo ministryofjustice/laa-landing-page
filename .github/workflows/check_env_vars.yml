@@ -1,0 +1,100 @@
+name: Check for Missing Environment Variables
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-variables:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files_ignore_pattern: |
+            **/*.md
+            **/*.txt
+          dir_names: true
+          json: true
+
+      - name: Find and check environment variables
+        id: check-env
+        run: |
+          # The files to check for the environment variables
+          files_to_check=(
+            ".github/workflows/deploy_dev.yml"
+            ".github/workflows/deploy_test.yml"
+            ".github/workflows/deploy_prd.yml"
+            "deployments/templates/deployment.yml"
+          )
+
+          # Get the list of changed files in the src directory from the previous step
+          changed_src_files=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | jq -r '.[] | select(. | startswith("src/"))')
+
+          if [ -z "$changed_src_files" ]; then
+            echo "No changes in src directory. Skipping check."
+            exit 0
+          fi
+
+          # Find all unique environment variables in the changed files
+          env_vars=$(grep -hE '\$\{[A-Za-z0-9_]+\}' $changed_src_files | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
+
+          if [ -z "$env_vars" ]; then
+            echo "No environment variables found in changed src files. Skipping check."
+            exit 0
+          fi
+
+          comment_body=""
+          # Check if each variable exists in the specified files
+          for var in $env_vars; do
+            var_name=$(echo "$var" | sed -E 's/\$\{//' | sed -E 's/\}//')
+            
+            missing_in_files=()
+            for file in "${files_to_check[@]}"; do
+              if ! grep -q "$var_name" "$file"; then
+                missing_in_files+=("$file")
+              fi
+            done
+
+            if [ ${#missing_in_files[@]} -gt 0 ]; then
+              if [ -z "$comment_body" ]; then
+                comment_body=":warning: **Missing Environment Variables**\n\nI found some new environment variables in your changes that are missing from the following deployment files:\n"
+              fi
+              comment_body+="\n- **\`$var_name\`** is missing from:\n"
+              for missing_file in "${missing_in_files[@]}"; do
+                comment_body+="  - \`$missing_file\`\n"
+              done
+            fi
+          done
+
+          if [ -n "$comment_body" ]; then
+            echo "comment_body<<EOF" >> $GITHUB_ENV
+            echo -e "$comment_body" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            exit 1 # Fail the job
+          fi
+      
+      - name: Add comment to PR
+        if: failure() && steps.check-env.conclusion == 'failure'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{ env.comment_body }}`
+            })
