@@ -787,6 +787,7 @@ public class UserController {
         // Update user details
         //TODO audit log needed
         userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        session.removeAttribute("editUserDetailsForm");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
 
@@ -829,30 +830,11 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
-            Authentication authentication,
-            HttpSession session, RedirectAttributes redirectAttributes) {
+            HttpSession session) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
         if (selectedApps.isEmpty()) {
-            // Update user to have no roles (empty list)
-            /*UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            try {
-                CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        userProfileDto != null ? userProfileDto.getId() : null,
-                        currentUserDto,
-                        userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                        changed, "apps");
-                eventService.logEvent(updateUserAuditEvent);
-            } catch (RoleCoverageException e) {
-                String errorMessage = e.getMessage();
-                redirectAttributes.addFlashAttribute("errorMessage",
-                        errorMessage);
-                UUID uuid = UUID.fromString(id);
-                return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
-            }*/
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
             UUID uuid = UUID.fromString(id);
@@ -974,7 +956,6 @@ public class UserController {
      * 
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
-     * @param authentication   Authentication object for the current user
      * @param session          HttpSession to store selected apps and roles
      * @return Redirect view to the user management page or next app roles page
      * @throws IllegalArgumentException If the user ID is invalid or not found
@@ -985,8 +966,7 @@ public class UserController {
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
-            Authentication authentication,
-            Model model, HttpSession session) {
+            HttpSession session) {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
@@ -1008,30 +988,6 @@ public class UserController {
         }
         session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
         if (selectedAppIndex >= selectedApps.size() - 1) {
-            /*
-            // Clear the userEditRolesModel and page roles from session to avoid stale data
-            session.removeAttribute("userEditRolesModel");
-            session.removeAttribute("editUserAllSelectedRoles");
-            // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
-                    .flatMap(List::stream)
-                    .toList();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                try {
-                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
-                    UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                            editorProfile.getId(),
-                            currentUserDto,
-                            user != null ? user.getEntraUser() : null, changed,
-                            "role");
-                    eventService.logEvent(updateUserAuditEvent);
-                }  catch (RoleCoverageException e) {
-                    String errorMessage = e.getMessage();
-                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
-                }
-            }*/
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         } else {
             return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
@@ -1335,20 +1291,12 @@ public class UserController {
         // Edit User Apps/Roles Form
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
-        session.removeAttribute("userEditRolesModel");
-        session.removeAttribute("editUserRoles");
-        session.removeAttribute("availableRoles");
-        session.removeAttribute("userAssignedRoles");
-        session.removeAttribute("selectedAppIndex");
-        session.removeAttribute("editUserRolesCurrentApp");
-        session.removeAttribute("editUserRolesSelectedAppIndex");
 
         // Edit User Apps Form
-        session.removeAttribute("userAssignedApps");
-        session.removeAttribute("availableApps");
 
         // Edit User Offices Form
         session.removeAttribute("editUserOfficesModel");
+        session.removeAttribute("officesForm");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
