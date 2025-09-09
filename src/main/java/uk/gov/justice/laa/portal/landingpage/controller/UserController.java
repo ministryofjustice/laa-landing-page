@@ -55,10 +55,12 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -92,6 +94,7 @@ public class UserController {
     private final ModelMapper mapper;
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
+    private final EmailValidationService emailValidationService;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -320,6 +323,11 @@ public class UserController {
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
+        }
+
+        if (!emailValidationService.hasMxRecords(userDetailsForm.getEmail())) {
+            result.rejectValue("email", "email.invalidDomain", "The email address domain is not valid or cannot receive emails.");
+            return "add-user-details";
         }
 
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
