@@ -4539,11 +4539,13 @@ class UserControllerTest {
         List<String> canEditMethods = List.of("editUser",
                 "editUserApps", "setSelectedAppsEdit",
                 "editUserRoles", "updateUserRoles",
+                "updateUserDetailsSubmit", "editUserRolesCheckAnswerSubmit",
+                "updateUserDetailsCheck", "editUserRolesCheckAnswer",
                 "grantUserAccess", "grantAccessEditUserApps",
                 "grantAccessSetSelectedApps", "grantAccessEditUserRoles",
                 "grantAccessUpdateUserRoles", "grantAccessCheckAnswers",
                 "removeAppRole", "grantAccessProcessCheckAnswers",
-                "grantAccessConfirmation");
+                "grantAccessConfirmation", "editUserConfirmation");
         List<String> canAcessMethods = List.of("manageUser");
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
@@ -4559,12 +4561,8 @@ class UserControllerTest {
                 continue;
             }
             // Methods with more complicated permissions
-            if (List.of("updateUserDetails", "editUserDetails").contains(method.getName())) {
-                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)"
-                        + " && @accessControlService.canEditUser(#id)");
-            }
-            if (List.of("updateUserOffices", "grantAccessEditUserOffices", "grantAccessUpdateUserOffices", "editUserOffices").contains(method.getName())) {
+            if (List.of("updateUserOffices", "grantAccessEditUserOffices", "grantAccessUpdateUserOffices", "editUserOffices",
+                    "updateUserOfficesSubmit", "updateUserOfficesCheck").contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
                 assertThat(anno.value()).isEqualTo("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
                         + " && @accessControlService.canEditUser(#id)");
