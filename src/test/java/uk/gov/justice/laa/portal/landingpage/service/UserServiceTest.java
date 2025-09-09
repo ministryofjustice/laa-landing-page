@@ -3151,4 +3151,16 @@ class UserServiceTest {
                     .contains("Attempt to remove last Global Admin, from user profile");
         }
     }
+
+    @Test
+    void getRolesByIdIn() {
+        AppRole appRole1 = AppRole.builder().id(UUID.randomUUID()).name("ap1").build();
+        AppRole appRole2 = AppRole.builder().id(UUID.randomUUID()).build();
+        AppRole appRole3 = AppRole.builder().id(UUID.randomUUID()).build();
+        List<AppRole> appRoles = List.of(appRole1, appRole2, appRole3);
+        when(mockAppRoleRepository.findAllByIdIn(any())).thenReturn(appRoles);
+        Map<String, AppRoleDto> rolesByIdIn = userService.getRolesByIdIn(List.of());
+        assertThat(rolesByIdIn).hasSize(3);
+        assertThat(rolesByIdIn.get(appRole1.getId().toString()).getName()).isEqualTo("ap1");
+    }
 }
