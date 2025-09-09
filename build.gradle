@@ -80,6 +80,9 @@ dependencies {
     // Validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
+    // Logging
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
     // Spring Retry for declarative retry logic
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
