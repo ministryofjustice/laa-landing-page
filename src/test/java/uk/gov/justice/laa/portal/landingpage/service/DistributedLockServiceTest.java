@@ -58,7 +58,6 @@ class DistributedLockServiceTest {
     void withLock_WhenLockNotAcquired_ShouldNotExecuteTask() {
         // Given
         when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
-        when(lockRepository.save(any())).thenThrow(new RuntimeException("Error acquiring lock"));
 
         // When/Then
         assertThrows(

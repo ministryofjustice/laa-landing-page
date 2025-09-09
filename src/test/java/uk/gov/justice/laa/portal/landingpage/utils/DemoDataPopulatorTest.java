@@ -106,7 +106,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataAlreadyExists() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         when(firmRepository.findFirmByName("Firm One")).thenReturn(Firm.builder().name("Firm One").build());
 
@@ -117,7 +117,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataErrorAddingData() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
 
         // Mocked response from Graph API
@@ -135,7 +135,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataErrorAddingCustomApps() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
 
         // Mocked response from Graph API
@@ -149,7 +149,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataErrorAddingCustomUser() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("test"));
 
@@ -164,7 +164,7 @@ class DemoDataPopulatorTest {
     @Test
     void populateDummyDataEnabled() {
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         demoDataPopulator.appReady(applicationReadyEvent);
         verifyMockCalls(1);
     }
@@ -180,7 +180,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabledWithAdditionalUsers() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
@@ -190,7 +190,7 @@ class DemoDataPopulatorTest {
 
     @Test
     void populateDummyDataEnabledWithAdditionalAppsAndUsers() {
-        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(0);
+        when(lockRepository.acquireLock(anyString(), any(), anyString())).thenReturn(1);
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "adminUserPrincipals", Set.of("testadmin@email.com:123"));
         ReflectionTestUtils.setField(demoDataPopulator, "nonAdminUserPrincipals", Set.of("testuser@email.com:1234"));
@@ -325,7 +325,7 @@ class DemoDataPopulatorTest {
     @Test
     void shouldHandleLockAcquisitionFailure() {
         // Given
-        when(lockRepository.save(any()))
+        when(lockRepository.acquireLock(any(), any(), any()))
             .thenThrow(new RuntimeException("Lock acquisition failed"));
 
         // When/Then
