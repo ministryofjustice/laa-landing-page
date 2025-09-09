@@ -1,15 +1,4 @@
----
-name: SILAS Pull Request
-about: Create a pull request to contribute to the project.
-title: '[JIRA-TICKET-NUMBER]: Brief description of changes'
-labels: ''
-assignees: ''
-
----
-
 ### Description :pencil:
-
-:pencil: Please fill in. :pencil:
 
 ---
 
@@ -32,3 +21,5 @@ assignees: ''
 ---
 
 ### Additional Context :pencil:
+
+---
