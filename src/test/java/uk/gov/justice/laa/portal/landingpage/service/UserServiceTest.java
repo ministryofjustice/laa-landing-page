@@ -1074,7 +1074,7 @@ class UserServiceTest {
     }
 
     @Test
-    void userExistsByEmail_logsWarning_whenGraphThrowsException() {
+    void userExistsByEmail_logsDebug_whenGraphThrowsException() {
         String email = "test@example.com";
         when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
         UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
@@ -1082,9 +1082,9 @@ class UserServiceTest {
         when(usersRequestBuilder.byUserId(email).get()).thenThrow(new RuntimeException("Not found"));
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         assertThat(userService.userExistsByEmail(email)).isFalse();
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
-        assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage())
+        List<ILoggingEvent> debugLogs = LogMonitoring.getLogsByLevel(listAppender, Level.DEBUG);
+        assertThat(debugLogs).isNotEmpty();
+        assertThat(debugLogs.getFirst().getFormattedMessage())
                 .contains("No user found in Entra with matching email. Catching error and moving on");
     }
 
