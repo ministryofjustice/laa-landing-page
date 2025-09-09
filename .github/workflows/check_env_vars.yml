@@ -19,7 +19,7 @@ jobs:
 
       - name: Get changed files in src directory
         id: changed-src-files
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v46
         with:
           # We only care about files inside the 'src' directory
           files: |
