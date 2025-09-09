@@ -19,22 +19,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed files
-        id: changed-files
+      - name: Get changed files in src directory
+        id: changed-src-files
         uses: tj-actions/changed-files@v44
         with:
-          files_ignore_pattern: |
-            **/*.md
-            **/*.txt
-          dir_names: true
-          json: true
+          files: |
+            src/**
 
       - name: Find and check environment variables
         id: check-env
-        env:
-          CHANGED_FILES_JSON: ${{ steps.changed-files.outputs.all_changed_files }}
+        if: steps.changed-src-files.outputs.any_changed == 'true'
         run: |
-          # The files to check for the environment variables
+          # List of files where variables must exist
           files_to_check=(
             ".github/workflows/deploy_dev.yml"
             ".github/workflows/deploy_test.yml"
@@ -42,30 +38,18 @@ jobs:
             "deployments/templates/deployment.yml"
           )
 
-          # Read the changed files from the environment variable
-          changed_src_files=$(echo "$CHANGED_FILES_JSON" | jq -r '.[] | select(. | startswith("src/"))')
+          # Find all unique environment variables from the changed files
+          # Note: We read the file names from the output of the previous step
+          env_vars=$(grep -hE '\$\{[A-Za-z0-9_]+\}' ${{ steps.changed-src-files.outputs.all_changed_files }} 2>/dev/null | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
 
-          if [ -z "$changed_src_files" ];
-          then
-            echo "No relevant files changed in src directory. Skipping."
-            # Set the output so the comment step is skipped
-            echo "should_comment=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Find all unique environment variables in the changed files
-          env_vars=$(grep -hE '\$\{[A-Za-z0-9_]+\}' $changed_src_files 2>/dev/null | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
-
-
-          if [ -z "$env_vars" ];
-          then
-            echo "No environment variables found in changed src files. Skipping."
+          if [ -z "$env_vars" ]; then
+            echo "No new environment variables found in the changed files."
             echo "should_comment=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           comment_body=""
-          # Check if each variable exists in the specified files
+          # Check if each variable exists in the deployment files
           for var in $env_vars; do
             var_name=$(echo "$var" | sed -E 's/\$\{//' | sed -E 's/\}//')
             
@@ -80,7 +64,7 @@ jobs:
 
             if [ ${#missing_in_files[@]} -gt 0 ]; then
               if [ -z "$comment_body" ]; then
-                comment_body=":warning: **Missing Environment Variables**\n\nI found new environment variables in your changes that are missing from one or more deployment files. Please add them to ensure the deployments don't fail:\n"
+                comment_body=":warning: **Missing Environment Variables**\n\nI found new environment variables in your changes that are missing from key deployment files. Please add them to ensure deployments don't fail:\n"
               fi
               comment_body+="\n- **\`$var_name\`** is missing from:\n"
               for missing_file in "${missing_in_files[@]}"; do
@@ -90,7 +74,7 @@ jobs:
           done
 
           if [ -n "$comment_body" ]; then
-            # Use a unique delimiter for multiline strings to safely pass to the next step
+            # Safely export the comment body for the next step
             delimiter=$(openssl rand -hex 8)
             echo "comment_body<<${delimiter}" >> $GITHUB_ENV
             echo -e "${comment_body}" >> $GITHUB_ENV
@@ -99,6 +83,7 @@ jobs:
             echo "should_comment=true" >> $GITHUB_OUTPUT
             exit 1 # Fail the job
           else
+            echo "All variables are present. Good to go!"
             echo "should_comment=false" >> $GITHUB_OUTPUT
           fi
 
@@ -116,6 +101,4 @@ jobs:
                 repo: context.repo.repo,
                 body: body
               });
-            } else {
-              core.info('Comment body was empty, so no comment was posted.');
             }
