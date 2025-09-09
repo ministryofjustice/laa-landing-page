@@ -1179,7 +1179,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp));
 
         // When
-        String view = userController.editUserApps(userId.toString(), null, model);
+        String view = userController.editUserApps(userId.toString(), null, model, session);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");
@@ -1409,7 +1409,7 @@ class UserControllerTest {
         when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(allApps);
 
         // When
-        String view = userController.editUserApps(userId, null, model);
+        String view = userController.editUserApps(userId, null, model, session);
 
         // Then
         assertThat(view).isEqualTo("edit-user-apps");

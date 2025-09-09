@@ -50,18 +50,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -932,5 +922,12 @@ public class UserService {
         } else {
             logger.warn("User profile with id {} not found. Could not remove app role.", userProfileId);
         }
+    }
+
+    public Map<String, AppRoleDto> getRolesByIdIn(Collection<UUID> roleIds) {
+        return appRoleRepository.findAllByIdIn(roleIds).stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .collect(Collectors.toMap(AppRoleDto::getId,
+                        Function.identity()));
     }
 }
