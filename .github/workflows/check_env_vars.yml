@@ -16,18 +16,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Get changed files in src directory
         id: changed-src-files
         uses: tj-actions/changed-files@v44
         with:
+          # We only care about files inside the 'src' directory
           files: |
             src/**
 
       - name: Find and check environment variables
         id: check-env
+        # This step only runs if there are changed files in the 'src' directory
         if: steps.changed-src-files.outputs.any_changed == 'true'
         run: |
           # List of files where variables must exist
@@ -38,9 +38,20 @@ jobs:
             "deployments/templates/deployment.yml"
           )
 
-          # Find all unique environment variables from the changed files
-          # Note: We read the file names from the output of the previous step
-          env_vars=$(grep -hE '\$\{[A-Za-z0-9_]+\}' ${{ steps.changed-src-files.outputs.all_changed_files }} 2>/dev/null | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
+          # Create an empty temporary file to store results
+          found_vars_temp_file=$(mktemp)
+
+          # Safely loop through each changed file to find environment variables
+          echo "${{ steps.changed-src-files.outputs.all_changed_files }}" | while read -r file; do
+            # Ensure the file exists (i.e., it wasn't deleted in the PR)
+            if [ -f "$file" ]; then
+              grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" >> "$found_vars_temp_file"
+            fi
+          done
+          
+          # Now, get the unique variables from our temporary file
+          env_vars=$(cat "$found_vars_temp_file" | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
+          rm "$found_vars_temp_file"
 
           if [ -z "$env_vars" ]; then
             echo "No new environment variables found in the changed files."
@@ -74,26 +85,29 @@ jobs:
           done
 
           if [ -n "$comment_body" ]; then
-            # Safely export the comment body for the next step
             delimiter=$(openssl rand -hex 8)
             echo "comment_body<<${delimiter}" >> $GITHUB_ENV
             echo -e "${comment_body}" >> $GITHUB_ENV
             echo "${delimiter}" >> $GITHUB_ENV
             
             echo "should_comment=true" >> $GITHUB_OUTPUT
-            exit 1 # Fail the job
+            exit 1
           else
-            echo "All variables are present. Good to go!"
             echo "should_comment=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Add comment to PR
         if: failure() && steps.check-env.outputs.should_comment == 'true'
         uses: actions/github-script@v6
+        # Pass the comment body as an environment variable to the script
+        env:
+          COMMENT_BODY: ${{ env.comment_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const body = `${{ env.comment_body }}`;
+            // Read the comment from the environment variable to avoid syntax errors
+            const body = process.env.COMMENT_BODY;
+            
             if (body && body.trim()) {
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
