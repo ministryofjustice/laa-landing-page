@@ -13,9 +13,16 @@ import java.time.LocalDateTime;
 public interface DistributedLockRepository extends JpaRepository<DistributedLock, String> {
 
     @Modifying
-    @Query("UPDATE DistributedLock l SET l.lockedUntil = :lockedUntil, l.lockedBy = :lockedBy "
-            + "WHERE l.key = :key AND (l.lockedUntil < CURRENT_TIMESTAMP OR l.lockedBy = :lockedBy)")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Query(value = """
+                INSERT INTO distributed_lock (lock_key, locked_until, locked_by)
+                VALUES (:key, :lockedUntil, :lockedBy)
+                ON CONFLICT (lock_key)
+                DO UPDATE SET
+                    locked_until = EXCLUDED.locked_until,
+                    locked_by = EXCLUDED.locked_by
+                WHERE distributed_lock.locked_until < CURRENT_TIMESTAMP
+            """, nativeQuery = true)
+    @Transactional
     int acquireLock(@Param("key") String key,
                     @Param("lockedUntil") LocalDateTime lockedUntil,
                     @Param("lockedBy") String lockedBy);
