@@ -26,8 +26,8 @@ public class DistributedLockService {
     private final String instanceId = UUID.randomUUID().toString();
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> T withLock(String lockKey, Duration lockDuration, Supplier<T> task) {
         if (acquireLock(lockKey, lockDuration)) {
@@ -42,8 +42,8 @@ public class DistributedLockService {
     }
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void withLock(String lockKey, Duration lockDuration, Runnable task) {
         withLock(lockKey, lockDuration, () -> {
@@ -56,20 +56,20 @@ public class DistributedLockService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lockedUntil = now.plus(lockDuration);
 
-        int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
-        if (updated == 0) {
-            // Try to insert new lock
-            try {
+        try {
+            int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
+            if (updated == 0) {
+                // Try to insert new lock
                 DistributedLock lock = new DistributedLock();
                 lock.setKey(key);
                 lock.setLockedUntil(lockedUntil);
                 lock.setLockedBy(instanceId);
                 lockRepository.save(lock);
                 return true;
-            } catch (Exception e) {
-                log.debug("Failed to acquire lock for key: {}", key, e);
-                return false;
             }
+        } catch (Exception e) {
+            log.debug("Failed to acquire lock for key: {}", key, e);
+            return false;
         }
         return true;
     }
