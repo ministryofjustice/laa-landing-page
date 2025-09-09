@@ -58,6 +58,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -120,6 +121,8 @@ class UserControllerTest {
     private RedirectAttributes redirectAttributes;
     @Mock
     private RoleAssignmentService roleAssignmentService;
+    @Mock
+    private EmailValidationService emailValidationService;
 
     private Model model;
     private FirmSearchForm firmSearchForm;
@@ -127,7 +130,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
-                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService);
+                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
