@@ -1,9 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +31,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -49,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -59,14 +76,6 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -85,12 +94,14 @@ public class UserController {
     private final ModelMapper mapper;
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
+    private final EmailValidationService emailValidationService;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
-    public List<FirmDto> getFirms(Authentication authentication, @RequestParam(value = "q", defaultValue = "") String query) {
+    public List<FirmDto> getFirms(Authentication authentication,
+            @RequestParam(value = "q", defaultValue = "") String query) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         return firmService.getUserAccessibleFirms(entraUser, query);
     }
@@ -136,10 +147,12 @@ public class UserController {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
+                    showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
+                    showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -150,9 +163,11 @@ public class UserController {
                 if (selectedFirmId != null && !optionalFirm.get().getId().equals(selectedFirmId)) {
                     throw new RuntimeException("Firm access denied");
                 }
-                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm).orElse(FirmSearchForm.builder().build());
+                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
+                        .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL, showFirmAdmins);
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
+                        showFirmAdmins);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -224,9 +239,9 @@ public class UserController {
                 || (size != null && size != 10)
                 || (page != null && page != 1)
                 || (firmSearchForm != null
-                && firmSearchForm.getSelectedFirmId() != null
-                && firmSearchForm.getFirmSearch() != null
-                && !firmSearchForm.getFirmSearch().isEmpty());
+                        && firmSearchForm.getSelectedFirmId() != null
+                        && firmSearchForm.getFirmSearch() != null
+                        && !firmSearchForm.getFirmSearch().isEmpty());
     }
 
     @GetMapping("/users/edit/{id}")
@@ -317,6 +332,11 @@ public class UserController {
 
         if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
             result.rejectValue("email", "error.email", "Email address already exists");
+        }
+
+        if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
+            result.rejectValue("email", "email.invalidDomain",
+                    "The email address domain is not valid or cannot receive emails.");
         }
 
         if (result.hasErrors()) {
@@ -1863,7 +1883,7 @@ public class UserController {
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
             String usertype, String search, boolean showFirmAdmins,
-                                                      boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
+            boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
 
         if (backButton) {
             // Use session filters when back button is used
@@ -1913,7 +1933,6 @@ public class UserController {
 
         // Store current filter state in session for future back navigation
         session.setAttribute("userListFilters", result);
-
 
         return result;
     }

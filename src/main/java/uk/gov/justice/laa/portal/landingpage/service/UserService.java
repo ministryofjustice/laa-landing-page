@@ -570,7 +570,7 @@ public class UserService {
                     .byUserId(email)
                     .get();
         } catch (Exception ex) {
-            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
+            logger.debug("No user found in Entra with matching email. Catching error and moving on.");
         }
         return user.isPresent() || graphUser != null;
     }

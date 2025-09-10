@@ -19,6 +19,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class InternalUserPollingTest {
@@ -42,6 +43,7 @@ class InternalUserPollingTest {
     @Test
     void shouldAcquireLockAndCallPollForNewUsers_whenPollingEnabled() {
         // When
+        when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
         internalUserPolling.poll();
 
         // Then
@@ -88,6 +90,7 @@ class InternalUserPollingTest {
     @Test
     void shouldOnlyAllowOneInstanceToAcquireLock() {
         // Given
+        when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
         setPollingEnabled(true);
         InternalUserPolling anotherInstance = new InternalUserPolling(internalUserPollingService, lockService);
 
@@ -108,6 +111,7 @@ class InternalUserPollingTest {
     @Test
     void shouldReleaseLockAfterPolling() {
         // When
+        when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
         internalUserPolling.poll();
 
         // Then
