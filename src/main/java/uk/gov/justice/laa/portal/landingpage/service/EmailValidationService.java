@@ -33,9 +33,11 @@ public class EmailValidationService {
         try {
             return future.get(30, TimeUnit.SECONDS);
         } catch (TimeoutException timeoutEx) {
-            throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
+            log.error("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
+            throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!");
         } catch (Exception ex) {
-            throw new RuntimeException("Error while performing email domain validation. Possibly the email domain is invalid!", ex);
+            log.error("Error while performing email domain validation. Possibly the email domain is invalid!", ex);
+            throw new RuntimeException("Error while performing email domain validation. Possibly the email domain is invalid!");
         }
 
     }
