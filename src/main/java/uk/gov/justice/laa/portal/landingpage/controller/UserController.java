@@ -6,6 +6,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -881,6 +883,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
+            RolesForm rolesForm,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
             Model model, HttpSession session) {
