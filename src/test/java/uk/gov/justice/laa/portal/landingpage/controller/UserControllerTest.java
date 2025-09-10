@@ -29,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -1629,21 +1630,21 @@ class UserControllerTest {
         String userId = "user123";
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
-        testSession.setAttribute("editUserRoles", List.of("role1"));
-        testSession.setAttribute("userEditRolesModel", new ExtendedModelMap());
-        testSession.setAttribute("editUserRolesCurrentApp", new AppDto());
-        testSession.setAttribute("editUserRolesSelectedAppIndex", 0);
-
+        testSession.setAttribute("editUserOfficesModel", new ExtendedModelMap());
+        testSession.setAttribute("user", UserProfile.builder().build());
+        testSession.setAttribute("officesForm", new OfficesForm());
+        testSession.setAttribute("editUserAllSelectedRoles", new HashMap<>());
+        testSession.setAttribute("editUserDetailsForm", new EditUserDetailsForm());
         // When
         String view = userController.cancelUserEdit(userId, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
         assertThat(testSession.getAttribute("selectedApps")).isNull();
-        assertThat(testSession.getAttribute("editUserRoles")).isNull();
-        assertThat(testSession.getAttribute("userEditRolesModel")).isNull();
-        assertThat(testSession.getAttribute("editUserRolesCurrentApp")).isNull();
-        assertThat(testSession.getAttribute("editUserRolesSelectedAppIndex")).isNull();
+        assertThat(testSession.getAttribute("user")).isNull();
+        assertThat(testSession.getAttribute("officesForm")).isNull();
+        assertThat(testSession.getAttribute("editUserAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
     }
 
     @Test
@@ -1958,6 +1959,26 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles");
+    }
+
+    @Test
+    void editUserConfirmation() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("testUserName");
+        final UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        // When
+        String view = userController.editUserConfirmation(userId, model);
+        // Then
+        assertThat(view).isEqualTo("edit-user-confirmation");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("User updated - testUserName");
     }
 
     @Test
@@ -2599,29 +2620,6 @@ class UserControllerTest {
         // Both roles should be deselected since no roles were provided in form
         assertThat(roles.get(0).isSelected()).isFalse();
         assertThat(roles.get(1).isSelected()).isFalse();
-    }
-
-    @Test
-    void updateUserOffices_shouldHandleNullOfficesForm() throws IOException {
-        // Given
-        final String userId = "user123";
-        OfficesForm form = new OfficesForm();
-        form.setOffices(null); // Null offices list
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setUserId(UUID.randomUUID());
-        currentUserDto.setName("tester");
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
-
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserOffices(userId, new ArrayList<>());
-        assertThat(testSession.getAttribute("editUserOfficesModel")).isNull();
     }
 
     @Test
