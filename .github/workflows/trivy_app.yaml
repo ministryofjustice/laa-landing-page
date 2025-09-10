@@ -24,7 +24,7 @@ jobs:
 
       # enable vulnerability and secret detection as well as misconfiguration detection
       - name: Run Trivy Vulnerability Scanner in Repo Mode
-        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
         with:
           scan-type: 'fs'
           scanners: misconfig,vuln,secret
