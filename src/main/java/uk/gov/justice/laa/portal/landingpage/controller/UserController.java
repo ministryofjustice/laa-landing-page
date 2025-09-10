@@ -749,8 +749,6 @@ public class UserController {
             // errors
             return "edit-user-details";
         }
-        // Update user details
-        //userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
         return "redirect:/admin/users/edit/" + id + "/details-check-answer";
     }
 
@@ -758,8 +756,11 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsCheck(@PathVariable String id, Model model,
                                           HttpSession session) throws IOException {
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
+        if (Objects.isNull(editUserDetailsForm)) {
+            return "redirect:/admin/users/manage/" + id;
+        }
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - Check your answers - " + user.getFullName());
@@ -779,9 +780,9 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsSubmit(@PathVariable String id,
                                     HttpSession session) throws IOException {
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(user) || Objects.isNull(editUserDetailsForm)) {
+        if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
         }
         // Update user details
