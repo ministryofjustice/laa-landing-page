@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -1000,6 +999,12 @@ public class UserController {
                                            @RequestParam(value = "errorMessage", required = false) String errorMessage,
                                            Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
+        if (editUserAllSelectedRoles == null) {
+            return "redirect:/admin/users/manage/" + id;
+        }
         UserType userType = user.getUserType();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
@@ -1007,7 +1012,6 @@ public class UserController {
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
 
-        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
         List<UUID> roleIds = editUserAllSelectedRoles.values()
                 .stream()
                 .flatMap(List::stream)
@@ -1016,7 +1020,7 @@ public class UserController {
         Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
         List<UserRole> selectedAppRole = new ArrayList<>();
-        if (Objects.isNull(editUserAllSelectedRoles) || editUserAllSelectedRoles.isEmpty()) {
+        if (editUserAllSelectedRoles.isEmpty()) {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
             int size = editUserAllSelectedRoles.size();
@@ -1064,7 +1068,7 @@ public class UserController {
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
-            return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
+            return "redirect:/admin/users/manage/" + id;
         }
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
