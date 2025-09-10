@@ -861,7 +861,6 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
-            RolesForm rolesForm,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Authentication authentication,
             Model model, HttpSession session) {
@@ -971,7 +970,7 @@ public class UserController {
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
 
-        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         @SuppressWarnings("unchecked")
@@ -1059,7 +1058,7 @@ public class UserController {
                                                  Authentication authentication) {
         UUID uuid = UUID.fromString(id);
 
-        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
@@ -1218,9 +1217,7 @@ public class UserController {
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
-        // Handle "ALL" option
         if (!selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available offices by firm
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1252,15 +1249,15 @@ public class UserController {
             return "redirect:/admin/users/edit/" + id + "/offices";
         }
         // Update user offices
+        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
 
         String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                userProfileDto != null ? userProfileDto.getId() : null,
+                userProfileDto.getId(),
                 currentUserDto,
-                userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
