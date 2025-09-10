@@ -38,6 +38,7 @@ jobs:
             "POSTGRES_PASSWORD"
             "POSTGRES_USERNAME"
             "INTERNAL_USER_SECURITY_GROUP"
+            "CONSOLE_LOG_PATTERN"
           )
           # --------------------------------------------------------------------------
 
