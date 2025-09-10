@@ -1535,43 +1535,7 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUserOffices_shouldUpdateOfficesAndRedirect() throws IOException {
-        // Given
-        OfficesForm form = new OfficesForm();
-        form.setOffices(List.of("office1", "office2"));
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
-        OfficeModel.Address address = OfficeModel.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-        OfficeModel of1 = new OfficeModel();
-        of1.setId("office1");
-        of1.setAddress(address);
-        OfficeModel of2 = new OfficeModel();
-        of2.setId("office2");
-        of2.setAddress(address);
-        List<OfficeModel> officeData = List.of(of1, of2);
-        model.addAttribute("officeData", officeData);
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("editUserOfficesModel", model);
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setUserId(UUID.randomUUID());
-        currentUserDto.setName("tester");
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        String userId = "user123";
-        // When
-        String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
-
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
-        ArgumentCaptor<UpdateUserAuditEvent> captor = ArgumentCaptor.forClass(UpdateUserAuditEvent.class);
-        verify(eventService).logEvent(captor.capture());
-        UpdateUserAuditEvent updateUserAuditEvent = captor.getValue();
-        assertThat(updateUserAuditEvent.getField()).isEqualTo("office");
-    }
-
-    @Test
-    void updateUserOffices_shouldHandleAccessToAllOffices() throws IOException {
+    void updateUserOffices_shouldSaveOfficeForm() throws IOException {
         // Given
         final String userId = "user123";
         OfficesForm form = new OfficesForm();
@@ -1579,19 +1543,13 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setUserId(UUID.randomUUID());
-        currentUserDto.setName("tester");
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         MockHttpSession testSession = new MockHttpSession();
         // When
         String view = userController.updateUserOffices(userId, form, bindingResult, model, testSession);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-        // Should pass 'All' to service when option is selected
-        List<String> expectedOfficeIds = List.of("ALL");
-        verify(userService).updateUserOffices(userId, expectedOfficeIds);
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/offices-check-answer");
+        assertThat(testSession.getAttribute("officesForm")).isNotNull();
     }
 
     @Test
@@ -1621,7 +1579,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-offices");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("officeData")).isEqualTo(officeData);
-        verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
     }
 
     @Test
