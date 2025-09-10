@@ -37,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -45,6 +46,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -457,8 +459,13 @@ public class UserService {
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
             boolean isUserManager, String createdBy) {
 
-        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
-        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
+        if(!registerUserResponse.isSuccess()){
+            throw new TechServicesClientException(registerUserResponse.getError().getMessage(),
+                    registerUserResponse.getError().getCode(), registerUserResponse.getError().getErrors());
+        }
+
+        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
             user.setEntraOid(createdUser.getId());

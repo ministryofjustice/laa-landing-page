@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,8 @@ public class TechServicesConfigTest {
     private CacheManager cacheManager;
     @Mock
     private JwtDecoder jwtDecoder;
+    @Mock
+    private ObjectMapper objectMapper;
 
     private TechServicesConfig techServicesConfig;
 
@@ -47,7 +50,7 @@ public class TechServicesConfigTest {
     void techServicesConfig_shouldCreateTechServicesNotifierInstance() {
         RestClient client = techServicesConfig.restClient("http://localhost");
         TechServicesClient techServicesClient = techServicesConfig.liveTechServicesClient(
-                clientSecretCredential, client, entraUserRepository, cacheManager, jwtDecoder);
+                clientSecretCredential, client, entraUserRepository, cacheManager, jwtDecoder, objectMapper);
 
         assertThat(techServicesClient).isNotNull();
         assertThat(techServicesClient).isInstanceOf(TechServicesClient.class);
