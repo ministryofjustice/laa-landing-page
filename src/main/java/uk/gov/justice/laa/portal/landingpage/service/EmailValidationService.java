@@ -1,21 +1,44 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.Hashtable;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import java.util.Hashtable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
+@Slf4j
 public class EmailValidationService {
 
-    private static final Logger log = LoggerFactory.getLogger(EmailValidationService.class);
+    private static final ExecutorService executor = new ThreadPoolExecutor(10, 100, 3600,
+            TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000));
+
+    public boolean isValidEmailDomain(String email) {
+
+        Future<Boolean> future = executor.submit(() -> {
+            return hasMxRecords(email);
+        });
+
+
+        try {
+            return future.get(30, TimeUnit.SECONDS);
+        } catch (TimeoutException timeoutEx) {
+            throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
+        } catch (Exception ex) {
+            throw new RuntimeException("Error while performing email domain validation. Possibly the email domain is invalid!", ex);
+        }
+
+    }
 
     /**
      * Checks if the domain of a given email address has valid MX records.
@@ -23,7 +46,7 @@ public class EmailValidationService {
      * @param email The email address to validate.
      * @return true if MX records are found, false otherwise.
      */
-    public boolean hasMxRecords(String email) {
+    protected boolean hasMxRecords(String email) {
         if (email == null || !email.contains("@")) {
             return false;
         }
@@ -37,7 +60,7 @@ public class EmailValidationService {
             env.put("java.naming.provider.url", "dns:");
 
             DirContext dirContext = new InitialDirContext(env);
-            Attributes attrs = dirContext.getAttributes(domain, new String[] { "MX" });
+            Attributes attrs = dirContext.getAttributes(domain, new String[]{"MX"});
             Attribute mxAttr = attrs.get("MX");
 
             boolean recordsFound = mxAttr != null && mxAttr.size() > 0;

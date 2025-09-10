@@ -1,10 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EmailValidationServiceTest {
 
@@ -13,35 +15,36 @@ class EmailValidationServiceTest {
     @BeforeEach
     void setUp() {
         emailValidationService = new EmailValidationService();
+        ReflectionTestUtils.setField(emailValidationService, "emailDomainLookupTimeout", 10_000);
     }
 
     @Test
     void hasMxRecords_returnsFalse_whenEmailIsNull() {
-        boolean result = emailValidationService.hasMxRecords(null);
+        boolean result = emailValidationService.isValidEmailDomain(null);
         assertThat(result).isFalse();
     }
 
     @Test
     void hasMxRecords_returnsFalse_whenEmailIsEmpty() {
-        boolean result = emailValidationService.hasMxRecords("");
+        boolean result = emailValidationService.isValidEmailDomain("");
         assertThat(result).isFalse();
     }
 
     @Test
     void hasMxRecords_returnsFalse_whenEmailDoesNotContainAtSymbol() {
-        boolean result = emailValidationService.hasMxRecords("invalid-email");
+        boolean result = emailValidationService.isValidEmailDomain("invalid-email");
         assertThat(result).isFalse();
     }
 
     @Test
     void hasMxRecords_returnsFalse_whenEmailOnlyContainsAtSymbol() {
-        boolean result = emailValidationService.hasMxRecords("@");
+        boolean result = emailValidationService.isValidEmailDomain("@");
         assertThat(result).isFalse();
     }
 
     @Test
     void hasMxRecords_returnsFalse_whenEmailEndsWithAtSymbol() {
-        boolean result = emailValidationService.hasMxRecords("user@");
+        boolean result = emailValidationService.isValidEmailDomain("user@");
         assertThat(result).isFalse();
     }
 
@@ -51,7 +54,7 @@ class EmailValidationServiceTest {
         // It may return true or false depending on the actual DNS resolution,
         // but it should not throw any exceptions
         assertDoesNotThrow(() -> {
-            emailValidationService.hasMxRecords("test@nonexistentdomainfortesting12345.com");
+            emailValidationService.isValidEmailDomain("test@nonexistentdomainfortesting12345.com");
         });
     }
 
@@ -60,7 +63,7 @@ class EmailValidationServiceTest {
         // This test uses a real domain but doesn't assert the result
         // since DNS results can vary by environment
         assertDoesNotThrow(() -> {
-            emailValidationService.hasMxRecords("user@example.com");
+            emailValidationService.isValidEmailDomain("user@example.com");
         });
     }
 
@@ -69,14 +72,14 @@ class EmailValidationServiceTest {
         // Test with an email that has multiple @ symbols
         // The method should extract the domain after the last @
         assertDoesNotThrow(() -> {
-            emailValidationService.hasMxRecords("user@name@example.com");
+            emailValidationService.isValidEmailDomain("user@name@example.com");
         });
     }
 
     @Test
     void hasMxRecords_handlesSubdomain_gracefully() {
         assertDoesNotThrow(() -> {
-            emailValidationService.hasMxRecords("user@mail.example.com");
+            emailValidationService.isValidEmailDomain("user@mail.example.com");
         });
     }
 
@@ -84,8 +87,30 @@ class EmailValidationServiceTest {
     void hasMxRecords_handlesInvalidDomain_gracefully() {
         // Should handle invalid domains without throwing exceptions
         assertDoesNotThrow(() -> {
-            emailValidationService.hasMxRecords("user@invalid..domain");
+            emailValidationService.isValidEmailDomain("user@invalid..domain");
             // For invalid domains, we expect the method to handle it gracefully
         });
     }
+
+    @Test
+    void hasMxRecords_validateEmailDomain_timeout() {
+
+        EmailValidationService slowValidator = new EmailValidationService() {
+            @Override
+            public boolean hasMxRecords(String email) {
+                try {
+                    Thread.sleep(35_000); // simulate long-running task
+                } catch (InterruptedException ignored) {
+                }
+                return true;
+            }
+        };
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
+            slowValidator.isValidEmailDomain("user@example.com");
+        });
+        assertThat(ex.getMessage()).isEqualTo("The email domain validation took longer than expected. Possibly the email domain is invalid!");
+
+    }
+
 }

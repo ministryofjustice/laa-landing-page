@@ -334,7 +334,7 @@ public class UserController {
             result.rejectValue("email", "error.email", "Email address already exists");
         }
 
-        if (!emailValidationService.hasMxRecords(userDetailsForm.getEmail())) {
+        if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
             result.rejectValue("email", "email.invalidDomain",
                     "The email address domain is not valid or cannot receive emails.");
         }
