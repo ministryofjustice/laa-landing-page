@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -15,7 +14,6 @@ class EmailValidationServiceTest {
     @BeforeEach
     void setUp() {
         emailValidationService = new EmailValidationService();
-        ReflectionTestUtils.setField(emailValidationService, "emailDomainLookupTimeout", 10_000);
     }
 
     @Test
@@ -101,6 +99,7 @@ class EmailValidationServiceTest {
                 try {
                     Thread.sleep(35_000); // simulate long-running task
                 } catch (InterruptedException ignored) {
+                    // Do nothing
                 }
                 return true;
             }
