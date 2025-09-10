@@ -2,6 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -13,7 +16,7 @@ class EmailValidationServiceTest {
 
     @BeforeEach
     void setUp() {
-        emailValidationService = new EmailValidationService();
+        emailValidationService = new EmailValidationService(new BlocklistedEmailDomains(Set.of()));
     }
 
     @Test
@@ -93,7 +96,7 @@ class EmailValidationServiceTest {
     @Test
     void hasMxRecords_validateEmailDomain_timeout() {
 
-        EmailValidationService slowValidator = new EmailValidationService() {
+        EmailValidationService slowValidator = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
             @Override
             public boolean hasMxRecords(String email) {
                 try {

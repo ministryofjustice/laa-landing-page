@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -9,6 +11,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import java.util.Hashtable;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -18,17 +21,31 @@ import java.util.concurrent.TimeoutException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmailValidationService {
 
     private static final ExecutorService executor = new ThreadPoolExecutor(10, 100, 3600,
             TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000));
 
+    private final BlocklistedEmailDomains blocklistedEmailDomains;
+
     public boolean isValidEmailDomain(String email) {
 
-        Future<Boolean> future = executor.submit(() -> {
-            return hasMxRecords(email);
-        });
+        if (email == null || !email.contains("@")) {
+            return false;
+        }
 
+        String domain = email.substring(email.lastIndexOf('@') + 1).toLowerCase(Locale.ROOT).trim();
+        if (domain.isEmpty()) {
+            return false;
+        }
+
+        if (blocklistedEmailDomains.isBlocklisted(domain)) {
+            log.debug("Email domain '{}' is blocklisted", domain);
+            return false;
+        }
+
+        Future<Boolean> future = executor.submit(() -> hasMxRecords(email));
 
         try {
             return future.get(30, TimeUnit.SECONDS);
