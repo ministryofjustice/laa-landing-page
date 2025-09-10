@@ -1,5 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -15,25 +28,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpSession;
@@ -86,6 +88,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -121,6 +124,8 @@ class UserControllerTest {
     private RedirectAttributes redirectAttributes;
     @Mock
     private RoleAssignmentService roleAssignmentService;
+    @Mock
+    private EmailValidationService emailValidationService;
 
     private Model model;
     private FirmSearchForm firmSearchForm;
@@ -128,7 +133,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
-                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService);
+                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -2736,6 +2741,7 @@ class UserControllerTest {
         testSession.setAttribute("user", existingUser);
 
         when(userService.userExistsByEmail("existing@example.com")).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain("existing@example.com")).thenReturn(true);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
@@ -2744,11 +2750,143 @@ class UserControllerTest {
 
         // Then
         verify(bindingResult).rejectValue("email", "error.email", "Email address already exists");
+        verify(emailValidationService).isValidEmailDomain("existing@example.com");
         EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
         assertThat(sessionUser.getFirstName()).isEqualTo("Test");
         assertThat(sessionUser.getLastName()).isEqualTo("User");
         assertThat(sessionUser.getFullName()).isEqualTo("Test User");
         assertThat(sessionUser.getEmail()).isEqualTo("existing@example.com");
+    }
+
+    @Test
+    void postUser_shouldRejectEmailWithInvalidDomain() {
+        // Given
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setEmail("test@invalid-domain.com");
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+
+        EntraUserDto user = new EntraUserDto();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("user", user);
+
+        when(userService.userExistsByEmail("test@invalid-domain.com")).thenReturn(false);
+        when(emailValidationService.isValidEmailDomain("test@invalid-domain.com")).thenReturn(false);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("userTypes", List.of());
+        sessionModel.addAttribute("user", user);
+        testSession.setAttribute("createUserDetailsModel", sessionModel);
+
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
+
+        // Then
+        verify(emailValidationService).isValidEmailDomain("test@invalid-domain.com");
+        verify(bindingResult).rejectValue("email", "email.invalidDomain", 
+                "The email address domain is not valid or cannot receive emails.");
+        assertThat(result).isEqualTo("add-user-details");
+    }
+
+    @Test
+    void postUser_shouldAcceptEmailWithValidDomain() {
+        // Given
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setEmail("test@valid-domain.com");
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+
+        EntraUserDto user = new EntraUserDto();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("user", user);
+
+        when(userService.userExistsByEmail("test@valid-domain.com")).thenReturn(false);
+        when(emailValidationService.isValidEmailDomain("test@valid-domain.com")).thenReturn(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
+
+        // Then
+        verify(emailValidationService).isValidEmailDomain("test@valid-domain.com");
+        verify(bindingResult, never()).rejectValue(eq("email"), eq("email.invalidDomain"), anyString());
+        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        
+        // Verify user details are set correctly
+        EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
+        assertThat(sessionUser.getFirstName()).isEqualTo("Test");
+        assertThat(sessionUser.getLastName()).isEqualTo("User");
+        assertThat(sessionUser.getFullName()).isEqualTo("Test User");
+        assertThat(sessionUser.getEmail()).isEqualTo("test@valid-domain.com");
+    }
+
+    @Test
+    void postUser_shouldHandleBothExistingUserAndInvalidDomain() {
+        // Given
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setEmail("existing@invalid-domain.com");
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+
+        EntraUserDto user = new EntraUserDto();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("user", user);
+
+        when(userService.userExistsByEmail("existing@invalid-domain.com")).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain("existing@invalid-domain.com")).thenReturn(false);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("userTypes", List.of());
+        sessionModel.addAttribute("user", user);
+        testSession.setAttribute("createUserDetailsModel", sessionModel);
+
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
+
+        // Then
+        verify(emailValidationService).isValidEmailDomain("existing@invalid-domain.com");
+        verify(bindingResult).rejectValue("email", "error.email", "Email address already exists");
+        verify(bindingResult).rejectValue("email", "email.invalidDomain", 
+                "The email address domain is not valid or cannot receive emails.");
+        assertThat(result).isEqualTo("add-user-details");
+    }
+
+    @Test
+    void postUser_shouldNotValidateDomainWhenEmailValidationFails() {
+        // Given
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setEmail(""); // Empty email to trigger validation error
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+
+        EntraUserDto user = new EntraUserDto();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("user", user);
+
+        // Mock validation errors (e.g., empty email)
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("userTypes", List.of());
+        sessionModel.addAttribute("user", user);
+        testSession.setAttribute("createUserDetailsModel", sessionModel);
+
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
+
+        // Then
+        // EmailValidationService should still be called even with empty email
+        verify(emailValidationService).isValidEmailDomain("");
+        assertThat(result).isEqualTo("add-user-details");
     }
 
     @Test
