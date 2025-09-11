@@ -992,8 +992,6 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         @SuppressWarnings("unchecked")
@@ -1104,7 +1102,7 @@ public class UserController {
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
-                        user != null ? user.getEntraUser() : null, changed,
+                        user.getEntraUser(), changed,
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }  catch (RoleCoverageException e) {
