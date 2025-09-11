@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import javax.naming.NamingException;
+import javax.naming.NameNotFoundException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
@@ -90,8 +91,13 @@ public class EmailValidationService {
             }
             return recordsFound;
 
+        } catch (NameNotFoundException e) {
+            // Non-existent domain
+            log.debug("DNS name not found (response code 3) for domain: {}", domain, e);
+            return false;
         } catch (NamingException e) {
-            log.error("DNS lookup failed for domain: {}", domain, e);
+            // Other DNS issues
+            log.debug("DNS lookup failed for domain: {}", domain, e);
             return false;
         }
     }
