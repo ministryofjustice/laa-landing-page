@@ -283,7 +283,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void authorizationRequestResolverAddsPromptLoginParameter() {
+    void authorizationRequestResolverAddsPromptSelectAccountParameter() {
         SecurityConfig securityConfig = new SecurityConfig(authzOidcUserDetailsService, logoutHandler);
         ClientRegistrationRepository clientRegistrationRepository = createMockClientRegistrationRepository();
         
@@ -293,12 +293,12 @@ class SecurityConfigTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setServletPath("/oauth2/authorization/azure");
         
-        // Test that the resolver creates an authorization request with prompt=login
+        // Test that the resolver creates an authorization request with prompt=select_account
         OAuth2AuthorizationRequest authorizationRequest = resolver.resolve(request);
         
         if (authorizationRequest != null) {
             assertThat(authorizationRequest.getAdditionalParameters())
-                    .containsEntry("prompt", "login");
+                    .containsEntry("prompt", "select_account");
         }
     }
 

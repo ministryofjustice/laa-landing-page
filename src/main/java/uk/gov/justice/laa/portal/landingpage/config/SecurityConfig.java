@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -20,9 +23,6 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
@@ -62,7 +62,7 @@ public class SecurityConfig {
         
         authorizationRequestResolver.setAuthorizationRequestCustomizer(customizer -> {
             Map<String, Object> additionalParameters = new HashMap<>();
-            additionalParameters.put("prompt", "login");
+            additionalParameters.put("prompt", "select_account");
             customizer.additionalParameters(additionalParameters);
         });
         
