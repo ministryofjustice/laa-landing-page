@@ -77,6 +77,38 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testGlobalAdminCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCannotAssignInternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", false);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCannotAssignExternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", false);
+    }
+
+    @Test
+    @Transactional
     public void testInternalUserManagerCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
@@ -89,6 +121,22 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
         assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true);
+    }
+
+    @Test
+    @Transactional
+    public void testInternalUserManagerCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = internalUserManagers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testInternalUserManagerCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = internalUserManagers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", true);
     }
 
     @Test
