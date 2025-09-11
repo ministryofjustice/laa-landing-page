@@ -13,9 +13,9 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" 
-                   th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}"
-                   th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
+                <a class="govuk-breadcrumbs__link"
+                    th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}"
+                    th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
@@ -24,6 +24,11 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
+        <style>
+            #main-content .govuk-summary-card__content {
+                min-height: 215px;
+            }
+        </style>
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
@@ -109,7 +114,7 @@
                                 <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Edit</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Change</a>
                                     </li>
                                 </ul>
                             </div>
@@ -137,35 +142,55 @@
                                 <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Edit</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
                                     </li>
                                 </ul>
                             </div>
                             <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
-                                        <dt class="govuk-summary-list__key" th:text="${office.address.addressLine1}">
-                                        </dt>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine1}">
-                                        </dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine2}">
-                                        </dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.city}"></dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.postcode}"></dd>
-                                    </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}"
-                                        class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">No offices assigned</dd>
-                                    </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}"
-                                        class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">Access to All Offices</dd>
-                                    </div>
-                                </dl>
+                                <div th:if="${!#lists.isEmpty(userOffices)}">
+                                    <table class="govuk-table">
+                                        <thead class="govuk-table__head">
+                                            <tr class="govuk-table__row">
+                                                <th scope="col" class="govuk-table__header">Office address</th>
+                                                <th scope="col" class="govuk-table__header">Account number</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="govuk-table__body">
+                                            <tr class="govuk-table__row" th:each="office : ${userOffices}">
+                                                <td class="govuk-table__cell">
+                                                    <span th:text="${office.address.addressLine1}"></span><span
+                                                        th:if="${office.address.addressLine2}">, </span><span
+                                                        th:if="${office.address.addressLine2}"
+                                                        th:text="${office.address.addressLine2}"></span><span
+                                                        th:if="${office.address.city}">, </span><span
+                                                        th:text="${office.address.city}"></span><span
+                                                        th:if="${office.address.city != null and office.address.postcode != null}">,
+                                                    </span><span th:text="${office.address.postcode}"></span>
+                                                </td>
+                                                <td class="govuk-table__cell" th:text="${office.code}"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}">
+                                    <p class="govuk-body">No offices assigned</p>
+                                </div>
+                                <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}">
+                                    <p class="govuk-body">Access to All Offices</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <a class="govuk-button govuk-button--primary" data-module="govuk-button"
+                   th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
+                    Go back to manage your users
+                </a>
             </div>
         </div>
         </div>

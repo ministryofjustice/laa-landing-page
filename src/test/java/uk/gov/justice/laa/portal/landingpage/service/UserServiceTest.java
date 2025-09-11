@@ -1074,21 +1074,6 @@ class UserServiceTest {
     }
 
     @Test
-    void userExistsByEmail_logsWarning_whenGraphThrowsException() {
-        String email = "test@example.com";
-        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(email).get()).thenThrow(new RuntimeException("Not found"));
-        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        assertThat(userService.userExistsByEmail(email)).isFalse();
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
-        assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage())
-                .contains("No user found in Entra with matching email. Catching error and moving on");
-    }
-
-    @Test
     public void testGetAppsByUserTypeQueriesInternalUsersWhenUserTypeIsInternal() {
         App testApp = App.builder()
                 .name("Test App")
@@ -3067,7 +3052,7 @@ class UserServiceTest {
 
             RoleCoverageException rtEx = assertThrows(RoleCoverageException.class,
                     () -> userService.roleCoverage(oldRoles, newRoles, firm, userId, true));
-            assertThat(rtEx.getMessage()).contains("Attempt to remove own External User Manager, from user profile");
+            assertThat(rtEx.getMessage()).contains("You cannot remove your own External User Manager role");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())

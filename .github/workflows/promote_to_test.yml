@@ -21,6 +21,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Print changes between main and test
+        run: |
+          git fetch origin main
+          git fetch origin test
+          echo "Changes between main and test"
+          git log origin/test..origin/main --oneline --graph
+
       - name: Merge into Test
         run: |
           git pull origin test

@@ -222,7 +222,7 @@ public class UserService {
                 boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
                 if (removeManager && self) {
                     logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    throw new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId);
+                    throw new RoleCoverageException("You cannot remove your own External User Manager role");
                 }
                 if (existingManagers.getTotalElements() < 2 && removeManager) {
                     logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
@@ -580,7 +580,7 @@ public class UserService {
                     .byUserId(email)
                     .get();
         } catch (Exception ex) {
-            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
+            logger.debug("No user found in Entra with matching email. Catching error and moving on.");
         }
         return user.isPresent() || graphUser != null;
     }
