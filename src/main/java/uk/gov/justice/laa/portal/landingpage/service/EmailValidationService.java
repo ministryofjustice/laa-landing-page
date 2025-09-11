@@ -54,15 +54,6 @@ public class EmailValidationService {
             log.error("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
             throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!");
         } catch (Exception ex) {
-            Throwable cause = ex.getCause();
-            if (cause instanceof NameNotFoundException) {
-                log.debug("DNS name not found during email domain validation ({}). Treating as invalid domain.", cause.getMessage());
-                return false;
-            }
-            if (cause instanceof NamingException) {
-                log.debug("Naming exception during email domain validation ({}). Treating as invalid domain.", cause.getMessage());
-                return false;
-            }
             log.error("Error while performing email domain validation. Possibly the email domain is invalid!", ex);
             throw new RuntimeException("Error while performing email domain validation. Possibly the email domain is invalid!");
         }

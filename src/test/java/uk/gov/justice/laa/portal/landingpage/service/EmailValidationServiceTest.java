@@ -118,30 +118,21 @@ class EmailValidationServiceTest {
     }
 
     @Test
-    void isValidEmailDomain_returnsFalse_whenNameNotFoundExceptionThrown() {
-        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
-            @Override
-            public boolean hasMxRecords(String email) {
-                throw new RuntimeException(new NameNotFoundException("DNS name not found [response code 3]"));
-            }
-        };
-
-        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@nonexistent.example"));
-        // The above expression returns a boolean, but assertDoesNotThrow returns the same value.
-        // Assign to result to keep clarity and then assert.
+    void isValidEmailDomain_returnsFalse_forClearlyNonExistentDomain_withoutThrowing() {
+        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of()));
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@nonexistentdomainfortesting12345.example"));
         assertThat(result).isFalse();
     }
 
     @Test
-    void isValidEmailDomain_returnsFalse_whenGenericNamingExceptionThrown() {
+    void isValidEmailDomain_returnsFalse_whenHasMxRecordsReturnsFalse() {
         EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
             @Override
             public boolean hasMxRecords(String email) {
-                throw new RuntimeException(new NamingException("General DNS failure"));
+                return false;
             }
         };
-
-        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@dnsissue.example"));
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@example.com"));
         assertThat(result).isFalse();
     }
 
