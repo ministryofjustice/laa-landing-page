@@ -10,6 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -17,6 +20,9 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
@@ -42,6 +48,25 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+    }
+
+    /**
+     * Custom OAuth2 Authorization Request Resolver that adds prompt=login parameter
+     * to force users to always enter their email address during authentication
+     */
+    @Bean
+    public OAuth2AuthorizationRequestResolver authorizationRequestResolver(
+            ClientRegistrationRepository clientRegistrationRepository) {
+        DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
+                new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
+        
+        authorizationRequestResolver.setAuthorizationRequestCustomizer(customizer -> {
+            Map<String, Object> additionalParameters = new HashMap<>();
+            additionalParameters.put("prompt", "login");
+            customizer.additionalParameters(additionalParameters);
+        });
+        
+        return authorizationRequestResolver;
     }
 
     /**
@@ -89,7 +114,8 @@ public class SecurityConfig {
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, 
+            ClientRegistrationRepository clientRegistrationRepository) throws Exception {
         http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
@@ -112,6 +138,9 @@ public class SecurityConfig {
         ).oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                         .oidcUserService(authzOidcUserDetailsService)
+                )
+                .authorizationEndpoint(authorization -> authorization
+                        .authorizationRequestResolver(authorizationRequestResolver(clientRegistrationRepository))
                 )
                 .loginPage("/oauth2/authorization/azure")
                 .defaultSuccessUrl("/home", true)
