@@ -990,10 +990,6 @@ public class UserController {
             @RequestParam int selectedAppIndex,
             HttpSession session) {
 
-        // Ensure passed in ID is a valid UUID to avoid open redirects.
-        UUID uuid = UUID.fromString(id);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
@@ -1007,6 +1003,10 @@ public class UserController {
             allSelectedRolesByPage.put(selectedAppIndex, new ArrayList<>());
         }
         session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
         if (selectedAppIndex >= selectedApps.size() - 1) {
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         } else {
@@ -1160,7 +1160,7 @@ public class UserController {
                     hasAllOffices = true;
                 } else {
                     hasAllOffices = false;
-                    userOfficeIds = new HashSet<String> (officesForm.getOffices());
+                    userOfficeIds = new HashSet<String>(officesForm.getOffices());
                 }
             }
         }

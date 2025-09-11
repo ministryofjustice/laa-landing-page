@@ -26,7 +26,6 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -40,7 +39,13 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.*;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -1354,7 +1359,8 @@ class UserControllerTest {
         String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
 
         // Then - should redirect back when role coverage exception thrown
-        assertThat(redirect).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s", userId, "Attempt to remove own External User Manager, from user profile " + userId));
+        assertThat(redirect).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s",
+                userId, "Attempt to remove own External User Manager, from user profile " + userId));
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
@@ -1816,7 +1822,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-offices-check-answer");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("userOffices")).isNotNull();
-        assertThat((List)model.getAttribute("userOffices")).isEmpty();
+        assertThat((List) model.getAttribute("userOffices")).isEmpty();
     }
 
     @Test
@@ -1829,7 +1835,6 @@ class UserControllerTest {
         OfficeModel of2 = new OfficeModel();
         of2.setId("office2");
         of2.setAddress(address);
-        List<OfficeModel> officeData = List.of(of1, of2);
         final String userId = "user123";
         MockHttpSession testSession = new MockHttpSession();
         OfficesForm form = new OfficesForm();
@@ -1837,6 +1842,7 @@ class UserControllerTest {
         testSession.setAttribute("officesForm", form);
         Model modelFromSession = new ExtendedModelMap();
         modelFromSession.addAttribute("user", UserProfile.builder().build());
+        List<OfficeModel> officeData = List.of(of1, of2);
         modelFromSession.addAttribute("officeData", officeData);
         testSession.setAttribute("editUserOfficesModel", modelFromSession);
         // When
