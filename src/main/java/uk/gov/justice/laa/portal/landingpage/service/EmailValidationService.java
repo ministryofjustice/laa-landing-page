@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import javax.naming.NamingException;
+import javax.naming.NameNotFoundException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
@@ -53,6 +54,15 @@ public class EmailValidationService {
             log.error("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
             throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!");
         } catch (Exception ex) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof NameNotFoundException) {
+                log.debug("DNS name not found during email domain validation ({}). Treating as invalid domain.", cause.getMessage());
+                return false;
+            }
+            if (cause instanceof NamingException) {
+                log.debug("Naming exception during email domain validation ({}). Treating as invalid domain.", cause.getMessage());
+                return false;
+            }
             log.error("Error while performing email domain validation. Possibly the email domain is invalid!", ex);
             throw new RuntimeException("Error while performing email domain validation. Possibly the email domain is invalid!");
         }
@@ -90,7 +100,12 @@ public class EmailValidationService {
             }
             return recordsFound;
 
+        } catch (NameNotFoundException e) {
+            // Non-existent domain; treat as invalid and log at debug level
+            log.debug("DNS name not found (response code 3) for domain: {}", domain, e);
+            return false;
         } catch (NamingException e) {
+            // Other DNS issues; treat as invalid but log at error level for visibility
             log.error("DNS lookup failed for domain: {}", domain, e);
             return false;
         }

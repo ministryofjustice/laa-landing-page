@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import java.util.Set;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -113,6 +115,34 @@ class EmailValidationServiceTest {
         });
         assertThat(ex.getMessage()).isEqualTo("The email domain validation took longer than expected. Possibly the email domain is invalid!");
 
+    }
+
+    @Test
+    void isValidEmailDomain_returnsFalse_whenNameNotFoundExceptionThrown() {
+        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
+            @Override
+            public boolean hasMxRecords(String email) {
+                throw new RuntimeException(new NameNotFoundException("DNS name not found [response code 3]"));
+            }
+        };
+
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@nonexistent.example"));
+        // The above expression returns a boolean, but assertDoesNotThrow returns the same value.
+        // Assign to result to keep clarity and then assert.
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void isValidEmailDomain_returnsFalse_whenGenericNamingExceptionThrown() {
+        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
+            @Override
+            public boolean hasMxRecords(String email) {
+                throw new RuntimeException(new NamingException("General DNS failure"));
+            }
+        };
+
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@dnsissue.example"));
+        assertThat(result).isFalse();
     }
 
 }
