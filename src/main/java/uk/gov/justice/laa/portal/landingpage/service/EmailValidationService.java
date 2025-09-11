@@ -92,12 +92,12 @@ public class EmailValidationService {
             return recordsFound;
 
         } catch (NameNotFoundException e) {
-            // Non-existent domain; treat as invalid and log at debug level
+            // Non-existent domain
             log.debug("DNS name not found (response code 3) for domain: {}", domain, e);
             return false;
         } catch (NamingException e) {
-            // Other DNS issues; treat as invalid but log at error level for visibility
-            log.error("DNS lookup failed for domain: {}", domain, e);
+            // Other DNS issues
+            log.debug("DNS lookup failed for domain: {}", domain, e);
             return false;
         }
     }
