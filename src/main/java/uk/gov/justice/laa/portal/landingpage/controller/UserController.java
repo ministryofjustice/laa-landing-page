@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -96,6 +97,9 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
+
+    @Value("${feature.flag.enable.resend.verification.code}")
+    private boolean enableResendVerificationCode;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -290,7 +294,7 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
-        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
         // Add filter state to model for "Back to search results" link
@@ -328,6 +332,10 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
+
+        if(!enableResendVerificationCode){
+            log.warn("Resend activation code is disabled");
+        }
 
         try {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
