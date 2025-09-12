@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755695455405-1
+      author: niall.mcmahon
+      changes:
+        # Insert new internal and external user viewer roles into app role table.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Internal User Viewer', 'An internal user able to view details about internal users', ARRAY['INTERNAL'], true)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Viewer', 'An internal user able to view details about external users', ARRAY['INTERNAL'], true)"
+        # Give internal user viewer the VIEW_INTERNAL_USER permission
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), 'VIEW_INTERNAL_USER')"
+        # Give external user viewer the VIEW_EXTERNAL_USER permission
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_EXTERNAL_USER')"
+        # Give Global Admin the ability to assign the Internal User Viewer and External User Viewer roles.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        # Give Internal User Manager the ability to assign the Internal User Viewer and External User Viewer roles.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"

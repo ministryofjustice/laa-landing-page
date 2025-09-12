@@ -270,4 +270,42 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         }
     }
 
+    @Test
+    public void testInternalUserViewerCanSeeAllInternalUsers() throws Exception {
+        EntraUser loggedInUser = internalUserViewers.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=100")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        int expectedSize = (int) allUsers.stream()
+                .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.INTERNAL)
+                .count();
+        Assertions.assertThat(users).hasSize(expectedSize);
+        for (UserProfileDto userProfile : users) {
+            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.INTERNAL);
+        }
+    }
+
+    @Test
+    public void testExternalUserViewerCanSeeAllExternalUsers() throws Exception {
+        EntraUser loggedInUser = externalUserViewers.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=100")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        int expectedSize = (int) allUsers.stream()
+                .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.EXTERNAL)
+                .count();
+        Assertions.assertThat(users).hasSize(expectedSize);
+        for (UserProfileDto userProfile : users) {
+            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        }
+    }
+
 }

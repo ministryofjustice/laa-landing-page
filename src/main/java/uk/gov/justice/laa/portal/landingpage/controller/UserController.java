@@ -37,6 +37,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.sqs.endpoints.internal.Value;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -282,6 +283,7 @@ public class UserController {
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
+        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -290,7 +292,8 @@ public class UserController {
         model.addAttribute("externalUser", externalUser);
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
-        
+
+        model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
 
         // Add filter state to model for "Back to search results" link
