@@ -8,7 +8,7 @@ databaseChangeLog:
             sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL'] WHERE authz_role = true AND name = 'External User Manager'"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Firm User Manager', 'An external firm user manager', 'EXTERNAL', ARRAY['EXTERNAL'], true)"
+            sql: "INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Firm User Manager', 'An external firm user manager', ARRAY['EXTERNAL'], true)"
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_EXTERNAL_USER')"
