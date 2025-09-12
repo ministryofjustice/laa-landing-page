@@ -344,7 +344,7 @@ public class UserController {
         boolean hasFilters = filters != null && hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
 
-        if(!enableResendVerificationCode){
+        if (!enableResendVerificationCode) {
             log.warn("Resend activation code is disabled");
         }
 

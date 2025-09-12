@@ -64,7 +64,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -248,7 +247,7 @@ public class UserService {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userProfileId);
 
         return optionalUserProfile.map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
-                .orElseThrow(() -> new RuntimeException("User Not Found!"));
+                .orElseThrow(() -> new RuntimeException("Failed to send verification email!"));
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
