@@ -347,4 +347,81 @@ public class AccessControlServiceTest {
         assertTrue(infoLogs.get(0).toString().contains("does not have permission to edit this userId"));
     }
 
+    @Test
+    public void testCanSendVerificationEmail() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL) // Internal user type
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testFirmAdminCannotSendVerificationEmail() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("external@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.EXTERNAL) // External user type
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
 }

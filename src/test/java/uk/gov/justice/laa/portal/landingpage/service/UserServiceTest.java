@@ -60,6 +60,9 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.io.IOException;
@@ -81,7 +84,6 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -3130,5 +3132,72 @@ class UserServiceTest {
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("Attempt to remove last Global Admin, from user profile");
         }
+    }
+
+    @Test
+    void sendVerificationEmail_Success() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
+                        .build()));
+
+        // Act
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getData()).isNotNull();
+        verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+    }
+
+    @Test
+    void sendVerificationEmail_Failure() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                .thenReturn(TechServicesApiResponse.error(TechServicesErrorResponse.builder().success(false)
+                        .build()));
+
+        // Act
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getData()).isNull();
+        verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+    }
+
+    @Test
+    void sendVerificationEmail_UserNotFound() {
+        // Arrange
+        UUID profileId = UUID.randomUUID();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.empty());
+
+        // Act
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> userService.sendVerificationEmail(profileId.toString()));
+
+        // Assert
+        assertThat(ex.getMessage()).isEqualTo("Failed to send verification email!");
+        verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
     }
 }

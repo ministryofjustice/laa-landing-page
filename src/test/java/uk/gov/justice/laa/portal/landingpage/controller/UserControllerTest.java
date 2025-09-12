@@ -94,6 +94,8 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
@@ -464,6 +466,41 @@ class UserControllerTest {
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_resendVerificationEmailShouldProcessAndRemainToModelAndReturnManageUserView() {
+        // Arrange
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(userService.getUserProfileById(mockUser.getId().toString())).thenReturn(Optional.of(mockUser));
+        when(userService.sendVerificationEmail(mockUser.getId().toString()))
+                .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
+                .message("Activation code has been generated and sent successfully via email.")
+                .build()));
+
+        // Act
+        String view = userController.resendActivationCode(mockUser.getId().toString(), model, session);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        verify(userService).getUserProfileById(mockUser.getId().toString());
     }
 
     @Test
