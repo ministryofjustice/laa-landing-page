@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -37,7 +38,6 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.sqs.endpoints.internal.Value;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -73,6 +73,8 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -286,6 +288,7 @@ public class UserController {
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
+        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -320,20 +323,25 @@ public class UserController {
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
+        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
+        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
+        model.addAttribute("showOfficesTab", showOfficesTab);
+
+        model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
-        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = hasActiveFilters(filters);
+        boolean hasFilters = filters != null && hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
 
         if(!enableResendVerificationCode){
