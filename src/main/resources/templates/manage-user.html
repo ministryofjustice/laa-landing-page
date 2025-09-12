@@ -29,6 +29,37 @@
                 min-height: 215px;
             }
         </style>
+
+        <div th:if="${errorMessage}">
+            <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                 aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body" id="error-summary-description">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li><a href="#" th:text="${errorMessage}"></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+             aria-label="success: Verification email sent successfully" data-module="moj-alert">
+            <div>
+                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 30 30" height="30" width="30">
+                    <path
+                            d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                            fill="currentColor" />
+                </svg>
+            </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">Success</h2>
+                <p th:text="${successMessage}"></p>
+            </div>
+        </div>
+
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
@@ -80,6 +111,11 @@
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title" th:text="${user.entraUser.email}">
                                 </h2>
+                                <div th:if="${showResendVerificationLink}">
+                                    <a class="govuk-link"
+                                       th:href="@{/admin/user/{id}/verify(id=${user.id})}"
+                                       th:text="'Resend Activation Code'"></a>
+                                </div>
                                 <!-- <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Edit</a>

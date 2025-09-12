@@ -1,20 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,11 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -72,10 +56,27 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -289,12 +290,56 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = filters != null && hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
+
+        return "manage-user";
+    }
+
+    @GetMapping("/user/{id}/verify")
+    @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
+    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+        List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
+                .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                .sorted()
+                .collect(Collectors.toList());
+        List<OfficeDto> userOffices = optionalUser.get().getOffices();
+        final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
+        optionalUser.ifPresent(user -> model.addAttribute("user", user));
+        model.addAttribute("userAppRoles", userAppRoles);
+        model.addAttribute("userOffices", userOffices);
+        model.addAttribute("isAccessGranted", isAccessGranted);
+        boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
+        model.addAttribute("externalUser", externalUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        // Add filter state to model for "Back to search results" link
+        @SuppressWarnings("unchecked")
+        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
+        boolean hasFilters = hasActiveFilters(filters);
+        model.addAttribute("hasFilters", hasFilters);
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
 
         return "manage-user";
     }

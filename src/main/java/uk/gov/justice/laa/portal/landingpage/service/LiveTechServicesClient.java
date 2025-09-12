@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -20,6 +23,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
@@ -40,6 +47,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
+    private static final String TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT = "%s/users/%s/verify";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ClientSecretCredential clientSecretCredential;
     private final RestClient restClient;
@@ -158,6 +166,58 @@ public class LiveTechServicesClient implements TechServicesClient {
         } catch (Exception ex) {
             logger.error("Error while create user request to Tech Services.", ex);
             throw new RuntimeException("Error while create user request to Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<SendUserVerificationEmailResponse> sendEmailVerification(EntraUserDto user) {
+        try {
+            String accessToken = getAccessToken();
+
+            SendUserVerificationEmailRequest request = SendUserVerificationEmailRequest.builder()
+                    .verificationMethod("activation_code_email").build();
+
+            logger.info("Sending Resend verification email request to tech services: {}", request);
+
+            String uri = String.format(TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT, laaBusinessUnit, user.getEntraOid());
+
+            ResponseEntity<String> response = restClient
+                    .post()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Resend user verification email by Tech Services is successful for {} and response is {}",
+                        user.getFirstName() + " " + user.getLastName(), response);
+                ObjectMapper mapper = new ObjectMapper();
+                SendUserVerificationEmailResponse successResponse = mapper.readValue(response.getBody(), SendUserVerificationEmailResponse.class);
+                return TechServicesApiResponse.success(successResponse);
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
+                logger.error("Failed to send verification email for {}", user.getFirstName() + " " + user.getLastName());
+                return TechServicesApiResponse.error(errorResponse);
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
+                logger.error("Failed to send verification email for {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                return TechServicesApiResponse.error(errorResponse);
+            } catch (Exception ex) {
+                logger.error("Error while sending verification email to Tech Services.", ex);
+                throw new RuntimeException("Error while sending verification email to Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            logger.error("Error while sending verification email to Tech Services.", ex);
+            throw new RuntimeException("Error while sending verification email to Tech Services.", ex);
         }
     }
 

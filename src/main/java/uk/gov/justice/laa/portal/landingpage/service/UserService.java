@@ -45,6 +45,8 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -247,6 +249,13 @@ public class UserService {
                 .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
                 .filter(AppRole::isLegacySync)
                 .collect(Collectors.toSet()) : new HashSet<>();
+    }
+
+    public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userProfileId);
+
+        return optionalUserProfile.map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
+                .orElseThrow(() -> new RuntimeException("User Not Found!"));
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
