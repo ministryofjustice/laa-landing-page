@@ -702,7 +702,7 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 0}"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${search}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
                         th:aria-label="'Page 1'">1</a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
                         th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"

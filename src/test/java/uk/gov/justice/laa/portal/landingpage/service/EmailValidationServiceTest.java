@@ -2,6 +2,11 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
+
+import java.util.Set;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -13,7 +18,7 @@ class EmailValidationServiceTest {
 
     @BeforeEach
     void setUp() {
-        emailValidationService = new EmailValidationService();
+        emailValidationService = new EmailValidationService(new BlocklistedEmailDomains(Set.of()));
     }
 
     @Test
@@ -93,7 +98,7 @@ class EmailValidationServiceTest {
     @Test
     void hasMxRecords_validateEmailDomain_timeout() {
 
-        EmailValidationService slowValidator = new EmailValidationService() {
+        EmailValidationService slowValidator = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
             @Override
             public boolean hasMxRecords(String email) {
                 try {
@@ -110,6 +115,25 @@ class EmailValidationServiceTest {
         });
         assertThat(ex.getMessage()).isEqualTo("The email domain validation took longer than expected. Possibly the email domain is invalid!");
 
+    }
+
+    @Test
+    void isValidEmailDomain_returnsFalse_forClearlyNonExistentDomain_withoutThrowing() {
+        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of()));
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@nonexistentdomainfortesting12345.example"));
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void isValidEmailDomain_returnsFalse_whenHasMxRecordsReturnsFalse() {
+        EmailValidationService svc = new EmailValidationService(new BlocklistedEmailDomains(Set.of())) {
+            @Override
+            public boolean hasMxRecords(String email) {
+                return false;
+            }
+        };
+        boolean result = assertDoesNotThrow(() -> svc.isValidEmailDomain("user@example.com"));
+        assertThat(result).isFalse();
     }
 
 }
