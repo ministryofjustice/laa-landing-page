@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'edit-user'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Edit - Offices</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">
+            Back </a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <form method="post" th:action="@{/admin/users/edit/{id}/offices-check-answer(id=${user.id})}">
+            <div class="govuk-summary-card">
+                <div class="govuk-summary-card__title-wrapper">
+                    <h2 class="govuk-summary-card__title">
+                        User offices
+                    </h2>
+                </div>
+                <div class="govuk-summary-card__content">
+                    <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
+                        <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
+                            <dd class="govuk-summary-list__value">
+                                <span th:text="${office.address.formattedAddress}"></span>
+                                (<span th:text="${office.code}"></span>)
+                            </dd>
+                            <dd class="govuk-summary-list__actions">
+                                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}" class="govuk-link">Change</a>
+                            </dd>
+                        </div>
+                    </dl>
+                    <div class="govuk-summary-list" th:if="${(userOffices == null or userOffices.isEmpty())}">
+                        <div class="govuk-summary-list__row">
+                            <dd class="govuk-summary-list__value">
+                                <span>Access to All Offices</span>
+                            </dd>
+                            <dd class="govuk-summary-list__actions">
+                                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}" class="govuk-link">Change</a>
+                            </dd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Confirm</button>
+                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+            </div>
+        </form>
+    </main>
+</body>
+
+</html>

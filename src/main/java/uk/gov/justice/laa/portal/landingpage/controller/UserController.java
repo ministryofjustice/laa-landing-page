@@ -6,6 +6,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
@@ -30,7 +32,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
@@ -65,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -730,13 +732,19 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
-    public String editUserDetails(@PathVariable String id, Model model) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
-        editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
-        editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
-        editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
+        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
+        if (Objects.isNull(user)) {
+            user = userService.getUserProfileById(id).orElseThrow();
+        }
+        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
+        if (Objects.isNull(editUserDetailsForm) || Objects.isNull(editUserDetailsForm.getFirstName()) || Objects.isNull(editUserDetailsForm.getLastName())) {
+            editUserDetailsForm = new EditUserDetailsForm();
+            editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
+            editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
+            editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
+        }
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
@@ -755,22 +763,60 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
             @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
             HttpSession session) throws IOException {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        session.setAttribute("user", user);
+        session.setAttribute("editUserDetailsForm", editUserDetailsForm);
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user details page with
             // errors
-            UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-            session.setAttribute("user", user);
-            session.setAttribute("editUserDetailsForm", editUserDetailsForm);
             return "edit-user-details";
         }
+        return "redirect:/admin/users/edit/" + id + "/details-check-answer";
+    }
+
+    @GetMapping("/users/edit/{id}/details-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String updateUserDetailsCheck(@PathVariable String id, Model model,
+                                          HttpSession session) throws IOException {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
+        if (Objects.isNull(editUserDetailsForm)) {
+            return "redirect:/admin/users/manage/" + id;
+        }
+        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - Check your answers - " + user.getFullName());
+        return "edit-user-details-check-answer";
+    }
+
+    /**
+     * Update user details
+     *
+     * @param id                  User ID
+     * @param session             HttpSession to store user details
+     * @return Redirect to user management page
+     * @throws IOException              If an error occurs during user update
+     * @throws IllegalArgumentException If the user ID is invalid or not found
+     */
+    @PostMapping("/users/edit/{id}/details-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String updateUserDetailsSubmit(@PathVariable String id,
+                                    HttpSession session) throws IOException {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
+        if (Objects.isNull(editUserDetailsForm)) {
+            return "redirect:/admin/users/manage/" + id;
+        }
         // Update user details
-        userService.updateUserDetails(id, editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
-        return "redirect:/admin/users/manage/" + id;
+        //TODO audit log needed
+        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        session.removeAttribute("editUserDetailsForm");
+        return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
 
     /**
@@ -779,18 +825,25 @@ public class UserController {
     @GetMapping("/users/edit/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id,
-            @RequestParam(value = "errorMessage", required = false) String errorMessage,
-            Model model) {
+                               @RequestParam(value = "errorMessage", required = false) String errorMessage,
+                               Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
-
-        // Add selected attribute to available apps based on user assigned apps
-        availableApps.forEach(app -> {
-            app.setSelected(userAssignedApps.stream()
-                    .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-        });
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        if (Objects.isNull(selectedAppRole)) {
+            // Add selected attribute to available apps based on user assigned apps
+            availableApps.forEach(app -> {
+                app.setSelected(userAssignedApps.stream()
+                        .anyMatch(userApp -> userApp.getId().equals(app.getId())));
+            });
+        } else {
+            availableApps.forEach(app -> {
+                app.setSelected(selectedAppRole.containsKey(app.getId()));
+            });
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("apps", availableApps);
@@ -805,34 +858,15 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
-            Authentication authentication,
-            HttpSession session, RedirectAttributes redirectAttributes) {
+            HttpSession session) {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
-
         if (selectedApps.isEmpty()) {
-            // Update user to have no roles (empty list)
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            try {
-                CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        userProfileDto != null ? userProfileDto.getId() : null,
-                        currentUserDto,
-                        userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                        changed, "apps");
-                eventService.logEvent(updateUserAuditEvent);
-            } catch (RoleCoverageException e) {
-                String errorMessage = e.getMessage();
-                redirectAttributes.addFlashAttribute("errorMessage",
-                        errorMessage);
-                UUID uuid = UUID.fromString(id);
-                return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
-            }
             // Ensure passed in ID is a valid UUID to avoid open redirects.
+            session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
             UUID uuid = UUID.fromString(id);
-            return new RedirectView(String.format("/admin/users/manage/%s", uuid));
+            return new RedirectView(String.format("/admin/users/edit/%s/roles-check-answer", uuid));
         }
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
@@ -878,13 +912,7 @@ public class UserController {
             return "redirect:/admin/users/manage/" + id;
         }
 
-        Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
-        Integer currentSelectedAppIndex;
-        if (modelFromSession != null && modelFromSession.getAttribute("editUserRolesSelectedAppIndex") != null) {
-            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("editUserRolesSelectedAppIndex");
-        } else {
-            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
-        }
+        Integer currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
 
         // Ensure the index is within bounds
         if (currentSelectedAppIndex >= selectedApps.size()) {
@@ -896,9 +924,18 @@ public class UserController {
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        if (Objects.isNull(editUserAllSelectedRoles)) {
+            editUserAllSelectedRoles = new HashMap<>();
+        }
         // Get currently selected roles from session or use user's existing roles
-        List<String> selectedRoles = getListFromHttpSession(session, "editUserRoles", String.class)
-                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
+        List<String> selectedRoles;
+        if (editUserAllSelectedRoles.get(selectedAppIndex) != null) {
+            selectedRoles = editUserAllSelectedRoles.get(selectedAppIndex);
+        } else {
+            selectedRoles = userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList());
+        }
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
@@ -935,9 +972,6 @@ public class UserController {
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
 
-        // Store the model in session to handle validation errors later and track
-        // currently selected app.
-        session.setAttribute("userEditRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -950,7 +984,6 @@ public class UserController {
      * 
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
-     * @param authentication   Authentication object for the current user
      * @param session          HttpSession to store selected apps and roles
      * @return Redirect view to the user management page or next app roles page
      * @throws IllegalArgumentException If the user ID is invalid or not found
@@ -961,46 +994,8 @@ public class UserController {
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
-            Authentication authentication,
-            Model model, HttpSession session) {
-        Model modelFromSession = (Model) session.getAttribute("userEditRolesModel");
+            HttpSession session) {
 
-        // Ensure passed in ID is a valid UUID to avoid open redirects.
-        UUID uuid = UUID.fromString(id);
-
-        if (modelFromSession == null) {
-            return "redirect:/admin/users/edit/" + uuid + "/roles";
-        }
-        if (result.hasErrors()) {
-            log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
-            // If there are validation errors, return to the roles page with errors
-            // and role unseleected if it is not in the list
-            @SuppressWarnings("unchecked")
-            List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
-            if (roles != null) {
-                // Add null check for rolesForm.getRoles()
-                List<String> selectedRoleIds = rolesForm.getRoles() != null ? rolesForm.getRoles() : new ArrayList<>();
-                roles.forEach(role -> {
-                    if (!selectedRoleIds.contains(role.getId())) {
-                        role.setSelected(false);
-                    }
-                });
-            }
-            if (roles != null) {
-                model.addAttribute("roles", roles);
-            }
-
-            model.addAttribute("user", modelFromSession.getAttribute("user"));
-            model.addAttribute("editUserRolesSelectedAppIndex",
-                    modelFromSession.getAttribute("editUserRolesSelectedAppIndex"));
-            model.addAttribute("editUserRolesCurrentApp", modelFromSession.getAttribute("editUserRolesCurrentApp"));
-
-            return "edit-user-roles";
-        }
-
-        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
@@ -1010,39 +1005,121 @@ public class UserController {
         // Add the roles for the currently selected app to a map for lookup.
         if (rolesForm.getRoles() != null) {
             allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
-        }
-        if (selectedAppIndex >= selectedApps.size() - 1) {
-            // Clear the userEditRolesModel and page roles from session to avoid stale data
-            session.removeAttribute("userEditRolesModel");
-            session.removeAttribute("editUserAllSelectedRoles");
-            // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
-                    .flatMap(List::stream)
-                    .toList();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                try {
-                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
-                    UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                            editorProfile.getId(),
-                            currentUserDto,
-                            user != null ? user.getEntraUser() : null, changed,
-                            "role");
-                    eventService.logEvent(updateUserAuditEvent);
-                } catch (RoleCoverageException e) {
-                    String errorMessage = e.getMessage();
-                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
-                }
-            }
-            return "redirect:/admin/users/manage/" + uuid;
         } else {
-            modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex + 1);
-            session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
-            session.setAttribute("userEditRolesModel", modelFromSession);
-
+            allSelectedRolesByPage.put(selectedAppIndex, new ArrayList<>());
+        }
+        session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        // Ensure passed in ID is a valid UUID to avoid open redirects.
+        UUID uuid = UUID.fromString(id);
+        if (selectedAppIndex >= selectedApps.size() - 1) {
+            return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
+        } else {
             return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
         }
+    }
+
+    @GetMapping("/users/edit/{id}/roles-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String editUserRolesCheckAnswer(@PathVariable String id,
+                                           @RequestParam(value = "errorMessage", required = false) String errorMessage,
+                                           Model model, HttpSession session) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
+        if (editUserAllSelectedRoles == null) {
+            return "redirect:/admin/users/manage/" + id;
+        }
+        UserType userType = user.getUserType();
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElseGet(ArrayList::new);
+        Map<String, AppDto> availableApps = userService.getAppsByUserType(userType).stream()
+                .filter(app -> selectedApps.contains(app.getId()))
+                .collect(Collectors.toMap(AppDto::getId, Function.identity()));
+
+        List<UUID> roleIds = editUserAllSelectedRoles.values()
+                .stream()
+                .flatMap(List::stream)
+                .map(UUID::fromString)
+                .toList();
+        Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
+        String backUrl = "";
+        List<UserRole> selectedAppRole = new ArrayList<>();
+        if (editUserAllSelectedRoles.isEmpty()) {
+            backUrl = "/admin/users/edit/" + id + "/apps";
+        } else {
+            int size = editUserAllSelectedRoles.size();
+            backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + size;
+            for (Integer key : editUserAllSelectedRoles.keySet()) {
+                String url = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + key;
+                if (Objects.nonNull(editUserAllSelectedRoles.get(key))
+                        && !editUserAllSelectedRoles.get(key).isEmpty()) {
+                    List<String> selectedRoles = editUserAllSelectedRoles.get(key);
+                    for (String selectedRole : selectedRoles) {
+                        AppRoleDto role = roles.get(selectedRole);
+                        UserRole userRole = new UserRole();
+                        userRole.setRoleName(role.getName());
+                        userRole.setAppName(role.getApp().getName());
+                        userRole.setUrl(url);
+                        selectedAppRole.add(userRole);
+                    }
+                } else {
+                    UserRole userRole = new UserRole();
+                    userRole.setAppName(availableApps.get(selectedApps.get(key)).getName());
+                    userRole.setRoleName("No Role selected");
+                    userRole.setUrl(url);
+                    selectedAppRole.add(userRole);
+                }
+            }
+        }
+        if (errorMessage != null) {
+            model.addAttribute("errorMessage", errorMessage);
+        }
+        model.addAttribute("user", user);
+        model.addAttribute("selectedAppRole", selectedAppRole);
+        model.addAttribute("backUrl", backUrl);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
+        return "edit-user-roles-check-answer";
+    }
+
+    @PostMapping("/users/edit/{id}/roles-check-answer")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
+                                                 Authentication authentication) {
+        UUID uuid = UUID.fromString(id);
+
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
+        if (allSelectedRolesByPage == null) {
+            return "redirect:/admin/users/manage/" + id;
+        }
+        List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .toList();
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
+            try {
+                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
+                        user.getEntraUser(), changed,
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
+            }  catch (RoleCoverageException e) {
+                String errorMessage = e.getMessage();
+                return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
+            }
+        }
+        // Clear the session
+        session.removeAttribute("editUserAllSelectedRoles");
+        session.removeAttribute("selectedApps");
+        return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
 
     /**
@@ -1057,7 +1134,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
+        session.removeAttribute("editUserOfficesModel");
         // Get user's current offices
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
         Set<String> userOfficeIds = userOffices.stream()
@@ -1072,6 +1149,28 @@ public class UserController {
         // Check if user has access to all offices
         boolean hasAllOffices = userOffices.isEmpty();
 
+        // Create form object or load from session if exist
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            officesForm = new OfficesForm();
+            List<String> selectedOffices = new ArrayList<>();
+            if (hasAllOffices) {
+                selectedOffices.add("ALL");
+            } else {
+                selectedOffices.addAll(userOfficeIds);
+            }
+            officesForm.setOffices(selectedOffices);
+        } else {
+            if (officesForm.getOffices() != null) {
+                if (officesForm.getOffices().contains("ALL")) {
+                    hasAllOffices = true;
+                } else {
+                    hasAllOffices = false;
+                    userOfficeIds = new HashSet<String>(officesForm.getOffices());
+                }
+            }
+        }
+        Set<String> finalUserOfficeIds = userOfficeIds;
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
@@ -1079,20 +1178,8 @@ public class UserController {
                                 office.getAddress().getAddressLine2(),
                                 office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
-                        userOfficeIds.contains(office.getId().toString())))
+                        finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
-
-        // Create form object
-        OfficesForm officesForm = new OfficesForm();
-        List<String> selectedOffices = new ArrayList<>();
-
-        if (hasAllOffices) {
-            selectedOffices.add("ALL");
-        } else {
-            selectedOffices.addAll(userOfficeIds);
-        }
-
-        officesForm.setOffices(selectedOffices);
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
@@ -1120,8 +1207,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
-            Authentication authentication,
-            Model model, HttpSession session) throws IOException {
+            Model model, HttpSession session) {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while updating user offices: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user offices page with
@@ -1148,13 +1234,22 @@ public class UserController {
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
             return "edit-user-offices";
         }
+        session.setAttribute("officesForm", officesForm);
+        return "redirect:/admin/users/edit/" + id + "/offices-check-answer";
+    }
 
+    @GetMapping("/users/edit/{id}/offices-check-answer")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    public String updateUserOfficesCheck(@PathVariable String id,
+                                    Model model, HttpSession session) {
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            return "redirect:/admin/users/edit/" + id + "/offices";
+        }
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-        List<String> selectOfficesDisplay = new ArrayList<>();
-        // Handle "ALL" option
+        List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
         if (!selectedOffices.contains("ALL")) {
-            // If "ALL" is selected, get all available offices by firm
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1164,26 +1259,55 @@ public class UserController {
                             : new ArrayList<>();
                     for (OfficeModel office : officeData) {
                         if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getCode());
+                            selectOfficesDisplay.add(office);
                         }
                     }
                 }
             }
         }
+        Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+        model.addAttribute("userOffices", selectOfficesDisplay);
+        model.addAttribute("user", modelFromSession.getAttribute("user"));
+        return "edit-user-offices-check-answer";
+    }
+
+    @PostMapping("/users/edit/{id}/offices-check-answer")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    public String updateUserOfficesSubmit(@PathVariable String id,
+                                    Authentication authentication,
+                                    HttpSession session) throws IOException {
+        OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        if (officesForm == null) {
+            return "redirect:/admin/users/edit/" + id + "/offices";
+        }
+        // Update user offices
+        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
+        List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
 
         String changed = userService.updateUserOffices(id, selectedOffices);
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                userProfileDto != null ? userProfileDto.getId() : null,
+                userProfileDto.getId(),
                 currentUserDto,
-                userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
+        session.removeAttribute("officesForm");
+        return "redirect:/admin/users/edit/" + id + "/confirmation";
+    }
 
-        return "redirect:/admin/users/manage/" + id;
+    /**
+     * Update user detail Flow - Show confirmation page
+     */
+    @GetMapping("/users/edit/{id}/confirmation")
+    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    public String editUserConfirmation(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "User updated - " + user.getFullName());
+        return "edit-user-confirmation";
     }
 
     @GetMapping("/users/edit/{id}/cancel")
@@ -1196,20 +1320,12 @@ public class UserController {
         // Edit User Apps/Roles Form
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
-        session.removeAttribute("userEditRolesModel");
-        session.removeAttribute("editUserRoles");
-        session.removeAttribute("availableRoles");
-        session.removeAttribute("userAssignedRoles");
-        session.removeAttribute("selectedAppIndex");
-        session.removeAttribute("editUserRolesCurrentApp");
-        session.removeAttribute("editUserRolesSelectedAppIndex");
 
         // Edit User Apps Form
-        session.removeAttribute("userAssignedApps");
-        session.removeAttribute("availableApps");
 
         // Edit User Offices Form
         session.removeAttribute("editUserOfficesModel");
+        session.removeAttribute("officesForm");
 
         // Clear any success messages
         session.removeAttribute("successMessage");

@@ -30,4 +30,6 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
     List<AppRole> findByUserTypeRestrictionContains(@Param("userType") String userType);
 
     List<AppRole> findAllByIdInAndAuthzRoleIs(Collection<UUID> roleIds, boolean authzRole);
+
+    List<AppRole> findAllByIdIn(Collection<UUID> roleIds);
 }

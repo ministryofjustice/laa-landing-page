@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -13,6 +14,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,7 +39,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(globalAdmins.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices().iterator().next().getCode()).isEqualTo(newOffice.getCode());
 
@@ -69,7 +71,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(globalAdmins.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices()).isEmpty();
     }
@@ -93,7 +95,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(internalAndExternalUserManagers.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices().iterator().next().getCode()).isEqualTo(newOffice.getCode());
 
@@ -125,7 +127,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(internalAndExternalUserManagers.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices()).isEmpty();
     }
@@ -164,7 +166,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(externalUserAdmins.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices().iterator().next().getCode()).isEqualTo(newOffice.getCode());
 
@@ -196,7 +198,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(externalUserAdmins.getFirst(), editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices()).isEmpty();
     }
@@ -217,7 +219,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
                 .findFirst()
                 .orElseThrow();
 
-        MvcResult result = changeUserOffice(internalUserManagers.getFirst(), editedUser, newOffice);
+        MvcResult result = changeUserOffice(internalUserManagers.getFirst(), editedUser, newOffice, false);
 
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
@@ -254,7 +256,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         MvcResult result = changeUserOffice(loggedInUser, editedUser, newOffice);
 
         assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/manage/" + editedUserProfile.getId());
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/users/edit/" + editedUserProfile.getId() + "/confirmation");
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices().iterator().next().getCode()).isEqualTo(newOffice.getCode());
 
@@ -289,7 +291,7 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
                 .findFirst()
                 .orElseThrow();
 
-        MvcResult result = changeUserOffice(loggedInUser, editedUser, newOffice);
+        MvcResult result = changeUserOffice(loggedInUser, editedUser, newOffice, false);
 
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
@@ -349,14 +351,37 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         assertThat(savedProfile.getOffices()).isEmpty();
     }
 
-
-
     private MvcResult changeUserOffice(EntraUser loggedInUser, EntraUser editedUser, Office newOffice) throws Exception {
+        return changeUserOffice(loggedInUser, editedUser, newOffice, true);
+    }
+
+    private MvcResult changeUserOffice(EntraUser loggedInUser, EntraUser editedUser, Office newOffice, boolean access) throws Exception {
         UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
-        return this.mockMvc.perform(post(String.format("/admin/users/edit/%s/offices", editedUserProfile.getId()))
+        // Show office list
+        MockHttpSession session = new MockHttpSession();
+        MvcResult result = mockMvc.perform(get(String.format("/admin/users/edit/%s/offices", editedUserProfile.getId()))
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .param("id", editedUserProfile.getId().toString()))
+                .andExpect(access ? status().isOk() : status().is3xxRedirection())
+                .andReturn();
+        if (!access) {
+            return result;
+        }
+
+        this.mockMvc.perform(post(String.format("/admin/users/edit/%s/offices", editedUserProfile.getId()))
                 .with(userOauth2Login(loggedInUser))
                 .with(csrf())
+                .session(session)
                 .param("offices", newOffice.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        return this.mockMvc.perform(post(String.format("/admin/users/edit/%s/offices-check-answer", editedUserProfile.getId().toString()))
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
     }

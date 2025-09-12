@@ -54,9 +54,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.function.Function;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -916,5 +918,12 @@ public class UserService {
         } else {
             logger.warn("User profile with id {} not found. Could not remove app role.", userProfileId);
         }
+    }
+
+    public Map<String, AppRoleDto> getRolesByIdIn(Collection<UUID> roleIds) {
+        return appRoleRepository.findAllByIdIn(roleIds).stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .collect(Collectors.toMap(AppRoleDto::getId,
+                        Function.identity()));
     }
 }
