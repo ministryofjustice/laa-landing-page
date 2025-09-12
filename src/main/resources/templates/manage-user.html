@@ -70,7 +70,7 @@
                         <strong th:if="${isAccessGranted}"
                             class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
                     </div>
-                    <form class="form" th:if="${!isAccessGranted}"
+                    <form class="form" th:if="${!isAccessGranted and canEditUser}"
                         th:action="@{'/admin/users/manage/' + ${user.id} + '/grant-access'}" method="post">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
@@ -147,7 +147,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Services
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Change</a>
@@ -173,7 +173,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
