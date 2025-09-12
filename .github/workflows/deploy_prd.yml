@@ -81,6 +81,7 @@ jobs:
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
+          SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
           JWT_URL: ${{ secrets.JWT_URL }}
           SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}

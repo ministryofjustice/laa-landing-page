@@ -1,57 +1,21 @@
 databaseChangeLog:
   - changeSet:
-      id: 1755695455412-1
-      author: suresh.kavali
+      id: 1755695455403-1
+      author: niall.mcmahon
       changes:
+        # Update roles with the INTERNAL role_type to have INTERNAL as their user type restriction
         - sql:
             dbms: postgresql
-            sql: "UPDATE app_role SET role_type='INTERNAL', user_type_restriction = ARRAY['INTERNAL'] WHERE authz_role = true AND name = 'External User Manager'"
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL'] WHERE role_type = 'INTERNAL'"
+        # Update roles with the EXTERNAL role_type to have EXTERNAL as their user type restriction
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Firm User Manager', 'An external firm user manager', 'EXTERNAL', ARRAY['EXTERNAL'], true)"
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['EXTERNAL'] WHERE role_type = 'EXTERNAL'"
+        # Update roles with the INTERNAL_AND_EXTERNAL role_type to have INTERNAL and EXTERNAL as their user type restriction
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Internal User Viewer', 'An internal LAA user viewer', 'INTERNAL', ARRAY['INTERNAL'], true)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, name, description, role_type, user_type_restriction, authz_role) VALUES ((SELECT id from app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'External User Viewer', 'An external LAA user viewer', 'INTERNAL', ARRAY['EXTERNAL'], true)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_EXTERNAL_USER')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'EDIT_EXTERNAL_USER')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'EDIT_USER_OFFICE')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), 'VIEW_INTERNAL_USER')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_EXTERNAL_USER')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), (SELECT id FROM app_role WHERE name = 'External User Manager'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), (SELECT id FROM app_role WHERE name = 'Firm User Manager'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), (SELECT id FROM app_role WHERE name = 'External User Admin'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL','EXTERNAL'] WHERE role_type = 'INTERNAL_AND_EXTERNAL'"
+        # Remove unused role_type column.
+        - dropColumn:
+            columnName: role_type
+            tableName: app_role

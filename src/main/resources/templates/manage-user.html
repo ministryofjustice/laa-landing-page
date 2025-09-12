@@ -100,7 +100,7 @@
                                 Services
                             </a>
                         </li>
-                        <li class="govuk-tabs__list-item">
+                        <li th:if="${showOfficesTab}" class="govuk-tabs__list-item">
                             <a class="govuk-tabs__tab" href="#offices">
                                 Offices
                             </a>
@@ -160,16 +160,14 @@
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">
-                                            <p class="govuk-body">No services are currently assigned to this user.</p>
-                                        </dd>
-                                    </div>
                                 </dl>
+                                <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
+                                    <p class="govuk-body">No services are currently assigned to this user</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
+                    <div th:if="${showOfficesTab}" class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
@@ -220,11 +218,11 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <a class="govuk-button govuk-button--primary" data-module="govuk-button"
-                   th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
+                    th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
                     Go back to manage your users
                 </a>
             </div>

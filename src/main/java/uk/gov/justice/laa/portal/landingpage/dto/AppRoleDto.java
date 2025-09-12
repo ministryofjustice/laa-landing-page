@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @Data
 @Builder
@@ -18,7 +18,7 @@ public class AppRoleDto implements Comparable<AppRoleDto> {
     private String description;
     private String ccmsCode;
     private AppDto app;
-    private RoleType roleType;
+    private UserType[] userTypeRestriction;
 
     @Override
     public int compareTo(@NotNull AppRoleDto o) {

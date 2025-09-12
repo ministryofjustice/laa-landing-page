@@ -64,6 +64,8 @@ spec:
             failureThreshold: 15
             periodSeconds: 10
           env:
+            - name: SENTRY_SAMPLE_RATE
+              value: "${SENTRY_SAMPLE_RATE}"
             - name: JWT_URL
               value: "${JWT_URL}"
             - name: SPRING_PROFILE

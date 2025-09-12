@@ -10,7 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,8 +44,8 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2));
         int oldAssignmentsSize = repository.findAll().size();
 
@@ -71,9 +71,9 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         appRepository.save(app);
 
-        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").roleType(RoleType.EXTERNAL).app(app).build();
-        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").roleType(RoleType.EXTERNAL).app(app).build();
-        AppRole appRole3 = AppRole.builder().name("appRole3").description("appRole3").roleType(RoleType.EXTERNAL).app(app).build();
+        AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole2 = AppRole.builder().name("appRole2").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
+        AppRole appRole3 = AppRole.builder().name("appRole3").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
         appRoleRepository.saveAll(List.of(appRole1, appRole2, appRole3));
 
         // Act
