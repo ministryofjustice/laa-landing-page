@@ -73,7 +73,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
@@ -1008,16 +1007,16 @@ class UserControllerTest {
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
-        testRole1.setRoleType(RoleType.EXTERNAL);
+        testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
         testRole2.setId("testAppRoleId2");
-        testRole2.setRoleType(RoleType.EXTERNAL);
+        testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
-        testRole3.setRoleType(RoleType.EXTERNAL);
+        testRole3.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole4 = new AppRoleDto();
         testRole4.setId("testUserAppRoleId");
-        testRole4.setRoleType(RoleType.EXTERNAL);
+        testRole4.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
         currentApp.setName("testAppName");
@@ -1053,13 +1052,13 @@ class UserControllerTest {
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
-        testRole1.setRoleType(RoleType.EXTERNAL);
+        testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
         testRole2.setId("testAppRoleId2");
-        testRole2.setRoleType(RoleType.EXTERNAL);
+        testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
-        testRole3.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
+        testRole3.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
         currentApp.setName("testAppName");
@@ -1095,16 +1094,16 @@ class UserControllerTest {
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId("testAppRoleId1");
-        testRole1.setRoleType(RoleType.EXTERNAL);
+        testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
         testRole2.setId("testAppRoleId2");
-        testRole2.setRoleType(RoleType.EXTERNAL);
+        testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId("testAppRoleId3");
-        testRole3.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
+        testRole3.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
         AppRoleDto testRole4 = new AppRoleDto();
         testRole4.setId("testUserAppRoleId");
-        testRole4.setRoleType(RoleType.INTERNAL);
+        testRole4.setUserTypeRestriction(new UserType[] {UserType.INTERNAL});
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
         currentApp.setName("testAppName");
@@ -1770,7 +1769,7 @@ class UserControllerTest {
         currentApp.setName("App 1");
 
         AppRoleDto role = new AppRoleDto();
-        role.setRoleType(RoleType.EXTERNAL);
+        role.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         List<AppRoleDto> appRoles = List.of(role);
 
         final UserProfileDto userProfile = UserProfileDto.builder()
@@ -1810,15 +1809,15 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id("app-two").name("app-two").ordinal(1).build();
         AppDto app3 = AppDto.builder().id("app-three").name("app-three").ordinal(3).build();
 
-        AppRoleDto a1r1 = AppRoleDto.builder().id("a1r1").name("a1r1").roleType(RoleType.EXTERNAL).app(app1).ordinal(3).build();
-        AppRoleDto a1r2 = AppRoleDto.builder().id("a1r2").name("a1r2").roleType(RoleType.EXTERNAL).app(app1).ordinal(4).build();
-        AppRoleDto a1r3 = AppRoleDto.builder().id("a1r3").name("a1r3").roleType(RoleType.EXTERNAL).app(app1).ordinal(1).build();
-        AppRoleDto a1r4 = AppRoleDto.builder().id("a1r4").name("a1r4").roleType(RoleType.EXTERNAL).app(app1).ordinal(2).build();
-        AppRoleDto a2r1 = AppRoleDto.builder().id("a2r1").name("a2r1").roleType(RoleType.EXTERNAL).app(app2).ordinal(2).build();
-        AppRoleDto a2r2 = AppRoleDto.builder().id("a2r2").name("a2r2").roleType(RoleType.EXTERNAL).app(app2).ordinal(3).build();
-        AppRoleDto a2r3 = AppRoleDto.builder().id("a2r3").name("a2r3").roleType(RoleType.EXTERNAL).app(app2).ordinal(1).build();
-        AppRoleDto a3r1 = AppRoleDto.builder().id("a3r1").name("a3r1").roleType(RoleType.EXTERNAL).app(app3).ordinal(1).build();
-        AppRoleDto a3r2 = AppRoleDto.builder().id("a3r2").name("a3r2").roleType(RoleType.EXTERNAL).app(app3).ordinal(2).build();
+        AppRoleDto a1r1 = AppRoleDto.builder().id("a1r1").name("a1r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().id("a1r2").name("a1r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().id("a1r3").name("a1r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().id("a1r4").name("a1r4").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().id("a2r1").name("a2r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().id("a2r2").name("a2r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().id("a2r3").name("a2r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().id("a3r1").name("a3r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().id("a3r2").name("a3r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app3).ordinal(2).build();
 
         Set<AppDto> userApps = new LinkedHashSet<>(Arrays.asList(app1, app2, app3));
 
