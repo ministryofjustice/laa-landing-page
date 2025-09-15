@@ -160,6 +160,7 @@ public class UserService {
             String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self, internal);
             if (!error.isEmpty()) {
                 result.put("error", error);
+                return result;
             }
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());

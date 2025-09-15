@@ -2064,6 +2064,40 @@ class UserServiceTest {
         }
 
         @Test
+        void updateUserRoles_handlesRoleCoverageError() {
+            // Arrange
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+            AppRole appRole = AppRole.builder().name("Global Admin").id(UUID.randomUUID()).build();
+            UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .appRoles(Set.of(appRole)).build();
+            EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+            userProfile.setEntraUser(user);
+
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
+            when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findByName("Global Admin")).thenReturn(Optional.of(appRole));
+            Page<UserProfile> existingAdmins = new PageImpl<>(List.of(userProfile));
+            when(mockUserProfileRepository.findInternalUserByAuthzRole(eq("Global Admin"), any()))
+                    .thenReturn(existingAdmins);
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                            .userType(UserType.EXTERNAL).build())).build();
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            // Act
+            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+
+            // Assert
+            assertThat(result.get("error")).isNotEmpty();
+            verify(mockUserProfileRepository, never()).save(userProfile);
+            verify(techServicesClient, never()).updateRoleAssignment(userId);
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
+        }
+
+        @Test
         void getUserAuthorities_handlesInactiveUser() {
             // Arrange
             EntraUser entraUser = EntraUser.builder()
