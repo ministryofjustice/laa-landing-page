@@ -46,7 +46,7 @@ public class InternalUserPolling {
                         return null;
                     });
                 } catch (DistributedLockService.LockAcquisitionException e) {
-                    log.warn("Could not acquire lock for internal user polling. Another instance might be running.");
+                    log.debug("Could not acquire lock for internal user polling. Another instance might be running.");
                 } catch (Exception e) {
                     log.error("Error during internal user polling", e);
                 }

@@ -6,9 +6,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import uk.gov.justice.laa.portal.landingpage.entity.DistributedLock;
 import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 
 import java.time.Duration;
@@ -26,9 +24,9 @@ public class DistributedLockService {
     private final String instanceId = UUID.randomUUID().toString();
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
+    @Transactional
     public <T> T withLock(String lockKey, Duration lockDuration, Supplier<T> task) {
         if (acquireLock(lockKey, lockDuration)) {
             try {
@@ -42,9 +40,9 @@ public class DistributedLockService {
     }
 
     @Retryable(retryFor = LockAcquisitionException.class,
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 1000, multiplier = 2))
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2))
+    @Transactional
     public void withLock(String lockKey, Duration lockDuration, Runnable task) {
         withLock(lockKey, lockDuration, () -> {
             task.run();
@@ -56,20 +54,14 @@ public class DistributedLockService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lockedUntil = now.plus(lockDuration);
 
-        int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
-        if (updated == 0) {
-            // Try to insert new lock
-            try {
-                DistributedLock lock = new DistributedLock();
-                lock.setKey(key);
-                lock.setLockedUntil(lockedUntil);
-                lock.setLockedBy(instanceId);
-                lockRepository.save(lock);
-                return true;
-            } catch (Exception e) {
-                log.debug("Failed to acquire lock for key: {}", key, e);
+        try {
+            int updated = lockRepository.acquireLock(key, lockedUntil, instanceId);
+            if (updated == 0) {
                 return false;
             }
+        } catch (Exception e) {
+            log.debug("Failed to acquire lock for key: {}", key, e);
+            return false;
         }
         return true;
     }

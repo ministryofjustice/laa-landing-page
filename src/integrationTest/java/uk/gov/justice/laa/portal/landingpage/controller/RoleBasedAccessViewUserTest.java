@@ -200,6 +200,27 @@ public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest 
         testCanAccessUser(loggedInUser, accessedUserFirmTwo, status().isOk());
     }
 
+    @Test
+    public void testInternalUserViewerCanAccessInternalUserProfile() throws Exception {
+        testCanAccessUser(internalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testInternalUserViewerCannotAccessExternalUserProfile() throws Exception {
+        testCanAccessUser(internalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserViewerCanAccessExternalUserProfile() throws Exception {
+        testCanAccessUser(externalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotAccessInternalUserProfile() throws Exception {
+        testCanAccessUser(externalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+
 
     public void testCanAccessUser(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
         UserProfile accessedUserProfile = accessedUser.getUserProfiles().stream().findFirst().get();

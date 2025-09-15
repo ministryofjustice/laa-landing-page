@@ -28,6 +28,10 @@ sentry {
   org = "ministryofjustice"
   projectName = "laa-portal-stabilisation"
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
+
+  autoInstallation {
+    enabled = true
+  }
 }
 
 sourceSets {

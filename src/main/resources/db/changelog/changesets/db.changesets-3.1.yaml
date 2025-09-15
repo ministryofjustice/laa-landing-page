@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755695455403-1
+      author: niall.mcmahon
+      changes:
+        # Update roles with the INTERNAL role_type to have INTERNAL as their user type restriction
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL'] WHERE role_type = 'INTERNAL'"
+        # Update roles with the EXTERNAL role_type to have EXTERNAL as their user type restriction
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['EXTERNAL'] WHERE role_type = 'EXTERNAL'"
+        # Update roles with the INTERNAL_AND_EXTERNAL role_type to have INTERNAL and EXTERNAL as their user type restriction
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app_role SET user_type_restriction = ARRAY['INTERNAL','EXTERNAL'] WHERE role_type = 'INTERNAL_AND_EXTERNAL'"
+        # Remove unused role_type column.
+        - dropColumn:
+            columnName: role_type
+            tableName: app_role
