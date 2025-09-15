@@ -288,6 +288,9 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
         model.addAttribute("externalUser", externalUser);
+        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
+        model.addAttribute("showOfficesTab", showOfficesTab);
+        
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
 
         // Add filter state to model for "Back to search results" link

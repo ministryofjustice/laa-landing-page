@@ -216,7 +216,7 @@ public class DemoDataPopulator {
                         return null;
                     });
                 } catch (DistributedLockService.LockAcquisitionException e) {
-                    log.warn("Could not acquire lock for demo data population. Another instance might be running.");
+                    log.debug("Could not acquire lock for demo data population. Another instance might be running.");
                 } catch (Exception e) {
                     log.error("Error during demo data population", e);
                     throw e; // Re-throw to ensure transaction rollback on error
