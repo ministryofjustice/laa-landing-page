@@ -147,7 +147,7 @@ public class UserService {
             boolean internal  = modifierTypes.contains(UserType.INTERNAL);
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(uType -> uType == userProfile.getUserType()))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(userType -> userType == userProfile.getUserType()))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -168,7 +168,6 @@ public class UserService {
             // Update roles
             userProfile.setAppRoles(newRoles);
             diff = diffRole(oldRoles, newRoles);
-            result.put("diff", diff);
 
             // Try to send role change notification with retry logic before saving
             boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
@@ -177,6 +176,7 @@ public class UserService {
             // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
+            result.put("diff", diff);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
