@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -158,24 +159,27 @@ public class LiveTechServicesClient implements TechServicesClient {
                         user.getFirstName() + " " + user.getLastName(), securityGroups);
                 return TechServicesApiResponse.success(responseBody);
             } else {
-                logger.error("Failed to create new user by Tech Services for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
-                TechServicesErrorResponse errorResponse = objectMapper.readValue(response.getBody(), TechServicesErrorResponse.class);
-                return TechServicesApiResponse.error(errorResponse);
+                logger.error("Error while sending new user creation request to Tech Services, the response is {}.", response.getBody());
+                throw new RuntimeException(String.format("Error while sending verification email to Tech Services, the response is %s.", response.getBody()));
             }
         } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
             String errorJson = httpEx.getResponseBodyAsString();
             try {
                 TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
-                logger.error("Failed to send verification email for {}, the root cause is {} ({}) ",
+                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
                         user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
-                return TechServicesApiResponse.error(errorResponse);
+                if (httpEx.getStatusCode().equals(HttpStatus.CONFLICT)) {
+                    logger.info("Handling user conflicts gracefully.");
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                throw httpEx;
             } catch (Exception ex) {
-                logger.error("Error while sending verification email to Tech Services.", ex);
-                throw new RuntimeException("Error while sending verification email to Tech Services.", ex);
+                logger.error("Error while sending new user creation request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
-            logger.error("Error while create user request to Tech Services.", ex);
-            throw new RuntimeException("Error while create user request to Tech Services.", ex);
+            logger.error("Error while sending new user creation request to Tech Services.", ex);
+            throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
         }
     }
 

@@ -64,7 +64,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -442,7 +441,7 @@ public class UserService {
             boolean isUserManager, String createdBy) {
 
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
-        if(!registerUserResponse.isSuccess()){
+        if (!registerUserResponse.isSuccess()) {
             throw new TechServicesClientException(registerUserResponse.getError().getMessage(),
                     registerUserResponse.getError().getCode(), registerUserResponse.getError().getErrors());
         }
