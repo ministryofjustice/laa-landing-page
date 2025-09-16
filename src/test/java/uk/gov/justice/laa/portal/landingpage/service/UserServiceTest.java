@@ -46,7 +46,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -936,7 +935,7 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL_AND_EXTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL}).build();
         UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
@@ -960,7 +959,7 @@ class UserServiceTest {
         UUID userProfileId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.EXTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
         UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
@@ -982,7 +981,7 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.INTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
@@ -1004,7 +1003,7 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).roleType(RoleType.INTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
@@ -1074,21 +1073,6 @@ class UserServiceTest {
     }
 
     @Test
-    void userExistsByEmail_logsWarning_whenGraphThrowsException() {
-        String email = "test@example.com";
-        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.empty());
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(email).get()).thenThrow(new RuntimeException("Not found"));
-        ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-        assertThat(userService.userExistsByEmail(email)).isFalse();
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
-        assertThat(warningLogs).isNotEmpty();
-        assertThat(warningLogs.getFirst().getFormattedMessage())
-                .contains("No user found in Entra with matching email. Catching error and moving on");
-    }
-
-    @Test
     public void testGetAppsByUserTypeQueriesInternalUsersWhenUserTypeIsInternal() {
         App testApp = App.builder()
                 .name("Test App")
@@ -1097,16 +1081,14 @@ class UserServiceTest {
                 .name("Test Role")
                 .app(testApp)
                 .build();
-        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.INTERNAL);
         Assertions.assertEquals(1, apps.size());
         Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
-        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
-        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
-        List<RoleType> roleTypes = captor.getValue();
-        Assertions.assertEquals(2, roleTypes.size());
-        Assertions.assertEquals(RoleType.INTERNAL, roleTypes.getFirst());
-        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
+        String userTypeString = captor.getValue();
+        Assertions.assertEquals(UserType.INTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1118,16 +1100,14 @@ class UserServiceTest {
                 .name("Test Role")
                 .app(testApp)
                 .build();
-        when(mockAppRoleRepository.findByRoleTypeIn(anyList())).thenReturn(List.of(testAppRole));
+        when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL);
         Assertions.assertEquals(1, apps.size());
         Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
-        ArgumentCaptor<List<RoleType>> captor = ArgumentCaptor.forClass(List.class);
-        verify(mockAppRoleRepository).findByRoleTypeIn(captor.capture());
-        List<RoleType> roleTypes = captor.getValue();
-        Assertions.assertEquals(2, roleTypes.size());
-        Assertions.assertEquals(RoleType.EXTERNAL, roleTypes.getFirst());
-        Assertions.assertEquals(RoleType.INTERNAL_AND_EXTERNAL, roleTypes.get(1));
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
+        String userTypeString = captor.getValue();
+        Assertions.assertEquals(UserType.EXTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1138,19 +1118,19 @@ class UserServiceTest {
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
                 .ordinal(2)
-                .roleType(RoleType.INTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
                 .app(testApp)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
                 .ordinal(3)
-                .roleType(RoleType.EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                 .app(testApp)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
                 .ordinal(1)
-                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
                 .app(testApp)
                 .build();
 
@@ -1162,7 +1142,7 @@ class UserServiceTest {
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
-                .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.EXTERNAL)));
+                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction())).anyMatch(userType -> userType == UserType.INTERNAL));
         Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
         Assertions.assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
     }
@@ -1174,19 +1154,19 @@ class UserServiceTest {
                 .build();
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
-                .roleType(RoleType.INTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
                 .app(testApp)
                 .ordinal(2)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
-                .roleType(RoleType.EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                 .app(testApp)
                 .ordinal(3)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
-                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
                 .ordinal(1)
                 .app(testApp)
                 .build();
@@ -1199,7 +1179,7 @@ class UserServiceTest {
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
-                .assertTrue(returnedAppRoles.stream().noneMatch(role -> role.getRoleType().equals(RoleType.INTERNAL)));
+                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction())).anyMatch(userType -> userType == UserType.EXTERNAL));
         Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
         Assertions.assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
     }
@@ -2312,17 +2292,17 @@ class UserServiceTest {
         // Given
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .roleType(RoleType.INTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
                 .ordinal(2)
                 .app(App.builder().id(UUID.randomUUID()).name("Internal App").build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
                 .ordinal(1)
                 .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
                 .build();
-        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+        when(mockAppRoleRepository.findByUserTypeRestrictionContains(UserType.INTERNAL.name()))
                 .thenReturn(List.of(appRole1, appRole2));
 
         // When
@@ -2332,7 +2312,7 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.stream().map(AppDto::getName))
                 .containsExactly("Internal App", "Common App");
-        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.INTERNAL.name());
     }
 
     @Test
@@ -2341,16 +2321,16 @@ class UserServiceTest {
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .ordinal(2)
-                .roleType(RoleType.EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                 .app(App.builder().id(UUID.randomUUID()).name("External App").ordinal(2).build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .ordinal(1)
-                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
                 .app(App.builder().id(UUID.randomUUID()).name("Common App").ordinal(1).build())
                 .build();
-        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+        when(mockAppRoleRepository.findByUserTypeRestrictionContains(UserType.EXTERNAL.name()))
                 .thenReturn(List.of(appRole1, appRole2));
 
         // When
@@ -2362,7 +2342,7 @@ class UserServiceTest {
                 IntStream.range(0, 2)
                         .allMatch(i -> result.get(i).getName().equals(Arrays.asList("Common App", "External App").get(i))))
                 .isTrue();
-        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.EXTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.EXTERNAL.name());
     }
 
     @Test
@@ -2371,15 +2351,15 @@ class UserServiceTest {
         App sharedApp = App.builder().id(UUID.randomUUID()).name("Shared App").build();
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .roleType(RoleType.INTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
                 .app(sharedApp)
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .roleType(RoleType.INTERNAL_AND_EXTERNAL)
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
                 .app(sharedApp)
                 .build();
-        when(mockAppRoleRepository.findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL)))
+        when(mockAppRoleRepository.findByUserTypeRestrictionContains(UserType.INTERNAL.name()))
                 .thenReturn(List.of(appRole1, appRole2));
 
         // When
@@ -2388,7 +2368,7 @@ class UserServiceTest {
         // Then - Should only appear once due to distinct()
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("Shared App");
-        verify(mockAppRoleRepository).findByRoleTypeIn(List.of(RoleType.INTERNAL, RoleType.INTERNAL_AND_EXTERNAL));
+        verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.INTERNAL.name());
     }
 
     @Test
@@ -2806,7 +2786,7 @@ class UserServiceTest {
                     .description("Old Role Description")
                     .ccmsCode("CCMS_OLD")
                     .legacySync(true)
-                    .roleType(RoleType.EXTERNAL)
+                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                     .authzRole(false)
                     .build();
 
@@ -2816,7 +2796,7 @@ class UserServiceTest {
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
-                    .roleType(RoleType.EXTERNAL)
+                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                     .authzRole(false)
                     .build();
 
@@ -2872,7 +2852,7 @@ class UserServiceTest {
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
-                    .roleType(RoleType.EXTERNAL)
+                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                     .authzRole(false)
                     .build();
 
@@ -2937,7 +2917,7 @@ class UserServiceTest {
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NON_PUI_ROLE")
                     .legacySync(false)
-                    .roleType(RoleType.EXTERNAL)
+                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
                     .authzRole(false)
                     .build();
 

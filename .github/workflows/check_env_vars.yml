@@ -1,0 +1,144 @@
+name: Check for Missing Environment Variables
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-variables:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get changed files in src directory
+        id: changed-src-files
+        uses: tj-actions/changed-files@v46
+        with:
+          # We only care about files inside the 'src' directory
+          files: |
+            src/**
+
+      - name: Find and check environment variables
+        id: check-env
+        # This step only runs if there are changed files in the 'src' directory
+        if: steps.changed-src-files.outputs.any_changed == 'true'
+        run: |
+          # --------------------------------------------------------------------------
+          # CONFIGURE THE ALLOWLIST HERE
+          # Add any variable names you want to ignore to this list.
+          env_var_allowlist=(
+            "POSTGRES_DB_NAME"
+            "POSTGRES_PASSWORD"
+            "POSTGRES_USERNAME"
+            "INTERNAL_USER_SECURITY_GROUP"
+          )
+          # --------------------------------------------------------------------------
+
+          # List of files where variables must exist
+          files_to_check=(
+            ".github/workflows/deploy_dev.yml"
+            ".github/workflows/deploy_test.yml"
+            ".github/workflows/deploy_prd.yml"
+            "deployments/templates/deployment.yml"
+          )
+
+          # Create an empty temporary file to store results
+          found_vars_temp_file=$(mktemp)
+
+          # Safely loop through each changed file to find environment variables
+          echo "${{ steps.changed-src-files.outputs.all_changed_files }}" | while read -r file; do
+            # Ensure the file exists (i.e., it wasn't deleted in the PR)
+            if [ -f "$file" ]; then
+              grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" >> "$found_vars_temp_file"
+            fi
+          done
+          
+          # Now, get the unique variables from our temporary file
+          env_vars=$(cat "$found_vars_temp_file" | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
+          rm "$found_vars_temp_file"
+
+          if [ -z "$env_vars" ]; then
+            echo "should_comment=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          comment_body=""
+          # Check if each variable exists in the deployment files
+          for var in $env_vars; do
+            var_name=$(echo "$var" | sed -E 's/\$\{//' | sed -E 's/\}//')
+            
+            # Check if the variable is in the allowlist
+            is_allowed=false
+            for allowed_var in "${env_var_allowlist[@]}"; do
+              if [[ "$var_name" == "$allowed_var" ]]; then
+                is_allowed=true
+                break
+              fi
+            done
+
+            # If the variable is not in the allowlist, then proceed with the check
+            if [ "$is_allowed" = false ]; then
+              missing_in_files=()
+              for file in "${files_to_check[@]}"; do
+                if [ -f "$file" ] && ! grep -q "$var_name" "$file"; then
+                  missing_in_files+=("$file")
+                elif [ ! -f "$file" ]; then
+                  missing_in_files+=("$file (File not found)")
+                fi
+              done
+
+              if [ ${#missing_in_files[@]} -gt 0 ]; then
+                if [ -z "$comment_body" ]; then
+                  comment_body=":warning: **Missing Environment Variables**\n\nI found new environment variables in your changes that are missing from key deployment files. Please add them to ensure deployments don't fail:\n"
+                fi
+                comment_body+="\n- **\`$var_name\`** is missing from:\n"
+                for missing_file in "${missing_in_files[@]}"; do
+                  comment_body+="  - \`$missing_file\`\n"
+                done
+              fi
+            fi
+          done
+          
+          # If we have a comment body, add the concluding notes before exiting
+          if [ -n "$comment_body" ]; then
+            comment_body+="\n> [!IMPORTANT]\n> Remember to also add these variables to this repository's **GitHub Secrets** for each environment."
+            comment_body+="\n\n---\n*If a variable is intentionally missing from the deployment files, you can add it to the \`env_var_allowlist\` in \`.github/workflows/env_variable_check.yml\` to ignore it in future checks.*"
+            
+            delimiter=$(openssl rand -hex 8)
+            echo "comment_body<<${delimiter}" >> $GITHUB_ENV
+            echo -e "${comment_body}" >> $GITHUB_ENV
+            echo "${delimiter}" >> $GITHUB_ENV
+            
+            echo "should_comment=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "should_comment=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add comment to PR
+        if: failure() && steps.check-env.outputs.should_comment == 'true'
+        uses: actions/github-script@v6
+        # Pass the comment body as an environment variable to the script
+        env:
+          COMMENT_BODY: ${{ env.comment_body }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Read the comment from the environment variable to avoid syntax errors
+            const body = process.env.COMMENT_BODY;
+            
+            if (body && body.trim()) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }

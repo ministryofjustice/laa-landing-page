@@ -50,6 +50,20 @@ public class RoleBasedAccessViewCreateUserPageTest extends RoleBasedAccessIntegr
     }
 
     @Test
+    public void testInternalUserViewerCannotAccessCreateUserPage() throws Exception {
+        MvcResult result = accessCreateUserScreen(internalUserViewers.getFirst(), status().is3xxRedirection());
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
+    public void testExternalUserViewerCannotAccessCreateUserPage() throws Exception {
+        MvcResult result = accessCreateUserScreen(externalUserViewers.getFirst(), status().is3xxRedirection());
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
     public void testInternalUserWithNoRolesCannotAccessCreateUserPage() throws Exception {
         accessCreateUserScreen(internalUsersNoRoles.getFirst(), status().isForbidden());
     }

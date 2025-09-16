@@ -39,7 +39,7 @@
                         <strong th:if="${isAccessGranted}"
                             class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
                     </div>
-                    <form class="form" th:if="${!isAccessGranted}"
+                    <form class="form" th:if="${!isAccessGranted and canEditUser}"
                         th:action="@{'/admin/users/manage/' + ${user.id} + '/grant-access'}" method="post">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
@@ -69,7 +69,7 @@
                                 Services
                             </a>
                         </li>
-                        <li class="govuk-tabs__list-item">
+                        <li th:if="${showOfficesTab}" class="govuk-tabs__list-item">
                             <a class="govuk-tabs__tab" href="#offices">
                                 Offices
                             </a>
@@ -111,7 +111,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Services
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Change</a>
@@ -124,22 +124,20 @@
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">
-                                            <p class="govuk-body">No services are currently assigned to this user.</p>
-                                        </dd>
-                                    </div>
                                 </dl>
+                                <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
+                                    <p class="govuk-body">No services are currently assigned to this user</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
+                    <div th:if="${showOfficesTab}" class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
@@ -184,11 +182,11 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <a class="govuk-button govuk-button--primary" data-module="govuk-button"
-                   th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
+                    th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
                     Go back to manage your users
                 </a>
             </div>

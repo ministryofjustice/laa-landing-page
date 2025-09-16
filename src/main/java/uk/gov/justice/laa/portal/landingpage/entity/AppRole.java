@@ -74,11 +74,6 @@ public class AppRole extends BaseEntity {
     @Builder.Default
     private Set<UserProfile> userProfiles = new HashSet<>();
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role_type", nullable = false, length = 255)
-    @NotNull(message = "App role type must be provided")
-    private RoleType roleType;
-
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type_restriction", nullable = true, columnDefinition = "text[]")

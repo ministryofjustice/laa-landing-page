@@ -31,7 +31,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -53,6 +52,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -75,10 +75,6 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private static final int BATCH_SIZE = 20;
-    /**
-     * The number of pages to load in advance when doing user pagination
-     */
-    private static final int PAGES_TO_PRELOAD = 5;
     private final OfficeRepository officeRepository;
     private final GraphServiceClient graphClient;
     private final EntraUserRepository entraUserRepository;
@@ -143,16 +139,9 @@ public class UserService {
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
-            boolean isInternal = userProfile.getUserType() == UserType.INTERNAL;
             int before = roles.size();
-            Predicate<AppRole> internalUserWithInternalRole = appRole -> isInternal
-                    && appRole.getRoleType().equals(RoleType.INTERNAL);
-            Predicate<AppRole> externalUserWithExternalRole = appRole -> !isInternal
-                    && appRole.getRoleType().equals(RoleType.EXTERNAL);
             roles = roles.stream()
-                    .filter(appRole -> internalUserWithInternalRole.test(appRole)
-                            || externalUserWithExternalRole.test(appRole)
-                            || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(userType -> userType == userProfile.getUserType()))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -428,15 +417,8 @@ public class UserService {
     }
 
     public List<AppDto> getAppsByUserType(UserType userType) {
-        if (userType == UserType.INTERNAL) {
-            return getAppsByRoleType(RoleType.INTERNAL);
-        } else {
-            return getAppsByRoleType(RoleType.EXTERNAL);
-        }
-    }
-
-    private List<AppDto> getAppsByRoleType(RoleType roleType) {
-        return appRoleRepository.findByRoleTypeIn(List.of(roleType, RoleType.INTERNAL_AND_EXTERNAL)).stream()
+        return appRoleRepository.findByUserTypeRestrictionContains(userType.name())
+                .stream()
                 .map(AppRole::getApp)
                 .distinct()
                 .map(app -> mapper.map(app, AppDto.class))
@@ -587,7 +569,7 @@ public class UserService {
                     .byUserId(email)
                     .get();
         } catch (Exception ex) {
-            logger.warn("No user found in Entra with matching email. Catching error and moving on.");
+            logger.debug("No user found in Entra with matching email. Catching error and moving on.");
         }
         return user.isPresent() || graphUser != null;
     }
@@ -611,10 +593,8 @@ public class UserService {
         List<AppRoleDto> appRoles = new ArrayList<>();
         if (optionalApp.isPresent()) {
             App app = optionalApp.get();
-            RoleType userRoleType = userType == UserType.INTERNAL ? RoleType.INTERNAL : RoleType.EXTERNAL;
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> appRole.getRoleType().equals(userRoleType)
-                            || appRole.getRoleType().equals(RoleType.INTERNAL_AND_EXTERNAL))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(roleUserType -> roleUserType == userType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .sorted()
                     .toList();
