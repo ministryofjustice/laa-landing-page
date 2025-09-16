@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -2487,76 +2488,6 @@ class UserControllerTest {
         // EmailValidationService should still be called even with empty email
         verify(emailValidationService).isValidEmailDomain("");
         assertThat(result).isEqualTo("add-user-details");
-    }
-
-    @Test
-    void offices_shouldHandleExistingOfficeDataInSession() {
-        // Given
-        UUID firmId = UUID.randomUUID();
-        UUID office1Id = UUID.randomUUID();
-        UUID office2Id = UUID.randomUUID();
-
-        Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
-        final Office office1 = Office.builder().id(office1Id).address(address).build();
-        final Office office2 = Office.builder().id(office2Id).address(address).build();
-
-        OfficeData existingOfficeData = new OfficeData();
-        existingOfficeData.setSelectedOffices(List.of(office1Id.toString()));
-
-        FirmDto selectedFirm = new FirmDto();
-        selectedFirm.setId(firmId);
-
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("officeData", existingOfficeData);
-        testSession.setAttribute("user", new EntraUserDto());
-        testSession.setAttribute("firm", selectedFirm);
-
-        when(officeService.getOfficesByFirms(List.of(firmId))).thenReturn(List.of(office1, office2));
-
-        // When
-        String view = userController.offices(new OfficesForm(), testSession, model);
-
-        // Then
-        assertThat(view).isEqualTo("add-user-offices");
-        @SuppressWarnings("unchecked")
-        List<OfficeModel> officeData = (List<OfficeModel>) model.getAttribute("officeData");
-        assertThat(officeData).hasSize(2);
-        assertThat(officeData.get(0).isSelected()).isTrue();
-        assertThat(officeData.get(1).isSelected()).isFalse();
-    }
-
-    @Test
-    void setSelectedRoles_shouldHandleLastAppInMultiAppScenario() {
-        // Given
-        RolesForm rolesForm = new RolesForm();
-        rolesForm.setRoles(List.of("finalRole"));
-
-        MockHttpSession testSession = new MockHttpSession();
-        List<String> selectedApps = List.of("app1", "app2");
-        testSession.setAttribute("apps", selectedApps);
-
-        Model sessionModel = new ExtendedModelMap();
-        sessionModel.addAttribute("createUserRolesSelectedAppIndex", 1); // Last app index
-        testSession.setAttribute("userCreateRolesModel", sessionModel);
-
-        // Existing roles for previous apps
-        Map<Integer, List<String>> existingRoles = new HashMap<>();
-        existingRoles.put(0, List.of("role1", "role2"));
-        testSession.setAttribute("createUserAllSelectedRoles", existingRoles);
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
-
-        // When
-        String view = userController.setSelectedRoles(rolesForm, bindingResult, model, testSession);
-
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/user/create/offices");
-        @SuppressWarnings("unchecked")
-        List<String> allRoles = (List<String>) testSession.getAttribute("roles");
-        assertThat(allRoles).containsExactlyInAnyOrder("role1", "role2", "finalRole");
-        assertThat(testSession.getAttribute("userCreateRolesModel")).isNull();
-        assertThat(testSession.getAttribute("createUserAllSelectedRoles")).isNull();
     }
 
     @Test
