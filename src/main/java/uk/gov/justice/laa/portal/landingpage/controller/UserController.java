@@ -551,7 +551,7 @@ public class UserController {
             user = userService.getUserProfileById(id).orElseThrow();
         }
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm) || Objects.isNull(editUserDetailsForm.getFirstName()) || Objects.isNull(editUserDetailsForm.getLastName())) {
+        if (Objects.isNull(editUserDetailsForm)) {
             editUserDetailsForm = new EditUserDetailsForm();
             editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
             editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
@@ -595,11 +595,11 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsCheck(@PathVariable String id, Model model,
                                           HttpSession session) throws IOException {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
         if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
         }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - Check your answers - " + user.getFullName());
