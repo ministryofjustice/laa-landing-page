@@ -101,6 +101,16 @@
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row" th:if="${user.firm != null}">
+                                        <dt class="govuk-summary-list__key">
+                                            Firm name
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.firm.name}">
+                                        </dd>
+                                        <dd th:if="${canReassignFirm}" class="govuk-summary-list__actions">
+                                            <a class="govuk-link" th:href="@{'/admin/users/reassign-firm/' + ${user.id}}">Change</a>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -193,6 +203,482 @@
         </div>
         </div>
     </main>
+
+    <!-- Firm Reassignment Modal -->
+    <div class="govuk-modal" id="firm-reassignment-modal" style="display: none;">
+        <div class="govuk-modal__backdrop" onclick="closeFirmReassignmentModal()"></div>
+        <div class="govuk-modal__content">
+            <div class="govuk-modal__header">
+                <h2 class="govuk-heading-m">Reassign user to a different firm</h2>
+                <button class="govuk-modal__close" onclick="closeFirmReassignmentModal()" aria-label="Close modal">×</button>
+            </div>
+            
+            <div class="govuk-modal__body">
+                <div class="govuk-warning-text">
+                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                    <strong class="govuk-warning-text__text">
+                        <span class="govuk-warning-text__assistive">Warning</span>
+                        This action will remove all current roles and office assignments for this user.
+                    </strong>
+                </div>
+                
+                <form id="firm-reassignment-form" onsubmit="submitFirmReassignment(event)">
+                    <div class="govuk-form-group" id="firm-search-group">
+                        <label class="govuk-label govuk-label--s" for="firm-search-input">
+                            Search for a firm
+                        </label>
+                        <div class="govuk-hint">
+                            Enter firm name or firm code
+                        </div>
+                        <div class="autocomplete__wrapper">
+                            <input class="govuk-input" id="firm-search-input" name="firmSearch" type="text"
+                                   autocomplete="off" placeholder="Start typing to search...">
+                            <input type="hidden" id="selected-firm-id" name="selectedFirmId" />
+                            <ul id="firm-search-results" class="autocomplete__menu autocomplete__menu--hidden" role="listbox">
+                                <!-- Search results will be populated here via JavaScript -->
+                            </ul>
+                        </div>
+                        <div class="govuk-error-message" id="firm-search-error" style="display: none;">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span id="firm-search-error-text"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="govuk-form-group" id="reason-group">
+                        <label class="govuk-label govuk-label--s" for="reassignment-reason">
+                            Reason for reassignment
+                        </label>
+                        <div class="govuk-hint">
+                            Explain why this user is being reassigned to a different firm
+                        </div>
+                        <textarea class="govuk-textarea" id="reassignment-reason" name="reason" rows="3"
+                                  placeholder="Enter the reason for this reassignment..."></textarea>
+                        <div class="govuk-error-message" id="reason-error" style="display: none;">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span id="reason-error-text"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button" id="submit-reassignment">
+                            Reassign user
+                        </button>
+                        <button type="button" class="govuk-button govuk-button--secondary" onclick="closeFirmReassignmentModal()">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Message Display -->
+    <div class="govuk-notification-banner" id="notification-banner" style="display: none;">
+        <div class="govuk-notification-banner__header">
+            <h2 class="govuk-notification-banner__title" id="notification-title">Important</h2>
+        </div>
+        <div class="govuk-notification-banner__content">
+            <p class="govuk-notification-banner__heading" id="notification-message"></p>
+        </div>
+    </div>
+
+    <style>
+        /* Modal Styles */
+        .govuk-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .govuk-modal__backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .govuk-modal__content {
+            position: relative;
+            background-color: #ffffff;
+            border: 2px solid #0b0c0c;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 0;
+            margin: 20px;
+            box-sizing: border-box;
+        }
+        
+        .govuk-modal__header {
+            padding: 20px 20px 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .govuk-modal__header h2 {
+            margin: 0;
+        }
+        
+        .govuk-modal__close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            color: #0b0c0c;
+        }
+        
+        .govuk-modal__body {
+            padding: 20px;
+        }
+        
+        /* Autocomplete Styles */
+        .autocomplete__menu {
+            background-color: #ffffff;
+            border: 2px solid #0b0c0c;
+            border-top: none;
+            box-sizing: border-box;
+            color: #0b0c0c;
+            font-family: "GDS Transport", arial, sans-serif;
+            font-size: 19px;
+            list-style: none;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        
+        .autocomplete__menu--hidden {
+            display: none !important;
+        }
+        
+        .autocomplete__option {
+            background-color: #ffffff;
+            border-bottom: 1px solid #b1b4b6;
+            color: #0b0c0c;
+            cursor: pointer;
+            display: block;
+            padding: 8px 12px;
+        }
+        
+        .autocomplete__option:last-child {
+            border-bottom: none;
+        }
+        
+        .autocomplete__option:hover,
+        .autocomplete__option--focused {
+            background-color: #1d70b8;
+            color: #ffffff;
+        }
+        
+        .autocomplete__option strong {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .autocomplete__option small {
+            font-size: 16px;
+            color: #505a5f;
+            display: block;
+        }
+        
+        .autocomplete__option:hover small,
+        .autocomplete__option--focused small {
+            color: #ffffff;
+        }
+        
+        .autocomplete__wrapper {
+            position: relative;
+        }
+        
+        /* Notification Banner */
+        .govuk-notification-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .govuk-notification-banner--success {
+            border: 5px solid #00703c;
+        }
+        
+        .govuk-notification-banner--error {
+            border: 5px solid #d4351c;
+        }
+    </style>
+
+    <script>
+        // Firm Reassignment Modal Functions
+        function openFirmReassignmentModal() {
+            document.getElementById('firm-reassignment-modal').style.display = 'flex';
+            document.getElementById('firm-search-input').focus();
+            clearErrors();
+        }
+        
+        function closeFirmReassignmentModal() {
+            document.getElementById('firm-reassignment-modal').style.display = 'none';
+            resetForm();
+        }
+        
+        function resetForm() {
+            document.getElementById('firm-reassignment-form').reset();
+            document.getElementById('selected-firm-id').value = '';
+            hideFirmResults();
+            clearErrors();
+        }
+        
+        function clearErrors() {
+            document.getElementById('firm-search-error').style.display = 'none';
+            document.getElementById('reason-error').style.display = 'none';
+            document.getElementById('firm-search-group').classList.remove('govuk-form-group--error');
+            document.getElementById('reason-group').classList.remove('govuk-form-group--error');
+        }
+        
+        function showError(fieldId, errorId, errorTextId, message) {
+            document.getElementById(fieldId).classList.add('govuk-form-group--error');
+            document.getElementById(errorTextId).textContent = message;
+            document.getElementById(errorId).style.display = 'block';
+        }
+        
+        function showNotification(message, type = 'success') {
+            const banner = document.getElementById('notification-banner');
+            const title = document.getElementById('notification-title');
+            const messageEl = document.getElementById('notification-message');
+            
+            banner.className = `govuk-notification-banner govuk-notification-banner--${type}`;
+            title.textContent = type === 'success' ? 'Success' : 'Error';
+            messageEl.textContent = message;
+            banner.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Firm Search Functionality
+        let searchTimeout;
+        let selectedIndex = -1;
+        
+        document.getElementById('firm-search-input').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 3) {
+                document.getElementById('selected-firm-id').value = '';
+                hideFirmResults();
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                searchFirms(query);
+            }, 300);
+        });
+        
+        document.getElementById('firm-search-input').addEventListener('keydown', function(e) {
+            const results = document.getElementById('firm-search-results');
+            const items = results.querySelectorAll('.autocomplete__option');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            } else if (e.key === 'Escape') {
+                hideFirmResults();
+            }
+        });
+        
+        function searchFirms(query) {
+            fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                displayFirmResults(data);
+            })
+            .catch(error => {
+                console.error('Error searching firms:', error);
+                hideFirmResults();
+            });
+        }
+        
+        function displayFirmResults(firms) {
+            const results = document.getElementById('firm-search-results');
+            results.innerHTML = '';
+            selectedIndex = -1;
+            
+            if (firms.length === 0) {
+                const noResultsItem = document.createElement('li');
+                noResultsItem.className = 'autocomplete__option';
+                noResultsItem.textContent = 'No firms found';
+                noResultsItem.style.color = '#6f777b';
+                results.appendChild(noResultsItem);
+                showFirmResults();
+                return;
+            }
+            
+            firms.forEach((firm, index) => {
+                const item = document.createElement('li');
+                item.className = 'autocomplete__option';
+                item.setAttribute('role', 'option');
+                
+                const strongElement = document.createElement('strong');
+                strongElement.textContent = firm.name || '';
+                
+                const smallElement = document.createElement('small');
+                smallElement.textContent = `Firm code: ${firm.code || 'No code available'}`;
+                
+                item.appendChild(strongElement);
+                item.appendChild(smallElement);
+                
+                item.addEventListener('click', function() {
+                    selectFirm(firm);
+                });
+                
+                item.addEventListener('mouseenter', function() {
+                    selectedIndex = index;
+                    updateSelection(results.querySelectorAll('.autocomplete__option'));
+                });
+                
+                results.appendChild(item);
+            });
+            
+            showFirmResults();
+        }
+        
+        function selectFirm(firm) {
+            document.getElementById('firm-search-input').value = firm.name;
+            document.getElementById('selected-firm-id').value = firm.id;
+            hideFirmResults();
+        }
+        
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                if (index === selectedIndex) {
+                    item.classList.add('autocomplete__option--focused');
+                } else {
+                    item.classList.remove('autocomplete__option--focused');
+                }
+            });
+        }
+        
+        function showFirmResults() {
+            document.getElementById('firm-search-results').classList.remove('autocomplete__menu--hidden');
+        }
+        
+        function hideFirmResults() {
+            document.getElementById('firm-search-results').classList.add('autocomplete__menu--hidden');
+            selectedIndex = -1;
+        }
+        
+        // Form Submission
+        function submitFirmReassignment(event) {
+            event.preventDefault();
+            clearErrors();
+            
+            const firmId = document.getElementById('selected-firm-id').value;
+            const reason = document.getElementById('reassignment-reason').value.trim();
+            const userId = '[[${user.id}]]'; // Thymeleaf variable
+            
+            let hasError = false;
+            
+            if (!firmId) {
+                showError('firm-search-group', 'firm-search-error', 'firm-search-error-text', 'Please select a firm');
+                hasError = true;
+            }
+            
+            if (!reason) {
+                showError('reason-group', 'reason-error', 'reason-error-text', 'Please provide a reason for the reassignment');
+                hasError = true;
+            }
+            
+            if (hasError) {
+                return;
+            }
+            
+            // Disable submit button to prevent double submission
+            const submitButton = document.getElementById('submit-reassignment');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Reassigning...';
+            
+            const formData = new FormData();
+            formData.append('newFirmId', firmId);
+            formData.append('reason', reason);
+            
+            fetch(`/admin/users/reassign-firm/${userId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeFirmReassignmentModal();
+                    showNotification(data.message, 'success');
+                    // Reload the page to show updated firm information
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('An error occurred while reassigning the user', 'error');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButton.textContent = 'Reassign user';
+            });
+        }
+        
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFirmReassignmentModal();
+            }
+        });
+        
+        // Hide notifications on click
+        document.getElementById('notification-banner').addEventListener('click', function() {
+            this.style.display = 'none';
+        });
+    </script>
 </body>
 
 </html>

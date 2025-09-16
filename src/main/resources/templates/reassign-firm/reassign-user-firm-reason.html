@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'reassign-firm-reason'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Why are you changing the firm</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/reassign-firm/' + ${user.id}}">Back</a>
+            </li>
+        </ol>
+    </nav>
+    
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                
+                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li>
+                                <a href="#reason-error" th:text="${errorMessage}"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h1 class="govuk-heading-l" th:text="'Why are you changing the Firm associated with ' + ${user.entraUser?.firstName ?: 'this user'} + '?'">
+                    Why are you changing the Firm associated with [User Name]?
+                </h1>
+
+                <form method="post" th:action="@{'/admin/users/reassign-firm/' + ${user.id} + '/reason'}" th:object="${reassignmentReasonForm}">
+                    
+                    <!-- Hidden field to carry forward the selected firm -->
+                    <input type="hidden" name="selectedFirmId" th:value="${selectedFirmId}" />
+                    <input type="hidden" name="firmSearch" th:value="${selectedFirmName}" />
+                    
+                    <!-- Reason Field -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('reason')} ? 'govuk-form-group--error' : ''" id="reason-group">
+                        <div th:if="${#fields.hasErrors('reason')}" class="govuk-error-message" id="reason-error">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{reason}"></span>
+                        </div>
+                        
+                        <textarea class="govuk-textarea" 
+                                  th:classappend="${#fields.hasErrors('reason')} ? 'govuk-textarea--error' : ''"
+                                  id="reassignment-reason" 
+                                  name="reason" 
+                                  rows="8"
+                                  th:field="*{reason}"
+                                  placeholder="Enter the reason for this reassignment..."></textarea>
+                    </div>
+                    
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Continue
+                        </button>
+                        <a class="govuk-link" th:href="@{'/admin/users/reassign-firm/' + ${user.id}}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

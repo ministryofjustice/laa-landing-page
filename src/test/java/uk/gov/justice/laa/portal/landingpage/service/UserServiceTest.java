@@ -1,8 +1,47 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
@@ -17,20 +56,11 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import okhttp3.Request;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -50,46 +80,18 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -114,6 +116,12 @@ class UserServiceTest {
     private UserProfileRepository mockUserProfileRepository;
     @Mock
     private RoleChangeNotificationService mockRoleChangeNotificationService;
+    @Mock
+    private EventService mockEventService;
+    @Mock
+    private FirmService mockFirmService;
+    @Mock
+    private FirmRepository mockFirmRepository;
 
     @BeforeEach
     void setUp() {
@@ -127,7 +135,10 @@ class UserServiceTest {
                 laaApplicationsList,
                 techServicesClient,
                 mockUserProfileRepository,
-                mockRoleChangeNotificationService);
+                mockRoleChangeNotificationService,
+                mockEventService,
+                mockFirmService,
+                mockFirmRepository);
     }
 
     @Test
@@ -3129,6 +3140,184 @@ class UserServiceTest {
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("Attempt to remove last Global Admin, from user profile");
+        }
+    }
+
+    @Nested
+    class ReassignUserFirmTests {
+        
+        @Test
+        void reassignUserFirm_success() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID oldFirmId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID(); 
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            // Create old firm
+            Firm oldFirm = Firm.builder()
+                    .id(oldFirmId)
+                    .name("Old Firm")
+                    .build();
+            
+            // Create new firm
+            Firm newFirm = Firm.builder()
+                    .id(newFirmId)
+                    .name("New Firm") 
+                    .build();
+            
+            // Create user profile
+            EntraUser entraUser = EntraUser.builder()
+                    .firstName("John")
+                    .lastName("Doe")
+                    .build();
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(oldFirm)
+                    .entraUser(entraUser)
+                    .appRoles(new HashSet<>())
+                    .offices(new HashSet<>())
+                    .build();
+            
+            FirmDto newFirmDto = FirmDto.builder()
+                    .id(newFirmId)
+                    .name("New Firm")
+                    .build();
+                    
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(newFirmId)).thenReturn(newFirmDto);
+            when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+            when(mockUserProfileRepository.saveAndFlush(any(UserProfile.class))).thenReturn(userProfile);
+            
+            // When
+            userService.reassignUserFirm(
+                userProfileId.toString(),
+                newFirmId,
+                reason,
+                modifierUserId,
+                modifierUserName
+            );
+            
+            // Then
+            verify(mockUserProfileRepository).findById(userProfileId);
+            verify(mockFirmService).getFirm(newFirmId);
+            verify(mockFirmRepository).findById(newFirmId);
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+            verify(mockEventService).logEvent(any());
+            
+            // Verify user profile was updated
+            assertThat(userProfile.getFirm()).isEqualTo(newFirm);
+            assertThat(userProfile.getAppRoles()).isEmpty();
+            assertThat(userProfile.getOffices()).isEmpty();
+        }
+        
+        @Test
+        void reassignUserFirm_userProfileNotFound_throwsException() {
+            // Given
+            String userProfileId = UUID.randomUUID().toString();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            when(mockUserProfileRepository.findById(any())).thenReturn(Optional.empty());
+            
+            // When & Then
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.reassignUserFirm(userProfileId, newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("User profile with id " + userProfileId + " not found");
+        }
+        
+        @Test
+        void reassignUserFirm_internalUser_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.INTERNAL) // Internal user - should not be reassignable
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            
+            // When & Then
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("Cannot reassign internal users between firms");
+        }
+        
+        @Test
+        void reassignUserFirm_firmNotFound_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(newFirmId)).thenThrow(new RuntimeException("Firm not found"));
+            
+            // When & Then
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("Firm with id " + newFirmId + " not found");
+        }
+        
+        @Test 
+        void reassignUserFirm_userAlreadyAssignedToFirm_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID(); // Same firm ID
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .build();
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(firm) // Already assigned to this firm
+                    .build();
+                    
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(firmId)).thenReturn(firmDto);
+            
+            // When & Then
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), firmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("User is already assigned to firm: Test Firm");
         }
     }
 }
