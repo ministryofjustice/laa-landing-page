@@ -172,6 +172,10 @@ public class LiveTechServicesClient implements TechServicesClient {
     @Override
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendEmailVerification(EntraUserDto user) {
         try {
+            if (user == null || user.getEntraOid() == null) {
+                throw new RuntimeException("Invalid user details supplied.");
+            }
+
             String accessToken = getAccessToken();
 
             SendUserVerificationEmailRequest request = SendUserVerificationEmailRequest.builder()
@@ -212,12 +216,12 @@ public class LiveTechServicesClient implements TechServicesClient {
                         user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 return TechServicesApiResponse.error(errorResponse);
             } catch (Exception ex) {
-                logger.error("Error while sending verification email to Tech Services.", ex);
-                throw new RuntimeException("Error while sending verification email to Tech Services.", ex);
+                logger.error("Error while sending verification email request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
             }
         } catch (Exception ex) {
-            logger.error("Error while sending verification email to Tech Services.", ex);
-            throw new RuntimeException("Error while sending verification email to Tech Services.", ex);
+            logger.error("Error while sending verification email request to Tech Services.", ex);
+            throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
         }
     }
 

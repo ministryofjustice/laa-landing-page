@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.util.UUID;
 
@@ -52,6 +54,21 @@ public class DoNothingTestServiceClientTest {
         Assertions.assertThat(response.getCreatedUser()).isNotNull();
         Assertions.assertThat(response.getCreatedUser().getId()).isNotNull();
         assertLogMessage("Register new user request received on Dummy Tech Services Client for user");
+    }
+
+    @Test
+    void testSendEmailVerification() {
+        EntraUserDto user = EntraUserDto.builder().build();
+
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = techServicesClient.sendEmailVerification(user);
+
+        Assertions.assertThat(response).isNotNull();
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getError()).isNull();
+        Assertions.assertThat(response.getData()).isNotNull();
+        Assertions.assertThat(response.getData().getMessage()).isNotNull();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Activation code has been generated and sent successfully via email.");
+        assertLogMessage("Verification email has been resent from Dummy Tech Services Client for user");
     }
 
     private void assertLogMessage(String message) {
