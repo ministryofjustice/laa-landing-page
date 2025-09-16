@@ -20,7 +20,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -190,8 +189,8 @@ public class DemoDataPopulator {
         return App.builder().name(name).entraAppId(entraAppOid).appRoles(HashSet.newHashSet(11)).build();
     }
 
-    protected AppRole buildLaaAppRole(App app, String name, RoleType roleType) {
-        return AppRole.builder().name(name).roleType(roleType)
+    protected AppRole buildLaaAppRole(App app, String name, UserType... types) {
+        return AppRole.builder().name(name).userTypeRestriction(types)
                 .description(name).authzRole(false).app(app).build();
     }
 
@@ -286,10 +285,10 @@ public class DemoDataPopulator {
 
                 AppRole internalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_INTERN")
                         .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_INTERN",
-                                RoleType.INTERNAL));
+                                UserType.INTERNAL));
                 AppRole externalRole = laaAppRoleRepository.findByName(currentAppName.toUpperCase() + "_VIEWER_EXTERN")
                         .orElse(buildLaaAppRole(app, app.getName().toUpperCase() + "_VIEWER_EXTERN",
-                                RoleType.EXTERNAL));
+                                UserType.EXTERNAL));
                 laaAppRoleRepository.save(internalRole);
                 laaAppRoleRepository.save(externalRole);
 

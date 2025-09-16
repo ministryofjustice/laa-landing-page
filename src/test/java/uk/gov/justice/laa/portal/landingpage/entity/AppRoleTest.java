@@ -21,7 +21,7 @@ public class AppRoleTest extends BaseEntityTest {
         assertThat(violations).isEmpty();
         assertNotNull(appRole);
         assertThat(appRole.getName()).isEqualTo("Test App Role");
-        assertThat(appRole.getRoleType()).isEqualTo(RoleType.INTERNAL);
+        assertThat(appRole.getUserTypeRestriction()).contains(UserType.INTERNAL);
     }
 
     @Test
@@ -150,32 +150,13 @@ public class AppRoleTest extends BaseEntityTest {
     @Test
     public void testAppRoleTypeExternal() {
         AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setRoleType(RoleType.EXTERNAL));
+        update(appRole, f -> f.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL}));
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isEmpty();
         assertNotNull(appRole);
         assertThat(appRole.getName()).isEqualTo("Test App Role");
-        assertThat(appRole.getRoleType()).isEqualTo(RoleType.EXTERNAL);
-    }
-
-    @Test
-    public void testAppRoleNullRoleType() {
-        AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setRoleType(null));
-
-        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("App role type must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleType");
-    }
-
-    @Test
-    public void testAppRoleInvalidRoleType() {
-        assertThrows(IllegalArgumentException.class, () -> AppRole.builder()
-                .roleType(RoleType.valueOf("INVALID")).build());
+        assertThat(appRole.getUserTypeRestriction()).contains(UserType.EXTERNAL);
     }
 }

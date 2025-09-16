@@ -118,6 +118,26 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
         canOpenGrantAccessScreen(externalUserManagerFirm1, externalUserFirm1, status().isOk());
     }
 
+    @Test
+    public void testInternalUserViewerCannotOpenInternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(internalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testInternalUserViewerCannotOpenExternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(internalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotOpenInternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(externalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotOpenExternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(externalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
 
     private void canOpenGrantAccessScreen(EntraUser loggedInUser, EntraUser editedUser, ResultMatcher expectedResult) throws Exception {
         UserProfile accessedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
