@@ -3151,10 +3151,10 @@ class UserServiceTest {
             // Given
             UUID userProfileId = UUID.randomUUID();
             UUID oldFirmId = UUID.randomUUID();
-            UUID newFirmId = UUID.randomUUID(); 
-            UUID modifierUserId = UUID.randomUUID();
-            String modifierUserName = "Test Admin";
-            String reason = "Business restructuring";
+            UUID newFirmId = UUID.randomUUID();
+            final UUID modifierUserId = UUID.randomUUID();
+            final String modifierUserName = "Test Admin";
+            final String reason = "Business restructuring";
             
             // Create old firm
             Firm oldFirm = Firm.builder()

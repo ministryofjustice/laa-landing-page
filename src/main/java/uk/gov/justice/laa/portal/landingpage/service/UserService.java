@@ -952,9 +952,6 @@ public class UserService {
             throw new IllegalStateException("Cannot reassign internal users between firms");
         }
         
-        // Get current firm information for audit logging
-        String previousFirmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "No Firm";
-        
         // Validate new firm exists
         FirmDto newFirm;
         try {
@@ -962,6 +959,9 @@ public class UserService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Firm with id " + newFirmId + " not found");
         }
+        
+        // Get current firm information for audit logging
+        final String previousFirmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "No Firm";
         
         // Check if user is already assigned to this firm
         if (userProfile.getFirm() != null && userProfile.getFirm().getId().equals(newFirmId)) {

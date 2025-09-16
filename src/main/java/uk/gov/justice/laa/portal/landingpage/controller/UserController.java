@@ -299,8 +299,8 @@ public class UserController {
 
         // Check if current user can reassign firms (External User Admin permission +
         // target is external user)
-        boolean canReassignFirm = externalUser &&
-                accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        boolean canReassignFirm = externalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
         model.addAttribute("canReassignFirm", canReassignFirm);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
