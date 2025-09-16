@@ -627,12 +627,6 @@ public class UserController {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             Map<String, String> result = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                    userProfileDto != null ? userProfileDto.getId() : null,
-                    currentUserDto,
-                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    result.get("diff"), "apps");
-            eventService.logEvent(updateUserAuditEvent);
             if (result.get("error") != null) {
                 String errorMessage = result.get("error");
                 redirectAttributes.addFlashAttribute("errorMessage",
@@ -640,6 +634,12 @@ public class UserController {
                 UUID uuid = UUID.fromString(id);
                 return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
             }
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto != null ? userProfileDto.getId() : null,
+                    currentUserDto,
+                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                    result.get("diff"), "apps");
+            eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
@@ -833,16 +833,16 @@ public class UserController {
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                if (updateResult.get("error") != null) {
+                    String errorMessage = updateResult.get("error");
+                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
+                }
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
                         user != null ? user.getEntraUser() : null, updateResult.get("diff"),
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
-                if (updateResult.get("error") != null) {
-                    String errorMessage = updateResult.get("error");
-                    return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
-                }
             }
             return "redirect:/admin/users/manage/" + uuid;
         } else {
