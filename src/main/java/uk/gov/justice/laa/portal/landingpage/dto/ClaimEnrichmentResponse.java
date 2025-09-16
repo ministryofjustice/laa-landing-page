@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClaimEnrichmentResponse {
+public class ClaimEnrichmentResponse implements Serializable {
     @JsonProperty("data")
     private ResponseData data;
     
@@ -27,7 +28,7 @@ public class ClaimEnrichmentResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ResponseData {
+    public static class ResponseData implements Serializable {
         @JsonProperty("@odata.type")
         private String odataType;
         

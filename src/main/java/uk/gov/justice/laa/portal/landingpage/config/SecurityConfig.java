@@ -24,6 +24,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
+import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -35,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@EnableJdbcHttpSession
 public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;

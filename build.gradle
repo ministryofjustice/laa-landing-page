@@ -88,6 +88,8 @@ dependencies {
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework:spring-aspects'
 
+    implementation 'org.springframework.session:spring-session-jdbc'
+
     // OpenAPI / Swagger Documentation
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
 
