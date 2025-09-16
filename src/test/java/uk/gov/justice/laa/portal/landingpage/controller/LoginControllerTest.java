@@ -162,7 +162,7 @@ class LoginControllerTest {
                 .thenReturn(mockSessionData);
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -187,7 +187,7 @@ class LoginControllerTest {
         when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of(Permission.VIEW_EXTERNAL_USER));
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -213,7 +213,7 @@ class LoginControllerTest {
         when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of());
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -236,7 +236,7 @@ class LoginControllerTest {
                 .thenReturn(mockSessionData);
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -255,7 +255,7 @@ class LoginControllerTest {
                 .thenReturn(null);
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -273,7 +273,7 @@ class LoginControllerTest {
                 .thenThrow(new RuntimeException("Error processing session"));
 
         // Act
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Assert
         assertThat(viewName).isEqualTo("home");
@@ -358,7 +358,7 @@ class LoginControllerTest {
         when(userService.isInternal(userId)).thenReturn(true);
 
         // When
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Then
         assertThat(viewName).isEqualTo("home");
@@ -382,7 +382,7 @@ class LoginControllerTest {
         when(userService.isInternal(userId)).thenReturn(false);
 
         // When
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Then
         assertThat(viewName).isEqualTo("home");
@@ -408,7 +408,7 @@ class LoginControllerTest {
                 .thenReturn(userSessionDataWithRoles);
 
         // When
-        String viewName = controller.home(model, authentication, session, authClient);
+        String viewName = controller.home(model, authentication, session);
 
         // Then
         assertThat(viewName).isEqualTo("home");

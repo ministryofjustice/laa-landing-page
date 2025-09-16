@@ -8,8 +8,10 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -41,6 +43,8 @@ public class LoginController {
     private final LoginService loginService;
     private final UserService userService;
     private final FirmService firmService;
+    @Autowired
+    private OAuth2AuthorizedClientService clientService;
 
     public LoginController(LoginService loginService, UserService userService, FirmService firmService) {
         this.loginService = loginService;
@@ -83,9 +87,9 @@ public class LoginController {
      * @return the view for home
      */
     @GetMapping("/home")
-    public String home(Model model, Authentication authentication, HttpSession session,
-            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) {
+    public String home(Model model, Authentication authentication, HttpSession session) {
         try {
+            var authClient = clientService.loadAuthorizedClient("azure", authentication.getName());
             UserSessionData userSessionData = loginService.processUserSession(authentication, authClient, session);
 
             if (userSessionData != null) {
