@@ -120,6 +120,26 @@ public class RoleBasedAccessEditUserTest extends RoleBasedAccessIntegrationTest 
         canOpenEditScreen(externalUserManagerFirm1, externalUserFirm1, status().isOk());
     }
 
+    @Test
+    public void testInternalUserViewerCannotOpenInternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testInternalUserViewerCannotOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(internalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotOpenInternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(externalUserViewers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
+    @Test
+    public void testExternalUserViewerCannotOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(externalUserViewers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
+    }
+
 
     private void canOpenEditScreen(EntraUser loggedInUser, EntraUser editedUser, ResultMatcher expectedResult) throws Exception {
         UserProfile accessedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();

@@ -10,8 +10,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import java.util.List;
@@ -77,6 +77,38 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testGlobalAdminCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCannotAssignInternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", false);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCannotAssignExternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", false);
+    }
+
+    @Test
+    @Transactional
     public void testInternalUserManagerCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
@@ -93,14 +125,29 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testInternalUserManagerCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = internalUserManagers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Internal User Viewer", true);
+    }
+
+    @Test
+    @Transactional
+    public void testInternalUserManagerCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = internalUserManagers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Viewer", true);
+    }
+
+    @Test
+    @Transactional
     public void testExternalUserRolesCannotBeAssignedToInternalUsers() throws Exception {
         // Build test app
         App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
-        testExternalAppRole.setRoleType(RoleType.EXTERNAL);
-        testExternalAppRole.setUserTypeRestriction(null);
+        testExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
 
         // Persist app and role.
         testExternalApp.setAppRoles(Set.of(testExternalAppRole));
@@ -130,8 +177,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
-        testInternalAppRole.setRoleType(RoleType.INTERNAL);
-        testInternalAppRole.setUserTypeRestriction(null);
+        testInternalAppRole.setUserTypeRestriction(new UserType[] {UserType.INTERNAL});
 
         // Persist app and role.
         testInternalApp.setAppRoles(Set.of(testInternalAppRole));
@@ -162,8 +208,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
-        testExternalAppRole.setRoleType(RoleType.EXTERNAL);
-        testExternalAppRole.setUserTypeRestriction(null);
+        testExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
 
         // Persist app and role.
         testExternalApp.setAppRoles(Set.of(testExternalAppRole));
@@ -193,8 +238,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
         // Build test role
         AppRole testInternalAndExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
-        testInternalAndExternalAppRole.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
-        testInternalAndExternalAppRole.setUserTypeRestriction(null);
+        testInternalAndExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
 
         // Persist app and role.
         testExternalApp.setAppRoles(Set.of(testInternalAndExternalAppRole));
@@ -224,8 +268,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
-        testInternalAppRole.setRoleType(RoleType.INTERNAL);
-        testInternalAppRole.setUserTypeRestriction(null);
+        testInternalAppRole.setUserTypeRestriction(new UserType[] {UserType.INTERNAL});
 
         // Persist app and role.
         testInternalApp.setAppRoles(Set.of(testInternalAppRole));
@@ -255,8 +298,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
         // Build test role
         AppRole testInternalAndExternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
-        testInternalAndExternalAppRole.setRoleType(RoleType.INTERNAL_AND_EXTERNAL);
-        testInternalAndExternalAppRole.setUserTypeRestriction(null);
+        testInternalAndExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
 
         // Persist app and role.
         testInternalApp.setAppRoles(Set.of(testInternalAndExternalAppRole));
