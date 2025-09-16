@@ -3,9 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import java.io.IOException;
 
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.stereotype.Service;
 
@@ -16,20 +14,16 @@ import jakarta.servlet.http.HttpServletResponse;
 @Service
 public class CustomLogoutHandler implements LogoutHandler {
 
-    private final OAuth2AuthorizedClientService clientService;
-    private final LoginService loginService;
     private final LogoutService logoutService;
 
-    public CustomLogoutHandler(OAuth2AuthorizedClientService clientService, LoginService loginService, LogoutService logoutService) {
-        this.clientService = clientService;
-        this.loginService = loginService;
+    private OAuth2AuthorizedClientService oAuth2AuthorizedClientService;
+
+    public CustomLogoutHandler(LogoutService logoutService) {
         this.logoutService = logoutService;
     }
 
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-        // First, revoke the Graph API sessions
-        loginService.logout(authentication, getClient(authentication));
         
         // Only redirect to Azure logout if this is not a test environment or if explicitly requested
         // Check if the request has a parameter indicating Azure logout is needed
@@ -45,10 +39,5 @@ public class CustomLogoutHandler implements LogoutHandler {
             }
         }
         // If no Azure logout is requested, let Spring Security handle the normal logout flow
-    }
-
-    protected OAuth2AuthorizedClient getClient(Authentication authentication) {
-        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-        return clientService.loadAuthorizedClient(oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
     }
 }
