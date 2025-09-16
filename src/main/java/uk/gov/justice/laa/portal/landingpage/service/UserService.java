@@ -74,10 +74,6 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private static final int BATCH_SIZE = 20;
-    /**
-     * The number of pages to load in advance when doing user pagination
-     */
-    private static final int PAGES_TO_PRELOAD = 5;
     private final OfficeRepository officeRepository;
     private final GraphServiceClient graphClient;
     private final EntraUserRepository entraUserRepository;
