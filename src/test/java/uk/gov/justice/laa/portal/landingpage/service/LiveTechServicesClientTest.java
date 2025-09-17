@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
@@ -79,6 +81,8 @@ public class LiveTechServicesClientTest {
     private RestClient.ResponseSpec responseSpec;
     @Mock
     private JwtDecoder jwtDecoder;
+    @Spy
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setup() {
@@ -386,8 +390,20 @@ public class LiveTechServicesClientTest {
         concurrentMapCache.put("access_token", "techServicesDetails");
         when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
         when(jwtDecoder.decode(anyString())).thenThrow(new RuntimeException("Error decoding JWT token"));
-        when(responseSpec.toEntity(RegisterUserResponse.class))
-                .thenReturn(ResponseEntity.ok(RegisterUserResponse.builder().build()));
+        String responseJson = """
+                                {
+                                "success": true,
+                                "message": "User created successfully. An email has been sent to the user with their activation code",
+                                "entraObject": {
+                            "id": "12345678-1234-1234-1234-123456789012",
+                                    "displayName": "John Smith",
+                                    "mail": "john@example.com",
+                                    "accountEnabled": false,
+                                    "createdDateTime": "2025-01-15T10:30:00Z"
+                        }
+                }""";
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok(responseJson));
 
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
@@ -407,8 +423,20 @@ public class LiveTechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(RegisterUserResponse.class))
-                .thenReturn(ResponseEntity.ok(RegisterUserResponse.builder().build()));
+        String responseJson = """
+                                {
+                                "success": true,
+                                "message": "User created successfully. An email has been sent to the user with their activation code",
+                                "entraObject": {
+                            "id": "12345678-1234-1234-1234-123456789012",
+                                    "displayName": "John Smith",
+                                    "mail": "john@example.com",
+                                    "accountEnabled": false,
+                                    "createdDateTime": "2025-01-15T10:30:00Z"
+                        }
+                }""";
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok(responseJson));
         ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
         concurrentMapCache.put("access_token", "techServicesDetails");
         when(jwtDecoder.decode(anyString())).thenReturn(Jwt.withTokenValue("techServicesDetails")
@@ -440,13 +468,13 @@ public class LiveTechServicesClientTest {
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage()).contains("Error while create user request to Tech Services.");
+        Assertions.assertThat(rtEx.getMessage()).contains("Error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.ERROR, "Error while create user request to Tech Services.");
+        assertLogMessage(Level.ERROR, "Error while sending new user creation request to Tech Services.");
     }
 
     @Test
-    void testRegisterUserError4Xx() {
+    void testRegisterUserError409() {
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
 
@@ -458,20 +486,66 @@ public class LiveTechServicesClientTest {
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.toEntity(RegisterUserResponse.class))
-                .thenReturn(ResponseEntity.badRequest().build());
+        String errorBody = """
+                {
+                   "success": false,
+                   "code": "USER_ALREADY_EXISTS",
+                   "message": "A user with this email already exists"
+                 }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.CONFLICT,
+                "Server Error", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(String.class))
+                .thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<RegisterUserResponse> result = liveTechServicesClient.registerNewUser(user);
+
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.isSuccess()).isFalse();
+        Assertions.assertThat(result.getError()).isNotNull();
+        Assertions.assertThat(result.getError().getCode()).isEqualTo("USER_ALREADY_EXISTS");
+        Assertions.assertThat(result.getError().getMessage()).isEqualTo("A user with this email already exists");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.DEBUG,
+                "Error while sending new user creation request to Tech Services for firstName lastName");
+        assertLogMessage(Level.INFO, "Handling user conflicts gracefully.");
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testRegisterUserError400() {
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        String errorBody = """
+                {
+                    "success": false,
+                    "code": "BAD_REQUEST",
+                    "message": "givenName is required and must be a non-empty string"
+                  }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
+                "Server Error", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(String.class)).thenThrow(exception);
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException rtEx = assertThrows(RuntimeException.class,
                 () -> liveTechServicesClient.registerNewUser(user),
                 "RuntimeException expected");
 
+        Assertions.assertThat(rtEx).isNotNull();
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage())
-                .contains("Error while create user request to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        Assertions.assertThat(rtEx.getMessage()).isEqualTo("Error while sending new user creation request to Tech Services.");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services");
         assertLogMessage(Level.ERROR,
-                "Failed to create new user by Tech Services for user firstName lastName with error code 400 BAD_REQUEST");
+                "Error while sending new user creation request to Tech Services for firstName lastName");
         verify(restClient, times(1)).post();
     }
 
@@ -498,10 +572,10 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
-                .contains("Error while create user request to Tech Services.");
+                .contains("Error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR,
-                "Failed to create new user by Tech Services for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
+                "Error while sending new user creation request to Tech Services");
         verify(restClient, times(1)).post();
     }
 

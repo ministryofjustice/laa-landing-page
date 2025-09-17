@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -42,8 +43,6 @@ import java.util.stream.Collectors;
 
 public class LiveTechServicesClient implements TechServicesClient {
 
-    @Value("${app.tech.services.laa.verification.method}")
-    public String techServicesVerificationMethod;
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
@@ -54,6 +53,9 @@ public class LiveTechServicesClient implements TechServicesClient {
     private final CacheManager cacheManager;
     private final JwtDecoder jwtDecoder;
     private final EntraUserRepository entraUserRepository;
+    private final ObjectMapper objectMapper;
+    @Value("${app.tech.services.laa.verification.method}")
+    public String techServicesVerificationMethod;
     @Value("${app.tech.services.laa.business.unit}")
     private String laaBusinessUnit;
     @Value("${spring.security.tech.services.credentials.scope}")
@@ -64,12 +66,13 @@ public class LiveTechServicesClient implements TechServicesClient {
 
     public LiveTechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
                                   EntraUserRepository entraUserRepository, CacheManager cacheManager,
-                                  @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder) {
+                                  @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder, ObjectMapper objectMapper) {
         this.clientSecretCredential = clientSecretCredential;
         this.restClient = restClient;
         this.entraUserRepository = entraUserRepository;
         this.cacheManager = cacheManager;
         this.jwtDecoder = jwtDecoder;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -124,7 +127,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     }
 
     @Override
-    public RegisterUserResponse registerNewUser(EntraUserDto user) {
+    public TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user) {
         try {
             String accessToken = getAccessToken();
 
@@ -144,28 +147,44 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
-            ResponseEntity<RegisterUserResponse> response = restClient
+            ResponseEntity<String> response = restClient
                     .post()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
-                    .toEntity(RegisterUserResponse.class);
+                    .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                RegisterUserResponse responseBody = response.getBody();
-                assert responseBody != null;
+                RegisterUserResponse responseBody = objectMapper.readValue(response.getBody(), RegisterUserResponse.class);
                 logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
                         user.getFirstName() + " " + user.getLastName(), securityGroups);
-                return responseBody;
+                return TechServicesApiResponse.success(responseBody);
             } else {
-                logger.error("Failed to create new user by Tech Services for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to create new user by Tech Services for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Error while sending new user creation request to Tech Services, the response is {}.", response.getBody());
+                throw new RuntimeException(String.format("Error while sending verification email to Tech Services, the response is %s.", response.getBody()));
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            try {
+                TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (httpEx.getStatusCode().equals(HttpStatus.CONFLICT)) {
+                    logger.debug("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Handling user conflicts gracefully.");
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                throw httpEx;
+            } catch (Exception ex) {
+                logger.error("Error while sending new user creation request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
-            logger.error("Error while create user request to Tech Services.", ex);
-            throw new RuntimeException("Error while create user request to Tech Services.", ex);
+            logger.error("Error while sending new user creation request to Tech Services.", ex);
+            throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
         }
     }
 

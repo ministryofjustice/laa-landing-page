@@ -47,12 +47,13 @@ public class DoNothingTestServiceClientTest {
     void testRegisterUser() {
         EntraUserDto user = EntraUserDto.builder().build();
 
-        RegisterUserResponse response = techServicesClient.registerNewUser(user);
+        TechServicesApiResponse<RegisterUserResponse> response = techServicesClient.registerNewUser(user);
 
         Assertions.assertThat(response).isNotNull();
         Assertions.assertThat(response.isSuccess()).isTrue();
-        Assertions.assertThat(response.getCreatedUser()).isNotNull();
-        Assertions.assertThat(response.getCreatedUser().getId()).isNotNull();
+        Assertions.assertThat(response.getData()).isNotNull();
+        Assertions.assertThat(response.getData().getCreatedUser()).isNotNull();
+        Assertions.assertThat(response.getData().getCreatedUser().getId()).isNotNull();
         assertLogMessage("Register new user request received on Dummy Tech Services Client for user");
     }
 

@@ -5,8 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import java.util.Set;
-import javax.naming.NameNotFoundException;
-import javax.naming.NamingException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -102,7 +100,7 @@ class EmailValidationServiceTest {
             @Override
             public boolean hasMxRecords(String email) {
                 try {
-                    Thread.sleep(35_000); // simulate long-running task
+                    Thread.sleep(1_100); // simulate long-running task
                 } catch (InterruptedException ignored) {
                     // Do nothing
                 }
@@ -110,9 +108,7 @@ class EmailValidationServiceTest {
             }
         };
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> {
-            slowValidator.isValidEmailDomain("user@example.com");
-        });
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> slowValidator.isValidEmailDomain("user@example.com", 1));
         assertThat(ex.getMessage()).isEqualTo("The email domain validation took longer than expected. Possibly the email domain is invalid!");
 
     }

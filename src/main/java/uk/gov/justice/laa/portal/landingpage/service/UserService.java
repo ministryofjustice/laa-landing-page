@@ -35,7 +35,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -56,9 +56,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -129,15 +131,19 @@ public class UserService {
     }
 
     @Transactional
-    public String updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
         List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+
         String diff = "";
+        Map<String, String> result = new HashMap<>();
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
+            List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
+            boolean internal  = modifierTypes.contains(UserType.INTERNAL);
             int before = roles.size();
             roles = roles.stream()
                     .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(userType -> userType == userProfile.getUserType()))
@@ -150,7 +156,11 @@ public class UserService {
             Set<AppRole> newRoles = new HashSet<>(roles);
             Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
                     : new HashSet<>(userProfile.getAppRoles());
-            roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self);
+            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self, internal);
+            if (!error.isEmpty()) {
+                result.put("error", error);
+                return result;
+            }
 
             Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
             Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
@@ -166,10 +176,11 @@ public class UserService {
             // Save user profile with ccms sync status
             userProfileRepository.save(userProfile);
             techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
+            result.put("diff", diff);
         } else {
             logger.warn("User profile with id {} not found. Could not update roles.", userProfileId);
         }
-        return diff;
+        return result;
     }
 
     protected static String diffRole(Set<AppRole> oldRoles, Set<AppRole> newRoles) {
@@ -196,9 +207,9 @@ public class UserService {
         return changed;
     }
 
-    protected void roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self) {
+    protected String roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self, boolean internal) {
         if (oldRoles.isEmpty()) {
-            return;
+            return "";
         }
         List<UUID> newIds = newRoles.stream().map(AppRole::getId).toList();
         List<AppRole> removed = oldRoles.stream()
@@ -212,11 +223,11 @@ public class UserService {
                 boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
                 if (removeManager && self) {
                     logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    throw new RoleCoverageException("You cannot remove your own External User Manager role");
+                    return "You cannot remove your own External User Manager role";
                 }
-                if (existingManagers.getTotalElements() < 2 && removeManager) {
+                if (!internal && existingManagers.getTotalElements() < 2 && removeManager) {
                     logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
-                    throw new RoleCoverageException("External User Manager role could not be removed, this is the last External User Manager of " + firm.getName());
+                    return "External User Manager role could not be removed, this is the last External User Manager of " + firm.getName();
                 }
             }
         } else {
@@ -226,10 +237,11 @@ public class UserService {
                 boolean removeGlobalAdmin = removed.stream().anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
                 if (existingAdmins.getTotalElements() < 2 && removeGlobalAdmin) {
                     logger.warn("Attempt to remove last Global Admin, from user profile {}.", userId);
-                    throw new RoleCoverageException("Global Admin role could not be removed, this is the last Global Admin");
+                    return "Global Admin role could not be removed, this is the last Global Admin";
                 }
             }
         }
+        return "";
     }
 
     private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
@@ -447,8 +459,13 @@ public class UserService {
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
             boolean isUserManager, String createdBy) {
 
-        RegisterUserResponse registerUserResponse = techServicesClient.registerNewUser(user);
-        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getCreatedUser();
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
+        if (!registerUserResponse.isSuccess()) {
+            throw new TechServicesClientException(registerUserResponse.getError().getMessage(),
+                    registerUserResponse.getError().getCode(), registerUserResponse.getError().getErrors());
+        }
+
+        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
             user.setEntraOid(createdUser.getId());
