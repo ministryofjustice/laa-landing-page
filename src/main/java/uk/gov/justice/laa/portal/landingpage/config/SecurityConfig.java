@@ -183,6 +183,8 @@ public class SecurityConfig {
     @Bean
     public OAuth2AuthorizedClientService oAuth2AuthorizedClientService
             (JdbcOperations jdbcOperations, ClientRegistrationRepository clientRegistrationRepository) {
-        return new JdbcOAuth2AuthorizedClientService(jdbcOperations, clientRegistrationRepository);
+        OAuth2AuthorizedClientService oAuth2AuthorizedClientService = new JdbcOAuth2AuthorizedClientService(jdbcOperations, clientRegistrationRepository);
+        logoutHandler.setOAuth2AuthorizedClientService(oAuth2AuthorizedClientService);
+        return oAuth2AuthorizedClientService;
     }
 }

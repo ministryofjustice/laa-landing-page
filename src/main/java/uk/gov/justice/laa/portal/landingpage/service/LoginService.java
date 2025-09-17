@@ -145,4 +145,19 @@ public class LoginService {
         }
         return currentUser.getUserProfiles().iterator().next();
     }
+
+    public void logout(Authentication authentication,
+                       OAuth2AuthorizedClient authorizedClient) {
+        if (authentication == null || authorizedClient == null) {
+            return;
+        }
+
+        OAuth2AccessToken accessToken = authorizedClient.getAccessToken();
+        if (accessToken == null || accessToken.getTokenValue() == null) {
+            logger.info("Access token is null");
+            return;
+        }
+        String tokenValue = accessToken.getTokenValue();
+        graphApiService.logoutUser(tokenValue);
+    }
 }
