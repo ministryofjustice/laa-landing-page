@@ -49,7 +49,7 @@ public class BaseEntityTest {
 
     protected AppRole buildTestLaaAppRole() {
         return AppRole.builder().name("Test App Role").ccmsCode("ccms_code").description("App Role Description")
-                .roleType(RoleType.INTERNAL).build();
+                .userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
     }
 
     protected UserProfile buildTestLaaUserProfile() {

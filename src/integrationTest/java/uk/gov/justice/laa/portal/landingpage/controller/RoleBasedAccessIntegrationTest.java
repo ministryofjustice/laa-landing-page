@@ -57,6 +57,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> externalUserAdmins = new ArrayList<>();
+    protected List<EntraUser> internalUserViewers = new ArrayList<>();
+    protected List<EntraUser> externalUserViewers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
@@ -228,6 +230,33 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         globalAdmins.add(entraUserRepository.saveAndFlush(user));
 
+        // Set up Internal User Viewer
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "UserViewer");
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        appRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Internal User Viewer"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(appRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        internalUserViewers.add(entraUserRepository.saveAndFlush(user));
+
+        // Set up External User Viewer
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "UserViewer");
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        appRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("External User Viewer"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(appRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        externalUserViewers.add(entraUserRepository.saveAndFlush(user));
+
+
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
         allUsers.addAll(internalAndExternalUserManagers);
@@ -236,6 +265,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(externalUsersNoRoles);
         allUsers.addAll(externalUserAdmins);
         allUsers.addAll(globalAdmins);
+        allUsers.addAll(internalUserViewers);
+        allUsers.addAll(externalUserViewers);
     }
 
     protected void clearRepositories() {

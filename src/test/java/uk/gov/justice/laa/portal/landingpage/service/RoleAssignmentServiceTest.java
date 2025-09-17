@@ -11,7 +11,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
@@ -45,9 +45,9 @@ public class RoleAssignmentServiceTest {
     void setUp() {
         roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRoleRepository, new MapperConfig().modelMapper());
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").roleType(RoleType.EXTERNAL).app(app).authzRole(true).build();
-        exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").roleType(RoleType.EXTERNAL).app(app).authzRole(true).build();
-        exMan = AppRole.builder().id(exManId).name("externalManager").description("appRole3").roleType(RoleType.EXTERNAL).app(app).authzRole(true).build();
+        gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
+        exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
+        exMan = AppRole.builder().id(exManId).name("externalManager").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exAdmin).build();
         RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exMan).build();
 
@@ -68,7 +68,8 @@ public class RoleAssignmentServiceTest {
         Set<AppRole> editorRoles = Set.of(gbAdmin);
         UUID viewCrimeId = UUID.randomUUID();
         App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
+        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3")
+                .userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(crimeApp).authzRole(false).build();
         List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString(), viewCrimeId.toString());
         when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeId), true)).thenReturn(List.of(exAdmin, exMan));
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isTrue();
@@ -112,7 +113,8 @@ public class RoleAssignmentServiceTest {
         exManDto.setId(gbAdminId.toString());
         UUID viewCrimeId = UUID.randomUUID();
         App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3").roleType(RoleType.EXTERNAL).app(crimeApp).authzRole(false).build();
+        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3")
+                .userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(crimeApp).authzRole(false).build();
         AppRoleDto viewCrimeDto = new AppRoleDto();
         viewCrimeDto.setId(viewCrimeId.toString());
         List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto, viewCrimeDto);
