@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'reassign-firm'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Reassign user to a different firm</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">Back</a>
+            </li>
+        </ol>
+    </nav>
+    
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                
+                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li>
+                                <a href="#firm-search-error" th:text="${errorMessage}"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h1 class="govuk-heading-l">Select the user's firm</h1>
+                
+                <p class="govuk-body" th:text="'Start typing a firm name or ID and select from the list of options'">
+                    Start typing a firm name or ID and select from the list of options
+                </p>
+
+                <div class="govuk-warning-text">
+                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                    <strong class="govuk-warning-text__text">
+                        <span class="govuk-warning-text__assistive">Warning</span>
+                        This action will remove all current roles and office assignments for this user.
+                    </strong>
+                </div>
+
+                <form method="post" th:action="@{'/admin/users/reassign-firm/' + ${user.id} + '/select-firm'}" th:object="${firmReassignmentForm}">
+                    
+                    <!-- Firm Search Field -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('firmSearch')} ? 'govuk-form-group--error' : ''" id="firm-search-group">
+                        <label class="govuk-label govuk-label--s" for="firm-search-input">
+                            Search for a firm
+                        </label>
+                        <div class="govuk-hint">
+                            Enter firm name or firm code
+                        </div>
+                        
+                        <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{firmSearch}"></span>
+                        </div>
+                        
+                        <div class="autocomplete__wrapper">
+                            <input class="govuk-input" 
+                                   th:classappend="${#fields.hasErrors('firmSearch')} ? 'govuk-input--error' : ''"
+                                   id="firm-search-input" 
+                                   name="firmSearch" 
+                                   type="text"
+                                   th:field="*{firmSearch}"
+                                   autocomplete="off" 
+                                   placeholder="Start typing to search...">
+                            
+                            <input type="hidden" id="selected-firm-id" name="selectedFirmId" th:field="*{selectedFirmId}" />
+                            
+                            <ul id="firm-search-results" class="autocomplete__menu autocomplete__menu--hidden" role="listbox">
+                                <!-- Search results will be populated here via JavaScript -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Continue
+                        </button>
+                        <a class="govuk-link" th:href="@{'/admin/users/manage/' + ${user.id}}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Autocomplete Styles -->
+        <style>
+            .autocomplete__wrapper {
+                position: relative;
+            }
+            
+            .autocomplete__menu {
+                background-color: #ffffff;
+                border: 2px solid #0b0c0c;
+                border-top: none;
+                box-sizing: border-box;
+                color: #0b0c0c;
+                font-family: "GDS Transport", arial, sans-serif;
+                font-size: 19px;
+                list-style: none;
+                margin: 0;
+                max-height: 200px;
+                overflow-y: auto;
+                padding: 0;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                z-index: 100;
+            }
+            
+            .autocomplete__menu--hidden {
+                display: none !important;
+            }
+            
+            .autocomplete__option {
+                background-color: #ffffff;
+                border-bottom: 1px solid #b1b4b6;
+                color: #0b0c0c;
+                cursor: pointer;
+                display: block;
+                padding: 8px 12px;
+            }
+            
+            .autocomplete__option:last-child {
+                border-bottom: none;
+            }
+            
+            .autocomplete__option:hover,
+            .autocomplete__option--focused {
+                background-color: #1d70b8;
+                color: #ffffff;
+            }
+            
+            .autocomplete__option strong {
+                font-weight: 600;
+                display: block;
+                margin-bottom: 2px;
+            }
+            
+            .autocomplete__option small {
+                font-size: 16px;
+                color: #505a5f;
+                display: block;
+            }
+            
+            .autocomplete__option:hover small,
+            .autocomplete__option--focused small {
+                color: #ffffff;
+            }
+        </style>
+        
+        <!-- JavaScript for firm search autocomplete -->
+        <script>
+            console.log('Firm search script loaded');
+            
+            // Firm Search Functionality
+            let searchTimeout;
+            let selectedIndex = -1;
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM loaded, initializing firm search...');
+                
+                const firmSearchInput = document.getElementById('firm-search-input');
+                const selectedFirmIdInput = document.getElementById('selected-firm-id');
+                const firmSearchResults = document.getElementById('firm-search-results');
+                
+                if (!firmSearchInput || !selectedFirmIdInput || !firmSearchResults) {
+                    console.error('Required elements not found');
+                    return;
+                }
+                
+                console.log('All elements found, setting up event listeners');
+                
+                // Clear selected firm when input changes
+                firmSearchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+                    
+                    if (query.length < 3) {
+                        selectedFirmIdInput.value = '';
+                        hideFirmResults();
+                        return;
+                    }
+                    
+                    searchTimeout = setTimeout(() => {
+                        searchFirms(query);
+                    }, 300);
+                });
+                
+                // Handle keyboard navigation
+                firmSearchInput.addEventListener('keydown', function(e) {
+                    const items = firmSearchResults.querySelectorAll('.autocomplete__option');
+                    
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items);
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection(items);
+                    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                        e.preventDefault();
+                        items[selectedIndex].click();
+                    } else if (e.key === 'Escape') {
+                        hideFirmResults();
+                    }
+                });
+                
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!firmSearchInput.contains(e.target) && !firmSearchResults.contains(e.target)) {
+                        hideFirmResults();
+                    }
+                });
+                
+                // Add form submission handler for debugging
+                const form = document.querySelector('form');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        console.log('Form being submitted...');
+                        console.log('firmSearch value:', document.getElementById('firm-search-input').value);
+                        console.log('selectedFirmId value:', document.getElementById('selected-firm-id').value);
+                        
+                        const selectedFirmId = document.getElementById('selected-firm-id').value;
+                        if (!selectedFirmId) {
+                            console.warn('No firm selected - form may be rejected');
+                            alert('Please select a firm from the dropdown');
+                            e.preventDefault();
+                            return false;
+                        }
+                    });
+                }
+            });
+            
+            function searchFirms(query) {
+                console.log('Searching for firms with query:', query);
+                
+                fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API data received:', data);
+                    displayFirmResults(data);
+                })
+                .catch(error => {
+                    console.error('Error searching firms:', error);
+                    showErrorMessage('Error loading firms. Please try again.');
+                });
+            }
+            
+            function displayFirmResults(firms) {
+                console.log('Displaying', firms.length, 'firms');
+                const results = document.getElementById('firm-search-results');
+                results.innerHTML = '';
+                selectedIndex = -1;
+                
+                if (firms.length === 0) {
+                    const noResultsItem = document.createElement('li');
+                    noResultsItem.className = 'autocomplete__option';
+                    noResultsItem.textContent = 'No firms found';
+                    noResultsItem.style.color = '#6f777b';
+                    results.appendChild(noResultsItem);
+                    showFirmResults();
+                    return;
+                }
+                
+                firms.forEach((firm, index) => {
+                    const item = document.createElement('li');
+                    item.className = 'autocomplete__option';
+                    item.setAttribute('role', 'option');
+                    
+                    const strongElement = document.createElement('strong');
+                    strongElement.textContent = firm.name || '';
+                    
+                    const smallElement = document.createElement('small');
+                    smallElement.textContent = `Firm code: ${firm.code || 'No code available'}`;
+                    
+                    item.appendChild(strongElement);
+                    item.appendChild(smallElement);
+                    
+                    item.addEventListener('click', function() {
+                        selectFirm(firm);
+                    });
+                    
+                    item.addEventListener('mouseenter', function() {
+                        selectedIndex = index;
+                        updateSelection(results.querySelectorAll('.autocomplete__option'));
+                    });
+                    
+                    results.appendChild(item);
+                });
+                
+                showFirmResults();
+            }
+            
+            function selectFirm(firm) {
+                console.log('Selected firm:', firm);
+                const firmSearchInput = document.getElementById('firm-search-input');
+                const selectedFirmIdInput = document.getElementById('selected-firm-id');
+                
+                firmSearchInput.value = firm.name;
+                selectedFirmIdInput.value = firm.id;
+                
+                console.log('Updated input values:');
+                console.log('firmSearch:', firmSearchInput.value);
+                console.log('selectedFirmId:', selectedFirmIdInput.value);
+                
+                hideFirmResults();
+            }
+            
+            function updateSelection(items) {
+                items.forEach((item, index) => {
+                    if (index === selectedIndex) {
+                        item.classList.add('autocomplete__option--focused');
+                    } else {
+                        item.classList.remove('autocomplete__option--focused');
+                    }
+                });
+            }
+            
+            function showFirmResults() {
+                document.getElementById('firm-search-results').classList.remove('autocomplete__menu--hidden');
+            }
+            
+            function hideFirmResults() {
+                document.getElementById('firm-search-results').classList.add('autocomplete__menu--hidden');
+                selectedIndex = -1;
+            }
+            
+            function showErrorMessage(message) {
+                const results = document.getElementById('firm-search-results');
+                results.innerHTML = '';
+                const errorItem = document.createElement('li');
+                errorItem.className = 'autocomplete__option';
+                errorItem.textContent = message;
+                errorItem.style.color = '#d4351c';
+                results.appendChild(errorItem);
+                showFirmResults();
+            }
+        </script>
+    </main>
+
+    <!-- Autocomplete Styles -->
+    <style>
+        .autocomplete__wrapper {
+            position: relative;
+        }
+        
+        .autocomplete__menu {
+            background-color: #ffffff;
+            border: 2px solid #0b0c0c;
+            border-top: none;
+            box-sizing: border-box;
+            color: #0b0c0c;
+            font-family: "GDS Transport", arial, sans-serif;
+            font-size: 19px;
+            list-style: none;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        
+        .autocomplete__menu--hidden {
+            display: none !important;
+        }
+        
+        .autocomplete__option {
+            background-color: #ffffff;
+            border-bottom: 1px solid #b1b4b6;
+            color: #0b0c0c;
+            cursor: pointer;
+            display: block;
+            padding: 8px 12px;
+        }
+        
+        .autocomplete__option:last-child {
+            border-bottom: none;
+        }
+        
+        .autocomplete__option:hover,
+        .autocomplete__option--focused {
+            background-color: #1d70b8;
+            color: #ffffff;
+        }
+        
+        .autocomplete__option strong {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .autocomplete__option small {
+            font-size: 16px;
+            color: #505a5f;
+            display: block;
+        }
+        
+        .autocomplete__option:hover small,
+        .autocomplete__option--focused small {
+            color: #ffffff;
+        }
+    </style>
+</body>
+
+</html>
