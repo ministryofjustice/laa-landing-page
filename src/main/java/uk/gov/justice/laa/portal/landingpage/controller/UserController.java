@@ -56,7 +56,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
-import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -626,22 +625,21 @@ public class UserController {
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            try {
-                CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-                String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        userProfileDto != null ? userProfileDto.getId() : null,
-                        currentUserDto,
-                        userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                        changed, "apps");
-                eventService.logEvent(updateUserAuditEvent);
-            } catch (RoleCoverageException e) {
-                String errorMessage = e.getMessage();
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            Map<String, String> result = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            if (result.get("error") != null) {
+                String errorMessage = result.get("error");
                 redirectAttributes.addFlashAttribute("errorMessage",
                         errorMessage);
                 UUID uuid = UUID.fromString(id);
                 return new RedirectView(String.format("/admin/users/edit/%s/apps", uuid));
             }
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto != null ? userProfileDto.getId() : null,
+                    currentUserDto,
+                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
+                    result.get("diff"), "apps");
+            eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/manage/%s", uuid));
@@ -834,18 +832,17 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                try {
-                    String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
-                    UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                            editorProfile.getId(),
-                            currentUserDto,
-                            user != null ? user.getEntraUser() : null, changed,
-                            "role");
-                    eventService.logEvent(updateUserAuditEvent);
-                } catch (RoleCoverageException e) {
-                    String errorMessage = e.getMessage();
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                if (updateResult.get("error") != null) {
+                    String errorMessage = updateResult.get("error");
                     return "redirect:/admin/users/edit/" + uuid + "/roles?errorMessage=" + errorMessage;
                 }
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
+                        user != null ? user.getEntraUser() : null, updateResult.get("diff"),
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
             }
             return "redirect:/admin/users/manage/" + uuid;
         } else {
@@ -1099,13 +1096,13 @@ public class UserController {
         if (selectedApps.isEmpty()) {
             // Update user to have no roles (empty list)
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            String changed = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto != null ? userProfileDto.getId() : null,
                     currentUserDto,
                     userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    changed, "roles");
+                    updateResult.get("diff"), "roles");
             eventService.logEvent(updateUserAuditEvent);
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
@@ -1270,11 +1267,11 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
-                        user != null ? user.getEntraUser() : null, changed,
+                        user != null ? user.getEntraUser() : null, updateResult.get("diff"),
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
             }

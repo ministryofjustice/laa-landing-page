@@ -73,7 +73,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
-import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -1023,8 +1022,9 @@ class UserControllerTest {
         UUID userId = UUID.randomUUID();
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
+        Map<String, String> result = Map.of("diff", "Changed", "error", "Attempt to remove own External User Manager, from user profile " + userId);
         when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
-                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+                .thenReturn(result);
         RedirectAttributes attrs = new RedirectAttributesModelMap();
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, attrs);
@@ -1691,8 +1691,9 @@ class UserControllerTest {
         // The controller flattens all roles from all apps and passes them to
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
+        Map<String, String> result = Map.of("diff", "Changed", "error", "Attempt to remove own External User Manager, from user profile " + userId);
         when(userService.updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId()))
-                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+                .thenReturn(result);
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
                 testSession);
