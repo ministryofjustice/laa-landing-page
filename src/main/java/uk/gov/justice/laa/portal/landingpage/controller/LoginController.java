@@ -43,13 +43,13 @@ public class LoginController {
     private final LoginService loginService;
     private final UserService userService;
     private final FirmService firmService;
-    @Autowired
-    private OAuth2AuthorizedClientService clientService;
+    private final OAuth2AuthorizedClientService clientService;
 
-    public LoginController(LoginService loginService, UserService userService, FirmService firmService) {
+    public LoginController(LoginService loginService, UserService userService, FirmService firmService, OAuth2AuthorizedClientService clientService) {
         this.loginService = loginService;
         this.userService = userService;
         this.firmService = firmService;
+        this.clientService = clientService;
     }
 
     @GetMapping("/")
@@ -83,7 +83,6 @@ public class LoginController {
      * @param model          the model to be populated with user session data
      * @param authentication the authentication object containing user credentials
      * @param session        the current HTTP session
-     * @param authClient     the OAuth2 authorized client for Azure
      * @return the view for home
      */
     @GetMapping("/home")

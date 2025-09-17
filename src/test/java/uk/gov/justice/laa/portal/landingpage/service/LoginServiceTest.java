@@ -251,7 +251,7 @@ class LoginServiceTest {
         UserProfile up = loginService.getCurrentProfile(realAuthToken);
         assertThat(up.isActiveProfile()).isTrue();
     }
-/*
+
     @Test
     void logout_whenAuthenticationIsNull_doNothing() {
 
@@ -281,5 +281,5 @@ class LoginServiceTest {
 
         // Assert
         verify(graphApiService).logoutUser(anyString());
-    }*/
+    }
 }

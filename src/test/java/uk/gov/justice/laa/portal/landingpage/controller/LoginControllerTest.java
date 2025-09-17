@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -53,6 +54,8 @@ class LoginControllerTest {
 
     @Mock
     private OAuth2AuthorizedClient authClient;
+    @Mock
+    private OAuth2AuthorizedClientService clientService;
 
     @InjectMocks
     private LoginController controller;
@@ -157,6 +160,7 @@ class LoginControllerTest {
         UserSessionData mockSessionData = UserSessionData.builder()
                 .name("Test User")
                 .build();
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenReturn(mockSessionData);
@@ -181,6 +185,7 @@ class LoginControllerTest {
                 .name("Test User")
                 .user(user)
                 .build();
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenReturn(mockSessionData);
@@ -207,6 +212,7 @@ class LoginControllerTest {
                 .name("Test User")
                 .user(user)
                 .build();
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenReturn(mockSessionData);
@@ -231,6 +237,7 @@ class LoginControllerTest {
         UserSessionData mockSessionData = UserSessionData.builder()
                 .name("Test User")
                 .build();
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenReturn(mockSessionData);
@@ -253,7 +260,7 @@ class LoginControllerTest {
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenReturn(null);
-
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         // Act
         String viewName = controller.home(model, authentication, session);
 
@@ -271,7 +278,7 @@ class LoginControllerTest {
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
                 any(HttpSession.class)))
                 .thenThrow(new RuntimeException("Error processing session"));
-
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         // Act
         String viewName = controller.home(model, authentication, session);
 
@@ -352,7 +359,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(true);
@@ -376,7 +383,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(false);
@@ -403,7 +410,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(UUID.randomUUID().toString()).build())
                 .name("Test User")
                 .build();
-        
+        when(clientService.loadAuthorizedClient("azure", authentication.getName())).thenReturn(authClient);
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithRoles);
 
