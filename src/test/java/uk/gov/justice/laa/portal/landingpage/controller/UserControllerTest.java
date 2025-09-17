@@ -1855,6 +1855,32 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldHideOfficesTabForExternalUserWithoutPermissions() {
+        // Given - External user without required permissions
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of())
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false); // No edit permission
+        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false); // No office permission
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
+    }
+
+    @Test
     void manageUser_shouldShowOfficesTabForExternalUser() {
         // Given - External user
         EntraUserDto entraUser = new EntraUserDto();
@@ -1873,6 +1899,8 @@ class UserControllerTest {
         
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
 
         // When
         String view = userController.manageUser("external-user-id", model, session);
