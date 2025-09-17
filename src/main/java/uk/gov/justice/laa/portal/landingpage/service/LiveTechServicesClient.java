@@ -166,12 +166,14 @@ public class LiveTechServicesClient implements TechServicesClient {
             String errorJson = httpEx.getResponseBodyAsString();
             try {
                 TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
-                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
-                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 if (httpEx.getStatusCode().equals(HttpStatus.CONFLICT)) {
+                    logger.debug("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     logger.info("Handling user conflicts gracefully.");
                     return TechServicesApiResponse.error(errorResponse);
                 }
+                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
                 logger.error("Error while sending new user creation request to Tech Services.", ex);

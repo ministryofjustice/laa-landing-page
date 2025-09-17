@@ -32,8 +32,6 @@ import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -101,7 +99,6 @@ public class LiveTechServicesClientTest {
                 .firstName("firstName").lastName("lastName")
                 .userStatus(UserStatus.ACTIVE)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
-        String reqStr = "{\"groups\": []}";
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -299,8 +296,6 @@ public class LiveTechServicesClientTest {
 
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
-        App app = App.builder().securityGroupOid("securityGroupOid").build();
-        AppRole appRole = AppRole.builder().name("name").app(app).build();
 
         liveTechServicesClient.registerNewUser(user);
 
@@ -315,8 +310,6 @@ public class LiveTechServicesClientTest {
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
-        App app = App.builder().securityGroupOid("securityGroupOid").build();
-        AppRole appRole = AppRole.builder().name("name").app(app).build();
 
         when(restClient.post()).thenThrow(new RuntimeException("Error sending request to Tech services"));
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
@@ -335,8 +328,6 @@ public class LiveTechServicesClientTest {
     void testRegisterUserError409() {
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
-        App app = App.builder().securityGroupOid("securityGroupOid").build();
-        AppRole appRole = AppRole.builder().name("name").app(app).build();
 
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -366,7 +357,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(result.getError().getCode()).isEqualTo("USER_ALREADY_EXISTS");
         Assertions.assertThat(result.getError().getMessage()).isEqualTo("A user with this email already exists");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.ERROR,
+        assertLogMessage(Level.DEBUG,
                 "Error while sending new user creation request to Tech Services for firstName lastName");
         assertLogMessage(Level.INFO, "Handling user conflicts gracefully.");
         verify(restClient, times(1)).post();
@@ -376,8 +367,6 @@ public class LiveTechServicesClientTest {
     void testRegisterUserError400() {
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
-        App app = App.builder().securityGroupOid("securityGroupOid").build();
-        AppRole appRole = AppRole.builder().name("name").app(app).build();
 
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -415,8 +404,6 @@ public class LiveTechServicesClientTest {
     void testRegisterUserError5Xx() {
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
-        App app = App.builder().securityGroupOid("securityGroupOid").build();
-        AppRole appRole = AppRole.builder().name("name").app(app).build();
 
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
