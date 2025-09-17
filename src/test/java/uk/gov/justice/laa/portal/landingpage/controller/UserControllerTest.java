@@ -73,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -634,7 +635,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -660,7 +661,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -680,7 +681,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -699,7 +700,7 @@ class UserControllerTest {
         session.setAttribute("isUserManager", true);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
@@ -1967,10 +1968,61 @@ class UserControllerTest {
                 .thenReturn(entraUser);
 
         // When
-        String view = userController.addUserCheckAnswers(mockSession, authentication);
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_duplicate_user_shouldCallCreateUserButShowErrorOnCurrentPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new TechServicesClientException("Duplicate User"));
+
+        // When
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_on_ts_error_shouldCallCreateUserAndShowErrorPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new RuntimeException("Bad Request!!"));
+
+        // When
+        RuntimeException runtimeException = assertThrows(RuntimeException.class,
+                () -> userController.addUserCheckAnswers(mockSession, authentication, model),
+                "Expected Runtime Exception");
+
+        // Then
+        assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
     }
 

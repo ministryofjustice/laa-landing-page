@@ -37,7 +37,6 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.services.sqs.endpoints.internal.Value;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -45,7 +44,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -56,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -75,7 +74,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppViewModel;
 
 /**
  * User Controller
@@ -472,7 +470,7 @@ public class UserController {
 
     @PostMapping("/user/create/check-answers")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
-    public String addUserCheckAnswers(HttpSession session, Authentication authentication) {
+    public String addUserCheckAnswers(HttpSession session, Authentication authentication, Model model) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
@@ -480,13 +478,27 @@ public class UserController {
             EntraUserDto user = userOptional.get();
             FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            EntraUser entraUser = userService.createUser(user, selectedFirm,
-                    userManager, currentUserDto.getName());
-            session.setAttribute("userProfile",
-                    mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
-            CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                    selectedFirm.getName(), userManager);
-            eventService.logEvent(createUserAuditEvent);
+            try {
+                EntraUser entraUser = userService.createUser(user, selectedFirm,
+                        userManager, currentUserDto.getName());
+                session.setAttribute("userProfile",
+                        mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+                CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
+                        selectedFirm.getName(), userManager);
+                eventService.logEvent(createUserAuditEvent);
+            } catch (TechServicesClientException techServicesClientException) {
+                log.error("Error creating user: {}", techServicesClientException.getMessage());
+                model.addAttribute("errorMessage", techServicesClientException.getMessage());
+                model.addAttribute("errors", techServicesClientException.getErrors());
+
+                model.addAttribute("user", user);
+                model.addAttribute("firm", selectedFirm);
+                boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+                model.addAttribute("isUserManager", isUserManager);
+                model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+                return "add-user-check-answers";
+            }
+
         } else {
             log.error("No user attribute was present in request. User not created.");
         }
