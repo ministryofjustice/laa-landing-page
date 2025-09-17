@@ -215,15 +215,15 @@ public class CustomLogoutHandlerTest {
     }
 
     @Test
-    public void getClient_withNonOAuth2Authentication_shouldReturnNull() {
-        UsernamePasswordAuthenticationToken nonOAuthToken = new UsernamePasswordAuthenticationToken("user", "password");
+    public void getClient_withNonOauthAuthentication_shouldReturnNull() {
+        UsernamePasswordAuthenticationToken nonOauthToken = new UsernamePasswordAuthenticationToken("user", "password");
         
-        assertThat(logoutHandler.getClient(nonOAuthToken)).isNull();
+        assertThat(logoutHandler.getClient(nonOauthToken)).isNull();
         verify(clientService, never()).loadAuthorizedClient(any(), any());
     }
 
     @Test
-    public void logout_withNullAuthentication_shouldNotCauseNPE() {
+    public void logout_withNullAuthentication_shouldNotCauseNpe() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -236,13 +236,13 @@ public class CustomLogoutHandlerTest {
     }
 
     @Test
-    public void logout_withNonOAuth2Authentication_shouldNotCauseNPE() {
+    public void logout_withNonOauthAuthentication_shouldNotCauseNpe() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
-        UsernamePasswordAuthenticationToken nonOAuthToken = new UsernamePasswordAuthenticationToken("user", "password");
+        UsernamePasswordAuthenticationToken nonOauthToken = new UsernamePasswordAuthenticationToken("user", "password");
 
         // This should not throw any exception
-        logoutHandler.logout(request, response, nonOAuthToken);
+        logoutHandler.logout(request, response, nonOauthToken);
         
         // Should not attempt to call any logout services when authentication is not OAuth2
         verify(clientService, never()).loadAuthorizedClient(any(), any());
