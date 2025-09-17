@@ -6,13 +6,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @Data
-public class CcmsMessage {
+public class CcmsMessage implements Serializable {
 
     @JsonProperty("userName")
     private final String userName;

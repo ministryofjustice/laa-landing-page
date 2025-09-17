@@ -5,6 +5,7 @@ import lombok.Setter;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -12,7 +13,7 @@ import java.util.List;
  */
 @Setter
 @Getter
-public class UserSearchCriteria {
+public class UserSearchCriteria implements Serializable {
     private String searchTerm;
     private FirmSearchForm firmSearch;
     private UserType userType;
