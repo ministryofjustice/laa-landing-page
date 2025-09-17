@@ -134,7 +134,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             securityGroups.add(defaultSecurityGroup);
 
             RegisterUserRequest request = RegisterUserRequest.builder()
-                    .email("test.user@email.com")
+                    .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .verificationMethod(techServicesVerificationMethod)
