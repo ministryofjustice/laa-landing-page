@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.util.UUID;
 
@@ -18,13 +19,13 @@ public class DoNothingTechServicesClient implements TechServicesClient {
     }
 
     @Override
-    public RegisterUserResponse registerNewUser(EntraUserDto user) {
+    public TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user) {
         logger.info("Register new user request received on Dummy Tech Services Client for user {} {}", user.getFirstName(), user.getLastName());
         // return success response with random uuid
-        return RegisterUserResponse.builder().success(true).message("Success")
+        return TechServicesApiResponse.success(RegisterUserResponse.builder().success(true).message("Success")
                 .createdUser(RegisterUserResponse.CreatedUser.builder().id(UUID.randomUUID().toString())
                         .displayName(user.getFullName()).mail(user.getEmail()).build())
-                .build();
+                .build());
     }
 
 }

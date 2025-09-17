@@ -73,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -634,7 +635,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -660,7 +661,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -680,7 +681,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -699,7 +700,7 @@ class UserControllerTest {
         session.setAttribute("isUserManager", true);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
@@ -1854,6 +1855,32 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldHideOfficesTabForExternalUserWithoutPermissions() {
+        // Given - External user without required permissions
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of())
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false); // No edit permission
+        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false); // No office permission
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
+    }
+
+    @Test
     void manageUser_shouldShowOfficesTabForExternalUser() {
         // Given - External user
         EntraUserDto entraUser = new EntraUserDto();
@@ -1872,6 +1899,8 @@ class UserControllerTest {
         
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
 
         // When
         String view = userController.manageUser("external-user-id", model, session);
@@ -1967,10 +1996,61 @@ class UserControllerTest {
                 .thenReturn(entraUser);
 
         // When
-        String view = userController.addUserCheckAnswers(mockSession, authentication);
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_duplicate_user_shouldCallCreateUserButShowErrorOnCurrentPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new TechServicesClientException("Duplicate User"));
+
+        // When
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_on_ts_error_shouldCallCreateUserAndShowErrorPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new RuntimeException("Bad Request!!"));
+
+        // When
+        RuntimeException runtimeException = assertThrows(RuntimeException.class,
+                () -> userController.addUserCheckAnswers(mockSession, authentication, model),
+                "Expected Runtime Exception");
+
+        // Then
+        assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
     }
 
