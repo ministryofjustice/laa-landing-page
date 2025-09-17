@@ -491,7 +491,7 @@ public class UserController {
                         selectedFirm.getName(), userManager);
                 eventService.logEvent(createUserAuditEvent);
             } catch (TechServicesClientException techServicesClientException) {
-                log.error("Error creating user: {}", techServicesClientException.getMessage());
+                log.debug("Error creating user: {}", techServicesClientException.getMessage());
                 model.addAttribute("errorMessage", techServicesClientException.getMessage());
                 model.addAttribute("errors", techServicesClientException.getErrors());
 
