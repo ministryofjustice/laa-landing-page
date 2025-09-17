@@ -31,6 +31,10 @@ public class EmailValidationService {
     private final BlocklistedEmailDomains blocklistedEmailDomains;
 
     public boolean isValidEmailDomain(String email) {
+        return isValidEmailDomain(email, 30);
+    }
+
+    public boolean isValidEmailDomain(String email, int timeout) {
 
         if (email == null || !email.contains("@")) {
             return false;
@@ -49,7 +53,7 @@ public class EmailValidationService {
         Future<Boolean> future = executor.submit(() -> hasMxRecords(email));
 
         try {
-            return future.get(30, TimeUnit.SECONDS);
+            return future.get(timeout, TimeUnit.SECONDS);
         } catch (TimeoutException timeoutEx) {
             log.error("The email domain validation took longer than expected. Possibly the email domain is invalid!", timeoutEx);
             throw new RuntimeException("The email domain validation took longer than expected. Possibly the email domain is invalid!");
