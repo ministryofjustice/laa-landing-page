@@ -28,8 +28,14 @@ public class CustomLogoutHandler implements LogoutHandler {
 
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-        // First, revoke the Graph API sessions
-        loginService.logout(authentication, getClient(authentication));
+        // Check if authentication is valid before attempting logout operations
+        if (authentication != null && authentication instanceof OAuth2AuthenticationToken) {
+            // First, revoke the Graph API sessions
+            OAuth2AuthorizedClient client = getClient(authentication);
+            if (client != null) {
+                loginService.logout(authentication, client);
+            }
+        }
         
         // Only redirect to Azure logout if this is not a test environment or if explicitly requested
         // Check if the request has a parameter indicating Azure logout is needed
@@ -48,6 +54,10 @@ public class CustomLogoutHandler implements LogoutHandler {
     }
 
     protected OAuth2AuthorizedClient getClient(Authentication authentication) {
+        if (authentication == null || !(authentication instanceof OAuth2AuthenticationToken)) {
+            return null;
+        }
+        
         OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
         return clientService.loadAuthorizedClient(oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
     }
