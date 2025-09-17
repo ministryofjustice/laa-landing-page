@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.config;
 
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -74,8 +75,8 @@ public class TechServicesConfig {
     )
     public TechServicesClient liveTechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
                                                      EntraUserRepository entraUserRepository, CacheManager cacheManager,
-                                                     @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder) {
-        return new LiveTechServicesClient(clientSecretCredential, restClient, entraUserRepository, cacheManager, jwtDecoder);
+                                                     @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder, ObjectMapper objectMapper) {
+        return new LiveTechServicesClient(clientSecretCredential, restClient, entraUserRepository, cacheManager, jwtDecoder, objectMapper);
     }
 
     @Bean

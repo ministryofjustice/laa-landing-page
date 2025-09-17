@@ -1,32 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -48,13 +27,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -73,6 +45,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
+import uk.gov.justice.laa.portal.landingpage.exception.RoleCoverageException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -92,6 +66,33 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -634,7 +635,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -660,7 +661,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -680,7 +681,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -699,7 +700,7 @@ class UserControllerTest {
         session.setAttribute("isUserManager", true);
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
-        String redirectUrl = userController.addUserCheckAnswers(session, authentication);
+        String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
@@ -1022,9 +1023,8 @@ class UserControllerTest {
         UUID userId = UUID.randomUUID();
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
-        Map<String, String> result = Map.of("diff", "Changed", "error", "Attempt to remove own External User Manager, from user profile " + userId);
         when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
-                .thenReturn(result);
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
         RedirectAttributes attrs = new RedirectAttributesModelMap();
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, authentication, session, attrs);
@@ -1691,9 +1691,8 @@ class UserControllerTest {
         // The controller flattens all roles from all apps and passes them to
         // updateUserRoles
         List<String> allSelectedRoles = List.of("role1", "role2", "role3");
-        Map<String, String> result = Map.of("diff", "Changed", "error", "Attempt to remove own External User Manager, from user profile " + userId);
         when(userService.updateUserRoles(userId, allSelectedRoles, currentUserDto.getUserId()))
-                .thenReturn(result);
+                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
         // When - updating roles for last app (index 1)
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, authentication, model,
                 testSession);
@@ -1967,10 +1966,61 @@ class UserControllerTest {
                 .thenReturn(entraUser);
 
         // When
-        String view = userController.addUserCheckAnswers(mockSession, authentication);
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_duplicate_user_shouldCallCreateUserButShowErrorOnCurrentPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new TechServicesClientException("Duplicate User"));
+
+        // When
+        String view = userController.addUserCheckAnswers(mockSession, authentication, model);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+    }
+
+    @Test
+    void addUserCheckAnswers_on_ts_error_shouldCallCreateUserAndShowErrorPage() {
+        MockHttpSession mockSession = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        mockSession.setAttribute("user", user);
+        mockSession.setAttribute("isUserManager", true);
+        // No other session attributes set
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+                .thenThrow(new RuntimeException("Bad Request!!"));
+
+        // When
+        RuntimeException runtimeException = assertThrows(RuntimeException.class,
+                () -> userController.addUserCheckAnswers(mockSession, authentication, model),
+                "Expected Runtime Exception");
+
+        // Then
+        assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
         verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
     }
 
