@@ -39,7 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableJdbcHttpSession(cleanupCron = "0 0 * * * *") // top of every hour of every day
+@EnableJdbcHttpSession
 public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
