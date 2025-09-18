@@ -25,7 +25,9 @@ public class CustomLogoutHandler implements LogoutHandler {
         this.logoutService = logoutService;
     }
 
+    // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
     public void setOAuth2AuthorizedClientService(OAuth2AuthorizedClientService clientService) {
+        // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
         this.clientService = clientService;
     }
 
@@ -59,7 +61,7 @@ public class CustomLogoutHandler implements LogoutHandler {
     protected OAuth2AuthorizedClient getClient(Authentication authentication) {
         if (authentication == null
                 || !(authentication instanceof OAuth2AuthenticationToken)
-                || clientService == null ) {
+                || clientService == null) {
             return null;
         }
         

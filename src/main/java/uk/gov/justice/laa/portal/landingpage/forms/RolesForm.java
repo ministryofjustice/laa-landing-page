@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class RolesForm implements java.io.Serializable{
+public class RolesForm implements java.io.Serializable {
 
     List<String> roles;
 }
