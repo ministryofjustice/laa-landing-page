@@ -67,7 +67,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
                             SELECT 1 FROM ups.appRoles ar
                             WHERE ar.authzRole = true
-                            AND ar.name = 'External User Manager'
+                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
                         """)
     Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);

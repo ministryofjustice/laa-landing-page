@@ -18,4 +18,5 @@ public class UserRole implements Serializable {
     private String appRoleName;
     private String appRoleAssignmentId;
     private boolean selected;
+    private String url;
 }

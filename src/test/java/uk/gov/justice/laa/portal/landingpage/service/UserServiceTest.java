@@ -50,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -59,6 +60,9 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.io.IOException;
@@ -217,7 +221,8 @@ class UserServiceTest {
         RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
-        RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                .success(RegisterUserResponse.builder().createdUser(createdUser).build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
         when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
@@ -248,7 +253,8 @@ class UserServiceTest {
         RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
-        RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                .success(RegisterUserResponse.builder().createdUser(createdUser).build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
         List<String> roles = new ArrayList<>();
@@ -1969,7 +1975,8 @@ class UserServiceTest {
             RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
-            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
@@ -1994,7 +2001,8 @@ class UserServiceTest {
             RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
-            RegisterUserResponse registerUserResponse = RegisterUserResponse.builder().createdUser(createdUser).build();
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -2007,6 +2015,50 @@ class UserServiceTest {
             assertThat(capturedUser.getUserProfiles()).hasSize(1);
             UserProfile profile = capturedUser.getUserProfiles().iterator().next();
             assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        }
+
+        @Test
+        void createUser_returns_ts_user_email_conflict() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("test@example.com");
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .error(TechServicesErrorResponse.builder().code("USER_ALREADY_EXISTS")
+                            .message("A user with this email already exists").build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            TechServicesClientException result = assertThrows(TechServicesClientException.class,
+                    () -> userService.createUser(user, firmDto, false, "admin"),
+                    "Expected TS Client Exception");
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getMessage()).isEqualTo("A user with this email already exists");
+        }
+
+        @Test
+        void createUser_ts_4xx_error() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("test@example.com");
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenThrow(new RuntimeException("Error while sending new user creation request to Tech Services"));
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            RuntimeException result = assertThrows(RuntimeException.class,
+                    () -> userService.createUser(user, firmDto, false, "admin"),
+                    "Expected TS Client Exception");
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getMessage()).isEqualTo("Error while sending new user creation request to Tech Services");
         }
     }
 
@@ -3208,5 +3260,84 @@ class UserServiceTest {
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("Attempt to remove last Global Admin, from user profile");
         }
+    }
+
+    @Test
+    void sendVerificationEmail_Success() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
+                        .build()));
+
+        // Act
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getData()).isNotNull();
+        verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+    }
+
+    @Test
+    void sendVerificationEmail_Failure() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                .thenReturn(TechServicesApiResponse.error(TechServicesErrorResponse.builder().success(false)
+                        .build()));
+
+        // Act
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getData()).isNull();
+        verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+    }
+
+    @Test
+    void sendVerificationEmail_UserNotFound() {
+        // Arrange
+        UUID profileId = UUID.randomUUID();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.empty());
+
+        // Act
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> userService.sendVerificationEmail(profileId.toString()));
+
+        // Assert
+        assertThat(ex.getMessage()).isEqualTo("Failed to send verification email!");
+        verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
+    }
+
+    @Test
+    void getRolesByIdIn() {
+        AppRole appRole1 = AppRole.builder().id(UUID.randomUUID()).name("ap1").build();
+        AppRole appRole2 = AppRole.builder().id(UUID.randomUUID()).build();
+        AppRole appRole3 = AppRole.builder().id(UUID.randomUUID()).build();
+        List<AppRole> appRoles = List.of(appRole1, appRole2, appRole3);
+        when(mockAppRoleRepository.findAllByIdIn(any())).thenReturn(appRoles);
+        Map<String, AppRoleDto> rolesByIdIn = userService.getRolesByIdIn(List.of());
+        assertThat(rolesByIdIn).hasSize(3);
+        assertThat(rolesByIdIn.get(appRole1.getId().toString()).getName()).isEqualTo("ap1");
     }
 }
