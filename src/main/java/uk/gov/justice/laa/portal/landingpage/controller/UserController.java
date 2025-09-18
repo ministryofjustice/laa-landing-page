@@ -317,6 +317,11 @@ public class UserController {
     @GetMapping("/user/{id}/verify")
     @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
     public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
+        if (!enableResendVerificationCode) {
+            log.error("Resend activation code is disabled");
+            throw new AccessDeniedException("Resend verification is disabled.");
+        }
+
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
         List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
@@ -345,10 +350,6 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = filters != null && hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-
-        if (!enableResendVerificationCode) {
-            log.warn("Resend activation code is disabled");
-        }
 
         try {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
