@@ -1056,7 +1056,7 @@ class UserControllerTest {
         List<String> apps = new ArrayList<>(); // Empty list
         HttpSession session = new MockHttpSession();
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
-        when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId())).thenReturn("changed");
+        when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId())).thenReturn(Map.of("diff", "changed"));
         session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
         // When
         String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
@@ -1101,7 +1101,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
-                .thenThrow(new RoleCoverageException("Attempt to remove own External User Manager, from user profile " + userId));
+                .thenReturn(Map.of("error" , "Attempt to remove own External User Manager, from user profile " + userId));
         session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
         // When
         String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
@@ -1257,12 +1257,6 @@ class UserControllerTest {
         String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         MockHttpSession testSession = new MockHttpSession();
         // When
         String view = userController.updateUserDetailsCheck(userId, model, testSession);

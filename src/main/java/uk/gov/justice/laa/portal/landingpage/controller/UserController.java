@@ -930,18 +930,17 @@ public class UserController {
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-            try {
-                String changed = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        editorProfile.getId(),
-                        currentUserDto,
-                        user.getEntraUser(), changed,
-                        "role");
-                eventService.logEvent(updateUserAuditEvent);
-            }  catch (RoleCoverageException e) {
-                String errorMessage = e.getMessage();
+            Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+            if (updateResult.get("error") != null) {
+                String errorMessage = updateResult.get("error");
                 return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
             }
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    editorProfile.getId(),
+                    currentUserDto,
+                    user.getEntraUser(), updateResult.get("diff"),
+                    "role");
+            eventService.logEvent(updateUserAuditEvent);
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
