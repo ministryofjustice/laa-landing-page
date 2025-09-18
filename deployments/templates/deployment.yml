@@ -205,4 +205,4 @@ spec:
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
             - name: FEATURE_FLAG_ENABLE_RESEND_VER_CODE
-              value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}
+              value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
