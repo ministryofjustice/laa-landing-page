@@ -9,12 +9,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -155,6 +153,21 @@ public class AccessControlService {
         return Arrays.stream(permissions).anyMatch(userPermissions::contains);
     }
 
+    public boolean canSendVerificationEmail(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        return userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && userHasAnyGivenPermissions(authenticatedUser,
+                Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
+    }
 
 }
