@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'edit-user'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Edit - User Details</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
+            Back </a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                <h1 class="govuk-fieldset__heading">
+                    User details - Check your answers and confirm
+                </h1>
+            </legend>
+            <form th:action="@{/admin/users/edit/{id}/details-check-answer(id=${id})}" th:method="post"
+                th:object="${editUserDetailsForm}" class="govuk-form">
+
+
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">
+                            User details
+                        </h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl class="govuk-summary-list">
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{email}"></span>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{firstName}"></span>
+                                </dd>
+                                <dd class="govuk-summary-list__actions">
+                                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}" class="govuk-link">Change</a>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="*{lastName}"></span>
+                                </dd>
+                                <dd class="govuk-summary-list__actions">
+                                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}" class="govuk-link">Change</a>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button">Confirm</button>
+                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                </div>
+            </form>
+        </fieldset>
+    </main>
+</body>
+
+</html>
