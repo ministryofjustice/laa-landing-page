@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.io.IOException;
@@ -55,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.function.Function;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -248,6 +250,13 @@ public class UserService {
                 .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
                 .filter(AppRole::isLegacySync)
                 .collect(Collectors.toSet()) : new HashSet<>();
+    }
+
+    public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
+        Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userProfileId);
+
+        return optionalUserProfile.map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
+                .orElseThrow(() -> new RuntimeException("Failed to send verification email!"));
     }
 
     public List<DirectoryRole> getDirectoryRolesByUserId(String userId) {
@@ -929,5 +938,12 @@ public class UserService {
         } else {
             logger.warn("User profile with id {} not found. Could not remove app role.", userProfileId);
         }
+    }
+
+    public Map<String, AppRoleDto> getRolesByIdIn(Collection<UUID> roleIds) {
+        return appRoleRepository.findAllByIdIn(roleIds).stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .collect(Collectors.toMap(AppRoleDto::getId,
+                        Function.identity()));
     }
 }
