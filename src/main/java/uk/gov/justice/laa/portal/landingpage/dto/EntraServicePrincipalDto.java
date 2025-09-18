@@ -6,12 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class EntraServicePrincipalDto {
+public class EntraServicePrincipalDto implements Serializable {
     private String id;
     private String appId;
     private String appDisplayName;

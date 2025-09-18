@@ -1,0 +1,19 @@
+package uk.gov.justice.laa.portal.landingpage.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+public class SessionCleanupTask {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    @Scheduled(fixedRate = 3600000) // every hour
+    public void cleanExpiredSessions() {
+        jdbcTemplate.update("DELETE FROM SPRING_SESSION WHERE EXPIRY_TIME < ?", System.currentTimeMillis());
+        jdbcTemplate.update("DELETE FROM oauth2_authorized_client WHERE access_token_expires_at < NOW()");
+    }
+}

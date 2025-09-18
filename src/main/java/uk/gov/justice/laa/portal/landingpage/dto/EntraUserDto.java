@@ -6,11 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 
+import java.io.Serializable;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EntraUserDto {
+public class EntraUserDto implements Serializable {
 
     private String id;
     private String email;

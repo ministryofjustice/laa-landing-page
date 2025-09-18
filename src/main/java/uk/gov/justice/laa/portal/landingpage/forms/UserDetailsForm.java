@@ -7,8 +7,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalPattern;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalSize;
 
+import java.io.Serializable;
+
 @Data
-public class UserDetailsForm {
+public class UserDetailsForm implements Serializable {
 
     @NotEmpty(message = "Enter a first name")
     @ConditionalSize(min = 2, max = 99, message = "First name must be between 2-99 characters")

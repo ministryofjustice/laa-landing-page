@@ -6,12 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ClaimEnrichmentRequest {
+public class ClaimEnrichmentRequest implements Serializable {
     private String type;
     private String source;
     private EntraClaimData data;

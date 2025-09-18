@@ -6,12 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class EntraUserPayloadDto {
+public class EntraUserPayloadDto implements Serializable {
     private String companyName;
     private String createdDateTime;
     private String displayName;
