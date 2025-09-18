@@ -64,7 +64,9 @@ dependencies {
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation("org.springframework.session:spring-session-jdbc")
-
+    configurations.testImplementation {
+        exclude group: 'org.springframework.session', module : 'spring-session-jdbc'
+    }
     implementation 'org.apache.httpcomponents.client5:httpclient5'
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
