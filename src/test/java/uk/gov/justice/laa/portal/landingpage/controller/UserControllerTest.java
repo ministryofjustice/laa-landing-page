@@ -1101,7 +1101,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         when(userService.updateUserRoles(userId.toString(), new ArrayList<>(), currentUserDto.getUserId()))
-                .thenReturn(Map.of("error" , "Attempt to remove own External User Manager, from user profile " + userId));
+                .thenReturn(Map.of("error", "Attempt to remove own External User Manager, from user profile " + userId));
         session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
         // When
         String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
