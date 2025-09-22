@@ -1,153 +1,23 @@
 databaseChangeLog:
   - changeSet:
-      id: 1758026276123-1
-      author: pijian.liao
+      id: 1755697515000-1
+      author: suresh.kavali
       changes:
-        # add table oauth2_authorized_client
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: client_registration_id
-                  type: VARCHAR(100)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: principal_name
-                  type: VARCHAR(200)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: access_token_type
-                  type: VARCHAR(100)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: access_token_value
-                  type: BYTEA
-              - column:
-                  constraints:
-                    nullable: false
-                  name: access_token_issued_at
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  constraints:
-                    nullable: false
-                  name: access_token_expires_at
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  name: access_token_scopes
-                  type: VARCHAR(1000)
-              - column:
-                  name: refresh_token_value
-                  type: BYTEA
-              - column:
-                  name: refresh_token_issued_at
-                  type: TIMESTAMP WITHOUT TIME ZONE
-              - column:
-                  constraints:
-                    nullable: false
-                  name: created_at
-                  type: TIMESTAMP WITHOUT TIME ZONE
-                  defaultValueComputed: current_timestamp
-            tableName: oauth2_authorized_client
-        - addPrimaryKey:
-            columnNames: client_registration_id, principal_name
-            tableName: oauth2_authorized_client
-  - changeSet:
-      id: 1758026276123-2
-      author: pijian.liao
-      changes:
-        # add table SPRING_SESSION
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    primaryKeyName: SPRING_SESSION_PK
-                  name: PRIMARY_ID
-                  type: CHAR(36)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: SESSION_ID
-                  type: CHAR(36)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: CREATION_TIME
-                  type: BIGINT
-              - column:
-                  constraints:
-                    nullable: false
-                  name: LAST_ACCESS_TIME
-                  type: BIGINT
-              - column:
-                  constraints:
-                    nullable: false
-                  name: MAX_INACTIVE_INTERVAL
-                  type: INT
-              - column:
-                  constraints:
-                    nullable: false
-                  name: EXPIRY_TIME
-                  type: BIGINT
-              - column:
-                  name: PRINCIPAL_NAME
-                  type: VARCHAR(100)
-            tableName: SPRING_SESSION
-        # add table SPRING_SESSION
-        - createTable:
-            columns:
-              - column:
-                  constraints:
-                    nullable: false
-                  name: SESSION_PRIMARY_ID
-                  type: CHAR(36)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: ATTRIBUTE_NAME
-                  type: VARCHAR(200)
-              - column:
-                  constraints:
-                    nullable: false
-                  name: ATTRIBUTE_BYTES
-                  type: BYTEA
-            tableName: SPRING_SESSION_ATTRIBUTES
-        - addPrimaryKey:
-            columnNames: SESSION_PRIMARY_ID, ATTRIBUTE_NAME
-            constraintName: SPRING_SESSION_ATTRIBUTES_PK
-            tableName: SPRING_SESSION_ATTRIBUTES
-        - addForeignKeyConstraint:
-            baseColumnNames: SESSION_PRIMARY_ID
-            baseTableName: SPRING_SESSION_ATTRIBUTES
-            constraintName: SPRING_SESSION_ATTRIBUTES_FK
-            deferrable: false
-            initiallyDeferred: false
-            onDelete: CASCADE
-            onUpdate: NO ACTION
-            referencedColumnNames: PRIMARY_ID
-            referencedTableName: SPRING_SESSION
-            validate: true
-        - createIndex:
-            columns:
-              - column:
-                  name: SESSION_ID
-            indexName: SPRING_SESSION_IX1
-            tableName: SPRING_SESSION
-            unique: true
-        - createIndex:
-            columns:
-              - column:
-                  name: EXPIRY_TIME
-            indexName: SPRING_SESSION_IX2
-            tableName: SPRING_SESSION
-        - createIndex:
-            columns:
-              - column:
-                  name: PRINCIPAL_NAME
-            indexName: SPRING_SESSION_IX3
-            tableName: SPRING_SESSION
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              UPDATE user_profile_app_role upar
+              SET app_role_id = ar2.id
+              FROM user_profile up
+                       JOIN app_role ar1 ON ar1.name = 'External User Manager'
+                       JOIN app_role ar2 ON ar2.name = 'Firm User Manager'
+              WHERE upar.user_profile_id = up.id
+                AND upar.app_role_id = ar1.id
+                AND up.user_type = 'EXTERNAL'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role upar2
+                  WHERE upar2.user_profile_id = upar.user_profile_id
+                    AND upar2.app_role_id = ar2.id
+              );
