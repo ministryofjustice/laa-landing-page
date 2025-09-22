@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755697515000-1
+      author: suresh.kavali
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              UPDATE user_profile_app_role upar
+              SET app_role_id = ar2.id
+              FROM user_profile up
+                       JOIN app_role ar1 ON ar1.name = 'External User Manager'
+                       JOIN app_role ar2 ON ar2.name = 'Firm User Manager'
+              WHERE upar.user_profile_id = up.id
+                AND upar.app_role_id = ar1.id
+                AND up.user_type = 'EXTERNAL'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role upar2
+                  WHERE upar2.user_profile_id = upar.user_profile_id
+                    AND upar2.app_role_id = ar2.id
+              );
