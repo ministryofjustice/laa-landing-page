@@ -1,9 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -14,11 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(StaticPagesController.class)
-public class StaticPagesControllerIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+@ActiveProfiles("test")
+public class StaticPagesControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getCookies_shouldReturnCookiesPage() throws Exception {
