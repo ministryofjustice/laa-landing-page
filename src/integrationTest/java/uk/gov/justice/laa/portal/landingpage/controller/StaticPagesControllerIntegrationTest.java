@@ -1,16 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MvcResult;
-
-import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MvcResult;
+
+import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 
 @ActiveProfiles("test")
 public class StaticPagesControllerIntegrationTest extends BaseIntegrationTest {
