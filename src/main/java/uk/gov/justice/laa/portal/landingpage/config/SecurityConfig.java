@@ -6,7 +6,6 @@ import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,8 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
@@ -27,7 +24,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
-import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -39,7 +35,6 @@ import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@EnableJdbcHttpSession
 public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
@@ -178,15 +173,5 @@ public class SecurityConfig {
                                 + " frame-src * self blob: data: gap:;"))
         );
         return http.build();
-    }
-
-    @Bean
-    // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
-    public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(JdbcOperations jdbcOperations,
-                                                                       ClientRegistrationRepository clientRegistrationRepository) {
-        // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
-        OAuth2AuthorizedClientService service = new JdbcOAuth2AuthorizedClientService(jdbcOperations, clientRegistrationRepository);
-        logoutHandler.setOAuth2AuthorizedClientService(service);
-        return service;
     }
 }
