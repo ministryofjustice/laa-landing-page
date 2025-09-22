@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'cookies'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Cookies</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/home">&lt; Back</a>
+            </li>
+        </ol>
+    </nav>
+    
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl">Cookies</h1>
+                
+                <p class="govuk-body">
+                    Cookies are small files saved on your phone, tablet or computer when you visit a website.
+                </p>
+                
+                <p class="govuk-body">
+                    We use cookies to make this site work and collect information about how you use our service.
+                </p>
+                
+                <h2 class="govuk-heading-l">Essential cookies</h2>
+                
+                <p class="govuk-body">
+                    Essential cookies keep your information secure while you use this service. We do not need to ask permission to use them.
+                </p>
+                
+                <h3 class="govuk-heading-m">Essential cookies we use</h3>
+                
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                        <tr class="govuk-table__row">
+                            <th scope="col" class="govuk-table__header">Name</th>
+                            <th scope="col" class="govuk-table__header">Purpose</th>
+                            <th scope="col" class="govuk-table__header">Expires</th>
+                        </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">XSRF-TOKEN</td>
+                            <td class="govuk-table__cell">Cross-Site Request Forgery (CSRF) protection - prevents unauthorised actions from other sites</td>
+                            <td class="govuk-table__cell">Expires when browser closes</td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">JSESSIONID</td>
+                            <td class="govuk-table__cell">Identifies user session</td>
+                            <td class="govuk-table__cell">Expires when browser closes</td>
+                        </tr>
+                        <tr class="govuk-table__row">
+                            <td class="govuk-table__cell">sticky</td>
+                            <td class="govuk-table__cell">Maintains session affinity</td>
+                            <td class="govuk-table__cell">24 hours</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
