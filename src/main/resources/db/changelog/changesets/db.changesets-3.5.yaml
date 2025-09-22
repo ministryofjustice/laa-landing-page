@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 202509221156-01
+      author: kavali.suresh
+      changes:
+        - update:
+            tableName: app
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "0"
+            where: name='Manage Your Users'
+        - update:
+            tableName: app
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "1"
+            where: name='Apply for criminal legal aid'
+        - update:
+            tableName: app
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "2"
+            where: name='Submit a crime form'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "0"
+            where: name='Internal User Viewer'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "1"
+            where: name='Internal User Manager'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "2"
+            where: name='External User Viewer'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "3"
+            where: name='External User Manager'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "4"
+            where: name='External User Admin'
+        - update:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  valueNumeric: "5"
+            where: name='Global Admin'
+        - delete:
+            tableName: role_assignment
+            where: >
+              assignable_role_id = (
+                SELECT id FROM app_role WHERE name = 'Firm User Manager' LIMIT 1
+              )
+              AND assigning_role_id = (
+                SELECT id FROM app_role WHERE name = 'Firm User Manager' LIMIT 1
+              )
