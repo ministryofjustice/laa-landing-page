@@ -27,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 /**
  * Unit tests to verify that search validation is working correctly
  * across all endpoints that implement minimum search length requirements.
+ * Tests the 1-character minimum search requirement.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Search Validation Unit Tests")
@@ -45,47 +46,60 @@ public class SearchValidationTest {
     private Authentication authentication;
 
     @Test
-    @DisplayName("Should return empty results for queries shorter than 3 characters in firm search endpoints")
+    @DisplayName("Should return empty results only for empty queries in firm search endpoints")
     void testMinimumSearchLengthValidationForFirmEndpoints() {
         // Test /admin/user/firms/search endpoint
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserAccessibleFirms(any(), any())).thenReturn(List.of());
 
-        // Test with empty query
+        // Test with empty query - should not call service
         List<FirmDto> result1 = userController.getFirms(authentication, "");
         assertThat(result1).isEmpty();
 
-        // Test with single character
-        List<FirmDto> result2 = userController.getFirms(authentication, "a");
-        assertThat(result2).isEmpty();
-
-        // Test with two characters
-        List<FirmDto> result3 = userController.getFirms(authentication, "ab");
-        assertThat(result3).isEmpty();
-
-        // Test with whitespace only
+        // Test with whitespace only - should not call service
         List<FirmDto> result4 = userController.getFirms(authentication, "   ");
         assertThat(result4).isEmpty();
 
-        // Verify that service was never called for any short queries
-        verify(firmService, never()).getUserAccessibleFirms(any(), any());
+        // Verify that service was not called for empty queries
+        verify(firmService, never()).getUserAccessibleFirms(any(), eq(""));
+        verify(firmService, never()).getUserAccessibleFirms(any(), eq("   "));
+
+        // Test with single character - should now call service (1-character minimum)
+        List<FirmDto> result2 = userController.getFirms(authentication, "a");
+        assertThat(result2).isEmpty(); // Empty result but service was called
+
+        // Test with two characters - should call service
+        List<FirmDto> result3 = userController.getFirms(authentication, "ab");
+        assertThat(result3).isEmpty(); // Empty result but service was called
+
+        // Verify that service was called for valid queries (1+ characters)
+        verify(firmService).getUserAccessibleFirms(entraUser, "a");
+        verify(firmService).getUserAccessibleFirms(entraUser, "ab");
 
         // Test /admin/user/create/firm/search endpoint
+        when(firmService.searchFirms(any())).thenReturn(List.of());
+
+        // Empty query - should not call service
         List<Map<String, String>> searchResult1 = userController.searchFirms("");
         assertThat(searchResult1).isEmpty();
 
+        // Single character - should call service
         List<Map<String, String>> searchResult2 = userController.searchFirms("x");
-        assertThat(searchResult2).isEmpty();
+        assertThat(searchResult2).isEmpty(); // Empty result but service was called
 
+        // Two characters - should call service
         List<Map<String, String>> searchResult3 = userController.searchFirms("xy");
-        assertThat(searchResult3).isEmpty();
+        assertThat(searchResult3).isEmpty(); // Empty result but service was called
 
-        // Verify that service was never called for any short queries
-        verify(firmService, never()).searchFirms(any());
+        // Verify service calls for searchFirms
+        verify(firmService, never()).searchFirms("");
+        verify(firmService).searchFirms("x");
+        verify(firmService).searchFirms("xy");
     }
 
     @Test
-    @DisplayName("Should process queries that meet the 3 character minimum requirement")
+    @DisplayName("Should process queries that meet the 1 character minimum requirement")
     void testValidQueriesProcessedCorrectly() {
         // Arrange
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
@@ -96,51 +110,55 @@ public class SearchValidationTest {
                 .build();
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserAccessibleFirms(entraUser, "abc")).thenReturn(List.of(testFirm));
-        when(firmService.searchFirms("def")).thenReturn(List.of(testFirm));
+        when(firmService.getUserAccessibleFirms(entraUser, "a")).thenReturn(List.of(testFirm));
+        when(firmService.searchFirms("b")).thenReturn(List.of(testFirm));
 
-        // Test /admin/user/firms/search endpoint with valid query
-        List<FirmDto> result1 = userController.getFirms(authentication, "abc");
+        // Test /admin/user/firms/search endpoint with single character (now valid)
+        List<FirmDto> result1 = userController.getFirms(authentication, "a");
         assertThat(result1).hasSize(1);
         assertThat(result1.get(0).getName()).isEqualTo("Test Firm");
 
-        // Test /admin/user/create/firm/search endpoint with valid query
-        List<Map<String, String>> result2 = userController.searchFirms("def");
+        // Test /admin/user/create/firm/search endpoint with single character (now valid)
+        List<Map<String, String>> result2 = userController.searchFirms("b");
         assertThat(result2).hasSize(1);
         assertThat(result2.get(0).get("name")).isEqualTo("Test Firm");
 
         // Verify services were called for valid queries
-        verify(firmService).getUserAccessibleFirms(entraUser, "abc");
-        verify(firmService).searchFirms("def");
+        verify(firmService).getUserAccessibleFirms(entraUser, "a");
+        verify(firmService).searchFirms("b");
     }
 
     @Test
     @DisplayName("Should handle edge cases correctly")
     void testEdgeCases() {
-        // Test exactly 3 characters (should be processed)
+        // Test exactly 1 character (should be processed)
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserAccessibleFirms(entraUser, "123")).thenReturn(List.of());
-        when(firmService.searchFirms("456")).thenReturn(List.of());
+        when(firmService.getUserAccessibleFirms(entraUser, "1")).thenReturn(List.of());
+        when(firmService.searchFirms("2")).thenReturn(List.of());
 
-        List<FirmDto> result1 = userController.getFirms(authentication, "123");
+        List<FirmDto> result1 = userController.getFirms(authentication, "1");
         assertThat(result1).isEmpty(); // Empty but service was called
 
-        List<Map<String, String>> result2 = userController.searchFirms("456");
+        List<Map<String, String>> result2 = userController.searchFirms("2");
         assertThat(result2).isEmpty(); // Empty but service was called
 
-        verify(firmService).getUserAccessibleFirms(entraUser, "123");
-        verify(firmService).searchFirms("456");
+        verify(firmService).getUserAccessibleFirms(entraUser, "1");
+        verify(firmService).searchFirms("2");
 
-        // Test query with leading/trailing spaces that becomes too short when trimmed
+        // Test query with leading/trailing spaces
+        // The controller checks trim().length() but passes the original untrimmed query to service
+        when(firmService.getUserAccessibleFirms(entraUser, "  a  ")).thenReturn(List.of());
+        when(firmService.searchFirms("  b  ")).thenReturn(List.of());
+
         List<FirmDto> result3 = userController.getFirms(authentication, "  a  ");
-        assertThat(result3).isEmpty();
+        assertThat(result3).isEmpty(); // Empty but service was called (with original "  a  ")
 
         List<Map<String, String>> result4 = userController.searchFirms("  b  ");
-        assertThat(result4).isEmpty();
+        assertThat(result4).isEmpty(); // Empty but service was called (with original "  b  ")
 
-        // These should not have called the service because trimmed length is < 1
-        verify(firmService, never()).getUserAccessibleFirms(any(), eq("a"));
-        verify(firmService, never()).searchFirms(eq("b"));
+        // Verify the service was called with the original (untrimmed) values
+        verify(firmService).getUserAccessibleFirms(entraUser, "  a  ");
+        verify(firmService).searchFirms("  b  ");
     }
 }
