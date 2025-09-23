@@ -17,7 +17,6 @@ jobs:
       environment: ${{ vars.ENV_NAME }}
       snapshot_suffix: pre-deployment
       purpose: pre-deployment
-      service_pod_label: irsa-laa-landing-page-test-service-pod
     secrets:
       KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
       KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
