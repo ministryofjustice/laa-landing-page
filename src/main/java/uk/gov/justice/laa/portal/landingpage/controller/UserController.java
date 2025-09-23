@@ -108,6 +108,10 @@ public class UserController {
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
     public List<FirmDto> getFirms(Authentication authentication,
             @RequestParam(value = "q", defaultValue = "") String query) {
+        // Enforce minimum search length to prevent performance issues
+        if (query.trim().length() < 1) {
+            return List.of(); // Return empty list for queries shorter than 1 character
+        }
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         return firmService.getUserAccessibleFirms(entraUser, query);
     }
@@ -149,15 +153,22 @@ public class UserController {
         log.debug("UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}",
                 search, firmSearchForm, showFirmAdmins);
 
+        // Enforce minimum search length for performance - if search term is provided but too short, 
+        // treat it as empty search to avoid returning all users
+        String effectiveSearch = search;
+        if (search != null && !search.trim().isEmpty() && search.trim().length() < 1) {
+            effectiveSearch = ""; // Treat short searches as empty to prevent returning all users
+        }
+
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(effectiveSearch, firmSearchForm, null, showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(effectiveSearch, firmSearchForm, UserType.INTERNAL,
                     showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(effectiveSearch, firmSearchForm, UserType.EXTERNAL,
                     showFirmAdmins);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
@@ -172,7 +183,7 @@ public class UserController {
                 FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
                         .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
-                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(effectiveSearch, searchForm, UserType.EXTERNAL,
                         showFirmAdmins);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
@@ -458,6 +469,11 @@ public class UserController {
     @GetMapping("/user/create/firm/search")
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+        // Enforce minimum search length to prevent performance issues
+        if (query.trim().length() < 1) {
+            return List.of(); // Return empty list for queries shorter than 1 character
+        }
+        
         List<FirmDto> firms = firmService.searchFirms(query);
 
         List<Map<String, String>> result = firms.stream()
