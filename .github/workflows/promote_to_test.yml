@@ -14,17 +14,17 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
       
-      - name: Configure Git User
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Checkout Test
         uses: actions/checkout@v5.0.0
         with:
           ref: test
           fetch-depth: 0
           ssh-key: ${{ secrets.TEST_DEPLOY_KEY }}
+
+      - name: Configure Git User
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Configure Git to use SSH
         run: |
