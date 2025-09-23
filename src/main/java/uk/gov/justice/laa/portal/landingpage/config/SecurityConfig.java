@@ -6,6 +6,8 @@ import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,6 +15,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
@@ -39,10 +44,12 @@ public class SecurityConfig {
 
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
     private final CustomLogoutHandler logoutHandler;
+    private final Environment environment;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
+        this.environment = environment;
     }
 
     @Bean
@@ -173,5 +180,21 @@ public class SecurityConfig {
                                 + " frame-src * self blob: data: gap:;"))
         );
         return http.build();
+    }
+
+    @Bean
+    // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
+    public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(JdbcOperations jdbcOperations,
+                                                                       ClientRegistrationRepository clientRegistrationRepository) {
+        // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
+        String enabled = environment.getProperty("SPRING_SESSION_JDBC_ENABLED", "false");
+        OAuth2AuthorizedClientService service;
+        if ("true".equalsIgnoreCase(enabled)) {
+            service = new JdbcOAuth2AuthorizedClientService(jdbcOperations, clientRegistrationRepository);
+        } else {
+            service = new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
+        }
+        logoutHandler.setOAuth2AuthorizedClientService(service);
+        return service;
     }
 }

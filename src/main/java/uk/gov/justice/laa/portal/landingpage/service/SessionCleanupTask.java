@@ -14,5 +14,6 @@ public class SessionCleanupTask {
     @Scheduled(fixedRate = 3600000) // every hour
     public void cleanExpiredSessions() {
         jdbcTemplate.update("DELETE FROM SPRING_SESSION WHERE EXPIRY_TIME < ?", System.currentTimeMillis());
+        jdbcTemplate.update("DELETE FROM oauth2_authorized_client WHERE access_token_expires_at < NOW()");
     }
 }

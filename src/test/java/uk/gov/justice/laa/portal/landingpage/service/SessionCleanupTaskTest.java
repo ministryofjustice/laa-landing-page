@@ -26,5 +26,6 @@ public class SessionCleanupTaskTest {
         sessionCleanupTask = new SessionCleanupTask(jdbcTemplate);
         sessionCleanupTask.cleanExpiredSessions();
         verify(jdbcTemplate, times(1)).update(anyString(), any(Object.class));
+        verify(jdbcTemplate, times(1)).update(anyString());
     }
 }
