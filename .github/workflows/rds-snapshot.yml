@@ -1,0 +1,237 @@
+name: RDS Snapshot (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to create snapshot for'
+        required: true
+        type: string
+      snapshot_suffix:
+        description: 'Optional suffix for snapshot name'
+        required: false
+        type: string
+        default: ''
+      purpose:
+        description: 'Purpose of the snapshot (manual-backup, pre-deployment, etc.)'
+        required: true
+        type: string
+      service_pod_label:
+        description: 'Label selector for the service pod'
+        required: false
+        type: string
+        default: 'irsa-laa-landing-page-service-pod'
+    secrets:
+      KUBE_NAMESPACE:
+        required: true
+      KUBE_CLUSTER:
+        required: true
+      KUBE_CERT:
+        required: true
+      KUBE_TOKEN:
+        required: true
+      ECR_ROLE_TO_ASSUME:
+        required: true
+    outputs:
+      snapshot_id:
+        description: 'The created snapshot identifier'
+        value: ${{ jobs.create-snapshot.outputs.snapshot_id }}
+
+jobs:
+  create-snapshot:
+    runs-on: ubuntu-latest
+    outputs:
+      snapshot_id: ${{ steps.create-snapshot.outputs.snapshot_id }}
+    steps:
+      - uses: actions/checkout@v5.0.0
+
+      # Assume role in Cloud Platform
+      - uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          aws-region: eu-west-2
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CERT }}" > ca.crt
+          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
+          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
+          kubectl config use-context ${KUBE_CLUSTER}
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+
+      - name: Create RDS Snapshot
+        id: create-snapshot
+        run: |
+          #!/bin/bash
+          set -e  # Exit on any error
+          
+          TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+          ENV_NAME="${{ inputs.environment }}"
+          SNAPSHOT_SUFFIX="${{ inputs.snapshot_suffix }}"
+          PURPOSE="${{ inputs.purpose }}"
+          NAMESPACE="${{ secrets.KUBE_NAMESPACE }}"
+          SERVICE_POD_LABEL="${{ inputs.service_pod_label }}"
+          
+          echo "=== RDS Snapshot Creation Started ==="
+          echo "Environment: ${ENV_NAME}"
+          echo "Purpose: ${PURPOSE}"
+          echo "Namespace: ${NAMESPACE}"
+          echo "Service Pod Label: ${SERVICE_POD_LABEL}"
+          
+          # Validate required parameters
+          if [ -z "$ENV_NAME" ] || [ -z "$NAMESPACE" ] || [ -z "$SERVICE_POD_LABEL" ]; then
+            echo "ERROR: Missing required parameters"
+            echo "ENV_NAME: ${ENV_NAME}"
+            echo "NAMESPACE: ${NAMESPACE}"
+            echo "SERVICE_POD_LABEL: ${SERVICE_POD_LABEL}"
+            exit 1
+          fi
+          
+          # Get DB instance identifier with error handling
+          echo "Getting DB instance identifier..."
+          if ! RDS_DB_IDENTIFIER=$(kubectl get secret rds-postgresql-instance-output -n "${NAMESPACE}" -o jsonpath='{.data.rds_instance_endpoint}' 2>/dev/null | base64 -d | cut -d. -f1 | xargs printf "%s"); then
+            echo "ERROR: Failed to retrieve DB instance identifier from Kubernetes secret"
+            echo "Please check that the secret 'rds-postgresql-instance-output' exists in namespace '${NAMESPACE}'"
+            exit 1
+          fi
+          
+          if [ -z "$RDS_DB_IDENTIFIER" ]; then
+            echo "ERROR: DB instance identifier is empty"
+            exit 1
+          fi
+          
+          echo "DB Instance Identifier: ${RDS_DB_IDENTIFIER}"
+          
+          # Create snapshot identifier with SILAS application name
+          if [ -n "$SNAPSHOT_SUFFIX" ]; then
+            SNAPSHOT_IDENTIFIER="SILAS-${ENV_NAME}-${TIMESTAMP}-${SNAPSHOT_SUFFIX}"
+          else
+            SNAPSHOT_IDENTIFIER="SILAS-${ENV_NAME}-${TIMESTAMP}"
+          fi
+          
+          echo "Snapshot Identifier: ${SNAPSHOT_IDENTIFIER}"
+          
+          # Scale up the service pod deployment if needed
+          echo "Checking service pod deployment status..."
+          if ! CURRENT_REPLICAS=$(kubectl get deployment "${SERVICE_POD_LABEL}" -n "${NAMESPACE}" -o jsonpath='{.spec.replicas}' 2>/dev/null); then
+            echo "ERROR: Failed to get deployment '${SERVICE_POD_LABEL}' in namespace '${NAMESPACE}'"
+            echo "Available deployments:"
+            kubectl get deployments -n "${NAMESPACE}"
+            exit 1
+          fi
+          
+          if [ "$CURRENT_REPLICAS" = "0" ] || [ -z "$CURRENT_REPLICAS" ]; then
+            echo "Service pod is scaled down (replicas: ${CURRENT_REPLICAS}). Scaling up to 1 replica..."
+            if ! kubectl scale deployment "${SERVICE_POD_LABEL}" --replicas=1 -n "${NAMESPACE}"; then
+              echo "ERROR: Failed to scale up deployment '${SERVICE_POD_LABEL}'"
+              exit 1
+            fi
+            
+            echo "Waiting for service pod to be ready..."
+            if ! kubectl wait --for=condition=Available deployment/"${SERVICE_POD_LABEL}" -n "${NAMESPACE}" --timeout=120s; then
+              echo "ERROR: Service pod failed to become available within 120 seconds"
+              echo "Deployment status:"
+              kubectl describe deployment "${SERVICE_POD_LABEL}" -n "${NAMESPACE}"
+              exit 1
+            fi
+          else
+            echo "Service pod is already running (replicas: ${CURRENT_REPLICAS})"
+          fi
+          
+          # Get the service pod name with error handling
+          echo "Getting service pod name..."
+          if ! SERVICE_POD_NAME=$(kubectl get pods -n "${NAMESPACE}" -l app="${SERVICE_POD_LABEL}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); then
+            echo "ERROR: Failed to find service pod with label 'app=${SERVICE_POD_LABEL}' in namespace '${NAMESPACE}'"
+            echo "Available pods:"
+            kubectl get pods -n "${NAMESPACE}"
+            exit 1
+          fi
+          
+          if [ -z "$SERVICE_POD_NAME" ]; then
+            echo "ERROR: Service pod name is empty"
+            echo "Available pods with label 'app=${SERVICE_POD_LABEL}':"
+            kubectl get pods -n "${NAMESPACE}" -l app="${SERVICE_POD_LABEL}"
+            exit 1
+          fi
+          
+          echo "Using service pod: ${SERVICE_POD_NAME}"
+          
+          # Create the snapshot using the service pod
+          kubectl exec -n "${NAMESPACE}" "${SERVICE_POD_NAME}" -- bash -c "
+          set -e
+          
+          echo 'Starting RDS snapshot creation...'
+          echo 'Application: SILAS'
+          echo 'Environment: ${ENV_NAME}'
+          echo 'DB Instance Identifier: ${RDS_DB_IDENTIFIER}'
+          echo 'Snapshot Identifier: ${SNAPSHOT_IDENTIFIER}'
+          
+          # Create the snapshot
+          aws rds create-db-snapshot \
+            --db-instance-identifier '${RDS_DB_IDENTIFIER}' \
+            --db-snapshot-identifier '${SNAPSHOT_IDENTIFIER}' \
+            --tags Key=Application,Value='SILAS' Key=Environment,Value='${ENV_NAME}' Key=CreatedBy,Value='github-actions' Key=Purpose,Value='${PURPOSE}'
+          
+          echo 'Snapshot creation initiated successfully!'
+          echo 'Snapshot ID: ${SNAPSHOT_IDENTIFIER}'
+          
+          # Wait for snapshot to be available
+          echo 'Waiting for snapshot to become available...'
+          aws rds wait db-snapshot-completed \
+            --db-snapshot-identifier '${SNAPSHOT_IDENTIFIER}' \
+            --cli-read-timeout 0 \
+            --cli-connect-timeout 60
+          
+          echo 'Snapshot is now available!'
+          echo 'Snapshot details:'
+          aws rds describe-db-snapshots \
+            --db-snapshot-identifier '${SNAPSHOT_IDENTIFIER}' \
+            --query 'DBSnapshots[0].{SnapshotId:DBSnapshotIdentifier,Status:Status,AllocatedStorage:AllocatedStorage,SnapshotCreateTime:SnapshotCreateTime}'
+          "
+          
+          echo "Snapshot creation completed successfully!"
+          echo "Snapshot ID: ${SNAPSHOT_IDENTIFIER}"
+          
+          # Validate snapshot was created successfully
+          echo "Validating snapshot creation..."
+          if ! kubectl exec -n "${NAMESPACE}" "${SERVICE_POD_NAME}" -- aws rds describe-db-snapshots --db-snapshot-identifier "${SNAPSHOT_IDENTIFIER}" --query 'DBSnapshots[0].Status' --output text > /dev/null 2>&1; then
+            echo "ERROR: Failed to validate snapshot '${SNAPSHOT_IDENTIFIER}'"
+            echo "Snapshot may not have been created successfully"
+            exit 1
+          fi
+          
+          SNAPSHOT_STATUS=$(kubectl exec -n "${NAMESPACE}" "${SERVICE_POD_NAME}" -- aws rds describe-db-snapshots --db-snapshot-identifier "${SNAPSHOT_IDENTIFIER}" --query 'DBSnapshots[0].Status' --output text)
+          echo "Snapshot Status: ${SNAPSHOT_STATUS}"
+          
+          if [ "$SNAPSHOT_STATUS" != "available" ]; then
+            echo "WARNING: Snapshot is not yet available (Status: ${SNAPSHOT_STATUS})"
+            echo "This is normal for large databases - snapshot will become available shortly"
+          else
+            echo "✅ Snapshot is available and ready to use"
+          fi
+          
+          # Scale down the service pod deployment if it was scaled up
+          echo "Cleaning up service pod..."
+          if [ "$CURRENT_REPLICAS" = "0" ] || [ -z "$CURRENT_REPLICAS" ]; then
+            echo "Scaling service pod deployment back down to 0 replicas..."
+            if ! kubectl scale deployment "${SERVICE_POD_LABEL}" --replicas=0 -n "${NAMESPACE}"; then
+              echo "WARNING: Failed to scale down deployment '${SERVICE_POD_LABEL}'"
+              echo "You may need to manually scale it down later"
+            else
+              echo "Service pod deployment scaled down successfully"
+            fi
+          else
+            echo "Service pod was already running, leaving it as is"
+          fi
+          
+          echo "=== RDS Snapshot Creation Completed Successfully ==="
+          echo "Snapshot ID: ${SNAPSHOT_IDENTIFIER}"
+          echo "Status: ${SNAPSHOT_STATUS}"
+          
+          # Set output for other jobs
+          echo "snapshot_id=${SNAPSHOT_IDENTIFIER}" >> $GITHUB_OUTPUT
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}

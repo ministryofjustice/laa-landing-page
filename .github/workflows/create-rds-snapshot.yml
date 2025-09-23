@@ -1,0 +1,38 @@
+name: Create RDS Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to create snapshot for'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prd
+      snapshot_suffix:
+        description: 'Optional suffix for snapshot name (e.g., pre-deployment, manual-backup)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  create-snapshot:
+    if: vars.ENABLE_MANUAL_SNAPSHOTS == 'true'
+    uses: ./.github/workflows/rds-snapshot.yml
+    with:
+      environment: ${{ inputs.environment }}
+      snapshot_suffix: ${{ inputs.snapshot_suffix }}
+      purpose: manual-backup
+      service_pod_label: irsa-laa-landing-page-${{ inputs.environment }}-service-pod
+    secrets:
+      KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+      KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+      KUBE_CERT: ${{ secrets.KUBE_CERT }}
+      KUBE_TOKEN: ${{ secrets.KUBE_TOKEN }}
+      ECR_ROLE_TO_ASSUME: ${{ secrets.ECR_ROLE_TO_ASSUME }}

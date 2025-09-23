@@ -16,8 +16,25 @@ jobs:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
       SNYK_SLACK_WEBHOOK_URL: ${{ secrets.SNYK_SLACK_WEBHOOK_URL }}
+  
+  create-snapshot:
+    if: github.ref == 'refs/heads/main' && vars.ENABLE_PRE_DEPLOYMENT_SNAPSHOTS == 'true'
+    uses: ./.github/workflows/rds-snapshot.yml
+    with:
+      environment: ${{ vars.ENV_NAME }}
+      snapshot_suffix: pre-deployment
+      purpose: pre-deployment
+      service_pod_label: irsa-laa-landing-page-development-service-pod
+    secrets:
+      KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+      KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+      KUBE_CERT: ${{ secrets.KUBE_CERT }}
+      KUBE_TOKEN: ${{ secrets.KUBE_TOKEN }}
+      ECR_ROLE_TO_ASSUME: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+  
   ecr:
-    needs: vulnerability-scan
+    needs: [vulnerability-scan, create-snapshot]
+    if: always() && (needs.create-snapshot.result == 'success' || needs.create-snapshot.result == 'skipped')
     runs-on: ubuntu-latest
     environment: development
     permissions:
@@ -139,6 +156,7 @@ jobs:
           DISTRIBUTED_DB_LOCKING_PERIOD : ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
           FEATURE_FLAG_ENABLE_RESEND_VER_CODE : ${{ vars.FEATURE_FLAG_ENABLE_RESEND_VER_CODE }}
 
+
       - name: Deploy to Cloud Platform
         run: |
           kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
@@ -147,7 +165,7 @@ jobs:
 
       - name: Wait for new deployment to finish
         run: |
-          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment laa-landing-page --timeout=6m
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
