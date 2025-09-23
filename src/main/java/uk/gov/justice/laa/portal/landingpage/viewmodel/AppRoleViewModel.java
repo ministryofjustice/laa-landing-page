@@ -3,8 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.viewmodel;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serializable;
+
 @Data
-public class AppRoleViewModel implements Comparable<AppRoleViewModel> {
+public class AppRoleViewModel implements Comparable<AppRoleViewModel>, Serializable {
     private String id;
     private int ordinal;
     private String name;

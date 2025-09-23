@@ -49,7 +49,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
         
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-        
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.getClient(realAuthToken);
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
     }
@@ -65,7 +65,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -78,16 +78,17 @@ public class CustomLogoutHandlerTest {
     public void logoutWithAzureLogout() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setParameter("azure_logout", "true");
-        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
+        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
+
         OAuth2User realPrincipal = new DefaultOAuth2User(
                 List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"),
                 "name");
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
-
-        when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-        when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
-
+        MockHttpServletResponse response = new MockHttpServletResponse();
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -103,7 +104,6 @@ public class CustomLogoutHandlerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"),
                 "name");
-        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
         when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
@@ -115,7 +115,8 @@ public class CustomLogoutHandlerTest {
                 throw new IOException("Redirect failed");
             }
         };
-
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, spyResponse, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -139,7 +140,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -159,7 +160,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -179,7 +180,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -199,7 +200,7 @@ public class CustomLogoutHandlerTest {
         OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
 
         when(clientService.loadAuthorizedClient(eq("azure"), eq("Alice"))).thenReturn(mockClient);
-
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, realAuthToken);
         
         verify(clientService).loadAuthorizedClient(eq("azure"), eq("Alice"));
@@ -217,7 +218,7 @@ public class CustomLogoutHandlerTest {
     @Test
     public void getClient_withNonOauthAuthentication_shouldReturnNull() {
         UsernamePasswordAuthenticationToken nonOauthToken = new UsernamePasswordAuthenticationToken("user", "password");
-        
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         assertThat(logoutHandler.getClient(nonOauthToken)).isNull();
         verify(clientService, never()).loadAuthorizedClient(any(), any());
     }
@@ -228,6 +229,7 @@ public class CustomLogoutHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         // This should not throw any exception
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, null);
         
         // Should not attempt to call any logout services when authentication is null
@@ -242,6 +244,7 @@ public class CustomLogoutHandlerTest {
         UsernamePasswordAuthenticationToken nonOauthToken = new UsernamePasswordAuthenticationToken("user", "password");
 
         // This should not throw any exception
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, nonOauthToken);
         
         // Should not attempt to call any logout services when authentication is not OAuth2
@@ -258,6 +261,7 @@ public class CustomLogoutHandlerTest {
         when(logoutService.buildAzureLogoutUrl()).thenReturn("https://login.microsoftonline.com/tenant-id/oauth2/v2.0/logout?post_logout_redirect_uri=http%3A//localhost%3A8080/%3Fmessage%3Dlogout");
 
         // This should not throw any exception and should still handle Azure logout
+        logoutHandler.setOAuth2AuthorizedClientService(clientService);
         logoutHandler.logout(request, response, null);
         
         // Should not attempt to call logout services for null authentication
