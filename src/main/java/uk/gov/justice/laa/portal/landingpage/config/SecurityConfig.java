@@ -121,7 +121,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/css/**", "/js/**", "/assets/**"
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/css/**", "/js/**", "/assets/**"
                 ).permitAll()
                 .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
