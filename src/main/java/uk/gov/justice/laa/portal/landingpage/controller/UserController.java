@@ -470,7 +470,7 @@ public class UserController {
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
         // Enforce minimum search length to prevent performance issues
-        if (query.trim().length() < 1) {
+        if (query == null || query.trim().length() < 1) {
             return List.of(); // Return empty list for queries shorter than 1 character
         }
         

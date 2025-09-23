@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -679,5 +680,41 @@ class FirmServiceTest {
             assertThat(result).isEmpty();
             verify(firmRepository).findAll();
         }
+    }
+
+    // Additional tests for exception handling and edge cases to improve coverage
+
+    @Test 
+    void getUserFirms_withNullUserProfiles() {
+        // Given
+        EntraUser userWithNullProfiles = EntraUser.builder().userProfiles(null).build();
+
+        // When & Then
+        assertThatThrownBy(() -> firmService.getUserFirms(userWithNullProfiles))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void getUserAllFirms_withNullUserProfiles() {
+        // Given
+        EntraUser userWithNullProfiles = EntraUser.builder().userProfiles(null).build();
+
+        // When & Then
+        assertThatThrownBy(() -> firmService.getUserAllFirms(userWithNullProfiles))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void getAllFirmsFromCache_whenRepositoryThrowsException_shouldReturnEmptyList() {
+        // Given
+        Cache mockCache = mock(Cache.class);
+        when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(mockCache);
+        when(mockCache.get("all_firms", List.class)).thenReturn(null);
+        when(firmRepository.findAll()).thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        assertThatThrownBy(() -> firmService.getAllFirmsFromCache())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Database error");
     }
 }
