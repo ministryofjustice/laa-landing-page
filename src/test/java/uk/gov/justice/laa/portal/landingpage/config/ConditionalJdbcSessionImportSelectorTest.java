@@ -7,8 +7,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 class ConditionalJdbcSessionImportSelectorTest {
@@ -30,12 +28,11 @@ class ConditionalJdbcSessionImportSelectorTest {
         Mockito.when(mockEnvironment.getProperty("SPRING_SESSION_JDBC_ENABLED", "false"))
                 .thenReturn("true");
 
-        NoClassDefFoundError exception = assertThrows(NoClassDefFoundError.class,
-                () -> importSelector.selectImports(mockMetadata),
-                "Spring JDBC Session is disabled on test, should see see ClassCastException");
+        String[] imports = importSelector.selectImports(mockMetadata);
 
-        assertTrue(exception.getMessage()
-                .contains("org/springframework/session/jdbc/config/annotation/web/http/JdbcHttpSessionConfiguration"));
+        assertEquals(1, imports.length);
+        assertEquals("org.springframework.session.jdbc.config.annotation.web.http.JdbcHttpSessionConfiguration",
+                imports[0]);
     }
 
     @Test
