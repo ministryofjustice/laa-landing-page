@@ -16,14 +16,19 @@ import jakarta.servlet.http.HttpServletResponse;
 @Service
 public class CustomLogoutHandler implements LogoutHandler {
 
-    private final OAuth2AuthorizedClientService clientService;
+    private OAuth2AuthorizedClientService clientService;
     private final LoginService loginService;
     private final LogoutService logoutService;
 
-    public CustomLogoutHandler(OAuth2AuthorizedClientService clientService, LoginService loginService, LogoutService logoutService) {
-        this.clientService = clientService;
+    public CustomLogoutHandler(LoginService loginService, LogoutService logoutService) {
         this.loginService = loginService;
         this.logoutService = logoutService;
+    }
+
+    // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
+    public void setOAuth2AuthorizedClientService(OAuth2AuthorizedClientService clientService) {
+        // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
+        this.clientService = clientService;
     }
 
     @Override
@@ -54,7 +59,9 @@ public class CustomLogoutHandler implements LogoutHandler {
     }
 
     protected OAuth2AuthorizedClient getClient(Authentication authentication) {
-        if (authentication == null || !(authentication instanceof OAuth2AuthenticationToken)) {
+        if (authentication == null
+                || !(authentication instanceof OAuth2AuthenticationToken)
+                || clientService == null) {
             return null;
         }
         

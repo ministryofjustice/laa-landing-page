@@ -3,12 +3,13 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 @Getter
-public class UpdateUserAuditEvent extends AuditEvent {
+public class UpdateUserAuditEvent extends AuditEvent implements Serializable {
 
     private final EntraUserDto user;
     private final String field;

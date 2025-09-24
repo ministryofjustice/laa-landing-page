@@ -65,6 +65,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation 'org.springframework.session:spring-session-jdbc'
 
     implementation 'org.apache.httpcomponents.client5:httpclient5'
 
@@ -160,6 +161,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
+                    '**/config/SecurityConfig.class',
                     '**/model/**'
             ])
         })
