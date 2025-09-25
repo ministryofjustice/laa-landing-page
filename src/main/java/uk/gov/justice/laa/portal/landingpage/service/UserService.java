@@ -1,12 +1,28 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +33,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -46,29 +71,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.function.Function;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * userService
@@ -357,6 +359,16 @@ public class UserService {
     public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize,
             String sort,
             String direction) {
+        
+        // Validate search term length to prevent performance issues
+        if (searchCriteria != null && searchCriteria.getSearchTerm() != null) {
+            String searchTerm = searchCriteria.getSearchTerm().trim();
+            if (!searchTerm.isEmpty() && searchTerm.length() < 1) {
+                // Return empty result for short search terms to prevent returning all users
+                return new PaginatedUsers();
+            }
+        }
+        
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria,
                 pageRequest);

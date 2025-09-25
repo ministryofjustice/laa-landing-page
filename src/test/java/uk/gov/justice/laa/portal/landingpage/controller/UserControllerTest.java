@@ -1,11 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,6 +49,13 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -96,33 +97,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -187,10 +161,10 @@ class UserControllerTest {
     @Test
     void getFirms_WithSearchQuery_ReturnsFilteredFirms_By_Code() {
         // Arrange
-        String searchQuery = "F2";
+        String searchQuery = "F20"; // Changed to 3 characters to meet minimum requirement
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
-        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F20");
         List<FirmDto> allFirms = List.of(firm1, firm2);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
@@ -208,20 +182,121 @@ class UserControllerTest {
     void getFirms_WithoutSearchQuery_ReturnsAllFirms() {
         // Arrange
         String searchQuery = "";
+
+        // Act
+        List<FirmDto> result = userController.getFirms(authentication, searchQuery);
+
+        // Assert - Now expecting empty result for short/empty queries
+        assertThat(result).isEmpty();
+        verify(firmService, never()).getUserAccessibleFirms(any(), any());
+        verify(loginService, never()).getCurrentEntraUser(any());
+    }
+
+    @Test
+    void getFirms_WithShortQuery_ReturnsEmptyList() {
+        // Arrange
+        String searchQuery = ""; // Empty string, below minimum of 1 character
+
+        // Act
+        List<FirmDto> result = userController.getFirms(authentication, searchQuery);
+
+        // Assert - Should return empty result for empty queries
+        assertThat(result).isEmpty();
+        verify(firmService, never()).getUserAccessibleFirms(any(), any());
+        verify(loginService, never()).getCurrentEntraUser(any());
+    }
+
+    @Test
+    void getFirms_WithValidQuery_ReturnsFilteredFirms() {
+        // Arrange
+        String searchQuery = "Test"; // 4 characters, meets minimum requirement
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        List<FirmDto> expectedFirms = List.of(
-                new FirmDto(UUID.randomUUID(), "Firm A", "F1"),
-                new FirmDto(UUID.randomUUID(), "Firm B", "F2"));
+        FirmDto expectedFirm = new FirmDto(UUID.randomUUID(), "Test Firm", "TF001");
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(expectedFirms);
+        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(expectedFirm));
 
         // Act
         List<FirmDto> result = userController.getFirms(authentication, searchQuery);
 
         // Assert
-        assertThat(result).isEqualTo(expectedFirms);
+        assertThat(result).isEqualTo(List.of(expectedFirm));
         verify(firmService).getUserAccessibleFirms(entraUser, searchQuery);
+    }
+
+    @Test
+    void searchFirms_WithEmptyQuery_ReturnsEmptyList() {
+        // Arrange
+        String searchQuery = "";
+
+        // Act
+        List<Map<String, String>> result = userController.searchFirms(searchQuery);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(firmService, never()).searchFirms(any());
+    }
+
+    @Test
+    void searchFirms_WithNullQuery_ReturnsEmptyList() {
+        // Arrange - Using null as default value will be ""
+        String searchQuery = null;
+
+        // Act
+        List<Map<String, String>> result = userController.searchFirms("");
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(firmService, never()).searchFirms(any());
+    }
+
+    @Test
+    void searchFirms_WithWhitespaceOnlyQuery_ReturnsEmptyList() {
+        // Arrange
+        String searchQuery = "   ";
+
+        // Act
+        List<Map<String, String>> result = userController.searchFirms(searchQuery);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(firmService, never()).searchFirms(any());
+    }
+
+    @Test
+    void searchFirms_WithSingleCharacterQuery_ReturnsResults() {
+        // Arrange
+        String searchQuery = "A";
+        FirmDto mockFirm = new FirmDto(UUID.randomUUID(), "Alpha Firm", "A001");
+
+        when(firmService.searchFirms(searchQuery)).thenReturn(List.of(mockFirm));
+
+        // Act
+        List<Map<String, String>> result = userController.searchFirms(searchQuery);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name")).isEqualTo("Alpha Firm");
+        assertThat(result.get(0).get("id")).isEqualTo(mockFirm.getId().toString());
+        verify(firmService).searchFirms(searchQuery);
+    }
+
+    @Test
+    void searchFirms_WithValidQuery_ReturnsResults() {
+        // Arrange
+        String searchQuery = "Legal";
+        FirmDto mockFirm = new FirmDto(UUID.randomUUID(), "Legal Services", "LS001");
+
+        when(firmService.searchFirms(searchQuery)).thenReturn(List.of(mockFirm));
+
+        // Act
+        List<Map<String, String>> result = userController.searchFirms(searchQuery);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name")).isEqualTo("Legal Services");
+        assertThat(result.get(0).get("id")).isEqualTo(mockFirm.getId().toString());
+        verify(firmService).searchFirms(searchQuery);
     }
 
     @Test
@@ -3982,14 +4057,40 @@ class UserControllerTest {
     }
 
     @Test
-    void testSearchFirms_WithEmptyQuery_ShouldReturnAllFirms() {
+    void testSearchFirms_WithEmptyQuery_ShouldReturnEmptyList() {
         // Given
         String query = "";
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query);
+
+        // Then - Now expecting empty result for short/empty queries
+        assertThat(result).isEmpty();
+        verify(firmService, never()).searchFirms(any());
+    }
+
+    @Test
+    void testSearchFirms_WithShortQuery_ShouldReturnEmptyList() {
+        // Given
+        String query = ""; // Empty string, below the 1-character minimum
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query);
+
+        // Then - Should return empty result for queries shorter than 1 character
+        assertThat(result).isEmpty();
+        verify(firmService, never()).searchFirms(any());
+    }
+
+    @Test
+    void testSearchFirms_WithValidQuery_ShouldReturnResults() {
+        // Given
+        String query = "Test"; // 4 characters, meets minimum requirement
         List<FirmDto> mockFirms = List.of(
                 FirmDto.builder()
                         .id(UUID.randomUUID())
-                        .name("All Firms Test")
-                        .code("AFT001")
+                        .name("Test Firm")
+                        .code("TF001")
                         .build());
 
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
@@ -3999,8 +4100,8 @@ class UserControllerTest {
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).get("name")).isEqualTo("All Firms Test");
-        assertThat(result.get(0).get("code")).isEqualTo("AFT001");
+        assertThat(result.get(0).get("name")).isEqualTo("Test Firm");
+        assertThat(result.get(0).get("code")).isEqualTo("TF001");
         verify(firmService).searchFirms(query);
     }
 
@@ -4504,5 +4605,52 @@ class UserControllerTest {
         } finally {
             logger.detachAppender(listAppender);
         }
+    }
+
+    @Test
+    void searchFirms_withEmptyQuery_shouldReturnEmptyList() {
+        // When
+        List<Map<String, String>> result = userController.searchFirms("");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void searchFirms_withNullQuery_shouldReturnEmptyList() {
+        // When
+        List<Map<String, String>> result = userController.searchFirms(null);
+
+        // Then  
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void searchFirms_withWhitespaceQuery_shouldReturnEmptyList() {
+        // When
+        List<Map<String, String>> result = userController.searchFirms("   ");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void searchFirms_withSingleCharacter_shouldReturnFirms() {
+        // Given
+        FirmDto firmDto = FirmDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Firm")
+                .code("TEST")
+                .build();
+        when(firmService.searchFirms("A")).thenReturn(List.of(firmDto));
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms("A");
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name")).isEqualTo("Test Firm");
+        assertThat(result.get(0).get("code")).isEqualTo("TEST");
+        assertThat(result.get(0).get("id")).isEqualTo(firmDto.getId().toString());
     }
 }
