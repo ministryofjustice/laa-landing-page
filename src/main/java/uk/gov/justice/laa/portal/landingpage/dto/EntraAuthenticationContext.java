@@ -6,12 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.io.Serializable;
+
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class EntraAuthenticationContext {
+public class EntraAuthenticationContext implements Serializable {
     private String correlationId;
     private EntraClientDto client;
     private String protocol;

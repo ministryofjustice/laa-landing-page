@@ -63,6 +63,7 @@
                         </ul>
                     </div>
                     <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
+                    <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
                 </div>
             </div>
 
@@ -197,6 +198,7 @@
                 const firmSearchInput = document.getElementById('firmSearch');
                 const firmSearchListbox = document.getElementById('firmSearch__listbox');
                 const selectedFirmIdInput = document.getElementById('selectedFirmId');
+                const firmSearchResultCountInput = document.getElementById('firmSearchResultCount');
                 const statusA = document.getElementById('firmSearch__status--A');
                 const statusB = document.getElementById('firmSearch__status--B');
                 const assistiveHint = document.getElementById('firmSearch__assistiveHint');
@@ -230,7 +232,7 @@
 
                     // Debounce search requests
                     searchTimeout = setTimeout(() => {
-                        searchFirms(query);
+                        searchFirms(query, firmSearchResultCountInput.value);
                     }, 300);
                 });
 
@@ -265,9 +267,14 @@
                     }
                 });
 
-                function searchFirms(query) {
+                function searchFirms(query, count) {
                     updateStatus('Searching...');
-                    fetch(`/admin/user/create/firm/search?q=${encodeURIComponent(query)}`, {
+                    const params = {
+                        q: query,
+                        firmSearchResultCount: count
+                    };
+                    const queryString = new URLSearchParams(params).toString();
+                    fetch(`/admin/user/create/firm/search?${queryString}`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',

@@ -352,7 +352,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(true);
@@ -376,7 +376,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(false);
@@ -403,7 +403,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(UUID.randomUUID().toString()).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithRoles);
 

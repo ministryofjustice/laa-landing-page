@@ -53,10 +53,18 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
-    public void testGlobalAdminCanAssignExternalUserManagerRoleToExternalUser() throws Exception {
+    public void testGlobalAdminCannotAssignExternalUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, "External User Manager", false);
+    }
+
+    @Test
+    @Transactional
+    public void testGlobalAdminCanAssignFirmUserManagerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, "Firm User Manager", true);
     }
 
     @Test
@@ -344,13 +352,35 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
                 .andReturn();
 
         // Post Role
-        this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles", editedUserProfile.getId().toString()))
+        postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles", editedUserProfile.getId().toString()))
                         .with(userOauth2Login(loggedInUser))
                         .with(csrf())
                         .param("roles", role.getId().toString())
                         .param("selectedAppIndex", "0")
                         .session(session))
                 .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String cyaUrl = postAppsResult.getResponse().getRedirectedUrl();
+        Assertions.assertThat(cyaUrl).isNotNull();
+        this.mockMvc.perform(get(cyaUrl)
+                        .with(userOauth2Login(loggedInUser))
+                        .session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        //Check your answer
+        postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles-check-answer", editedUserProfile.getId().toString()))
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String confirmUrl = postAppsResult.getResponse().getRedirectedUrl();
+        Assertions.assertThat(confirmUrl).isNotNull();
+        this.mockMvc.perform(get(confirmUrl)
+                        .with(userOauth2Login(loggedInUser))
+                        .session(session))
+                .andExpect(status().isOk())
                 .andReturn();
 
         return userProfileRepository.findById(editedUserProfile.getId())
@@ -424,8 +454,30 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        // Check we're redirected back to manage user screen
-        Assertions.assertThat(postRolesResult.getResponse().getRedirectedUrl()).contains("manage");
+        // Check we're redirected to cya screen
+        String cyaUrl = postAppsResult.getResponse().getRedirectedUrl();
+        Assertions.assertThat(cyaUrl).isNotNull();
+        this.mockMvc.perform(get(cyaUrl)
+                        .with(userOauth2Login(loggedInUser))
+                        .session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        //Check your answer
+        postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles-check-answer", editedUserProfile.getId().toString()))
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String confirmUrl = postAppsResult.getResponse().getRedirectedUrl();
+        Assertions.assertThat(confirmUrl).isNotNull();
+        Assertions.assertThat(confirmUrl).contains("confirm");
+        this.mockMvc.perform(get(confirmUrl)
+                        .with(userOauth2Login(loggedInUser))
+                        .session(session))
+                .andExpect(status().isOk())
+                .andReturn();
 
         Set<String> editedUserRoles = userProfileRepository.findById(editedUserProfile.getId())
                 .orElseThrow()

@@ -114,6 +114,8 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(authzRoles).hasSize(2);
         List<AppRole> nonAuthzRoles = repository.findAllByIdInAndAuthzRoleIs(ids, false);
         Assertions.assertThat(nonAuthzRoles).hasSize(1);
+        List<AppRole> allRoles = repository.findAllByIdIn(ids);
+        Assertions.assertThat(allRoles).hasSize(3);
     }
 
 }
