@@ -66,6 +66,34 @@ For more detailed instructions, refer to the laa-ccms-spring-boot-common reposit
 
 More information on GDS can be found [here](https://gds-way.digital.cabinet-office.gov.uk/).
 
+#### Enable Pre-commit Hooks
+
+Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-hooks.yaml](./.pre-commit-hooks.yaml).
+
+To enable this:
+1. Download and install [Homebrew](https://github.com/Homebrew/brew/releases/latest)
+2. Authorise GitGuardian with your MoJ GitHub account [here](https://dashboard.gitguardian.com/api/v1/auth/user/github_login/authorize)
+3. Run the setup script (will take a few minutes to complete on the first time it is ran): 
+
+```sh
+./setup_precommits.sh
+```
+4. Acquire a GitGuardian Shield personal access token (will open authorisation in your browser):
+
+```sh
+ggshield auth login
+```
+
+The pre-commit hooks will now run as and when you commit your changes.
+
+To run the pre-commit secret scanners on everything in the repository:
+
+```sh
+pre-commit run --all-files
+```
+
+The hooks and dependencies can be updated by running the `setup_precommits.sh` script whenever needed (there is also an updater for the hooks alone that automatically runs on each pre-commit).
+
 #### Obtaining a Dockerhub account
 
 In order to run a database locally, you must have a licensed Docker account - please reach to the team to set this up.
