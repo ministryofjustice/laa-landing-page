@@ -148,6 +148,8 @@ public class FirmService {
                     return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                             .stream()
                             .map(firm -> mapper.map(firm, FirmDto.class))
+                            .sorted((s1, s2) ->
+                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 case EXTERNAL -> {
@@ -157,6 +159,8 @@ public class FirmService {
                             .stream()
                             .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
                                     || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+                            .sorted((s1, s2) ->
+                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 default -> {
