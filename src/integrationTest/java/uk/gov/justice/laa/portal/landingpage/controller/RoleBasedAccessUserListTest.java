@@ -57,7 +57,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         int expectedSize = (int) allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
-                .filter(profile -> profile.getAppRoles().stream().anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName().equals("External User Manager")))
+                .filter(profile -> profile.getAppRoles().stream()
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
                 .count();
 
         Assertions.assertThat(users).hasSize(expectedSize);
@@ -66,7 +67,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
             Set<String> authzRoleNames = userProfile.getAppRoles().stream()
                     .map(AppRoleDto::getName)
                     .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames).contains("External User Manager");
+            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
         }
     }
 
@@ -137,7 +138,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         int expectedSize = (int) allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
-                .filter(profile -> profile.getAppRoles().stream().anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName().equals("External User Manager")))
+                .filter(profile -> profile.getAppRoles().stream()
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
                 .count();
 
         Assertions.assertThat(users).hasSize(expectedSize);
@@ -146,7 +148,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
             Set<String> authzRoleNames = userProfile.getAppRoles().stream()
                     .map(AppRoleDto::getName)
                     .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames).contains("External User Manager");
+            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
         }
     }
 
@@ -192,7 +194,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(profile -> profile.isActiveProfile() && profile.getUserType() == UserType.EXTERNAL && profile.getFirm() != null
                         && profile.getFirm().getId().equals(loggedInUserFirm.getId()))
-                .filter(profile -> profile.getAppRoles().stream().anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName().equals("External User Manager")))
+                .filter(profile -> profile.getAppRoles().stream()
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
                 .count();
 
         Assertions.assertThat(users).hasSize(expectedSize);
@@ -201,7 +204,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
             Set<String> authzRoleNames = userProfile.getAppRoles().stream()
                     .map(AppRoleDto::getName)
                     .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames).contains("External User Manager");
+            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
         }
     }
 
@@ -238,7 +241,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> UserType.EXTERNAL == profile.getUserType())
-                .filter(profile -> profile.getAppRoles().stream().anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName().equals("External User Manager")))
+                .filter(profile -> profile.getAppRoles().stream()
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
@@ -246,7 +250,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
             Set<String> authzRoleNames = userProfile.getAppRoles().stream()
                     .map(AppRoleDto::getName)
                     .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames).contains("External User Manager");
+            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
         }
     }
 
