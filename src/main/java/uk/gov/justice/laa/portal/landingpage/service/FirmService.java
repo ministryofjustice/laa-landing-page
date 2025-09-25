@@ -21,6 +21,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+
 /**
  * FirmService
  */
@@ -101,6 +103,8 @@ public class FirmService {
         return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
+                .sorted((s1, s2) ->
+                        Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                 .collect(Collectors.toList());
     }
 

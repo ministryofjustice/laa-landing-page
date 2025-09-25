@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,33 +97,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -2650,7 +2624,7 @@ class UserControllerTest {
         Model testModel = new ExtendedModelMap();
 
         // When
-        String view = userController.createUserFirm(firmSearchForm, testSession, testModel);
+        String view = userController.createUserFirm(firmSearchForm, testSession, testModel, 10);
 
         // Then
         assertThat(view).isEqualTo("add-user-firm");
@@ -3943,7 +3917,7 @@ class UserControllerTest {
         Model testModel = new ExtendedModelMap();
 
         // When
-        String view = userController.createUserFirm(newForm, testSession, testModel);
+        String view = userController.createUserFirm(newForm, testSession, testModel, 10);
 
         // Then
         assertThat(view).isEqualTo("add-user-firm");
@@ -3970,7 +3944,7 @@ class UserControllerTest {
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = userController.searchFirms(query);
+        List<Map<String, String>> result = userController.searchFirms(query, 10);
 
         // Then
         assertThat(result).hasSize(2);
@@ -3978,6 +3952,62 @@ class UserControllerTest {
         assertThat(result.get(0).get("code")).isEqualTo("TF001");
         assertThat(result.get(1).get("name")).isEqualTo("Test Firm 2");
         assertThat(result.get(1).get("code")).isEqualTo("TF002");
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_ShouldReturnSubsetOfFirmList() {
+        // Given
+        String query = "Test Firm";
+        List<FirmDto> mockFirms = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> FirmDto.builder().id(UUID.randomUUID()).name("Test Firm " + i).code(String.format("TF%03d", i)).build())
+                .collect(Collectors.toList());
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query, 15);
+
+        // Then
+        assertThat(result).hasSize(15);
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_ShouldReturnDefaultCountOfTenFirmsList() {
+        // Given
+        String query = "Test Firm";
+        List<FirmDto> mockFirms = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> FirmDto.builder().id(UUID.randomUUID()).name("Test Firm " + i).code(String.format("TF%03d", i)).build())
+                .collect(Collectors.toList());
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query, 5);
+
+        // Then
+        assertThat(mockFirms).hasSize(20);
+        assertThat(result).hasSize(10);
+        verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_ShouldReturnMaxAllowedCountOfHundredFirmsList() {
+        // Given
+        String query = "Test Firm";
+        List<FirmDto> mockFirms = IntStream.rangeClosed(1, 200)
+                .mapToObj(i -> FirmDto.builder().id(UUID.randomUUID()).name("Test Firm " + i).code(String.format("TF%03d", i)).build())
+                .collect(Collectors.toList());
+
+        when(firmService.searchFirms(query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = userController.searchFirms(query, 101);
+
+        // Then
+        assertThat(mockFirms).hasSize(200);
+        assertThat(result).hasSize(100);
         verify(firmService).searchFirms(query);
     }
 
@@ -3995,7 +4025,7 @@ class UserControllerTest {
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = userController.searchFirms(query);
+        List<Map<String, String>> result = userController.searchFirms(query, 10);
 
         // Then
         assertThat(result).hasSize(1);
@@ -4052,7 +4082,7 @@ class UserControllerTest {
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = userController.searchFirms(query);
+        List<Map<String, String>> result = userController.searchFirms(query, 10);
 
         // Then
         assertThat(result).hasSize(10); // Should be limited to 10 results
