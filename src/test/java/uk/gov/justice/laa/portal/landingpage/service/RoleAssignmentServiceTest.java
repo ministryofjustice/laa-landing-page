@@ -86,6 +86,7 @@ public class RoleAssignmentServiceTest {
         UUID viewCrimeId = UUID.randomUUID();
         List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString(), viewCrimeId.toString());
         when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeId), true)).thenReturn(List.of(exAdmin, exMan));
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeId), false)).thenReturn(List.of(viewCrime));
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isTrue();
     }
 
@@ -99,12 +100,13 @@ public class RoleAssignmentServiceTest {
 
     @Test
     void filterRoles_globalAdmin() {
-        Set<AppRole> editorRoles = Set.of(gbAdmin);
         AppRoleDto exAdminDto = new AppRoleDto();
         exAdminDto.setId(exAdminId.toString());
         AppRoleDto exManDto = new AppRoleDto();
         exManDto.setId(exManId.toString());
-        List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto);
+        List<UUID> targetRoles = List.of(exAdminId, exManId);
+        Set<AppRole> editorRoles = Set.of(gbAdmin);
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoles, true)).thenReturn(List.of(exAdmin, exMan));
         assertThat(roleAssignmentService.filterRoles(editorRoles, targetRoles)).hasSize(2);
     }
 
@@ -115,7 +117,7 @@ public class RoleAssignmentServiceTest {
         exAdminDto.setId(exAdminId.toString());
         AppRoleDto exManDto = new AppRoleDto();
         exManDto.setId(gbAdminId.toString());
-        List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto);
+        List<UUID> targetRoles = List.of(exAdminId, exManId);
         assertThat(roleAssignmentService.filterRoles(editorRoles, targetRoles)).hasSize(0);
     }
 
@@ -131,9 +133,10 @@ public class RoleAssignmentServiceTest {
                 .userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(crimeApp).authzRole(false).build();
         AppRoleDto viewCrimeDto = new AppRoleDto();
         viewCrimeDto.setId(viewCrimeId.toString());
-        List<AppRoleDto> targetRoles = List.of(exAdminDto, exManDto, viewCrimeDto);
+        List<UUID> targetRoles = List.of(exAdminId, exManId, viewCrimeId);
         Set<AppRole> editorRoles = Set.of(exMan);
-        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, gbAdminId, viewCrimeId), false)).thenReturn(List.of(viewCrime));
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoles, true)).thenReturn(List.of(exAdmin, exMan));
+        when(appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoles, false)).thenReturn(List.of(viewCrime));
         assertThat(roleAssignmentService.filterRoles(editorRoles, targetRoles)).hasSize(1);
     }
 
