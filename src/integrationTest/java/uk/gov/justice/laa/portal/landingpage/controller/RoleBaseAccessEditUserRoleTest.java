@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,8 +11,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import java.util.List;
@@ -25,6 +28,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTest {
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private RoleAssignmentRepository roleAssignmentRepository;
 
 
     @Test
@@ -327,6 +334,79 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
     }
+
+    @Test
+    @Transactional
+    public void testRestrictedAppRoleCanBeAssignedByValidUser() throws Exception {
+        // Build test app
+        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+
+        // Build test role
+        AppRole testExternalAppRole = buildLaaAppRole(testInternalApp, "Test External App Role");
+        testExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+
+        // Persist app and role.
+        testInternalApp.setAppRoles(Set.of(testExternalAppRole));
+        testInternalApp = appRepository.saveAndFlush(testInternalApp);
+        testExternalAppRole = testInternalApp.getAppRoles().stream().findFirst().orElseThrow();
+
+        // Add restriction that test role can only be set by external user manager.
+        AppRole externalUserManager = appRoleRepository.findByName("External User Manager").orElseThrow();
+        RoleAssignment assignment = new RoleAssignment(externalUserManager, testExternalAppRole);
+        roleAssignmentRepository.saveAndFlush(assignment);
+
+        EntraUser loggedInUser = internalWithExternalOnlyUserManagers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+
+        // Send requests to update user roles
+        Set<AppRole> editedUserRoles = assignRoleToUserAndReturnRoles(loggedInUser, editedUser, testInternalApp, testExternalAppRole);
+
+        // Make sure role was assigned.
+        Assertions.assertThat(editedUserRoles).contains(testExternalAppRole);
+
+        // Teardown
+        roleAssignmentRepository.deleteAll();
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(appRepository);
+    }
+
+    @Test
+    @Transactional
+    public void testRestrictedAppRoleCannotBeAssignedByInvalidUser() throws Exception {
+        // Build test app
+        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+
+        // Build test role
+        AppRole testExternalAppRole = buildLaaAppRole(testInternalApp, "Test External App Role");
+        testExternalAppRole.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
+
+        // Persist app and role.
+        testInternalApp.setAppRoles(Set.of(testExternalAppRole));
+        testInternalApp = appRepository.saveAndFlush(testInternalApp);
+        testExternalAppRole = testInternalApp.getAppRoles().stream().findFirst().orElseThrow();
+
+        // Add restriction that test role can only be set by external user manager (internal).
+        AppRole externalUserManager = appRoleRepository.findByName("External User Manager").orElseThrow();
+        RoleAssignment assignment = new RoleAssignment(externalUserManager, testExternalAppRole);
+        roleAssignmentRepository.saveAndFlush(assignment);
+
+        EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+
+        // Send requests to update user roles
+        Set<AppRole> editedUserRoles = assignRoleToUserAndReturnRoles(loggedInUser, editedUser, testInternalApp, testExternalAppRole);
+
+        // Make sure role was not assigned.
+        Assertions.assertThat(editedUserRoles).doesNotContain(testExternalAppRole);
+
+        // Teardown
+        roleAssignmentRepository.deleteAll();
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(appRepository);
+
+    }
+
+
 
 
     private Set<AppRole> assignRoleToUserAndReturnRoles(EntraUser loggedInUser, EntraUser editedUser, App app, AppRole role) throws Exception {
