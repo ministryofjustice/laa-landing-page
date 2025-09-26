@@ -68,17 +68,20 @@ More information on GDS can be found [here](https://gds-way.digital.cabinet-offi
 
 #### Enable Pre-commit Hooks
 
-Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-hooks.yaml](./.pre-commit-hooks.yaml).
+Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian Shield. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-hooks.yaml](./.pre-commit-hooks.yaml). 
 
-To enable this:
+The pre-commit hooks will only be enabled for this repository, and won't affect others. The secret scanner CLI utilities themselves - `gitleaks`, `trufflehog` & `ggshield` - will be available in your shells to be ran against anything you wish.
+
+To enable the pre-commit hooks:
 1. Download and install [Homebrew](https://github.com/Homebrew/brew/releases/latest)
-2. Authorise GitGuardian with your MoJ GitHub account [here](https://dashboard.gitguardian.com/api/v1/auth/user/github_login/authorize)
-3. Run the setup script (will take a few minutes to complete on the first time it is ran): 
+2. Authorise GitGuardian with your Ministry of Justice GitHub user account [here](https://dashboard.gitguardian.com/api/v1/auth/user/github_login/authorize) (you only have to link your account, you do not need to go on to grant GitGuardian access to any personal or MoJ repository in this step as it shouldn't be necessary for running GitGuardian Shield locally)
+3. Run the setup script (will take a few minutes to complete the first time it is ran): 
 
 ```sh
 ./setup_precommits.sh
 ```
-4. Acquire a GitGuardian Shield personal access token (will open authorisation in your browser):
+
+4. Acquire a GitGuardian Shield personal access token (will open authorisation in your browser), this is used to allow `ggshield` access to GitGuardian's API for scanning, and only needs to be performed once on your local machine:
 
 ```sh
 ggshield auth login

@@ -6,7 +6,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 cd $SCRIPT_DIR
 
 # Install dependencies
-# (gitleaks and trufflehog aren't necessary, but this will make them available locally)
+# (gitleaks and trufflehog aren't necessary for the hooks, but this will make
+# them available locally to be ran if required)
 #
 # pre-commit framework: https://pre-commit.com/
 # Gitleaks: https://gitleaks.io/
