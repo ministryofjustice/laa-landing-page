@@ -6,13 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.Set;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterUserRequest {
+public class RegisterUserRequest implements Serializable {
     @JsonProperty("givenName")
     private String firstName;
     @JsonProperty("surname")
@@ -21,14 +22,14 @@ public class RegisterUserRequest {
     private String email;
     @JsonProperty("verification_method")
     private String verificationMethod;
-    @JsonProperty("requiredGroups")
-    private Set<String> requiredGroups;
+    @JsonProperty("groups")
+    private Set<String> groups;
     @JsonProperty("address")
     private Address address;
 
     @Data
     @Builder
-    private static class Address {
+    private static class Address implements Serializable {
         @JsonProperty("line1")
         private String addressLine1;
         @JsonProperty("line2")

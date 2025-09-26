@@ -1,0 +1,179 @@
+name: Deploy Prod
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [prd]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ecr:
+    if: github.ref == 'refs/heads/prd'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - uses: actions/checkout@v5.0.0
+
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Build JAR
+        run: ./gradlew build
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+
+      # Assume role in Cloud Platform
+      - uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.ECR_REGION }}
+
+      # Login to container repository
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CERT }}" > ca.crt
+          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
+          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
+          kubectl config use-context ${KUBE_CLUSTER}
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+
+      - name: Build and Push Docker Image to the container repository
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+
+          #  Tag the image per env (links with lifecycle policy of image)
+          docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$ENV_NAME
+          
+          # Push the image to the ECR repository
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:$ENV_NAME
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+
+
+      - name: Generate Deployment the Files
+        run: |
+          cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
+          cat deployments/templates/landing-page-ingress.yml | envsubst > deployments/landing-page-ingress.yml
+          cat deployments/templates/service.yml | envsubst > deployments/service.yml
+          cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+        env:
+          SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
+          BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
+          JWT_URL: ${{ secrets.JWT_URL }}
+          SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          POPULATE_TEST_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
+          TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
+          TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
+          TEST_DATA_INTERNAL_PRINCIPALS: ${{ secrets.TEST_DATA_INTERNAL_PRINCIPALS }}
+          APP_CIVIL_APPLY_NAME: ${{ vars.APP_CIVIL_APPLY_NAME }}
+          APP_CIVIL_APPLY_DETAILS: ${{ vars.APP_CIVIL_APPLY_DETAILS }}
+          APP_CIVIL_APPLY_URL: ${{ secrets.APP_CIVIL_APPLY_URL }}
+          APP_CRIME_APPLY_NAME: ${{ vars.APP_CRIME_APPLY_NAME }}
+          APP_CRIME_APPLY_DETAILS: ${{ vars.APP_CRIME_APPLY_DETAILS }}
+          APP_CRIME_APPLY_URL: ${{ secrets.APP_CRIME_APPLY_URL }}
+          APP_PUI_NAME: ${{ vars.APP_PUI_NAME }}
+          APP_PUI_DETAILS: ${{ vars.APP_PUI_DETAILS }}
+          APP_PUI_URL: ${{ secrets.APP_PUI_URL }}
+          APP_SUBMIT_CRIME_FORM_NAME: ${{ vars.APP_SUBMIT_CRIME_FORM_NAME }}
+          APP_SUBMIT_CRIME_FORM_DETAILS: ${{ vars.APP_SUBMIT_CRIME_FORM_DETAILS }}
+          APP_SUBMIT_CRIME_FORM_URL: ${{ secrets.APP_SUBMIT_CRIME_FORM_URL }}
+          APP_CCMS_ACCOUNT_LINK_NAME: ${{ vars.APP_CCMS_ACCOUNT_LINK_NAME }}
+          APP_CCMS_ACCOUNT_LINK_DETAILS: ${{ vars.APP_CCMS_ACCOUNT_LINK_DETAILS }}
+          APP_CCMS_ACCOUNT_LINK_URL: ${{ secrets.APP_CCMS_ACCOUNT_LINK_URL }}
+          TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
+          TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
+          TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}
+          TECH_SERVICES_AZURE_CLIENT_SECRET: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_SECRET }}
+          TECH_SERVICES_TENANT_ID: ${{ secrets.TECH_SERVICES_TENANT_ID }}
+          TECH_SERVICES_BASE_URL: ${{ secrets.TECH_SERVICES_BASE_URL }}
+          TECH_SERVICES_VERIFICATION_METHOD: ${{ vars.TECH_SERVICES_VERIFICATION_METHOD }}
+          APP_DEFAULT_USER_ACC_SEC_GROUP: ${{ secrets.APP_DEFAULT_USER_ACC_SEC_GROUP }}
+          POLLING_ENABLED: ${{ vars.POLLING_ENABLED }}
+          POLLING_INTERVAL: ${{ vars.POLLING_INTERVAL }}
+          POLLING_GROUP_ID: ${{ secrets.POLLING_GROUP_ID }}
+          FIRM_CACHE_CLEAR_SCHEDULE : ${{ vars.FIRM_CACHE_CLEAR_SCHEDULE }}
+          TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
+          TECH_SERVICES_REQ_READ_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_READ_TIMEOUT }}
+          TECH_SERVICES_REQ_CONNECT_TIMEOUT: ${{ vars.TECH_SERVICES_REQ_CONNECT_TIMEOUT }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+          SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
+          CCMS_USER_MANAGEMENT_API_BASE_URL: ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
+          CCMS_USER_MANAGEMENT_API_KEY: ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
+          CCMS_USER_API_SQS_ARN: ${{ secrets.CCMS_USER_API_SQS_ARN }}
+          ENABLE_DISTRIBUTED_DB_LOCKING: ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
+          DISTRIBUTED_DB_LOCKING_PERIOD: ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
+          FEATURE_FLAG_ENABLE_RESEND_VER_CODE : ${{ vars.FEATURE_FLAG_ENABLE_RESEND_VER_CODE }}
+          SPRING_SESSION_JDBC_ENABLED : ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
+
+      - name: Deploy to Cloud Platform
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
+      - name: Wait for new deployment to finish
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+
+      # Get DB identifier to use for Prometheus alerts & Grafana configuration
+      - name: Get DB identifier
+        run: |
+          #!/bin/bash
+          RDS_DB_IDENTIFIER=$(kubectl get secret rds-postgresql-instance-output -o jsonpath='{.data.rds_instance_endpoint}' | base64 -d | cut -d. -f1 | xargs printf "%s")
+          echo "RDS_DB_IDENTIFIER=${RDS_DB_IDENTIFIER}" >> "$GITHUB_ENV"
+          
+      # Prometheus alerts & Grafana config generation - after application deployment to avoid chicken/egg scenarios
+      # Note: first rm command removes the previously generated files and doesn't remove the templates/ directory
+      - name: Generate Monitoring Deployment Files
+        run: |
+          rm deployments/* 2> /dev/null || true
+          cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER,$ALERT_ALWAYS_ON_ENV' > deployments/prometheus.yml
+          cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
+        env:
+          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
+          RDS_LOW_FREEABLE_MEMORY_TRIGGER: "600"
+          # Should be 'prd' only if the environment is prd, otherwise set it to an random string. 
+          ALERT_ALWAYS_ON_ENV: 'prd'
+      
+      # Prometheus alerts & Grafana deployment
+      - name: Deploy Monitoring to Cloud Platform
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}

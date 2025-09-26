@@ -2,24 +2,33 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'register'},
+      pageCategory=${'edit-user'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Services</title>
+    <title>Edit - Services</title>
 </head>
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-                    < Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
+            Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/users/edit/{id}/apps(id=${user.id})}" th:object="${applicationsForm}">
+            <div th:if="${errorMessage}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li><a href="#" th:text="${errorMessage}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="govuk-form-group">
                 <fieldset class="govuk-fieldset">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">

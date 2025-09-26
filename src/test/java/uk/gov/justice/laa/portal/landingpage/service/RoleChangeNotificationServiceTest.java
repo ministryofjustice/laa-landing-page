@@ -1,38 +1,46 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import uk.gov.justice.laa.portal.landingpage.client.CcmsApiClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
+
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
-
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
+@SpringJUnitConfig
 class RoleChangeNotificationServiceTest {
 
     @Mock
-    private CcmsApiClient ccmsApiClient;
-
-    @InjectMocks
+    private SqsClient sqsClient;
+    
+    @Mock
+    private ObjectMapper objectMapper;
+    
     private RoleChangeNotificationService roleChangeNotificationService;
+    
+    private static final String QUEUE_URL = "https://sqs.eu-west-2.amazonaws.com/123456789/test-queue.fifo";
+    private static final String QUEUE_URL_NONE = "none";
 
     private UserProfile userProfile;
     private EntraUser entraUser;
@@ -46,6 +54,7 @@ class RoleChangeNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
+        roleChangeNotificationService = new RoleChangeNotificationService(sqsClient, objectMapper, QUEUE_URL);
         entraUser = EntraUser.builder()
                 .id(UUID.randomUUID())
                 .entraOid("test-entra-oid")
@@ -63,6 +72,7 @@ class RoleChangeNotificationServiceTest {
         puiRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_1")
+                .description("PUI Role 1 Description")
                 .ccmsCode("CCMS_PUI_001")
                 .legacySync(true)
                 .build();
@@ -70,6 +80,7 @@ class RoleChangeNotificationServiceTest {
         puiRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("PUI_ROLE_2")
+                .description("PUI Role 2 Description")
                 .ccmsCode("CCMS_PUI_002")
                 .legacySync(true)
                 .build();
@@ -77,13 +88,14 @@ class RoleChangeNotificationServiceTest {
         nonPuiRole = AppRole.builder()
                 .id(UUID.randomUUID())
                 .name("NON_PUI_ROLE")
+                .description("Non-PUI Role Description")
                 .ccmsCode("NON_CCMS_001")
                 .build();
 
         userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .legacyUserId(UUID.randomUUID())
-                .userType(UserType.EXTERNAL_SINGLE_FIRM)
+                .userType(UserType.EXTERNAL)
                 .entraUser(entraUser)
                 .firm(firm)
                 .appRoles(Set.of(puiRole1, puiRole2, nonPuiRole))
@@ -98,67 +110,87 @@ class RoleChangeNotificationServiceTest {
     void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() {
         Set<AppRole> unchangedRoles = Set.of(puiRole1);
 
-        roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
 
-        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
+        assertThat(result).isTrue();
+        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
     void shouldNotSendMessage_whenUserIsInternal() {
         userProfile.setUserType(UserType.INTERNAL);
 
-        roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
-        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
+        assertThat(result).isTrue();
+        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
-    void shouldCreateCorrectCcmsMessage_whenPuiRolesChanged() {
-        roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+    void shouldSendCorrectSqsMessage_whenPuiRolesChanged() throws Exception {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+            .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        verify(ccmsApiClient).sendUserRoleChange(argThat(message -> {
-            CcmsMessage ccmsMessage = (CcmsMessage) message;
-            return ccmsMessage.getUserName().equals(userProfile.getLegacyUserId().toString())
-                    && ccmsMessage.getVendorNumber().equals(firm.getCode())
-                    && ccmsMessage.getFirstName().equals(entraUser.getFirstName())
-                    && ccmsMessage.getLastName().equals(entraUser.getLastName())
-                    && ccmsMessage.getEmail().equals(entraUser.getEmail())
-                    && ccmsMessage.getTimestamp() != null
-                    && ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_001")
-                    && ccmsMessage.getResponsibilityKey().contains("CCMS_PUI_002");
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+
+        assertThat(result).isTrue();
+        verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
+            return request.queueUrl().equals(QUEUE_URL)
+                    && request.messageGroupId().equals(userProfile.getLegacyUserId().toString())
+                    && request.messageDeduplicationId() != null
+                    && request.messageBody().equals("{\"test\":\"message\"}");
         }));
     }
 
     @Test
-    void shouldThrowRuntimeException_whenCcmsApiClientFails() {
-        doThrow(new RuntimeException("CCMS API call failed"))
-                .when(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
+    void shouldReturnFalse_whenRecoverMethodCalled() {
+        boolean result = roleChangeNotificationService.recoverFromRetryFailure(
+            new RuntimeException("SQS send failed"), userProfile);
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles));
-
-        assertThat(exception.getMessage()).isEqualTo("Failed to send message");
-        assertThat(exception.getCause().getMessage()).isEqualTo("CCMS API call failed");
+        assertThat(result).isFalse();
     }
 
     @Test
-    void shouldHandleEmptyOldRoles() {
-        roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, emptyRoles);
+    void shouldHandleEmptyOldRoles() throws Exception {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+            .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        verify(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, emptyRoles);
+
+        assertThat(result).isTrue();
+        verify(sqsClient).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
-    void shouldHandleEmptyNewRoles() {
-        roleChangeNotificationService.sendMessage(userProfile, emptyRoles, oldPuiRoles);
+    void shouldHandleEmptyNewRoles() throws Exception {
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+            .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        verify(ccmsApiClient).sendUserRoleChange(any(CcmsMessage.class));
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, emptyRoles, oldPuiRoles);
+
+        assertThat(result).isTrue();
+        verify(sqsClient).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
     void shouldNotSendMessage_whenBothRoleSetsAreEmpty() {
-        roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
 
-        verify(ccmsApiClient, never()).sendUserRoleChange(any(CcmsMessage.class));
+        assertThat(result).isTrue();
+        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
+    }
+    
+    @Test
+    void shouldSkipSqsOperations_whenQueueUrlIsNone() {
+        RoleChangeNotificationService serviceWithNoneQueue = 
+            new RoleChangeNotificationService(sqsClient, objectMapper, QUEUE_URL_NONE);
+        
+        boolean result = serviceWithNoneQueue.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+        
+        assertThat(result).isFalse();
+        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
     }
 }

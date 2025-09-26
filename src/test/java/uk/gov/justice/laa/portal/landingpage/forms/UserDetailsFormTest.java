@@ -27,7 +27,7 @@ class UserDetailsFormTest {
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("john.doe@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).isEmpty();
     }
@@ -46,7 +46,7 @@ class UserDetailsFormTest {
         form.setFirstName("Jane");
         form.setLastName("Smith");
         form.setEmail("invalid-email");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("Enter an email address in the correct format");
@@ -58,7 +58,7 @@ class UserDetailsFormTest {
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("-john.doe@email.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("Enter an email address in the correct format");
@@ -70,7 +70,19 @@ class UserDetailsFormTest {
         form.setFirstName("John");
         form.setLastName("Doe");
         form.setEmail("john.doe@email");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("Enter an email address in the correct format");
+    }
+
+    @Test
+    void emailHasPlus_shouldTriggerPatternViolation() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirstName("John");
+        form.setLastName("Doe");
+        form.setEmail("john.doe+1@gmail.com");
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("Enter an email address in the correct format");
@@ -82,7 +94,7 @@ class UserDetailsFormTest {
         form.setFirstName("Jane");
         form.setLastName("Smith");
         form.setEmail("a".repeat(250) + "@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("Email must not be longer than 254 characters");
@@ -94,7 +106,7 @@ class UserDetailsFormTest {
         form.setFirstName("A".repeat(100));
         form.setLastName("B".repeat(100));
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("First name must be between 2-99 characters",
@@ -107,7 +119,7 @@ class UserDetailsFormTest {
         form.setFirstName("A");
         form.setLastName("B");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("First name must be between 2-99 characters",
@@ -120,7 +132,7 @@ class UserDetailsFormTest {
         form.setFirstName("Jan3");
         form.setLastName("Sm1th");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("First name must not contain numbers or special characters",
@@ -133,7 +145,7 @@ class UserDetailsFormTest {
         form.setFirstName("J@ne");
         form.setLastName("Sm!th");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("First name must not contain numbers or special characters",
@@ -146,8 +158,7 @@ class UserDetailsFormTest {
         form.setFirstName("Jane");
         form.setLastName("Anderson-Smith");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations.size()).isEqualTo(0);
     }
@@ -158,7 +169,7 @@ class UserDetailsFormTest {
         form.setFirstName("Mary-Jane");
         form.setLastName("O'Neil");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations.size()).isEqualTo(0);
     }
@@ -169,7 +180,7 @@ class UserDetailsFormTest {
         form.setFirstName("Mary Jane");
         form.setLastName("O'Neil");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations.size()).isEqualTo(0);
     }
@@ -180,13 +191,13 @@ class UserDetailsFormTest {
         form.setFirstName(" Mary Jane");
         form.setLastName("O'Neil-");
         form.setEmail("test@example.com");
-        form.setUserType(UserType.EXTERNAL_SINGLE_FIRM);
+        form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations.size()).isEqualTo(2);
     }
 
     @Test
-    void noUserType_shouldTriggerNotNullViolation() {
+    void noUserManageFlagSet_shouldTriggerNotNullViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");

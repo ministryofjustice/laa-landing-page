@@ -1,6 +1,6 @@
 plugins {
     id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.32'
-    id "io.sentry.jvm.gradle" version "5.5.0"
+    id "io.sentry.jvm.gradle" version "5.11.0"
 }
 
 ext {
@@ -28,6 +28,11 @@ sentry {
   org = "ministryofjustice"
   projectName = "laa-portal-stabilisation"
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
+
+  autoInstallation {
+    sentryVersion = "8.16.0"
+    enabled = true
+  }
 }
 
 sourceSets {
@@ -46,9 +51,13 @@ sourceSets {
 configurations {
     playwrightImplementation.extendsFrom testImplementation
     playwrightRuntimeOnly.extendsFrom testRuntimeOnly
+    configureEach {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
 }
 
 dependencies {
+    implementation 'io.sentry:sentry-opentelemetry-agentless-spring:8.16.0'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
@@ -56,6 +65,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation 'org.springframework.session:spring-session-jdbc'
 
     implementation 'org.apache.httpcomponents.client5:httpclient5'
 
@@ -98,6 +108,13 @@ dependencies {
     implementation "org.liquibase:liquibase-core"
     // UK Gov Notify dependency for email notifications
     implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
+    
+    // AWS SQS SDK for message queue integration
+    implementation 'software.amazon.awssdk:sqs:2.28.11'
+    
+    // AWS STS SDK for IRSA web identity token authentication
+    implementation 'software.amazon.awssdk:sts:2.28.11'
+    
     // Needed for the @Validated annotation, used when injecting properties.
     implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
 
@@ -144,6 +161,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
+                    '**/config/SecurityConfig.class',
                     '**/model/**'
             ])
         })

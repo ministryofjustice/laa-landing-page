@@ -1,13 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.Serializable;
 import java.util.Objects;
 
-import lombok.Data;
-
 @Data
-public class AppDto {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AppDto implements Comparable<AppDto>, Serializable {
     private String id;
     private String name;
+    private int ordinal;
     private boolean selected;
 
     @Override
@@ -21,5 +30,10 @@ public class AppDto {
     @Override
     public int hashCode() {
         return Objects.hash(id, name);
+    }
+
+    @Override
+    public int compareTo(@NotNull AppDto o) {
+        return this.ordinal - o.ordinal;
     }
 }

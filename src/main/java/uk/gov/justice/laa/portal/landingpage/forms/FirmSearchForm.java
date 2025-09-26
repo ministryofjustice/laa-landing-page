@@ -1,15 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
 import lombok.Data;
 
-@Data
-public class FirmSearchForm {
+import java.io.Serializable;
+import java.util.UUID;
 
-    @Size(min = 1, message = "Enter a firm name to search")
-    @NotEmpty(message = "Enter a firm name to search")
+@Data
+@Builder
+public class FirmSearchForm implements Serializable {
+
+    @NotBlank(message = "Enter a firm name to search")
     private String firmSearch;
 
-    private String selectedFirmId;
+    private UUID selectedFirmId;
+
+    public void setFirmSearch(String firmSearch) {
+        if (firmSearch != null) {
+            this.firmSearch = firmSearch.trim();
+        }
+    }
 }

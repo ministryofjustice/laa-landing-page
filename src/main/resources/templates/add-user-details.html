@@ -10,7 +10,6 @@
 </head>
 
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
@@ -44,8 +43,8 @@
                                 <li th:each="err : ${#fields.errors('lastName')}" th:if="${#fields.hasErrors('lastName')}">
                                     <a href="#lastName" th:text="${err}"></a>
                                 </li>
-                                <li th:each="err : ${#fields.errors('userType')}" th:if="${#fields.hasErrors('userType')}">
-                                    <a href="#userType" th:text="${err}"></a>
+                                <li th:each="err : ${#fields.errors('userManager')}" th:if="${#fields.hasErrors('userManager')}">
+                                    <a href="#userManager" th:text="${err}"></a>
                                 </li>
                             </ul>
                         </div>
@@ -88,20 +87,27 @@
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
                 <div class="govuk-form-group"
-                    th:classappend="${#fields.hasErrors('userType')} ? 'govuk-form-group--error'">
+                    th:classappend="${#fields.hasErrors('userManager')} ? 'govuk-form-group--error'">
                     <fieldset class="govuk-fieldset">
                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
                             User type
                         </legend>
-                        <div th:if="${#fields.hasErrors('userType')}" class="govuk-error-message">
-                            <p th:each="err : ${#fields.errors('userType')}" th:text="${err}"></p>
+                        <div th:if="${#fields.hasErrors('userManager')}" class="govuk-error-message">
+                            <p th:each="err : ${#fields.errors('userManager')}" th:text="${err}"></p>
                         </div>
                         <div class="govuk-radios">
-                            <div th:each="userType : ${userTypes}" class="govuk-radios__item">
-                                <input class="govuk-radios__input" id="userType" name="userType" type="radio"
-                                    th:value="${userType}" th:checked="${userType == selectedUserType}">
-                                <label class="govuk-label govuk-radios__label" for="userType"
-                                    th:text="${userType.friendlyName}">
+                            <div class="govuk-radios__item">
+                                <input class="govuk-radios__input" id="providerAdmin" type="radio"
+                                    th:field="*{userManager}" th:value="true">
+                                <label class="govuk-label govuk-radios__label" for="providerAdmin">
+                                    Provider Admin
+                                </label>
+                            </div>
+                            <div class="govuk-radios__item">
+                                <input class="govuk-radios__input" id="providerUser" type="radio"
+                                   th:field="*{userManager}" th:value="false">
+                                <label class="govuk-label govuk-radios__label" for="providerUser">
+                                    Provider User
                                 </label>
                             </div>
                         </div>

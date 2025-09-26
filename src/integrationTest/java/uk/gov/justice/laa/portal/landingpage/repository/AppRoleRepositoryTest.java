@@ -12,7 +12,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @DataJpaTest
 public class AppRoleRepositoryTest extends BaseRepositoryTest {
@@ -31,9 +33,8 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @BeforeEach
     public void beforeEach() {
-        roleAssignmentRepository.deleteAll();
-        repository.deleteAll();
-        appRepository.deleteAll();
+        deleteNonAuthzAppRoles(repository);
+        deleteNonAuthzApps(appRepository);
     }
 
     @Test
@@ -75,7 +76,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
-        appRole1.setUserTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN});
+        appRole1.setUserTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL});
         repository.saveAndFlush(appRole1);
 
 
@@ -86,8 +87,35 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getUserTypeRestriction()).isNotNull();
         Assertions.assertThat(result.getUserTypeRestriction()).hasSize(2);
         Assertions.assertThat(result.getUserTypeRestriction())
-                .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL_SINGLE_FIRM_ADMIN));
+                .containsAll(Set.of(UserType.INTERNAL, UserType.EXTERNAL));
 
+    }
+
+    @Test
+    public void findAllByIdInAndAuthzRoleIs() {
+        App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
+                "Security Group Name");
+        App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
+                "Security Group Name 2");
+        appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
+
+        AppRole lassieExMan = buildLaaAppRole(lassie, "App Role 1");
+        lassieExMan.setAuthzRole(true);
+        AppRole lassieInMan = buildLaaAppRole(lassie, "App Role 2");
+        lassieInMan.setAuthzRole(true);
+
+        AppRole crimeViewer = buildLaaAppRole(crime, "App Role 3");
+        crimeViewer.setAuthzRole(false);
+
+        repository.saveAllAndFlush(Arrays.asList(lassieExMan, lassieInMan, crimeViewer));
+
+        List<UUID> ids = List.of(lassieExMan.getId(), lassieInMan.getId(), crimeViewer.getId());
+        List<AppRole> authzRoles = repository.findAllByIdInAndAuthzRoleIs(ids, true);
+        Assertions.assertThat(authzRoles).hasSize(2);
+        List<AppRole> nonAuthzRoles = repository.findAllByIdInAndAuthzRoleIs(ids, false);
+        Assertions.assertThat(nonAuthzRoles).hasSize(1);
+        List<AppRole> allRoles = repository.findAllByIdIn(ids);
+        Assertions.assertThat(allRoles).hasSize(3);
     }
 
 }

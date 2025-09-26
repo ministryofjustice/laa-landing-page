@@ -3,13 +3,14 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-public abstract class AuditEvent {
+public abstract class AuditEvent implements Serializable {
     @Getter
-    protected UUID userId;
+    protected UUID userId; //modifier id
     @Getter
     protected String userName;
     private final LocalDateTime createdDate;

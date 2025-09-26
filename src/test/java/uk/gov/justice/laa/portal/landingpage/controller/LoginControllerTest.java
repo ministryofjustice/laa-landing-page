@@ -1,10 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -13,6 +21,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -24,16 +34,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
@@ -64,10 +64,10 @@ class LoginControllerTest {
         Model model = new ConcurrentModel();
 
         // Act
-        String viewIndex = controller.login(null, model);
+        String viewIndex = controller.index();
 
         // Assert
-        assertThat(viewIndex).isEqualTo("index");
+        assertThat(viewIndex).isEqualTo("redirect:/home");
         assertThat(model.getAttribute("successMessage")).isNull();
     }
 
@@ -78,11 +78,12 @@ class LoginControllerTest {
         Model model = new ConcurrentModel();
 
         // Act
-        String viewIndex = controller.login("logout", model);
+        String viewIndex = controller.index();
 
         // Assert
-        assertThat(viewIndex).isEqualTo("index");
-        assertThat(model.getAttribute("successMessage")).isEqualTo("You have been securely logged out");
+        assertThat(viewIndex).isEqualTo("redirect:/home");
+        // Since we're redirecting to home, no model attributes are set in the index method
+        assertThat(model.getAttribute("successMessage")).isNull();
     }
 
     @Test
@@ -96,7 +97,8 @@ class LoginControllerTest {
 
         // Assert
         assertThat(result.getUrl()).isEqualTo("/");
-        assertThat(attrs.getFlashAttributes().get("errorMessage")).isEqualTo("An incorrect Username or Password was specified");
+        assertThat(attrs.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("An incorrect Username or Password was specified");
     }
 
     @Test
@@ -110,7 +112,8 @@ class LoginControllerTest {
 
         // Assert
         assertThat(result.getUrl()).isEqualTo("/");
-        assertThat(attrs.getFlashAttributes().get("errorMessage")).isEqualTo("An incorrect Username or Password was specified");
+        assertThat(attrs.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("An incorrect Username or Password was specified");
     }
 
     @Test
@@ -147,16 +150,6 @@ class LoginControllerTest {
     }
 
     @Test
-    void whenMigrateEndpoint_thenReturnsMigrateView() {
-
-        // Arrange & Act
-        String view = controller.migrate();
-
-        // Assert
-        assertThat(view).isEqualTo("migrate");
-    }
-
-    @Test
     void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelAndReturnsHomeView() {
 
         // Arrange
@@ -164,7 +157,8 @@ class LoginControllerTest {
         UserSessionData mockSessionData = UserSessionData.builder()
                 .name("Test User")
                 .build();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenReturn(mockSessionData);
 
         // Act
@@ -187,7 +181,8 @@ class LoginControllerTest {
                 .name("Test User")
                 .user(user)
                 .build();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenReturn(mockSessionData);
         when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of(Permission.VIEW_EXTERNAL_USER));
 
@@ -212,7 +207,8 @@ class LoginControllerTest {
                 .name("Test User")
                 .user(user)
                 .build();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenReturn(mockSessionData);
         when(userService.getUserPermissionsByUserId(user.getId())).thenReturn(Set.of());
 
@@ -235,7 +231,8 @@ class LoginControllerTest {
         UserSessionData mockSessionData = UserSessionData.builder()
                 .name("Test User")
                 .build();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenReturn(mockSessionData);
 
         // Act
@@ -253,7 +250,8 @@ class LoginControllerTest {
 
         // Arrange
         Model model = new ConcurrentModel();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenReturn(null);
 
         // Act
@@ -270,7 +268,8 @@ class LoginControllerTest {
 
         // Arrange
         Model model = new ConcurrentModel();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
                 .thenThrow(new RuntimeException("Error processing session"));
 
         // Act
@@ -292,9 +291,19 @@ class LoginControllerTest {
     }
 
     @Test
+    void whenLogoutSuccess_thenReturnsLogoutTemplate() {
+        // Arrange & Act
+        String result = controller.logoutSuccess();
+
+        // Assert
+        assertThat(result).isEqualTo("logout");
+    }
+
+    @Test
     void switchFirm_get_active() {
         UUID firmId = UUID.randomUUID();
-        UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().id(firmId).name("name").build()).build();
+        UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
@@ -309,7 +318,8 @@ class LoginControllerTest {
     @Test
     void switchFirm_get_no_active() {
         UUID firmId = UUID.randomUUID();
-        UserProfile up = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().id(firmId).name("name").build()).build();
+        UserProfile up = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firmId).name("name").build()).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
@@ -324,11 +334,85 @@ class LoginControllerTest {
     @Test
     void switchFirm_post() throws IOException {
         String firmId = UUID.randomUUID().toString();
+
         RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
+
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        verify(loginService).logout(authentication, authClient);
-        verify(session).invalidate();
-        assertThat(view.getUrl()).isEqualTo("/?message=logout");
+        assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
+    }
+
+    @Test
+    void home_userWithNoRoles_internalUser() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionDataWithNoRoles = UserSessionData.builder()
+                .laaApplications(null) // No roles assigned
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithNoRoles);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void home_userWithNoRoles_externalUser() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionDataWithNoRoles = UserSessionData.builder()
+                .laaApplications(Set.of()) // No roles assigned
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithNoRoles);
+        when(userService.isInternal(userId)).thenReturn(false);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(false);
+    }
+
+    @Test
+    void home_userWithRoles_shouldNotSetNoRolesFlags() throws IOException {
+        // Given
+        Model model = new ConcurrentModel();
+        UserSessionData userSessionDataWithRoles = UserSessionData.builder()
+                .laaApplications(Set.of(
+                    uk.gov.justice.laa.portal.landingpage.model.LaaApplication.builder()
+                        .name("Test App")
+                        .title("Test Application")
+                        .build()))
+                .user(EntraUserDto.builder().id(UUID.randomUUID().toString()).build())
+                .name("Test User")
+                .build();
+
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionDataWithRoles);
+
+        // When
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Then
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(false);
+        assertThat(model.getAttribute("isInternalUser")).isNull();
     }
 }

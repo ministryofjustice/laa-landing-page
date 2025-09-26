@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -11,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class FirmDto {
+public class FirmDto implements Serializable {
     private UUID id;
     private String name;
     private String code;

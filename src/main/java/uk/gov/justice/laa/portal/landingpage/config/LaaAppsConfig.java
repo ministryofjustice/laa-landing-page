@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class LaaAppsConfig {
 
     @Setter
     @ConfigurationProperties(prefix = "laa-apps")
-    public static class LaaApplicationsList {
+    public static class LaaApplicationsList implements Serializable {
 
         private List<LaaApplication> applications;
 

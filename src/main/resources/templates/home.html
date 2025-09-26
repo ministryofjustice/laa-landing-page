@@ -9,7 +9,6 @@
 </head>
 
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
@@ -22,11 +21,10 @@
                         <div class="govuk-grid-column-full">
                             <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                                 <h3 class="govuk-heading-m">
-                                    <a href="/admin/users" class="govuk-link govuk-link--no-visited-state"
-                                        rel="noreferrer noopener" target="_blank">Manage your users (opens in a new
-                                        tab)</a>
+                                    <a href="/admin/users" class="govuk-link govuk-link--no-visited-state">Manage your
+                                        users</a>
                                 </h3>
-                                <p class="govuk-body">Create users and manage access and permissions</p>
+                                <p class="govuk-body">Manage user access and permissions</p>
                             </div>
                         </div>
                     </div>
@@ -34,16 +32,27 @@
 
                 <h2 class="govuk-heading-l">Legal aid services</h2>
 
-                <div th:each="app : ${laaApplications}">
-                    <div class="govuk-grid-row">
-                        <div class="govuk-grid-column-full">
-                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
-                                <h3 class="govuk-heading-m">
-                                    <a th:href="${app.getUrl()}" class="govuk-link govuk-link--no-visited-state"
-                                        rel="noreferrer noopener" target="_blank"
-                                        th:text="${app.getTitle() + ' (opens in a new tab)'}"></a>
-                                </h3>
-                                <p class="govuk-body" th:text="${app.getDescription()}"></p>
+                <div th:if="${userHasNoRoles}" class="govuk-grid-row">
+                    <div class="govuk-grid-column-full">
+                        <div class="govuk-inset-text">
+                            <p th:if="${isInternalUser}">You cannot currently access any services. Please contact the MOJ Service Desk to request access.</p>
+                            <p th:unless="${isInternalUser}">You cannot currently access any services. Please contact your Firm Admin to request access.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:unless="${userHasNoRoles}">
+                    <div th:each="app : ${laaApplications}">
+                        <div class="govuk-grid-row">
+                            <div class="govuk-grid-column-full">
+                                <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                                    <h3 class="govuk-heading-m">
+                                        <a th:href="${app.getUrl()}" class="govuk-link govuk-link--no-visited-state"
+                                            rel="noreferrer noopener" target="_blank"
+                                            th:text="${app.getTitle() + ' (opens in a new tab)'}"></a>
+                                    </h3>
+                                    <p class="govuk-body" th:text="${app.getDescription()}"></p>
+                                </div>
                             </div>
                         </div>
                     </div>

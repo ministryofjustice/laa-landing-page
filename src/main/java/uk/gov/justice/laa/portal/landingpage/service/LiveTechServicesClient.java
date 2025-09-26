@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -9,10 +10,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -20,6 +24,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
@@ -35,17 +43,19 @@ import java.util.stream.Collectors;
 
 public class LiveTechServicesClient implements TechServicesClient {
 
-    @Value("${app.tech.services.laa.verification.method}")
-    public String techServicesVerificationMethod;
     public static final String ACCESS_TOKEN = "access_token";
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
+    private static final String TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT = "%s/users/%s/verify";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ClientSecretCredential clientSecretCredential;
     private final RestClient restClient;
     private final CacheManager cacheManager;
     private final JwtDecoder jwtDecoder;
     private final EntraUserRepository entraUserRepository;
+    private final ObjectMapper objectMapper;
+    @Value("${app.tech.services.laa.verification.method}")
+    public String techServicesVerificationMethod;
     @Value("${app.tech.services.laa.business.unit}")
     private String laaBusinessUnit;
     @Value("${spring.security.tech.services.credentials.scope}")
@@ -56,12 +66,13 @@ public class LiveTechServicesClient implements TechServicesClient {
 
     public LiveTechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
                                   EntraUserRepository entraUserRepository, CacheManager cacheManager,
-                                  @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder) {
+                                  @Qualifier("tokenExpiryJwtDecoder") JwtDecoder jwtDecoder, ObjectMapper objectMapper) {
         this.clientSecretCredential = clientSecretCredential;
         this.restClient = restClient;
         this.entraUserRepository = entraUserRepository;
         this.cacheManager = cacheManager;
         this.jwtDecoder = jwtDecoder;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -84,7 +95,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             // Add the default security group
             securityGroups.add(defaultSecurityGroup);
 
-            UpdateSecurityGroupsRequest request = builder.requiredGroups(securityGroups).build();
+            UpdateSecurityGroupsRequest request = builder.groups(securityGroups).build();
 
             logger.info("Sending update security groups request to tech services: {}", request);
 
@@ -116,7 +127,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     }
 
     @Override
-    public RegisterUserResponse registerNewUser(EntraUserDto user) {
+    public TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user) {
         try {
             String accessToken = getAccessToken();
 
@@ -130,34 +141,106 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .verificationMethod(techServicesVerificationMethod)
-                    .requiredGroups(securityGroups).build();
+                    .groups(securityGroups).build();
 
             logger.info("Sending create new user request with security groups to tech services: {}", request);
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
-            ResponseEntity<RegisterUserResponse> response = restClient
+            ResponseEntity<String> response = restClient
                     .post()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
-                    .toEntity(RegisterUserResponse.class);
+                    .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                RegisterUserResponse responseBody = response.getBody();
-                assert responseBody != null;
+                RegisterUserResponse responseBody = objectMapper.readValue(response.getBody(), RegisterUserResponse.class);
                 logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
                         user.getFirstName() + " " + user.getLastName(), securityGroups);
-                return responseBody;
+                return TechServicesApiResponse.success(responseBody);
             } else {
-                logger.error("Failed to create new user by Tech Services for user {} with error code {}", user.getFirstName() + " " + user.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to create new user by Tech Services for user " + user.getFirstName() + " " + user.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Error while sending new user creation request to Tech Services, the response is {}.", response.getBody());
+                throw new RuntimeException(String.format("Error while sending verification email to Tech Services, the response is %s.", response.getBody()));
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            try {
+                TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (httpEx.getStatusCode().equals(HttpStatus.CONFLICT)) {
+                    logger.debug("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Handling user conflicts gracefully.");
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                throw httpEx;
+            } catch (Exception ex) {
+                logger.error("Error while sending new user creation request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
-            logger.error("Error while create user request to Tech Services.", ex);
-            throw new RuntimeException("Error while create user request to Tech Services.", ex);
+            logger.error("Error while sending new user creation request to Tech Services.", ex);
+            throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<SendUserVerificationEmailResponse> sendEmailVerification(EntraUserDto user) {
+        try {
+            if (user == null || user.getEntraOid() == null) {
+                throw new RuntimeException("Invalid user details supplied.");
+            }
+
+            String accessToken = getAccessToken();
+
+            SendUserVerificationEmailRequest request = SendUserVerificationEmailRequest.builder()
+                    .verificationMethod("activation_code_email").build();
+
+            logger.info("Sending Resend verification email request to tech services: {}", request);
+
+            String uri = String.format(TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT, laaBusinessUnit, user.getEntraOid());
+
+            ResponseEntity<String> response = restClient
+                    .post()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Resend user verification email by Tech Services is successful for {} and response is {}",
+                        user.getFirstName() + " " + user.getLastName(), response);
+                ObjectMapper mapper = new ObjectMapper();
+                SendUserVerificationEmailResponse successResponse = mapper.readValue(response.getBody(), SendUserVerificationEmailResponse.class);
+                return TechServicesApiResponse.success(successResponse);
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
+                logger.error("Failed to send verification email for {}", user.getFirstName() + " " + user.getLastName());
+                return TechServicesApiResponse.error(errorResponse);
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
+                logger.error("Failed to send verification email for {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                return TechServicesApiResponse.error(errorResponse);
+            } catch (Exception ex) {
+                logger.error("Error while sending verification email request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            logger.error("Error while sending verification email request to Tech Services.", ex);
+            throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
         }
     }
 

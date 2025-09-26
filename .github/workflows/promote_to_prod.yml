@@ -1,0 +1,44 @@
+name: Merge to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-prod-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ref: test
+        fetch-depth: 0
+    
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Check for merge conflicts
+      run: |
+        # Fetch the prd branch without checking it out
+        git fetch origin prd:refs/remotes/origin/prd
+        
+        # Try to merge test into prd (dry run)
+        if git merge-tree $(git merge-base HEAD origin/prd) HEAD origin/prd | grep -q "<<<<<<<"; then
+          echo "❌ Merge conflicts detected! Aborting PR creation."
+          echo "Please resolve conflicts between test and prd branches manually."
+          exit 1
+        else
+          echo "✅ No merge conflicts detected. Proceeding with PR creation."
+        fi
+    
+    - name: Create PR to production
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: prd
+        branch: merge-test-to-prod
+        title: "Merge test to production"
+        body: "Automated PR from test branch to production"
+        delete-branch: true

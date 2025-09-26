@@ -47,7 +47,8 @@ public class AccessControlService {
             return false;
         }
 
-        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)) {
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
@@ -57,7 +58,15 @@ public class AccessControlService {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        //internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId())) {
+            return true;
+        }
+
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)
+                && !userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -75,18 +84,29 @@ public class AccessControlService {
             return false;
         }
 
-        // Only global admin should have both these permissions.
-        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)) {
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
             return true;
         }
 
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
-        boolean internalManagerCanEditInternalUser = userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId());
-        if (internalManagerCanEditInternalUser) {
+
+        // Internal User Manager editing internal user.
+        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && usersAreInSameFirm(authenticatedUser, userProfileId);
+        //internal user with external user manager permission accessing external user
+        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId())) {
+            return true;
+        }
+
+        // External user accessing external User
+        boolean canAccess = userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)
+                && !userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userProfileId);
         }
@@ -116,6 +136,13 @@ public class AccessControlService {
         return userHasAnyGivenPermissions(entraUser, permission);
     }
 
+    public static boolean userHasAuthzRole(EntraUser user, String authzRoleName) {
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .flatMap(userProfile -> userProfile.getAppRoles().stream())
+                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null && appRole.getName().equalsIgnoreCase(authzRoleName));
+    }
+
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser, Permission... permissions) {
         Set<Permission> userPermissions = entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
@@ -126,6 +153,21 @@ public class AccessControlService {
         return Arrays.stream(permissions).anyMatch(userPermissions::contains);
     }
 
+    public boolean canSendVerificationEmail(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        return userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && userHasAnyGivenPermissions(authenticatedUser,
+                Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
+    }
 
 }

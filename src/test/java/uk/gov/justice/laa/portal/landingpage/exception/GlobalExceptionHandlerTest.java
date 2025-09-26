@@ -1,20 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.exception;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.servlet.view.RedirectView;
-import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
-import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,8 +8,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.view.RedirectView;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 class GlobalExceptionHandlerTest {
 
@@ -46,7 +48,7 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(400, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
         assertEquals(errorMessage, response.getBody().getMessage());
     }
@@ -66,7 +68,7 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(400, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
         assertTrue(response.getBody().getMessage().contains("Validation error"));
         assertTrue(response.getBody().getMessage().contains("Field validation failed"));
@@ -83,7 +85,7 @@ class GlobalExceptionHandlerTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals(400, response.getStatusCodeValue());
+        assertEquals(400, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
         assertTrue(response.getBody().getMessage().contains("Validation error"));
     }
@@ -109,14 +111,66 @@ class GlobalExceptionHandlerTest {
         // Arrange
         String errorMessage = "Unexpected error";
         Exception exception = new Exception(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "application/json"); // Make it an API request
 
         // Act
-        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleGenericException(exception);
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleGenericException(exception, request);
 
         // Assert
         assertNotNull(response);
-        assertEquals(500, response.getStatusCodeValue());
+        assertEquals(500, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
         assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleAccessException() {
+        // Arrange
+        String errorMessage = "unauthorized error";
+        AccessDeniedException exception = new AccessDeniedException(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "application/json"); // Make it an API request
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleAccessException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(401, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleGenericException_webRequest_rethrowsException() {
+        // Arrange
+        String errorMessage = "Unexpected error";
+        Exception exception = new Exception(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "text/html"); // Make it a web request
+
+        // Act & Assert
+        RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+            RuntimeException.class, 
+            () -> exceptionHandler.handleGenericException(exception, request)
+        );
+        assertEquals(exception, thrown.getCause());
+    }
+
+    @Test
+    void handleAccessException_webRequest_rethrowsException() {
+        // Arrange
+        String errorMessage = "unauthorized error";
+        AccessDeniedException exception = new AccessDeniedException(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "text/html"); // Make it a web request
+
+        // Act & Assert
+        RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+            RuntimeException.class, 
+            () -> exceptionHandler.handleAccessException(exception, request)
+        );
+        assertEquals(exception, thrown.getCause());
     }
 }

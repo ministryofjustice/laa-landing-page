@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Set;
 
@@ -33,6 +34,14 @@ public class App extends BaseEntity {
     @NotBlank(message = "Application name must be provided")
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
+
+    @Column(name = "ordinal", nullable = false)
+    @ColumnDefault("0")
+    private int ordinal;
+
+    @Column(name = "enabled", nullable = false)
+    @ColumnDefault("true")
+    private boolean enabled;
 
     @Column(name = "entra_app_id", nullable = true, length = 255, unique = true)
     @Size(max = 255, message = "Entra App ID must be less than 255 characters")

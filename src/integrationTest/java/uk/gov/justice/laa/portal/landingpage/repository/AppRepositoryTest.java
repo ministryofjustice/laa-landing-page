@@ -25,9 +25,8 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @BeforeEach
     public void beforeEach() {
         // Delete child tables first to avoid foreign key constraint violations
-        roleAssignmentRepository.deleteAll();
-        appRoleRepository.deleteAll();
-        repository.deleteAll();
+        deleteNonAuthzAppRoles(appRoleRepository);
+        deleteNonAuthzApps(repository);
     }
 
     @Test

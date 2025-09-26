@@ -4,8 +4,10 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class EditUserDetailsForm {
+public class EditUserDetailsForm implements Serializable {
     @Size(max = 99, message = "First name must not be longer than 99 characters")
     @NotEmpty(message = "Enter a first name")
     private String firstName;

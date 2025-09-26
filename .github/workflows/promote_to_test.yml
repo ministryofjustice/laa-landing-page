@@ -3,23 +3,39 @@ name: Promote Main into Test
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   merge:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.TEST_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+      
       - name: Checkout Test
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5.0.0
         with:
           ref: test
           fetch-depth: 0
-      
+          ssh-key: ${{ secrets.TEST_DEPLOY_KEY }}
+
       - name: Configure Git User
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure Git to use SSH
+        run: |
+          git remote set-url origin git@github.com:ministryofjustice/laa-landing-page.git
+
+      - name: Print changes between main and test
+        run: |
+          git fetch origin main
+          git fetch origin test
+          echo "Changes between main and test"
+          git log origin/test..origin/main --oneline --graph
 
       - name: Merge into Test
         run: |

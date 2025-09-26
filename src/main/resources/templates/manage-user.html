@@ -2,19 +2,20 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'home'},
+      pageCategory=${'manage-user'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <title>Homepage</title>
+    <title>Manage User</title>
 </head>
 
 <body>
-    <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">Home</a>
+                <a class="govuk-breadcrumbs__link"
+                    th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}"
+                    th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
@@ -23,23 +24,59 @@
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
+        <style>
+            #main-content .govuk-summary-card__content {
+                min-height: 215px;
+            }
+        </style>
+
+        <div th:if="${errorMessage}">
+            <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                 aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body" id="error-summary-description">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li><a href="#" th:text="${errorMessage}"></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+             aria-label="success: Verification email sent successfully" data-module="moj-alert">
+            <div>
+                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 30 30" height="30" width="30">
+                    <path
+                            d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                            fill="currentColor" />
+                </svg>
+            </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">Success</h2>
+                <p th:text="${successMessage}"></p>
+            </div>
+        </div>
+
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
                         <strong th:if="${!isAccessGranted}"
-                            class="govuk-tag govuk-tag--yellow govuk-!-font-weight-bold govuk-!-margin-top-1">PENDING</strong>
+                            class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
                         <strong th:if="${isAccessGranted}"
                             class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
                     </div>
-                    <form class="form" th:if="${!isAccessGranted}"
+                    <form class="form" th:if="${!isAccessGranted and canEditUser}"
                         th:action="@{'/admin/users/manage/' + ${user.id} + '/grant-access'}" method="post">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline">
                                 <button type="submit" class="govuk-button govuk-button--primary"
                                     data-module="govuk-button">
-                                    Grant access
+                                    Manage access
                                 </button>
                             </div>
                         </div>
@@ -63,7 +100,7 @@
                                 Services
                             </a>
                         </li>
-                        <li class="govuk-tabs__list-item">
+                        <li th:if="${showOfficesTab}" class="govuk-tabs__list-item">
                             <a class="govuk-tabs__tab" href="#offices">
                                 Offices
                             </a>
@@ -71,9 +108,14 @@
                     </ul>
                     <div class="govuk-tabs__panel" id="user-details">
                         <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
+                            <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title" th:text="${user.entraUser.email}">
                                 </h2>
+                                <div th:if="${showResendVerificationLink}">
+                                    <a class="govuk-link"
+                                       th:href="@{/admin/user/{id}/verify(id=${user.id})}"
+                                       th:text="'Resend Activation Code'"></a>
+                                </div>
                                 <!-- <ul class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Edit</a>
@@ -105,10 +147,10 @@
                                 <h2 class="govuk-summary-card__title">
                                     Services
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Edit</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}">Change</a>
                                     </li>
                                 </ul>
                             </div>
@@ -118,48 +160,71 @@
                                         <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
                                         <dd class="govuk-summary-list__value" th:text="${role.name}"></dd>
                                     </div>
-                                    <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">
-                                            <p class="govuk-body">No services are currently assigned to this user.</p>
-                                        </dd>
-                                    </div>
                                 </dl>
+                                <div th:if="${#lists.isEmpty(userAppRoles)}" class="govuk-summary-list__row">
+                                    <p class="govuk-body">No services are currently assigned to this user</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
+                    <div th:if="${showOfficesTab}" class="govuk-tabs__panel govuk-tabs__panel--hidden" id="offices">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Edit</a>
+                                            th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
                                     </li>
                                 </ul>
                             </div>
                             <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row" th:each="office : ${userOffices}">
-                                        <dt class="govuk-summary-list__key" th:text="${office.address.addressLine1}"></dt>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine1}"></dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.addressLine2}"></dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.city}"></dd>
-                                        <dd class="govuk-summary-list__value" th:text="${office.address.postcode}"></dd>
-                                    </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">No offices assigned</dd>
-                                    </div>
-                                    <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}" class="govuk-summary-list__row">
-                                        <dd class="govuk-summary-list__value">Access to All Offices</dd>
-                                    </div>
-                                </dl>
+                                <div th:if="${!#lists.isEmpty(userOffices)}">
+                                    <table class="govuk-table">
+                                        <thead class="govuk-table__head">
+                                            <tr class="govuk-table__row">
+                                                <th scope="col" class="govuk-table__header">Office address</th>
+                                                <th scope="col" class="govuk-table__header">Account number</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="govuk-table__body">
+                                            <tr class="govuk-table__row" th:each="office : ${userOffices}">
+                                                <td class="govuk-table__cell">
+                                                    <span th:text="${office.address.addressLine1}"></span><span
+                                                        th:if="${office.address.addressLine2}">, </span><span
+                                                        th:if="${office.address.addressLine2}"
+                                                        th:text="${office.address.addressLine2}"></span><span
+                                                        th:if="${office.address.city}">, </span><span
+                                                        th:text="${office.address.city}"></span><span
+                                                        th:if="${office.address.city != null and office.address.postcode != null}">,
+                                                    </span><span th:text="${office.address.postcode}"></span>
+                                                </td>
+                                                <td class="govuk-table__cell" th:text="${office.code}"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}">
+                                    <p class="govuk-body">No offices assigned</p>
+                                </div>
+                                <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}">
+                                    <p class="govuk-body">Access to All Offices</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <a class="govuk-button govuk-button--primary" data-module="govuk-button"
+                    th:href="${hasFilters} ? @{/admin/users(backButton=true)} : @{/admin/users}">
+                    Go back to manage your users
+                </a>
             </div>
         </div>
         </div>

@@ -6,14 +6,20 @@ metadata:
     app: laa-landing-page
 spec:
   replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
-      app: laa-landing-page # this should match the selector in service.yml
+      app: laa-landing-page
   template:
     metadata:
       labels:
-        app: laa-landing-page # this should match the selector in service.yml
+        app: laa-landing-page
     spec:
+      serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
         runAsUser: 1000
         runAsNonRoot: true
@@ -43,17 +49,25 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            failureThreshold: 15
             periodSeconds: 10
           env:
+            - name: SENTRY_SAMPLE_RATE
+              value: "${SENTRY_SAMPLE_RATE}"
             - name: JWT_URL
-              value: "{JWT_URL}"
+              value: "${JWT_URL}"
             - name: SPRING_PROFILE
               value: "${SPRING_PROFILE}"
             - name: LOG_LEVEL
@@ -184,3 +198,13 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
             - name: CCMS_USER_MANAGEMENT_API_KEY
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
+            - name: CCMS_USER_API_SQS_ARN
+              value: "${CCMS_USER_API_SQS_ARN}"
+            - name: ENABLE_DISTRIBUTED_DB_LOCKING
+              value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
+            - name: DISTRIBUTED_DB_LOCKING_PERIOD
+              value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
+            - name: FEATURE_FLAG_ENABLE_RESEND_VER_CODE
+              value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
+            - name: SPRING_SESSION_JDBC_ENABLED
+              value: "${SPRING_SESSION_JDBC_ENABLED}"

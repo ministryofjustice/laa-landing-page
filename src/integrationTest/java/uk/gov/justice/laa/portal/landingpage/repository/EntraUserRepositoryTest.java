@@ -2,7 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -62,9 +62,13 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(result.getFirstName()).isEqualTo("FirstName");
         Assertions.assertThat(result.getLastName()).isEqualTo("LastName");
         Assertions.assertThat(result.getEmail()).isEqualTo("test@email.com");
-        Assertions.assertThat(result.getCreatedBy()).isEqualTo("System");
         Assertions.assertThat(result.getCreatedDate()).isNotNull();
 
+        Optional<EntraUser> ignoreCaseResult1 = repository.findByEmailIgnoreCase("test@email.com");
+        Optional<EntraUser> ignoreCaseResult2 = repository.findByEmailIgnoreCase("Test@emaiL.com");
+        Assertions.assertThat(ignoreCaseResult1).isPresent();
+        Assertions.assertThat(ignoreCaseResult2).isPresent();
+        Assertions.assertThat(ignoreCaseResult1.get().getEntraOid()).isEqualTo(ignoreCaseResult2.get().getEntraOid());
     }
 
     @Test
@@ -88,9 +92,9 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         entraUser1.setUserStatus(UserStatus.ACTIVE);
         entraUser1.setCreatedDate(LocalDateTime.now());
         repository.save(entraUser1);
-        UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile11 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
         userProfile11.setFirm(firm1);
-        UserProfile userProfile12 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL_MULTI_FIRM);
+        UserProfile userProfile12 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
         userProfile12.setFirm(firm2);
         entraUser1.getUserProfiles().add(userProfile11);
         entraUser1.getUserProfiles().add(userProfile12);
@@ -101,7 +105,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         entraUser2.setUserStatus(UserStatus.AWAITING_USER_APPROVAL);
         entraUser2.setCreatedDate(LocalDateTime.now().minusDays(1));
         repository.save(entraUser2);
-        UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL_SINGLE_FIRM);
+        UserProfile userProfile21 = buildLaaUserProfile(entraUser2, UserType.EXTERNAL);
         userProfile21.setFirm(firm1);
         entraUser2.getUserProfiles().add(userProfile21);
         userProfileRepository.saveAllAndFlush(Arrays.asList(userProfile21));
