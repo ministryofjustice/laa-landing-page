@@ -134,20 +134,25 @@ public class LoginController {
     @PostMapping("/switchfirm")
     public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
-        UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                .orElse(null);
-        String oldFirm = "";
-        String message = "Switch Firm successful";
-        if (Objects.nonNull(up)) {
-            oldFirm = up.getFirm().getId().toString();
-            if (oldFirm.equals(firmId)) {
-                message = "Can not switch to the same Firm";
-                return new RedirectView("/switchfirm?message=" + message);
+        String message = "";
+        if (Objects.nonNull(user) && user.isMultiFirmUser()) {
+            UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                    .orElse(null);
+            String oldFirm = "";
+            if (Objects.nonNull(up)) {
+                oldFirm = up.getFirm().getId().toString();
+                if (oldFirm.equals(firmId)) {
+                    message = "Can not switch to the same Firm";
+                    return new RedirectView("/switchfirm?message=" + message);
+                }
+                userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
+                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId().toString(), oldFirm, firmId);
+                eventService.logEvent(auditEvent);
+                message = "Switch firm successful";
             }
+        } else {
+            message = "Apply to multi firm user only";
         }
-        userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-        SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId().toString(), oldFirm, firmId);
-        eventService.logEvent(auditEvent);
         return new RedirectView("/switchfirm?message=" + message);
     }
 
@@ -157,19 +162,25 @@ public class LoginController {
     }
 
     @GetMapping("/switchfirm")
-    public String userFirmsPage(Model model, Authentication authentication) {
+    public String userFirmsPage(@RequestParam("message") String message, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
-        for (FirmDto firmDto : firmDtoList) {
-            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                    .orElse(null);
-            if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
-                firmDto.setName(firmDto.getName() + " - Active");
+        if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
+            List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
+            for (FirmDto firmDto : firmDtoList) {
+                UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                        .orElse(null);
+                if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
+                    firmDto.setName(firmDto.getName() + " - Active");
+                }
             }
+            model.addAttribute("firmDtoList", firmDtoList);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
+            if (Objects.nonNull(message)) {
+                model.addAttribute("message", message);
+            }
+            return "switch-firm";
         }
-        model.addAttribute("firmDtoList", firmDtoList);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
-        return "switch-firm";
+        return "redirect:/home";
     }
 
 }

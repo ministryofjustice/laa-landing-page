@@ -20,27 +20,36 @@ import java.util.Objects;
 public class GlobalControllerAdvice {
 
     private final LoginService loginService;
-    private final ModelMapper mapper;
 
     public GlobalControllerAdvice(LoginService loginService, ModelMapper mapper) {
         this.loginService = loginService;
-        this.mapper = mapper;
     }
 
     @ModelAttribute("activeFirm")
     public FirmDto getActiveFirm(Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        if (Objects.nonNull(entraUser)) {
-            if (entraUser.getUserProfiles().size() > 1) {
-
+        FirmDto firm = new FirmDto();
+        if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
+            //profile not set
+            if (Objects.isNull(entraUser.getUserProfiles()) || entraUser.getUserProfiles().isEmpty()) {
+                firm.setName("You currently don’t have access to any Provider Firms. Please contact the provider firm’s admin to be added.");
             } else {
-                return mapper.map(entraUser, FirmDto.class);
+                UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
+                //have active profile
+                if (Objects.nonNull(up)) {
+                    //have more than 1 firms
+                    firm.setName(up.getFirm().getName());
+                    firm.setCode(up.getFirm().getCode());
+                    if (entraUser.getUserProfiles().size() > 1) {
+                        firm.setCanChange(true);
+                    }
+                } else {
+                    //have no active profile
+                    firm.setName("You currently don’t have any active firms. Please select one active firm.");
+                    firm.setCanChange(true);
+                }
             }
-            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                    .orElse(entraUser.getUserProfiles().stream().findFirst().orElse(null));
-            if (Objects.nonNull(up) && up.getUserType().equals(UserType.EXTERNAL)) {
-                return mapper.map(up.getFirm(), FirmDto.class);
-            }
+            return firm;
         }
         return null;
     }

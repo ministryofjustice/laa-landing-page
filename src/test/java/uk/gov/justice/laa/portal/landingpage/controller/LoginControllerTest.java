@@ -308,7 +308,7 @@ class LoginControllerTest {
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
         Model model = new ConcurrentModel();
-        String view = controller.userFirmsPage(model, authentication);
+        String view = controller.userFirmsPage(null, model, authentication);
         assertThat(view).isEqualTo("switch-firm");
         List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
         assertThat(firmDtoList).hasSize(1);
@@ -324,7 +324,7 @@ class LoginControllerTest {
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
         Model model = new ConcurrentModel();
-        String view = controller.userFirmsPage(model, authentication);
+        String view = controller.userFirmsPage(null, model, authentication);
         assertThat(view).isEqualTo("switch-firm");
         List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
         assertThat(firmDtoList).hasSize(1);
