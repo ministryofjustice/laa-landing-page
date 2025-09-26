@@ -1,13 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
+import java.io.Serializable;
+
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalPattern;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalSize;
-
-import java.io.Serializable;
 
 @Data
 public class UserDetailsForm implements Serializable {
@@ -29,4 +28,6 @@ public class UserDetailsForm implements Serializable {
 
     @NotNull(message = "Select a user type")
     private Boolean userManager;
+
+    private Boolean isMultiFirmUser;
 }
