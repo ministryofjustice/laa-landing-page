@@ -1,12 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -260,6 +261,44 @@ class FirmServiceTest {
             assertThat(result).extracting(FirmDto::getName)
                     .containsExactlyInAnyOrder("Test Firm 1", "Test Firm 2");
             verify(firmRepository).findByNameOrCodeContaining("Test");
+        }
+
+        @Test
+        void whenInternalUser_withSearchTerm_filtersFirms_should_return_in_ranking_order() {
+            // Given
+            List<Firm> searchResults = List.of(
+                    Firm.builder().id(UUID.randomUUID()).name("A Test Firm 1").code("TF1").build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").build()
+            );
+            when(firmRepository.findByNameOrCodeContaining("Test")).thenReturn(searchResults);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "Test");
+
+            // Then
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FirmDto::getName)
+                    .containsExactlyInAnyOrder("Test Firm 2", "A Test Firm 1");
+            verify(firmRepository).findByNameOrCodeContaining("Test");
+        }
+
+        @Test
+        void whenInternalUser_withSearchTerm_code_filtersFirms_should_return_in_ranking_order() {
+            // Given
+            List<Firm> searchResults = List.of(
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("12345").build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("1234").build()
+            );
+            when(firmRepository.findByNameOrCodeContaining("1234")).thenReturn(searchResults);
+
+            // When
+            List<FirmDto> result = firmService.getUserAccessibleFirms(internalUser, "1234");
+
+            // Then
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FirmDto::getName)
+                    .containsExactlyInAnyOrder("Test Firm 2", "Test Firm 1");
+            verify(firmRepository).findByNameOrCodeContaining("1234");
         }
 
         @Test
@@ -540,6 +579,23 @@ class FirmServiceTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    public void shouldReturnSortedFirmsByRelevance_whenSearchTermIsValid() {
+        String searchTerm = "Alpha";
+
+        Firm firm1 = Firm.builder().name("Alpha").code("A001").build();
+        Firm firm2 = Firm.builder().name("AlphaTech").code("A002").build();
+
+        when(firmRepository.findByNameOrCodeContaining(searchTerm)).thenReturn(Arrays.asList(firm1, firm2));
+
+        List<FirmDto> result = firmService.searchFirms(searchTerm);
+
+        assertThat(result)
+                .hasSize(2)
+                .extracting(FirmDto::getName)
+                .containsExactly("Alpha", "AlphaTech"); // dto1 should be ranked higher
+    }
+
     @Nested
     class CacheTests {
         private Cache cache;
@@ -620,5 +676,40 @@ class FirmServiceTest {
             assertThat(result).isEmpty();
             verify(firmRepository).findAll();
         }
+
+        @Test
+        public void shouldReturnAllFirms_whenSearchTermIsNull() {
+            List<Firm> cachedFirms = Arrays.asList(
+                    Firm.builder().name("Alpha").code("A001").build(),
+                    Firm.builder().name("Beta").code("B002").build()
+            );
+            when(cache.get("all_firms", List.class)).thenReturn(null);
+            when(firmRepository.findAll()).thenReturn(cachedFirms);
+
+            List<FirmDto> result = firmService.searchFirms(null);
+
+            assertThat(result)
+                    .hasSize(2)
+                    .extracting(FirmDto::getName)
+                    .containsExactly("Alpha", "Beta");
+        }
+
+        @Test
+        public void shouldReturnAllFirms_whenSearchTermIsEmpty() {
+            List<Firm> cachedFirms = Collections.singletonList(
+                    Firm.builder().name("Alpha").code("A001").build()
+            );
+            when(cache.get("all_firms", List.class)).thenReturn(null);
+            when(firmRepository.findAll()).thenReturn(cachedFirms);
+
+            List<FirmDto> result = firmService.searchFirms("   ");
+
+            assertThat(result)
+                    .hasSize(1)
+                    .extracting(FirmDto::getName)
+                    .containsExactly("Alpha");
+        }
+
     }
+
 }

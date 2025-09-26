@@ -440,7 +440,8 @@ public class UserController {
     }
 
     @GetMapping("/user/create/firm")
-    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
+    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
+                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -449,19 +450,22 @@ public class UserController {
             firmSearchForm = existingForm;
             session.removeAttribute("firmSearchForm");
         }
-
+        int validatedCount = Math.max(10, Math.min(count, 100));
         model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
     }
 
     @GetMapping("/user/create/firm/search")
     @ResponseBody
-    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
+                                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        int validatedCount = Math.max(10, Math.min(count, 100));
         List<FirmDto> firms = firmService.searchFirms(query);
 
         List<Map<String, String>> result = firms.stream()
-                .limit(10) // Limit results to prevent overwhelming the UI
+                .limit(validatedCount) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
                     firmData.put("id", firm.getId().toString());
