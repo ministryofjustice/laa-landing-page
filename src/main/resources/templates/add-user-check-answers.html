@@ -86,7 +86,16 @@
                                         <a class="govuk-link" href="/admin/user/create/details">Change</a>
                                     </dd>
                                 </div>
-                                <div class="govuk-summary-list__row">
+                                <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                                    <dt class="govuk-summary-list__key">Multi-firm access</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a class="govuk-link" href="/admin/user/create/multi-firm">Change</a>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row" th:if="${!enableMultiFirmUser || !isMultiFirmUser}">
                                     <dt class="govuk-summary-list__key">Firm</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${firm.name}"></span>
