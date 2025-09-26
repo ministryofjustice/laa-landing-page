@@ -68,7 +68,7 @@ More information on GDS can be found [here](https://gds-way.digital.cabinet-offi
 
 #### Enable Pre-commit Hooks
 
-Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian Shield. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-hooks.yaml](./.pre-commit-hooks.yaml). 
+Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian Shield. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-config.yaml](./.pre-commit-config.yaml). 
 
 The pre-commit hooks will only be enabled for this repository, and won't affect others. The secret scanner CLI utilities themselves - `gitleaks`, `trufflehog` & `ggshield` - will be available in your shells to be ran against anything you wish.
 
