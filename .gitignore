@@ -46,3 +46,6 @@ target/
 .DS_STORE
 
 /secrets.gradle
+
+# Local pre-commit tools
+.cache_ggshield
