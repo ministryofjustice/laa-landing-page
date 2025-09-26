@@ -22,11 +22,14 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -41,11 +44,13 @@ public class LoginController {
     private final LoginService loginService;
     private final UserService userService;
     private final FirmService firmService;
+    private final EventService eventService;
 
-    public LoginController(LoginService loginService, UserService userService, FirmService firmService) {
+    public LoginController(LoginService loginService, UserService userService, FirmService firmService, EventService eventService) {
         this.loginService = loginService;
         this.userService = userService;
         this.firmService = firmService;
+        this.eventService = eventService;
     }
 
     @GetMapping("/")
@@ -127,15 +132,23 @@ public class LoginController {
     }
 
     @PostMapping("/switchfirm")
-    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication,
-            HttpSession session,
-            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
+    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
+        UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .orElse(null);
+        String oldFirm = "";
+        String message = "Switch Firm successful";
+        if (Objects.nonNull(up)) {
+            oldFirm = up.getFirm().getId().toString();
+            if (oldFirm.equals(firmId)) {
+                message = "Can not switch to the same Firm";
+                return new RedirectView("/switchfirm?message=" + message);
+            }
+        }
         userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-
-        // For switchFirm, we want to do full Azure logout, so redirect to logout with
-        // Azure logout parameter
-        return new RedirectView("/logout?azure_logout=true");
+        SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId().toString(), oldFirm, firmId);
+        eventService.logEvent(auditEvent);
+        return new RedirectView("/switchfirm?message=" + message);
     }
 
     @GetMapping("/logout-success")

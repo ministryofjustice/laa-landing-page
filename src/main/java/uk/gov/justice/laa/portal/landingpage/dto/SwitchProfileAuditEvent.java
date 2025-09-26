@@ -1,0 +1,31 @@
+package uk.gov.justice.laa.portal.landingpage.dto;
+
+import uk.gov.justice.laa.portal.landingpage.entity.EventType;
+
+import java.io.Serializable;
+
+public class SwitchProfileAuditEvent extends AuditEvent implements Serializable {
+    private final String userId;
+    private final String oldFirm;
+    private final String newFirm;
+
+    private static final String SWITCH_FIRM_TEMPLATE = """
+            User firm switched, user id %s, from firm %s to firm %s
+            """;
+
+    public SwitchProfileAuditEvent(String userId, String oldFirm, String newFirm) {
+        this.userId = userId;
+        this.oldFirm = oldFirm;
+        this.newFirm = newFirm;
+    }
+
+    @Override
+    public EventType getEventType() {
+        return EventType.SWITCH_FIRM;
+    }
+
+    @Override
+    public String getDescription() {
+        return String.format(SWITCH_FIRM_TEMPLATE, userId, oldFirm, newFirm);
+    }
+}
