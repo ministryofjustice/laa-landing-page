@@ -11,7 +11,6 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -56,7 +55,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.function.Function;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -67,6 +65,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -88,8 +87,6 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
-    private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
             EntraUserRepository entraUserRepository,
@@ -132,13 +129,14 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
-        List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+        List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
 
-        String diff = "";
         Map<String, String> result = new HashMap<>();
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
@@ -168,7 +166,7 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
-            diff = diffRole(oldRoles, newRoles);
+            String diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
             boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
@@ -290,9 +288,12 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<UserProfile> getById(String userId) {
+        return userProfileRepository.findById(UUID.fromString(userId));
+    }
+
     public Optional<UserProfileDto> getUserProfileById(String userId) {
-        return userProfileRepository.findById(UUID.fromString(userId))
-                .map(user -> mapper.map(user, UserProfileDto.class));
+        return getById(userId).map(user -> mapper.map(user, UserProfileDto.class));
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -484,7 +485,7 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("Firm User Manager");
             externalUserManagerRole.ifPresent(appRoles::add);
         }
         UserProfile userProfile = UserProfile.builder()
@@ -704,7 +705,7 @@ public class UserService {
      */
     public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
-        String diff = "";
+        String diff;
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {

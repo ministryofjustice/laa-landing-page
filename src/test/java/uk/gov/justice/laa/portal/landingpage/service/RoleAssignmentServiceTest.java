@@ -12,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
@@ -33,17 +34,19 @@ public class RoleAssignmentServiceTest {
     private RoleAssignmentRepository roleAssignmentRepository;
     @Mock
     private AppRoleRepository appRoleRepository;
+    @Mock
+    private AppRepository appRepository;
 
-    private UUID gbAdminId = UUID.randomUUID();
-    private UUID exAdminId = UUID.randomUUID();
-    private UUID exManId = UUID.randomUUID();
+    private final UUID gbAdminId = UUID.randomUUID();
+    private final UUID exAdminId = UUID.randomUUID();
+    private final UUID exManId = UUID.randomUUID();
     AppRole gbAdmin;
     AppRole exMan;
     AppRole exAdmin;
 
     @BeforeEach
     void setUp() {
-        roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRoleRepository, new MapperConfig().modelMapper());
+        roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRepository, appRoleRepository, new MapperConfig().modelMapper());
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
@@ -67,9 +70,6 @@ public class RoleAssignmentServiceTest {
     void canAssignRoleWithNonAuthzRole_ok() {
         Set<AppRole> editorRoles = Set.of(gbAdmin);
         UUID viewCrimeId = UUID.randomUUID();
-        App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
-        AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3")
-                .userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(crimeApp).authzRole(false).build();
         List<String> targetRoles = List.of(exAdminId.toString(), exManId.toString(), viewCrimeId.toString());
         when(appRoleRepository.findAllByIdInAndAuthzRoleIs(List.of(exAdminId, exManId, viewCrimeId), true)).thenReturn(List.of(exAdmin, exMan));
         assertThat(roleAssignmentService.canAssignRole(editorRoles, targetRoles)).isTrue();

@@ -952,7 +952,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -979,7 +979,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1005,7 +1005,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1030,7 +1030,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).isEmpty();
@@ -1045,7 +1045,8 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()),
+                Collections.emptyList(), modifierId);
 
         // Assert
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -2107,7 +2108,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
@@ -2140,7 +2141,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(),
+                    Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(result.get("error")).isNotEmpty();
@@ -2918,7 +2920,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles,
+                    Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2977,7 +2980,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2996,7 +2999,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.empty());
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             verify(mockUserProfileRepository, never()).save(any());
             verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
@@ -3046,7 +3049,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
