@@ -71,7 +71,7 @@ public class RoleAssignmentService {
         return new ArrayList<>(roles);
     }
 
-    public boolean canAssignAnyAppRole(Set<AppRole> editorRoles, List<String> targetRoles) {
+    private boolean canAssignAnyAppRole(Set<AppRole> editorRoles, List<String> targetRoles) {
         List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
         List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
         List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
