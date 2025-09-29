@@ -3,9 +3,9 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 public class SwitchProfileAuditEvent extends AuditEvent implements Serializable {
-    private final String userId;
     private final String oldFirm;
     private final String newFirm;
 
@@ -13,7 +13,7 @@ public class SwitchProfileAuditEvent extends AuditEvent implements Serializable 
             User firm switched, user id %s, from firm %s to firm %s
             """;
 
-    public SwitchProfileAuditEvent(String userId, String oldFirm, String newFirm) {
+    public SwitchProfileAuditEvent(UUID userId, String oldFirm, String newFirm) {
         this.userId = userId;
         this.oldFirm = oldFirm;
         this.newFirm = newFirm;
