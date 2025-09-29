@@ -22,7 +22,6 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -146,7 +145,7 @@ public class LoginController {
                     return new RedirectView("/switchfirm?message=" + message);
                 }
                 userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId().toString(), oldFirm, firmId);
+                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId(), oldFirm, firmId);
                 eventService.logEvent(auditEvent);
                 message = "Switch firm successful";
             }
@@ -162,7 +161,7 @@ public class LoginController {
     }
 
     @GetMapping("/switchfirm")
-    public String userFirmsPage(@RequestParam("message") String message, Model model, Authentication authentication) {
+    public String userFirmsPage(@RequestParam(name = "message", required = false) String message, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
             List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
