@@ -487,8 +487,8 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
-            Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
-            firmUserManagerRole.ifPresent(appRoles::add);
+            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("Firm User Manager");
+            externalUserManagerRole.ifPresent(appRoles::add);
         }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
