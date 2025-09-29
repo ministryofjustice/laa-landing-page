@@ -55,7 +55,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
         assertThat(createdUserProfile.getAppRoles()).hasSize(1);
-        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("Firm User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -96,7 +96,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
         assertThat(createdUserProfile.getAppRoles()).hasSize(1);
-        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("Firm User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
