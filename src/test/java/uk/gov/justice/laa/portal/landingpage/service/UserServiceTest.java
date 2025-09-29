@@ -3119,7 +3119,7 @@ class UserServiceTest {
         @Test
         void roleCoverage_removeManager_not_last_not_self() {
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3130,12 +3130,12 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 2
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             userService.roleCoverage(oldRoles, Set.of(), firm, userId, false, false);
-            verify(mockAppRoleRepository, times(1)).findByName(eq("External User Manager"));
+            verify(mockAppRoleRepository, times(1)).findByName(eq("Firm User Manager"));
             verify(mockUserProfileRepository, times(1)).findFirmUserByAuthzRoleAndFirm(any(), any(), any());
             verify(mockUserProfileRepository, never()).findInternalUserByAuthzRole(any(), any());
         }
@@ -3144,7 +3144,7 @@ class UserServiceTest {
         void roleCoverage_removeManager_not_last_is_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3155,23 +3155,23 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 2
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, true, false);
-            assertThat(result).contains("You cannot remove your own External User Manager role");
+            assertThat(result).contains("You cannot remove your own User Manager role");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
-                    .contains("Attempt to remove own External User Manager, from user profile");
+                    .contains("Attempt to remove own User Manager role, from user profile");
         }
 
         @Test
         void roleCoverage_removeManager_is_last_not_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3182,16 +3182,16 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 1
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, false, false);
-            assertThat(result).contains("External User Manager role could not be removed, this is the last External User Manager of MyFirm");
+            assertThat(result).contains("User Manager role could not be removed, this is the last User Manager of MyFirm");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
-                    .contains("Attempt to remove last firm External User Manager, from user profile");
+                    .contains("Attempt to remove last firm User Manager, from user profile");
         }
 
         @Test
