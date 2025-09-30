@@ -1018,8 +1018,8 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID roleId2 = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
-        AppRole appRole2 = AppRole.builder().id(roleId2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        AppRole appRole = AppRole.builder().id(roleId).ordinal(1).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
