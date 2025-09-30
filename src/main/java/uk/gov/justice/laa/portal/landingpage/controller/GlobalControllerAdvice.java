@@ -29,7 +29,7 @@ public class GlobalControllerAdvice {
             //profile not set
             if (Objects.isNull(entraUser.getUserProfiles()) || entraUser.getUserProfiles().isEmpty()) {
                 firm.setName("You currently don’t have access to any profiles. Please contact the admin to be added.");
-            } else if ( entraUser.isMultiFirmUser()) {
+            } else if (entraUser.isMultiFirmUser()) {
                 UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
                 //have active profile
                 if (Objects.nonNull(up)) {
