@@ -1012,6 +1012,34 @@ class UserServiceTest {
     }
 
     @Test
+    void updateUserRoles_updatesRoles_whenRestrictiveRoleUpdates() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        UUID roleId2 = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        AppRole appRole2 = AppRole.builder().id(roleId2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        UUID modifierId = UUID.randomUUID();
+        EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
+                .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                        .userType(UserType.EXTERNAL).build())).build();
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
+        when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()), modifierId);
+
+        // Assert
+        assertThat(userProfile.getAppRoles()).containsExactly(appRole, appRole2);
+    }
+
+    @Test
     void updateUserRoles_updatesRoles_whenUserAndProfileExist_error() {
         // Arrange
         UUID userId = UUID.randomUUID();

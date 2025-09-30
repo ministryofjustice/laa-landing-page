@@ -940,6 +940,62 @@ class UserControllerTest {
         entraUser.setId(userId.toString());
         entraUser.setFullName("Test User");
 
+        UUID appId = UUID.randomUUID();
+        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").build();
+
+        UUID appId2 = UUID.randomUUID();
+        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").build();
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(userId)
+                .entraUser(entraUser)
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(new HashSet<>())
+                .build();
+
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(userProfile));
+        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp, testApp2));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp, testApp2));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+
+        // When
+        String view = userController.editUserApps(userId.toString(), null, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-apps");
+        assertThat(model.getAttribute("user")).isNotNull();
+        UserProfileDto returnedUser = (UserProfileDto) model.getAttribute("user");
+        Assertions.assertEquals(userProfile.getId(), returnedUser.getId());
+        Assertions.assertEquals(userProfile.getFullName(), returnedUser.getFullName());
+
+        // Check the correct model attribute name "apps"
+        assertThat(model.getAttribute("apps")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.getFirst().isSelected()).isTrue(); // Should be selected because user has this app
+        assertThat(apps.get(1).isSelected()).isTrue();
+    }
+
+    @Test
+    public void testEditUserAppsReturnsCorrectViewAndAttributes_hide_non_editable_app() throws ServletException {
+        // Given
+        final UUID userId = UUID.randomUUID();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId.toString());
+        entraUser.setFullName("Test User");
+
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(new HashSet<>())
+                .build();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(userId)
                 .entraUser(entraUser)
@@ -947,16 +1003,16 @@ class UserControllerTest {
                 .build();
 
         UUID appId = UUID.randomUUID();
-        AppDto testApp = new AppDto();
-        testApp.setId(appId.toString());
-        testApp.setName("Test App");
+        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").build();
+        UUID appId2 = UUID.randomUUID();
+        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").build();
 
         when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(userProfile));
-        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp));
-        when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp));
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp, testApp2));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp, testApp2));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, testApp)).thenReturn(true);
+        when(roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, testApp2)).thenReturn(false);
 
         // When
         String view = userController.editUserApps(userId.toString(), null, model, session, authentication);
@@ -1055,19 +1111,25 @@ class UserControllerTest {
         testSession.setAttribute("selectedApps", List.of(appId1.toString(), appId2.toString()));
         existingRoles.put(0, List.of(role1.toString(), role2.toString()));
         existingRoles.put(1, List.of());
+        UUID role3 = UUID.randomUUID();
+        UUID appId3 = UUID.randomUUID();
         AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
         AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
                 .app(app1).name("role1").build();
         AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
                 .app(app1).name("role2").build();
-        Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto);
+        AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role3").build();
+        Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
+                role3.toString(), app1Role3Dto);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
         when(userService.getRolesByIdIn(any())).thenReturn(app1Roles);
-        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2, app3));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
         // When
         model = new ExtendedModelMap();
         String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);

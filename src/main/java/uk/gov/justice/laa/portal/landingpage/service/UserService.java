@@ -137,6 +137,7 @@ public class UserService {
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
 
+        String diff = "";
         Map<String, String> result = new HashMap<>();
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
@@ -166,7 +167,7 @@ public class UserService {
 
             // Update roles
             userProfile.setAppRoles(newRoles);
-            String diff = diffRole(oldRoles, newRoles);
+            diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
             boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
