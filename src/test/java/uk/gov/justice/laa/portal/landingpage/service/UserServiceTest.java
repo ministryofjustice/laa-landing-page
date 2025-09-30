@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -1036,7 +1037,8 @@ class UserServiceTest {
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()), modifierId);
 
         // Assert
-        assertThat(userProfile.getAppRoles()).containsExactly(appRole, appRole2);
+        List<AppRole> results = userProfile.getAppRoles().stream().sorted(Comparator.comparingInt(AppRole::getOrdinal)).toList();
+        assertThat(results).containsExactly(appRole, appRole2);
     }
 
     @Test
