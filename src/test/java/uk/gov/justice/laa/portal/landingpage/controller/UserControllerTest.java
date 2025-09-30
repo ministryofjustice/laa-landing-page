@@ -143,8 +143,8 @@ class UserControllerTest {
         // Arrange
         String searchQuery = "Firm 1";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
-        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1", false);
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2", false);
         List<FirmDto> allFirms = List.of(firm1, firm2);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
@@ -163,8 +163,8 @@ class UserControllerTest {
         // Arrange
         String searchQuery = "F2";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
-        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1", false);
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2", false);
         List<FirmDto> allFirms = List.of(firm1, firm2);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
@@ -184,8 +184,8 @@ class UserControllerTest {
         String searchQuery = "";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         List<FirmDto> expectedFirms = List.of(
-                new FirmDto(UUID.randomUUID(), "Firm A", "F1"),
-                new FirmDto(UUID.randomUUID(), "Firm B", "F2"));
+                new FirmDto(UUID.randomUUID(), "Firm A", "F1", false),
+                new FirmDto(UUID.randomUUID(), "Firm B", "F2", false));
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(expectedFirms);
@@ -610,7 +610,7 @@ class UserControllerTest {
         assertThat(sessionUser.getEmail()).isEqualTo("email");
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
         assertThat(isUserManager).isEqualTo(true);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
     }
 
     @Test
@@ -631,7 +631,7 @@ class UserControllerTest {
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
         assertThat(isUserManager).isEqualTo(true);
     }
@@ -651,7 +651,7 @@ class UserControllerTest {
         userDetailsForm.setUserManager(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
     }
 
     @Test
@@ -688,7 +688,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -714,7 +714,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -729,12 +729,12 @@ class UserControllerTest {
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("isUserManager", true);
         EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(entraUser);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(entraUser);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -2234,7 +2234,7 @@ class UserControllerTest {
 
         String view = userController.postUser(form, result, session, model);
 
-        assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(view).isEqualTo("redirect:/admin/user/create/select-firm");
         assertThat(session.getAttribute("isUserManager")).isEqualTo(false);
         assertThat(session.getAttribute("user")).isNotNull();
     }
@@ -2267,7 +2267,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenReturn(entraUser);
 
         // When
@@ -2275,7 +2275,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2291,7 +2291,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenThrow(new TechServicesClientException("Duplicate User"));
 
         // When
@@ -2300,7 +2300,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2316,7 +2316,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenThrow(new RuntimeException("Bad Request!!"));
 
         // When
@@ -2326,7 +2326,7 @@ class UserControllerTest {
 
         // Then
         assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2542,7 +2542,7 @@ class UserControllerTest {
         // Then
         verify(emailValidationService).isValidEmailDomain("test@valid-domain.com");
         verify(bindingResult, never()).rejectValue(eq("email"), eq("email.invalidDomain"), anyString());
-        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
 
         // Verify user details are set correctly
         EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
@@ -4312,7 +4312,7 @@ class UserControllerTest {
             when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
 
             // Set up the user's firms (different from the one being accessed)
-            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1");
+            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", false);
             when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
 
             // When / Then
@@ -4325,7 +4325,7 @@ class UserControllerTest {
         @Test
         void whenInvalidFirmIdFormat_usesDefaultFirm() {
             // Given
-            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1");
+            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1", false);
             firmSearchForm.setSelectedFirmId(null);
 
             when(userService.isInternal(internalUser.getId())).thenReturn(true);
@@ -4346,7 +4346,7 @@ class UserControllerTest {
         @Test
         void whenNoFirmSelected_usesDefaultFirm() {
             // Given
-            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1");
+            FirmDto defaultFirm = new FirmDto(userFirmId, "Default Firm", "DF1", false);
             firmSearchForm.setSelectedFirmId(null);
 
             when(userService.isInternal(internalUser.getId())).thenReturn(true);
