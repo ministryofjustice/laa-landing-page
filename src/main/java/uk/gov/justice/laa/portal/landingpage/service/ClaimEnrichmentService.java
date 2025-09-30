@@ -64,7 +64,7 @@ public class ClaimEnrichmentService {
                     .anyMatch(appRole -> appRole.getApp().getId().equals(app.getId()));
 
             if (!hasAccess) {
-                log.warn("User does not have access to this application");
+                log.info("User does not have access to this application");
                 return ClaimEnrichmentResponse.builder()
                         .success(false)
                         .data(null)
