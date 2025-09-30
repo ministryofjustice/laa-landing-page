@@ -216,17 +216,19 @@ public class UserService {
                 .toList();
         PageRequest pageRequest = PageRequest.of(0, 2);
         if (Objects.nonNull(firm)) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
-            if (externalUserManagerRole.isPresent()) {
-                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
-                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+            String userManagerRoleName = internal ? "External User Manager" : "Firm User Manager";
+            Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
+            if (optionalUserManagerRole.isPresent()) {
+                AppRole userManagerRole = optionalUserManagerRole.get();
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), userManagerRole.getName(), pageRequest);
+                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
-                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    return "You cannot remove your own External User Manager role";
+                    logger.warn("Attempt to remove own User Manager role, from user profile {}.", userId);
+                    return "You cannot remove your own User Manager role";
                 }
                 if (!internal && existingManagers.getTotalElements() < 2 && removeManager) {
-                    logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
-                    return "External User Manager role could not be removed, this is the last External User Manager of " + firm.getName();
+                    logger.warn("Attempt to remove last firm User Manager, from user profile {}.", userId);
+                    return "User Manager role could not be removed, this is the last User Manager of " + firm.getName();
                 }
             }
         } else {
