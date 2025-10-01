@@ -1160,13 +1160,13 @@ class UserControllerTest {
         UUID role1 = UUID.randomUUID();
         UUID role2 = UUID.randomUUID();
         UUID appId1 = UUID.randomUUID();
-        UUID appId2 = UUID.randomUUID();
         testSession.setAttribute("selectedApps", List.of(appId1.toString()));
         existingRoles.put(0, List.of(role1.toString(), role2.toString()));
         existingRoles.put(1, List.of());
         UUID role3 = UUID.randomUUID();
         UUID appId3 = UUID.randomUUID();
         AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
+        UUID appId2 = UUID.randomUUID();
         AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
         AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
