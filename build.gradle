@@ -149,9 +149,9 @@ tasks.withType(ProcessResources).configureEach {
 tasks.register('playwrightTest', Test) {
     description = 'Runs Playwright tests.'
     group = 'verification'
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    testClassesDirs = sourceSets.playwright.output.classesDirs
-    classpath = sourceSets.playwright.runtimeClasspath
+    testClassesDirs = sourceSets.playwrightTest.output.classesDirs
+    classpath = sourceSets.playwrightTest.runtimeClasspath
+    useJUnitPlatform()
 }
 
 jacocoTestReport {
