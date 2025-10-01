@@ -819,7 +819,7 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
@@ -1382,7 +1382,7 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();

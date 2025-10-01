@@ -803,16 +803,16 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
-        testRole1.setId("testAppRoleId1");
+        testRole1.setId(UUID.randomUUID().toString());
         testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
-        testRole2.setId("testAppRoleId2");
+        testRole2.setId(UUID.randomUUID().toString());
         testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
-        testRole3.setId("testAppRoleId3");
+        testRole3.setId(UUID.randomUUID().toString());
         testRole3.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole4 = new AppRoleDto();
-        testRole4.setId("testUserAppRoleId");
+        testRole4.setId(UUID.randomUUID().toString());
         testRole4.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
@@ -848,13 +848,13 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
-        testRole1.setId("testAppRoleId1");
+        testRole1.setId(UUID.randomUUID().toString());
         testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
-        testRole2.setId("testAppRoleId2");
+        testRole2.setId(UUID.randomUUID().toString());
         testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
-        testRole3.setId("testAppRoleId3");
+        testRole3.setId(UUID.randomUUID().toString());
         testRole3.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
         AppDto currentApp = new AppDto();
         currentApp.setId("testAppId");
@@ -886,24 +886,24 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
-        testUserRole.setId("testUserAppRoleId");
+        testUserRole.setId(UUID.randomUUID().toString());
         List<AppRoleDto> testUserRoles = List.of(testUserRole);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
-        testRole1.setId("testAppRoleId1");
+        testRole1.setId(UUID.randomUUID().toString());
         testRole1.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole2 = new AppRoleDto();
-        testRole2.setId("testAppRoleId2");
+        testRole2.setId(UUID.randomUUID().toString());
         testRole2.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         AppRoleDto testRole3 = new AppRoleDto();
-        testRole3.setId("testAppRoleId3");
+        testRole3.setId(UUID.randomUUID().toString());
         testRole3.setUserTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL});
         AppRoleDto testRole4 = new AppRoleDto();
-        testRole4.setId("testUserAppRoleId");
+        testRole4.setId(UUID.randomUUID().toString());
         testRole4.setUserTypeRestriction(new UserType[] {UserType.INTERNAL});
         AppDto currentApp = new AppDto();
-        currentApp.setId("testAppId");
+        currentApp.setId(UUID.randomUUID().toString());
         currentApp.setName("testAppName");
         List<String> selectedApps = List.of(currentApp.getId());
         MockHttpSession testSession = new MockHttpSession();
@@ -1901,6 +1901,7 @@ class UserControllerTest {
         currentApp.setName("App 1");
 
         AppRoleDto role = new AppRoleDto();
+        role.setId(UUID.randomUUID().toString());
         role.setUserTypeRestriction(new UserType[] {UserType.EXTERNAL});
         List<AppRoleDto> appRoles = List.of(role);
 
@@ -1941,13 +1942,13 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id("app-two").name("app-two").ordinal(1).build();
         AppDto app3 = AppDto.builder().id("app-three").name("app-three").ordinal(3).build();
 
-        AppRoleDto a1r1 = AppRoleDto.builder().id("a1r1").name("a1r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(3).build();
-        AppRoleDto a1r2 = AppRoleDto.builder().id("a1r2").name("a1r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(4).build();
-        AppRoleDto a1r3 = AppRoleDto.builder().id("a1r3").name("a1r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(1).build();
-        AppRoleDto a1r4 = AppRoleDto.builder().id("a1r4").name("a1r4").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(2).build();
-        AppRoleDto a2r1 = AppRoleDto.builder().id("a2r1").name("a2r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(2).build();
-        AppRoleDto a2r2 = AppRoleDto.builder().id("a2r2").name("a2r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(3).build();
-        AppRoleDto a2r3 = AppRoleDto.builder().id("a2r3").name("a2r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(1).build();
+        AppRoleDto a1r1 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a1r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a1r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a1r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a1r4").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a2r1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a2r2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().id(UUID.randomUUID().toString()).name("a2r3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app2).ordinal(1).build();
 
         Set<AppDto> userApps = new LinkedHashSet<>(Arrays.asList(app1, app2, app3));
 
@@ -2977,7 +2978,7 @@ class UserControllerTest {
         currentApp.setName("App 1");
 
         AppRoleDto role1 = new AppRoleDto();
-        role1.setId("role1");
+        role1.setId(UUID.randomUUID().toString());
         role1.setName("Role 1");
         final List<AppRoleDto> roles = List.of(role1);
 
@@ -3327,7 +3328,7 @@ class UserControllerTest {
         ccmsApp.setName("CCMS Application"); // Contains "CCMS" in name
 
         AppRoleDto normalRole = new AppRoleDto();
-        normalRole.setId("role1");
+        normalRole.setId(UUID.randomUUID().toString());
         normalRole.setCcmsCode("NORMAL_ROLE");
 
         final List<AppRoleDto> roles = List.of(normalRole);
@@ -3364,7 +3365,7 @@ class UserControllerTest {
         regularApp.setName("Regular Application"); // Doesn't contain "CCMS"
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId("role1");
+        ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN"); // CCMS role code
 
         final List<AppRoleDto> roles = List.of(ccmsRole);
@@ -3403,22 +3404,22 @@ class UserControllerTest {
 
         // Create roles for different CCMS sections
         AppRoleDto providerRole = new AppRoleDto();
-        providerRole.setId("provider1");
+        providerRole.setId(UUID.randomUUID().toString());
         providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
         providerRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
-        chambersRole.setId("chambers1");
+        chambersRole.setId(UUID.randomUUID().toString());
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
         chambersRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
-        advocateRole.setId("advocate1");
+        advocateRole.setId(UUID.randomUUID().toString());
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
 
         AppRoleDto otherRole = new AppRoleDto();
-        otherRole.setId("other1");
+        otherRole.setId(UUID.randomUUID().toString());
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
         otherRole.setApp(ccmsApp);
 
@@ -3461,7 +3462,7 @@ class UserControllerTest {
         regularApp.setName("Regular Application");
 
         AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId("role1");
+        regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE"); // Not a CCMS role
 
         final List<AppRoleDto> roles = List.of(regularRole);
@@ -3496,7 +3497,7 @@ class UserControllerTest {
         regularApp.setName("CCMS case transfer requests");
 
         AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId("role1");
+        regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN"); // Not a CCMS role
 
         final List<AppRoleDto> roles = List.of(regularRole);
@@ -3531,11 +3532,11 @@ class UserControllerTest {
         mixedApp.setName("Mixed App");
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId("ccms1");
+        ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
 
         AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId("regular1");
+        regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE");
 
         final List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
@@ -3579,7 +3580,7 @@ class UserControllerTest {
         ccmsApp.setName("CCMS Application");
 
         AppRoleDto normalRole = new AppRoleDto();
-        normalRole.setId("role1");
+        normalRole.setId(UUID.randomUUID().toString());
         normalRole.setCcmsCode("NORMAL_ROLE");
 
         final List<AppRoleDto> roles = List.of(normalRole);
@@ -3614,7 +3615,7 @@ class UserControllerTest {
         regularApp.setName("Regular Application");
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId("role1");
+        ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
 
         final List<AppRoleDto> roles = List.of(ccmsRole);
@@ -3653,32 +3654,32 @@ class UserControllerTest {
 
         // Create comprehensive CCMS roles for testing organization
         AppRoleDto firmRole = new AppRoleDto();
-        firmRole.setId("firm1");
+        firmRole.setId(UUID.randomUUID().toString());
         firmRole.setCcmsCode("XXCCMS_FIRM_USER");
         firmRole.setApp(ccmsApp);
 
         AppRoleDto officeRole = new AppRoleDto();
-        officeRole.setId("office1");
+        officeRole.setId(UUID.randomUUID().toString());
         officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
         officeRole.setApp(ccmsApp);
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
-        crossOfficeRole.setId("cross1");
+        crossOfficeRole.setId(UUID.randomUUID().toString());
         crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
         crossOfficeRole.setApp(ccmsApp);
 
         AppRoleDto chambersRole = new AppRoleDto();
-        chambersRole.setId("chambers1");
+        chambersRole.setId(UUID.randomUUID().toString());
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
         chambersRole.setApp(ccmsApp);
 
         AppRoleDto counselRole = new AppRoleDto();
-        counselRole.setId("counsel1");
+        counselRole.setId(UUID.randomUUID().toString());
         counselRole.setCcmsCode("XXCCMS_COUNSEL");
         counselRole.setApp(ccmsApp);
 
         AppRoleDto advocateRole = new AppRoleDto();
-        advocateRole.setId("advocate1");
+        advocateRole.setId(UUID.randomUUID().toString());
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
 
@@ -3726,7 +3727,7 @@ class UserControllerTest {
         regularApp.setName("Regular Grant Access App");
 
         AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId("role1");
+        regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE");
 
         final List<AppRoleDto> roles = List.of(regularRole);
@@ -3761,7 +3762,7 @@ class UserControllerTest {
         ccmsApp.setName("CCMS App 2");
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId("role1");
+        ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
 
         final List<AppRoleDto> roles = List.of(ccmsRole);

@@ -33,59 +33,41 @@ public class RoleAssignmentService {
     private final ModelMapper mapper;
 
     public boolean canAssignRole(Set<AppRole> editorRoles, List<String> targetRoles) {
-        List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
         List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
-        List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
-        List<UUID> authzRoleIds = authzRoles.stream().map(AppRole::getId).toList();
-        Set<UUID> roles = new HashSet<>();
-        List<RoleAssignment>  roleAssignments = roleAssignmentRepository.findByAssigningRole_IdIn(editorRoleIds);
-        for (RoleAssignment roleAssignment : roleAssignments) {
-            if (authzRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
-                roles.add(roleAssignment.getAssignableRole().getId());
-            }
-        }
-        if (roles.size() < authzRoles.size()) {
-            Set<UUID> targetSet = new HashSet<>(authzRoleIds);
-            targetSet.removeAll(roles);
-            String ids = targetSet.stream().map(UUID::toString).collect(Collectors.joining(","));
-            log.warn("Following roles can not be assigned : {}", ids);
+        List<AppRoleDto> validRoles = filterRoles(editorRoles, targetRoleIds);
+        if (validRoles.size() < targetRoles.size()) {
+            Set<String> targetSet = new HashSet<>(targetRoles);
+            targetSet.removeAll(validRoles.stream().map(AppRoleDto::getId).collect(Collectors.toSet()));
+            log.warn("Following roles can not be assigned : {}", targetSet);
             return false;
         }
         return true;
     }
 
-    public List<AppRoleDto> filterRoles(Set<AppRole> editorRoles, List<AppRoleDto> targetRoles) {
+    public List<AppRoleDto> filterRoles(Set<AppRole> editorRoles, List<UUID> targetRoleIds) {
         List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
-        List<UUID> targetRoleIds = targetRoles.stream().map(appRoleDto -> UUID.fromString(appRoleDto.getId())).distinct().toList();
-        Set<AppRoleDto> roles = new HashSet<>();
+        List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
+        List<UUID> authzRoleIds = authzRoles.stream().map(AppRole::getId).toList();
+        Set<AppRoleDto> validRoles = new HashSet<>();
         List<RoleAssignment>  roleAssignments = roleAssignmentRepository.findByAssigningRole_IdIn(editorRoleIds);
         for (RoleAssignment roleAssignment : roleAssignments) {
-            if (targetRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
-                roles.add(mapper.map(roleAssignment.getAssignableRole(), AppRoleDto.class));
+            if (authzRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
+                validRoles.add(mapper.map(roleAssignment.getAssignableRole(), AppRoleDto.class));
             }
         }
         List<AppRole> nonAuthzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, false);
-        if (!nonAuthzRoles.isEmpty()) {
-            roles.addAll(nonAuthzRoles.stream().map(r -> mapper.map(r, AppRoleDto.class)).toList());
-        }
-        return new ArrayList<>(roles);
-    }
-
-    private boolean canAssignAnyAppRole(Set<AppRole> editorRoles, List<String> targetRoles) {
-        List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
-        List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
-        List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
-        List<UUID> authzRoleIds = authzRoles.stream().map(AppRole::getId).toList();
-
-        List<RoleAssignment> roleAssignments = roleAssignmentRepository.findByAssigningRole_IdIn(editorRoleIds);
-
-        for (RoleAssignment roleAssignment : roleAssignments) {
-            if (authzRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
-                return true;
+        for (AppRole appRole : nonAuthzRoles) {
+            List<RoleAssignment> assignments = roleAssignmentRepository.findByAssignableRole_Id(appRole.getId());
+            if (!assignments.isEmpty()) {
+                List<AppRole> assigningRoles = assignments.stream().map(RoleAssignment::getAssigningRole).toList();
+                if (editorRoles.stream().anyMatch(assigningRoles::contains)) {
+                    validRoles.add(mapper.map(appRole, AppRoleDto.class));
+                }
+            } else {
+                validRoles.add(mapper.map(appRole, AppRoleDto.class));
             }
         }
-
-        return false;
+        return new ArrayList<>(validRoles);
     }
 
     public boolean canUserAssignRolesForApp(UserProfile userProfile, AppDto appDto) {
@@ -101,15 +83,15 @@ public class RoleAssignmentService {
                     .filter(appRole -> appRole.getApp().getId().equals(app.getId()))
                     .collect(Collectors.toSet());
 
-            List<String> assigneeRoles = app.getAppRoles().stream()
-                    .map(appRole -> appRole.getId().toString())
+            List<UUID> assigneeRoles = app.getAppRoles().stream()
+                    .map(appRole -> appRole.getId())
                     .collect(Collectors.toList());
 
             if (assigneeRoles.isEmpty() || editorRoles.isEmpty()) {
                 return false;
             }
 
-            return canAssignAnyAppRole(editorRoles, assigneeRoles);
+            return !filterRoles(editorRoles, assigneeRoles).isEmpty();
         } else {
             log.warn("App not found : {}", appDto.getId());
             return false;
