@@ -4,15 +4,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,6 +28,7 @@ import java.util.stream.Collectors;
 public class RoleAssignmentService {
 
     private final RoleAssignmentRepository roleAssignmentRepository;
+    private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
 
@@ -39,7 +45,7 @@ public class RoleAssignmentService {
             }
         }
         if (roles.size() < authzRoles.size()) {
-            Set<UUID> targetSet = new HashSet<UUID>(authzRoleIds);
+            Set<UUID> targetSet = new HashSet<>(authzRoleIds);
             targetSet.removeAll(roles);
             String ids = targetSet.stream().map(UUID::toString).collect(Collectors.joining(","));
             log.warn("Following roles can not be assigned : {}", ids);
@@ -64,4 +70,54 @@ public class RoleAssignmentService {
         }
         return new ArrayList<>(roles);
     }
+
+    private boolean canAssignAnyAppRole(Set<AppRole> editorRoles, List<String> targetRoles) {
+        List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
+        List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
+        List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
+        List<UUID> authzRoleIds = authzRoles.stream().map(AppRole::getId).toList();
+
+        List<RoleAssignment> roleAssignments = roleAssignmentRepository.findByAssigningRole_IdIn(editorRoleIds);
+
+        for (RoleAssignment roleAssignment : roleAssignments) {
+            if (authzRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean canUserAssignRolesForApp(UserProfile userProfile, AppDto appDto) {
+        Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
+        if (appOptional.isPresent()) {
+            App app = appOptional.get();
+
+            if (!isAuthzApp(app)) {
+                return true;
+            }
+
+            Set<AppRole> editorRoles = userProfile.getAppRoles().stream()
+                    .filter(appRole -> appRole.getApp().getId().equals(app.getId()))
+                    .collect(Collectors.toSet());
+
+            List<String> assigneeRoles = app.getAppRoles().stream()
+                    .map(appRole -> appRole.getId().toString())
+                    .collect(Collectors.toList());
+
+            if (assigneeRoles.isEmpty() || editorRoles.isEmpty()) {
+                return false;
+            }
+
+            return canAssignAnyAppRole(editorRoles, assigneeRoles);
+        } else {
+            log.warn("App not found : {}", appDto.getId());
+            return false;
+        }
+    }
+
+    private boolean isAuthzApp(App app) {
+        return app.getAppRoles().stream().anyMatch(AppRole::isAuthzRole);
+    }
+
 }

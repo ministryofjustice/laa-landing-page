@@ -9,7 +9,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Optional;
 
@@ -55,7 +54,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
         assertThat(createdUserProfile.getAppRoles()).hasSize(1);
-        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("Firm User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);
@@ -96,7 +95,7 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
         assertThat(optionalCreatedUserProfile).isNotEmpty();
         UserProfile createdUserProfile = optionalCreatedUserProfile.get();
         assertThat(createdUserProfile.getAppRoles()).hasSize(1);
-        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("External User Manager");
+        assertThat(createdUserProfile.getAppRoles().stream().findFirst().orElseThrow().getName()).isEqualTo("Firm User Manager");
         EntraUser createdUser = createdUserProfile.getEntraUser();
         userProfileRepository.delete(createdUserProfile);
         entraUserRepository.delete(createdUser);

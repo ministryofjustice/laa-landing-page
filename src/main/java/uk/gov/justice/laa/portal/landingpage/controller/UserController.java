@@ -501,7 +501,8 @@ public class UserController {
     }
 
     @GetMapping("/user/create/firm")
-    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model) {
+    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
+                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -510,19 +511,22 @@ public class UserController {
             firmSearchForm = existingForm;
             session.removeAttribute("firmSearchForm");
         }
-
+        int validatedCount = Math.max(10, Math.min(count, 100));
         model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
     }
 
     @GetMapping("/user/create/firm/search")
     @ResponseBody
-    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
+    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
+                                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        int validatedCount = Math.max(10, Math.min(count, 100));
         List<FirmDto> firms = firmService.searchFirms(query);
 
         List<Map<String, String>> result = firms.stream()
-                .limit(10) // Limit results to prevent overwhelming the UI
+                .limit(validatedCount) // Limit results to prevent overwhelming the UI
                 .map(firm -> {
                     Map<String, String> firmData = new HashMap<>();
                     firmData.put("id", firm.getId().toString());
@@ -802,27 +806,33 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id,
                                @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                               Model model, HttpSession session) {
+                               Model model, HttpSession session, Authentication authentication) {
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
+
+        List<AppDto> editableApps = availableApps.stream()
+                .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
+                .toList();
+
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
         if (Objects.isNull(selectedAppRole)) {
             // Add selected attribute to available apps based on user assigned apps
-            availableApps.forEach(app -> {
+            editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
             });
         } else {
-            availableApps.forEach(app -> {
+            editableApps.forEach(app -> {
                 app.setSelected(selectedAppRole.containsKey(app.getId()));
             });
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("apps", availableApps);
+        model.addAttribute("apps", editableApps);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -1000,7 +1010,8 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswer(@PathVariable String id,
                                            @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                                           Model model, HttpSession session) {
+                                           Model model, HttpSession session, Authentication authentication) {
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
@@ -1011,7 +1022,8 @@ public class UserController {
         UserType userType = user.getUserType();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
-        Map<String, AppDto> availableApps = userService.getAppsByUserType(userType).stream()
+        Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
+                .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
 
@@ -1043,7 +1055,7 @@ public class UserController {
                     }
                 } else {
                     UserRole userRole = new UserRole();
-                    userRole.setAppName(availableApps.get(selectedApps.get(key)).getName());
+                    userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
                     selectedAppRole.add(userRole);
@@ -1066,6 +1078,7 @@ public class UserController {
                                                  Authentication authentication) {
         UUID uuid = UUID.fromString(id);
 
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
@@ -1076,10 +1089,15 @@ public class UserController {
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
                 .toList();
+        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .map(AppRoleDto::getId)
+                .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-            Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+            Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
+                    nonEditableRoles, currentUserDto.getUserId());
             if (updateResult.get("error") != null) {
                 String errorMessage = updateResult.get("error");
                 return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
@@ -1324,20 +1342,25 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
-            HttpSession session) {
+                                          HttpSession session, Authentication authentication) {
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
+        List<AppDto> editableApps = availableApps.stream()
+                .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
+                .toList();
+
         // Add selected attribute to available apps based on user assigned apps
-        availableApps.forEach(app -> {
+        editableApps.forEach(app -> {
             app.setSelected(userAssignedApps.stream()
                     .anyMatch(userApp -> userApp.getId().equals(app.getId())));
         });
 
         model.addAttribute("user", user);
-        model.addAttribute("apps", availableApps);
+        model.addAttribute("apps", editableApps);
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
@@ -1351,7 +1374,6 @@ public class UserController {
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
             Model model, HttpSession session) {
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting apps: {}", result.getAllErrors());
             // If there are validation errors, return to the apps page with errors
@@ -1376,9 +1398,14 @@ public class UserController {
         // If no apps are selected, persist empty roles to database and redirect to
         // manage user page
         if (selectedApps.isEmpty()) {
+            UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
             // Update user to have no roles (empty list)
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), currentUserDto.getUserId());
+            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                    .map(AppRoleDto::getId)
+                    .toList();
+            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles, currentUserDto.getUserId());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto != null ? userProfileDto.getId() : null,
@@ -1408,16 +1435,18 @@ public class UserController {
             Authentication authentication,
             Model model, HttpSession session) {
 
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(() -> {
                     // If no selectedApps in session, get user's current apps
-                    Set<AppDto> userApps = userService.getUserAppsByUserId(id);
-                    List<String> userAppIds = userApps.stream()
+                    List<String> userApps = userService.getUserAppsByUserId(id)
+                            .stream()
+                            .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                             .map(AppDto::getId)
-                            .collect(Collectors.toList());
-                    session.setAttribute("grantAccessSelectedApps", userAppIds);
-                    return userAppIds;
+                            .toList();
+                    session.setAttribute("grantAccessSelectedApps", userApps);
+                    return userApps;
                 });
 
         // Ensure the selectedAppIndex is within bounds
@@ -1538,6 +1567,7 @@ public class UserController {
         // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             // Clear the grantAccessUserRolesModel and page roles from session to avoid
             // stale data
             session.removeAttribute("grantAccessUserRolesModel");
@@ -1546,10 +1576,14 @@ public class UserController {
             List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
+            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                    .map(AppRoleDto::getId)
+                    .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, currentUserDto.getUserId());
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles, currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
@@ -1705,14 +1739,18 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String grantAccessCheckAnswers(@PathVariable String id, Model model) {
+    public String grantAccessCheckAnswers(@PathVariable String id, Model model, Authentication authentication) {
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current app roles
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
+                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .toList();
 
         // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = userAppRoles.stream().sorted()
+        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
                 .collect(Collectors.groupingBy(
                         appRole -> appRole.getApp().getName(),
                         LinkedHashMap::new, // Preserve insertion order
@@ -1730,7 +1768,7 @@ public class UserController {
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", userAppRoles);
+        model.addAttribute("userAppRoles", editableUserAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
