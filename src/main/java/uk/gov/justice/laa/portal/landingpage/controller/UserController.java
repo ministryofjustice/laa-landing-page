@@ -966,7 +966,17 @@ public class UserController {
                     }
                 } else {
                     UserRole userRole = new UserRole();
-                    userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    if (selectedApps.size() < key ) {
+                        userRole.setAppName("Unknown app");
+                        String err = "Unknown app selected, please re-select apps";
+                        if (Objects.isNull(errorMessage)) {
+                            errorMessage = err;
+                        } else {
+                            errorMessage += " " + err;
+                        }
+                    } else {
+                        userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    }
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
                     selectedAppRole.add(userRole);
