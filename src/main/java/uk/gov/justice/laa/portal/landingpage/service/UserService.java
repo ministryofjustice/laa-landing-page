@@ -492,10 +492,21 @@ public class UserService {
             firmUserManagerRole.ifPresent(appRoles::add);
         }
         
-        // For multi-firm users, don't create a user profile initially
+        // For multi-firm users, create a user profile with null firm
         if (isMultiFirmUser) {
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(null) // No firm for multi-firm users
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
             entraUser.setEntraOid(newUser.getEntraOid());
-            entraUser.setUserProfiles(Set.of()); // Empty set for multi-firm users
+            entraUser.setUserProfiles(Set.of(userProfile));
             entraUser.setUserStatus(UserStatus.ACTIVE);
             return entraUserRepository.saveAndFlush(entraUser);
         } else {

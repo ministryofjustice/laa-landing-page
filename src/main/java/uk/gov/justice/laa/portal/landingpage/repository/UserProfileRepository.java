@@ -1,17 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.List;
-import java.util.UUID;
 
 @Repository
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
@@ -62,7 +63,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         )
                         AND (
                 (:#{#criteria.firmSearch.selectedFirmId} IS NULL) OR
-                (ups.firm IS NOT NULL AND ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+                (ups.firm IS NOT NULL AND ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}) OR
+                (ups.firm IS NULL AND u.isMultiFirmUser = true)
                         )
                         AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
                             SELECT 1 FROM ups.appRoles ar
