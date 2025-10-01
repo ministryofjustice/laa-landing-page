@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,6 +60,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientExcepti
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -74,8 +78,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -445,7 +447,7 @@ public class UserController {
 
     @GetMapping("/user/create/multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")  
-    public String createUserMultiFirm(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
+    public String createUserMultiFirm(MultiFirmForm multiFirmForm, HttpSession session, Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
             return "redirect:/admin/user/create/select-firm";
@@ -456,14 +458,20 @@ public class UserController {
             return "redirect:/admin/user/create/details";
         }
         
-        model.addAttribute("userDetailsForm", userDetailsForm);
+        // Pre-populate form with value from session if it exists
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+        if (isMultiFirmUser != null) {
+            multiFirmForm.setIsMultiFirmUser(isMultiFirmUser);
+        }
+        
+        model.addAttribute("multiFirmForm", multiFirmForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Allow multi-firm access");
         return "add-user-multi-firm";
     }
 
     @PostMapping("/user/create/multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
-    public String postUserMultiFirm(@Valid UserDetailsForm userDetailsForm, BindingResult result,
+    public String postUserMultiFirm(@Valid MultiFirmForm multiFirmForm, BindingResult result,
             HttpSession session, Model model) {
         
         // Check if multi-firm feature is enabled
@@ -471,14 +479,14 @@ public class UserController {
             return "redirect:/admin/user/create/select-firm";
         }
         
-        if (userDetailsForm.getIsMultiFirmUser() == null) {
+        if (multiFirmForm.getIsMultiFirmUser() == null) {
             result.rejectValue("isMultiFirmUser", "error.multiFirmUser",
                     "You must select whether this user requires access to multiple firms");
         }
         
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while setting multi-firm access: {}", result.getAllErrors());
-            model.addAttribute("userDetailsForm", userDetailsForm);
+            model.addAttribute("multiFirmForm", multiFirmForm);
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Allow multi-firm access");
             return "add-user-multi-firm";
         }
@@ -489,10 +497,10 @@ public class UserController {
             return "redirect:/admin/user/create/details";
         }
         
-        session.setAttribute("isMultiFirmUser", userDetailsForm.getIsMultiFirmUser());
+        session.setAttribute("isMultiFirmUser", multiFirmForm.getIsMultiFirmUser());
         
         // If multi-firm user, skip firm selection and go directly to check answers
-        if (Boolean.TRUE.equals(userDetailsForm.getIsMultiFirmUser())) {
+        if (Boolean.TRUE.equals(multiFirmForm.getIsMultiFirmUser())) {
             return "redirect:/admin/user/create/check-answers";
         } else {
             // Single firm user - go to firm selection
@@ -663,16 +671,26 @@ public class UserController {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<UserProfileDto> userProfileOptional = getObjectFromHttpSession(session, "userProfile",
                 UserProfileDto.class);
-        if (userOptional.isPresent() && userProfileOptional.isPresent()) {
+        
+        // Get multi-firm user flag from session
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+        
+        if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
-            model.addAttribute("userProfile", userProfileOptional.get());
+            
+            // For multi-firm users, userProfile will be null
+            if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                model.addAttribute("userProfile", null);
+            } else if (userProfileOptional.isPresent()) {
+                model.addAttribute("userProfile", userProfileOptional.get());
+            } else {
+                log.error("No userProfile attribute was present for single-firm user.");
+            }
         } else {
             log.error("No user attribute was present in request. User not added to model.");
         }
         
-        // Get multi-firm user flag from session before removing it
-        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
         
         // Add feature flag to control multi-firm UI display

@@ -1,14 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Builder;
-import lombok.Data;
-
 import java.io.Serializable;
 import java.util.UUID;
 
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class FirmSearchForm implements Serializable {
 
     @NotBlank(message = "Enter a firm name to search")

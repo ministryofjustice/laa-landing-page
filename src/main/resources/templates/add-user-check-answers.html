@@ -11,12 +11,9 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/user/create/firm">
-                    < Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link"
+            th:href="${enableMultiFirmUser && isMultiFirmUser} ? '/admin/user/create/multi-firm' : '/admin/user/create/firm'">
+            Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
@@ -27,7 +24,7 @@
                 <form th:action="@{/admin/user/create/check-answers}" th:method="post">
                     <div th:if="${errorMessage}">
                         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
-                             aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                            aria-describedby="error-summary-description" data-module="govuk-error-summary">
                             <h2 class="govuk-error-summary__title" id="error-summary-title">
                                 There is a problem
                             </h2>
@@ -95,7 +92,8 @@
                                         <a class="govuk-link" href="/admin/user/create/multi-firm">Change</a>
                                     </dd>
                                 </div>
-                                <div class="govuk-summary-list__row" th:if="${!enableMultiFirmUser || !isMultiFirmUser}">
+                                <div class="govuk-summary-list__row"
+                                    th:if="${!enableMultiFirmUser || !isMultiFirmUser}">
                                     <dt class="govuk-summary-list__key">Firm</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${firm.name}"></span>
@@ -108,10 +106,12 @@
                         </div>
                     </div>
                     <h2 class="govuk-heading-m">Create new user</h2>
-                    <p class="govuk-body">When you confirm, this user will be created and they will be sent an email invitation to complete their account setup.
+                    <p class="govuk-body">When you confirm, this user will be created and they will be sent an email
+                        invitation to complete their account setup.
                     </p>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button" onclick="this.disabled=true; this.form.submit();">Confirm</button>
+                        <button type="submit" class="govuk-button"
+                            onclick="this.disabled=true; this.form.submit();">Confirm</button>
                         <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                     </div>
 
