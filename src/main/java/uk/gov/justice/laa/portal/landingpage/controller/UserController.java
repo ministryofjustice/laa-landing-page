@@ -966,7 +966,7 @@ public class UserController {
                     }
                 } else {
                     UserRole userRole = new UserRole();
-                    if (selectedApps.size() < key ) {
+                    if (selectedApps.size() <= key ) {
                         userRole.setAppName("Unknown app");
                         String err = "Unknown app selected, please re-select apps";
                         if (Objects.isNull(errorMessage)) {
