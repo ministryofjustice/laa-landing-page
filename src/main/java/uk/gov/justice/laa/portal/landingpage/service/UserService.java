@@ -7,6 +7,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.transaction.Transactional;
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -632,7 +634,7 @@ public class UserService {
         }
     }
 
-    public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
+    public Set<LaaApplicationForView> getUserAssignedAppsforLandingPage(String id) {
         Optional<UserProfileDto> userProfile = getActiveProfileByUserId(id);
 
         if (userProfile.isEmpty()) {
@@ -673,12 +675,43 @@ public class UserService {
         }
     }
 
-    private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
+    private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
-        return applications.stream().filter(app -> userApps.stream()
+        Set<LaaApplicationForView> userAssignedApps =  applications.stream().filter(app -> userApps.stream()
                 .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
-                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
+                .map(LaaApplicationForView::new)
+                .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
+
+        // Make any necessary adjustments to the app display properties
+        makeAppDisplayAdjustments(userAssignedApps);
+
+        return userAssignedApps;
+    }
+
+    private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
+        List<LaaApplication> applications = laaApplicationsList.getApplications();
+
+        Set<String> userAppNames = userApps.stream()
+                .map(LaaApplicationForView::getName)
+                .collect(Collectors.toSet());
+
+        userApps.forEach(
+                app -> {
+                    Optional<LaaApplication> matchingApp = applications.stream()
+                            .filter(configApp -> configApp.getName().equals(app.getName()))
+                            .findFirst();
+
+                    matchingApp.ifPresent(configApp -> {
+                        if (configApp.getDescriptionIfAppAssigned() != null
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getAppAssigned())
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getDescription())
+                                && userAppNames.contains(configApp.getDescriptionIfAppAssigned().getAppAssigned())) {
+                            app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
+                        }
+                    });
+                }
+        );
     }
 
     /**

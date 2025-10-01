@@ -20,6 +20,6 @@ public class UserSessionData implements Serializable {
     private String name;
     private String accessToken;
     private EntraUserDto user;
-    private Set<LaaApplication> laaApplications;
+    private Set<LaaApplicationForView> laaApplications;
     List<UserType> userTypes;
 }

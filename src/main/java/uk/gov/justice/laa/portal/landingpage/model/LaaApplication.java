@@ -26,6 +26,7 @@ public class LaaApplication implements Comparable<LaaApplication>, Serializable 
     private String laaApplicationDetails;
     @JsonIgnore
     private LaaApplicationDetails laaApplicationDetailsObj;
+    private DescriptionIfAppAssigned descriptionIfAppAssigned;
 
     @Override
     public int compareTo(@NotNull LaaApplication o) {
@@ -51,5 +52,13 @@ public class LaaApplication implements Comparable<LaaApplication>, Serializable 
         private String oid;
         private String securityGroupName;
         private String securityGroupOid;
+    }
+
+    @AllArgsConstructor
+    @Data
+    @Builder
+    public static class DescriptionIfAppAssigned {
+        private String appAssigned;
+        private String description;
     }
 }
