@@ -70,23 +70,6 @@ public class RoleAssignmentService {
         return new ArrayList<>(validRoles);
     }
 
-    private boolean canAssignAnyAppRole(Set<AppRole> editorRoles, List<String> targetRoles) {
-        List<UUID> editorRoleIds = editorRoles.stream().map(AppRole::getId).toList();
-        List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
-        List<AppRole> authzRoles = appRoleRepository.findAllByIdInAndAuthzRoleIs(targetRoleIds, true);
-        List<UUID> authzRoleIds = authzRoles.stream().map(AppRole::getId).toList();
-
-        List<RoleAssignment> roleAssignments = roleAssignmentRepository.findByAssigningRole_IdIn(editorRoleIds);
-
-        for (RoleAssignment roleAssignment : roleAssignments) {
-            if (authzRoleIds.contains(roleAssignment.getAssignableRole().getId())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public boolean canUserAssignRolesForApp(UserProfile userProfile, AppDto appDto) {
         Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
         if (appOptional.isPresent()) {
@@ -100,15 +83,15 @@ public class RoleAssignmentService {
                     .filter(appRole -> appRole.getApp().getId().equals(app.getId()))
                     .collect(Collectors.toSet());
 
-            List<String> assigneeRoles = app.getAppRoles().stream()
-                    .map(appRole -> appRole.getId().toString())
+            List<UUID> assigneeRoles = app.getAppRoles().stream()
+                    .map(appRole -> appRole.getId())
                     .collect(Collectors.toList());
 
             if (assigneeRoles.isEmpty() || editorRoles.isEmpty()) {
                 return false;
             }
 
-            return canAssignAnyAppRole(editorRoles, assigneeRoles);
+            return !filterRoles(editorRoles, assigneeRoles).isEmpty();
         } else {
             log.warn("App not found : {}", appDto.getId());
             return false;
