@@ -17,6 +17,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -4605,7 +4606,7 @@ class UserControllerTest {
         AuthorizationDeniedException authException = new AuthorizationDeniedException("Access denied");
 
         // When
-        RedirectView result = userController.handleAuthorizationException(authException, mockSession);
+        RedirectView result = userController.handleAuthorizationException(authException, mockSession, new MockHttpServletRequest());
 
         // Then
         assertThat(result.getUrl()).isEqualTo("/not-authorised");
@@ -4619,7 +4620,7 @@ class UserControllerTest {
                 new AccessDeniedException("Access denied");
 
         // When
-        RedirectView result = userController.handleAuthorizationException(accessException, mockSession);
+        RedirectView result = userController.handleAuthorizationException(accessException, mockSession, new MockHttpServletRequest());
 
         // Then
         assertThat(result.getUrl()).isEqualTo("/not-authorised");
@@ -4641,14 +4642,17 @@ class UserControllerTest {
 
         try {
             // When
-            userController.handleAuthorizationException(authException, mockSession);
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setMethod("GET");
+            request.setRequestURI("/admin/users");
+            userController.handleAuthorizationException(authException, mockSession, request);
 
             // Then
             List<ILoggingEvent> logsList = listAppender.list;
             assertThat(logsList).hasSize(1);
             assertThat(logsList.getFirst().getLevel()).isEqualTo(Level.WARN);
-            assertThat(logsList.getFirst().getMessage()).isEqualTo("Authorization denied while accessing user: {}");
-            assertThat(logsList.getFirst().getArgumentArray()).containsExactly("Test access denied");
+            assertThat(logsList.getFirst().getMessage()).isEqualTo("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'");
+            assertThat(logsList.getFirst().getArgumentArray()).containsExactly("Test access denied", "GET", "/admin/users", null, null);
         } finally {
             logger.detachAppender(listAppender);
         }
