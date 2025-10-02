@@ -2730,8 +2730,8 @@ class UserControllerTest {
         String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
 
         // Then
-        // EmailValidationService should still be called even with empty email
-        verify(emailValidationService).isValidEmailDomain("");
+        // EmailValidationService should not be called even with empty email
+        verify(emailValidationService, never()).isValidEmailDomain(any());
         assertThat(result).isEqualTo("add-user-details");
     }
 

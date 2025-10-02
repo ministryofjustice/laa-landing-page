@@ -96,7 +96,7 @@
                                     th:if="${!enableMultiFirmUser || !isMultiFirmUser}">
                                     <dt class="govuk-summary-list__key">Firm</dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${firm.name}"></span>
+                                        <span th:text="${firm.name} + ' (Firm code: ' + ${firm.code} + ')'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link" href="/admin/user/create/firm">Change</a>
