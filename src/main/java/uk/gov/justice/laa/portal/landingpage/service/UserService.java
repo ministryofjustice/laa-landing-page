@@ -1,12 +1,28 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +32,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -45,29 +70,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * userService
@@ -459,7 +461,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
 
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
         if (!registerUserResponse.isSuccess()) {
@@ -475,35 +477,57 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, isUserManager, createdBy);
+        return persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        Firm firm = mapper.map(firmDto, Firm.class);
+        entraUser.setMultiFirmUser(isMultiFirmUser);
+        
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
             Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
             firmUserManagerRole.ifPresent(appRoles::add);
         }
-        UserProfile userProfile = UserProfile.builder()
-                .activeProfile(true)
-                .userType(UserType.EXTERNAL)
-                .appRoles(appRoles)
-                .createdDate(LocalDateTime.now())
-                .createdBy(createdBy)
-                .firm(firm)
-                .entraUser(entraUser)
-                .userProfileStatus(UserProfileStatus.PENDING)
-                .build();
+        
+        // For multi-firm users, create a user profile with null firm
+        if (isMultiFirmUser) {
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(null) // No firm for multi-firm users
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
 
-        entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserProfiles(Set.of(userProfile));
-        entraUser.setUserStatus(UserStatus.ACTIVE);
-        // Audit fields are automatically set by Spring Data JPA auditing
-        return entraUserRepository.saveAndFlush(entraUser);
+            entraUser.setEntraOid(newUser.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            return entraUserRepository.saveAndFlush(entraUser);
+        } else {
+            // Regular single-firm user flow
+            Firm firm = mapper.map(firmDto, Firm.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(firm)
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            entraUser.setEntraOid(newUser.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            return entraUserRepository.saveAndFlush(entraUser);
+        }
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
@@ -831,19 +855,20 @@ public class UserService {
     }
 
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
-        boolean foundFirm = false;
+        UserProfile active = null;
         for (UserProfile userProfile : entraUser.getUserProfiles()) {
             if (userProfile.getFirm().getId().equals(firmId)) {
-                userProfile.setActiveProfile(true);
-                foundFirm = true;
+                active = userProfile;
             } else {
                 userProfile.setActiveProfile(false);
             }
         }
-        if (!foundFirm) {
+        if (Objects.isNull(active)) {
             logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
+        entraUserRepository.saveAndFlush(entraUser);
+        active.setActiveProfile(true);
         entraUserRepository.saveAndFlush(entraUser);
     }
 

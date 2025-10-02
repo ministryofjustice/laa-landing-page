@@ -131,6 +131,9 @@ public class LoginService {
 
     public EntraUser getCurrentEntraUser(Authentication authentication) {
         CurrentUserDto currentUserDto = getCurrentUser(authentication);
+        if (currentUserDto == null) {
+            return null;
+        }
         EntraUser entraUser = userService.getUserByEntraId(currentUserDto.getUserId());
         assert entraUser != null;
         return entraUser;

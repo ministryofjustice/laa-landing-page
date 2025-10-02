@@ -23,10 +23,12 @@ import org.springframework.web.servlet.view.RedirectView;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -41,11 +43,13 @@ public class LoginController {
     private final LoginService loginService;
     private final UserService userService;
     private final FirmService firmService;
+    private final EventService eventService;
 
-    public LoginController(LoginService loginService, UserService userService, FirmService firmService) {
+    public LoginController(LoginService loginService, UserService userService, FirmService firmService, EventService eventService) {
         this.loginService = loginService;
         this.userService = userService;
         this.firmService = firmService;
+        this.eventService = eventService;
     }
 
     @GetMapping("/")
@@ -127,15 +131,28 @@ public class LoginController {
     }
 
     @PostMapping("/switchfirm")
-    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication,
-            HttpSession session,
-            @RegisteredOAuth2AuthorizedClient("azure") OAuth2AuthorizedClient authClient) throws IOException {
+    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication) throws IOException {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
-        userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-
-        // For switchFirm, we want to do full Azure logout, so redirect to logout with
-        // Azure logout parameter
-        return new RedirectView("/logout?azure_logout=true");
+        String message = "";
+        if (Objects.nonNull(user) && user.isMultiFirmUser()) {
+            UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                    .orElse(null);
+            String oldFirm = "";
+            if (Objects.nonNull(up)) {
+                oldFirm = up.getFirm().getId().toString();
+                if (oldFirm.equals(firmId)) {
+                    message = "Can not switch to the same Firm";
+                    return new RedirectView("/switchfirm?message=" + message);
+                }
+                userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
+                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId(), oldFirm, firmId);
+                eventService.logEvent(auditEvent);
+                message = "Switch firm successful";
+            }
+        } else {
+            message = "Apply to multi firm user only";
+        }
+        return new RedirectView("/switchfirm?message=" + message);
     }
 
     @GetMapping("/logout-success")
@@ -144,19 +161,25 @@ public class LoginController {
     }
 
     @GetMapping("/switchfirm")
-    public String userFirmsPage(Model model, Authentication authentication) {
+    public String userFirmsPage(@RequestParam(name = "message", required = false) String message, Model model, Authentication authentication) {
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
-        for (FirmDto firmDto : firmDtoList) {
-            UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                    .orElse(null);
-            if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
-                firmDto.setName(firmDto.getName() + " - Active");
+        if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
+            List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
+            for (FirmDto firmDto : firmDtoList) {
+                UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                        .orElse(null);
+                if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
+                    firmDto.setName(firmDto.getName() + " - Active");
+                }
             }
+            model.addAttribute("firmDtoList", firmDtoList);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
+            if (Objects.nonNull(message)) {
+                model.addAttribute("message", message);
+            }
+            return "switch-firm";
         }
-        model.addAttribute("firmDtoList", firmDtoList);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
-        return "switch-firm";
+        return "redirect:/home";
     }
 
 }

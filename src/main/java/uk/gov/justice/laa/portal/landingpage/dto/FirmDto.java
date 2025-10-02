@@ -16,4 +16,5 @@ public class FirmDto implements Serializable {
     private UUID id;
     private String name;
     private String code;
+    private boolean canChange = false;
 }

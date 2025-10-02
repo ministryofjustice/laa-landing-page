@@ -31,5 +31,9 @@
         <div sec:authorize="isAuthenticated()" class="logout">
             <form th:action="@{/logout}" method="post"><button type="submit">Sign out</button></form>
         </div>
+        <div class="moj-organisation-nav" aria-label="Organisation switcher" th:if="${activeFirm != null}">
+            <div class="moj-organisation-nav__title" th:text="${activeFirm.getName()}"></div>
+            <a href="/switchfirm" class="moj-organisation-nav__link" th:if="${activeFirm.isCanChange()}">Change firm</a>
+        </div>
     </div>
 </header>
