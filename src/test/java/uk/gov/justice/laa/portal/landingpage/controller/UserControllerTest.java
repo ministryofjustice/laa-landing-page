@@ -38,8 +38,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -4562,6 +4562,218 @@ class UserControllerTest {
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
         verify(userService).removeUserAppRole(userId, appId, roleName);
         // The orElseThrow() call throws NoSuchElementException, but it's caught and logged
+    }
+
+    // Multi-firm user tests
+    @Test
+    void createUserMultiFirm_get_withFeatureFlagEnabled_returnsMultiFirmPage() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-multi-firm");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Allow multi-firm access");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_withFeatureFlagDisabled_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_withNoUserInSession_redirectsToDetails() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/details");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_prePopulatesFormFromSession() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        session.setAttribute("isMultiFirmUser", true);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-multi-firm");
+        assertThat(multiFirmForm.getIsMultiFirmUser()).isTrue();
+    }
+    
+    @Test
+    void postUserMultiFirm_withValidYes_redirectsToCheckAnswers() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(true);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(true);
+    }
+    
+    @Test
+    void postUserMultiFirm_withValidNo_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(false);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(false);
+    }
+    
+    @Test
+    void postUserMultiFirm_withNullValue_returnsError() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(null);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        verify(bindingResult).rejectValue("isMultiFirmUser", "error.multiFirmUser",
+                "You must select whether this user requires access to multiple firms");
+        assertThat(result).isEqualTo("add-user-multi-firm");
+    }
+    
+    @Test
+    void postUserMultiFirm_withFeatureFlagDisabled_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(true);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
+    }
+    
+    @Test
+    void getUserCheckAnswers_withMultiFirmUser_hidesFirm() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        session.setAttribute("isMultiFirmUser", true);
+        session.setAttribute("isUserManager", false);
+        
+        // When
+        String result = userController.getUserCheckAnswers(model, session);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        assertThat(model.getAttribute("firm")).isNull();
+    }
+    
+    @Test
+    void postUserDetails_withMultiFirmFeatureEnabled_redirectsToMultiFirmPage() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+        userDetailsForm.setEmail("test@example.com");
+        userDetailsForm.setUserManager(false);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        MockHttpSession session = new MockHttpSession();
+        
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/multi-firm");
     }
 
     @Test
