@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -966,7 +967,17 @@ public class UserController {
                     }
                 } else {
                     UserRole userRole = new UserRole();
-                    userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    if (selectedApps.size() <= key) {
+                        userRole.setAppName("Unknown app");
+                        String err = "Unknown app selected, please re-select apps";
+                        if (Objects.isNull(errorMessage)) {
+                            errorMessage = err;
+                        } else {
+                            errorMessage += " " + err;
+                        }
+                    } else {
+                        userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    }
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
                     selectedAppRole.add(userRole);
@@ -1798,8 +1809,14 @@ public class UserController {
      * specific users
      */
     @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
-    public RedirectView handleAuthorizationException(Exception ex, HttpSession session) {
-        log.warn("Authorization denied while accessing user: {}", ex.getMessage());
+    public RedirectView handleAuthorizationException(Exception ex, HttpSession session,
+            HttpServletRequest request) {
+        Object requestedPath = session != null ? session.getAttribute("SPRING_SECURITY_SAVED_REQUEST") : null;
+        String uri = request != null ? request.getRequestURI() : "unknown";
+        String method = request != null ? request.getMethod() : "unknown";
+        String referer = request != null ? request.getHeader("Referer") : null;
+        log.warn("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
+                ex.getMessage(), method, uri, referer, requestedPath);
         return new RedirectView("/not-authorised");
     }
 
