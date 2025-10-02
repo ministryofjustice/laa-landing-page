@@ -24,7 +24,7 @@ jobs:
 
       - name: Build an image from Dockerfile
         run: |
-          docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+          docker build . --file Dockerfile --tag laa-landing-page:latest --progress=plain --no-cache
 
       # scan image for vulns
       - name: Scan Docker Image with Trivy vulnerability scanner
