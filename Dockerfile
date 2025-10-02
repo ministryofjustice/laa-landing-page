@@ -1,5 +1,10 @@
 FROM amazoncorretto:21-alpine
 
+# Update only OpenSSL to fix vulnerabilities
+RUN apk update && \
+    apk add --no-cache --upgrade openssl && \
+    rm -rf /var/cache/apk/*
+
 # Create a group and user to run the application
 RUN addgroup --gid 1000 appgroup && \
     adduser --uid 1000 --ingroup appgroup --disabled-password --gecos "" appuser

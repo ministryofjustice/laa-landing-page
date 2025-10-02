@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -398,15 +399,17 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
         }
+        if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
+            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+                result.rejectValue("email", "error.email", "Email address already exists");
+            }
 
-        if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
-            result.rejectValue("email", "error.email", "Email address already exists");
+            if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
+                result.rejectValue("email", "email.invalidDomain",
+                        "The email address domain is not valid or cannot receive emails.");
+            }
         }
 
-        if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
-            result.rejectValue("email", "email.invalidDomain",
-                    "The email address domain is not valid or cannot receive emails.");
-        }
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -819,7 +822,7 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
@@ -966,7 +969,17 @@ public class UserController {
                     }
                 } else {
                     UserRole userRole = new UserRole();
-                    userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    if (selectedApps.size() <= key) {
+                        userRole.setAppName("Unknown app");
+                        String err = "Unknown app selected, please re-select apps";
+                        if (Objects.isNull(errorMessage)) {
+                            errorMessage = err;
+                        } else {
+                            errorMessage += " " + err;
+                        }
+                    } else {
+                        userRole.setAppName(editableApps.get(selectedApps.get(key)).getName());
+                    }
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
                     selectedAppRole.add(userRole);
@@ -1382,7 +1395,7 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
@@ -1798,8 +1811,14 @@ public class UserController {
      * specific users
      */
     @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
-    public RedirectView handleAuthorizationException(Exception ex, HttpSession session) {
-        log.warn("Authorization denied while accessing user: {}", ex.getMessage());
+    public RedirectView handleAuthorizationException(Exception ex, HttpSession session,
+            HttpServletRequest request) {
+        Object requestedPath = session != null ? session.getAttribute("SPRING_SECURITY_SAVED_REQUEST") : null;
+        String uri = request != null ? request.getRequestURI() : "unknown";
+        String method = request != null ? request.getMethod() : "unknown";
+        String referer = request != null ? request.getHeader("Referer") : null;
+        log.warn("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
+                ex.getMessage(), method, uri, referer, requestedPath);
         return new RedirectView("/not-authorised");
     }
 

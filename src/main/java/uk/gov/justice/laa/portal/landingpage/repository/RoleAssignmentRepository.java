@@ -13,4 +13,6 @@ import java.util.UUID;
 public interface RoleAssignmentRepository extends JpaRepository<RoleAssignment, RoleAssignmentId> {
 
     List<RoleAssignment> findByAssigningRole_IdIn(Collection<UUID> ids);
+
+    List<RoleAssignment> findByAssignableRole_Id(UUID id);
 }

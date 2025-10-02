@@ -53,6 +53,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -602,7 +603,7 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
         when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
+        Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
         // Then
         assertThat(returnedApps.isEmpty()).isTrue();
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -677,15 +678,15 @@ class UserServiceTest {
         );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+        Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
         // Then
         assertThat(returnedApps).isNotNull();
         assertThat(returnedApps.size()).isEqualTo(2);
-        Iterator<LaaApplication> iterator = returnedApps.iterator();
-        LaaApplication resultApp1 = iterator.next();
+        Iterator<LaaApplicationForView> iterator = returnedApps.iterator();
+        LaaApplicationForView resultApp1 = iterator.next();
         assertThat(resultApp1.getName()).isEqualTo("Test App 1");
-        LaaApplication resultApp2 = iterator.next();
+        LaaApplicationForView resultApp2 = iterator.next();
         assertThat(resultApp2.getName()).isEqualTo("Test App 2");
     }
 
@@ -1903,11 +1904,11 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
-            List<String> resultNames = result.stream().map(LaaApplication::getName).toList();
+            List<String> resultNames = result.stream().map(LaaApplicationForView::getName).toList();
             assertThat(resultNames).containsExactlyInAnyOrder("Test App 1", "Test App 2");
         }
 
@@ -1938,7 +1939,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1978,12 +1979,109 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(3);
-            List<LaaApplication> resultList = new ArrayList<>(result);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
             assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(1).getName()).isEqualTo("App B");
+            assertThat(resultList.get(2).getName()).isEqualTo("App C");
+        }
+
+        @Test
+        void getUserAssignedAppsforLandingPage_returnsDefaultDescription() {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            App app1 = App.builder().name("App C").build();
+            App app2 = App.builder().name("App A").build();
+
+            AppRole role1 = AppRole.builder().app(app1).build();
+            AppRole role2 = AppRole.builder().app(app2).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .appRoles(Set.of(role1, role2))
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            List<LaaApplication> configuredApps = List.of(
+                    LaaApplication.builder().name("App C").ordinal(3).build(),
+                    LaaApplication.builder().name("App A").ordinal(1).description("Default description for App A")
+                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
+                                    .appAssigned("App B")
+                                    .description("Alternative description for App A").build()
+                            )
+                            .build(),
+                    LaaApplication.builder().name("App B").ordinal(2).build());
+            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+
+            // Act
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+
+            // Assert
+            assertThat(result).hasSize(2);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
+            assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(0).getDescription()).isEqualTo("Default description for App A");
+            assertThat(resultList.get(1).getName()).isEqualTo("App C");
+        }
+
+        @Test
+        void getUserAssignedAppsforLandingPage_returnsWithAlternativeDescription() {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            App app1 = App.builder().name("App C").build();
+            App app2 = App.builder().name("App A").build();
+            App app3 = App.builder().name("App B").build();
+
+            AppRole role1 = AppRole.builder().app(app1).build();
+            AppRole role2 = AppRole.builder().app(app2).build();
+            AppRole role3 = AppRole.builder().app(app3).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .appRoles(Set.of(role1, role2, role3))
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            List<LaaApplication> configuredApps = List.of(
+                    LaaApplication.builder().name("App C").ordinal(3).build(),
+                    LaaApplication.builder().name("App A").ordinal(1)
+                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
+                                    .appAssigned("App B")
+                                    .description("Alternative description for App A").build()
+                            )
+                            .build(),
+                    LaaApplication.builder().name("App B").ordinal(2).build());
+            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+
+            // Act
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+
+            // Assert
+            assertThat(result).hasSize(3);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
+            assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(0).getDescription()).isEqualTo("Alternative description for App A");
             assertThat(resultList.get(1).getName()).isEqualTo("App B");
             assertThat(resultList.get(2).getName()).isEqualTo("App C");
         }
