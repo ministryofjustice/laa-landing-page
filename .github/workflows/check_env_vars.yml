@@ -51,18 +51,28 @@ jobs:
 
           # Create an empty temporary file to store results
           found_vars_temp_file=$(mktemp)
+          
+          # Ensure cleanup on exit
+          trap 'rm -f "$found_vars_temp_file"' EXIT
 
-          # Safely loop through each changed file to find environment variables
-          echo "${{ steps.changed-src-files.outputs.all_changed_files }}" | while read -r file; do
+          # Use process substitution instead of pipe to avoid subshell issues
+          while IFS= read -r file; do
+            # Skip empty lines
+            [ -z "$file" ] && continue
+            
             # Ensure the file exists (i.e., it wasn't deleted in the PR)
             if [ -f "$file" ]; then
-              grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" >> "$found_vars_temp_file"
+              # Use -h to suppress filename and handle errors gracefully
+              grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" 2>/dev/null >> "$found_vars_temp_file" || true
             fi
-          done
+          done < <(printf '%s\n' "${{ steps.changed-src-files.outputs.all_changed_files }}" | tr ' ' '\n')
           
           # Now, get the unique variables from our temporary file
-          env_vars=$(cat "$found_vars_temp_file" | sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' | sort -u)
-          rm "$found_vars_temp_file"
+          if [ -s "$found_vars_temp_file" ]; then
+            env_vars=$(sed -E 's/.*(\$\{[A-Za-z0-9_]+\}).*/\1/' "$found_vars_temp_file" | sort -u)
+          else
+            env_vars=""
+          fi
 
           if [ -z "$env_vars" ]; then
             echo "should_comment=false" >> $GITHUB_OUTPUT
@@ -70,8 +80,12 @@ jobs:
           fi
 
           comment_body=""
+          should_comment=false
+          
           # Check if each variable exists in the deployment files
-          for var in $env_vars; do
+          while IFS= read -r var; do
+            [ -z "$var" ] && continue
+            
             var_name=$(echo "$var" | sed -E 's/\$\{//' | sed -E 's/\}//')
             
             # Check if the variable is in the allowlist
@@ -102,14 +116,15 @@ jobs:
                 for missing_file in "${missing_in_files[@]}"; do
                   comment_body+="  - \`$missing_file\`\n"
                 done
+                should_comment=true
               fi
             fi
-          done
+          done < <(printf '%s\n' "$env_vars")
           
           # If we have a comment body, add the concluding notes before exiting
-          if [ -n "$comment_body" ]; then
+          if [ "$should_comment" = true ]; then
             comment_body+="\n> [!IMPORTANT]\n> Remember to also add these variables to this repository's **GitHub Secrets** for each environment."
-            comment_body+="\n\n---\n*If a variable is intentionally missing from the deployment files, you can add it to the \`env_var_allowlist\` in \`.github/workflows/env_variable_check.yml\` to ignore it in future checks.*"
+            comment_body+="\n\n---\n*If a variable is intentionally missing from the deployment files, you can add it to the \`env_var_allowlist\` in \`.github/workflows/check_env_vars.yml\` to ignore it in future checks.*"
             
             delimiter=$(openssl rand -hex 8)
             echo "comment_body<<${delimiter}" >> $GITHUB_ENV

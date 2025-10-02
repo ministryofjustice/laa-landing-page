@@ -27,7 +27,6 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -90,8 +89,6 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
-    private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
             EntraUserRepository entraUserRepository,
@@ -134,8 +131,10 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
-        List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+        List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
@@ -220,17 +219,19 @@ public class UserService {
                 .toList();
         PageRequest pageRequest = PageRequest.of(0, 2);
         if (Objects.nonNull(firm)) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
-            if (externalUserManagerRole.isPresent()) {
-                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
-                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+            String userManagerRoleName = internal ? "External User Manager" : "Firm User Manager";
+            Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
+            if (optionalUserManagerRole.isPresent()) {
+                AppRole userManagerRole = optionalUserManagerRole.get();
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), userManagerRole.getName(), pageRequest);
+                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
-                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    return "You cannot remove your own External User Manager role";
+                    logger.warn("Attempt to remove own User Manager role, from user profile {}.", userId);
+                    return "You cannot remove your own User Manager role";
                 }
                 if (!internal && existingManagers.getTotalElements() < 2 && removeManager) {
-                    logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
-                    return "External User Manager role could not be removed, this is the last External User Manager of " + firm.getName();
+                    logger.warn("Attempt to remove last firm User Manager, from user profile {}.", userId);
+                    return "User Manager role could not be removed, this is the last User Manager of " + firm.getName();
                 }
             }
         } else {
@@ -487,14 +488,25 @@ public class UserService {
         
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
-            externalUserManagerRole.ifPresent(appRoles::add);
+            Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
+            firmUserManagerRole.ifPresent(appRoles::add);
         }
         
-        // For multi-firm users, don't create a user profile initially
+        // For multi-firm users, create a user profile with null firm
         if (isMultiFirmUser) {
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(null) // No firm for multi-firm users
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
             entraUser.setEntraOid(newUser.getEntraOid());
-            entraUser.setUserProfiles(Set.of()); // Empty set for multi-firm users
+            entraUser.setUserProfiles(Set.of(userProfile));
             entraUser.setUserStatus(UserStatus.ACTIVE);
             return entraUserRepository.saveAndFlush(entraUser);
         } else {
@@ -717,7 +729,7 @@ public class UserService {
      */
     public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
-        String diff = "";
+        String diff;
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {

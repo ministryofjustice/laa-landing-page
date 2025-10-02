@@ -317,18 +317,17 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaimThrowsException_UserNoAppAccess() {
+    void enrichClaim_UserNoAppAccess_ReturnsUnsuccessfulResponse() {
         // Arrange
         entraUser.setUserProfiles(Collections.emptySet());
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
-        // Act & Assert
-        ClaimEnrichmentException exception = assertThrows(
-            ClaimEnrichmentException.class,
-            () -> claimEnrichmentService.enrichClaim(request)
-        );
-        assertEquals("User does not have access to this application", exception.getMessage());
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        assertNotNull(response);
+        assertEquals(false, response.isSuccess());
+        assertEquals(null, response.getData());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 

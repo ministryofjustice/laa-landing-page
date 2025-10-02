@@ -64,7 +64,11 @@ public class ClaimEnrichmentService {
                     .anyMatch(appRole -> appRole.getApp().getId().equals(app.getId()));
 
             if (!hasAccess) {
-                throw new ClaimEnrichmentException("User does not have access to this application");
+                log.info("User does not have access to this application");
+                return ClaimEnrichmentResponse.builder()
+                        .success(false)
+                        .data(null)
+                        .build();
             }
 
             // 4. Get user roles for this app from the database

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -953,7 +954,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -980,7 +981,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1006,10 +1007,39 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenRestrictiveRoleUpdates() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        UUID roleId2 = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).ordinal(1).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        UUID modifierId = UUID.randomUUID();
+        EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
+                .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                        .userType(UserType.EXTERNAL).build())).build();
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
+        when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()), modifierId);
+
+        // Assert
+        List<AppRole> results = userProfile.getAppRoles().stream().sorted(Comparator.comparingInt(AppRole::getOrdinal)).toList();
+        assertThat(results).containsExactly(appRole, appRole2);
     }
 
     @Test
@@ -1031,7 +1061,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).isEmpty();
@@ -1046,7 +1076,8 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()),
+                Collections.emptyList(), modifierId);
 
         // Assert
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -2108,7 +2139,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
@@ -2141,7 +2172,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(),
+                    Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(result.get("error")).isNotEmpty();
@@ -2919,7 +2951,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles,
+                    Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2978,7 +3011,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2997,7 +3030,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.empty());
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             verify(mockUserProfileRepository, never()).save(any());
             verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
@@ -3047,7 +3080,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -3117,7 +3150,7 @@ class UserServiceTest {
         @Test
         void roleCoverage_removeManager_not_last_not_self() {
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3128,12 +3161,12 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 2
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             userService.roleCoverage(oldRoles, Set.of(), firm, userId, false, false);
-            verify(mockAppRoleRepository, times(1)).findByName(eq("External User Manager"));
+            verify(mockAppRoleRepository, times(1)).findByName(eq("Firm User Manager"));
             verify(mockUserProfileRepository, times(1)).findFirmUserByAuthzRoleAndFirm(any(), any(), any());
             verify(mockUserProfileRepository, never()).findInternalUserByAuthzRole(any(), any());
         }
@@ -3142,7 +3175,7 @@ class UserServiceTest {
         void roleCoverage_removeManager_not_last_is_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3153,23 +3186,23 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 2
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, true, false);
-            assertThat(result).contains("You cannot remove your own External User Manager role");
+            assertThat(result).contains("You cannot remove your own User Manager role");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
-                    .contains("Attempt to remove own External User Manager, from user profile");
+                    .contains("Attempt to remove own User Manager role, from user profile");
         }
 
         @Test
         void roleCoverage_removeManager_is_last_not_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
             AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
@@ -3180,16 +3213,16 @@ class UserServiceTest {
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS)),
                     PageRequest.of(0, 2), 1
             );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, false, false);
-            assertThat(result).contains("External User Manager role could not be removed, this is the last External User Manager of MyFirm");
+            assertThat(result).contains("User Manager role could not be removed, this is the last User Manager of MyFirm");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
-                    .contains("Attempt to remove last firm External User Manager, from user profile");
+                    .contains("Attempt to remove last firm User Manager, from user profile");
         }
 
         @Test

@@ -37,3 +37,10 @@ laa-apps:
       url: ${app.ccms.account.link.url}
       laaApplicationDetails: ${app.ccms.account.link.details}
       ordinal: 4
+    - name: ${app.submit.a.bulk.claim.name}
+      title: Submit A Bulk Claim
+      description: >-
+        Submit A Bulk Claim
+      url: ${app.submit.a.bulk.claim.url}
+      laaApplicationDetails: ${app.submit.a.bulk.claim.details}
+      ordinal: 5
