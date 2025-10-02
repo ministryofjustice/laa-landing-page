@@ -19,7 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 
 import java.time.Instant;
@@ -76,7 +76,7 @@ class LoginServiceTest {
         when(authorizedClient.getAccessToken()).thenReturn(accessToken);
         when(accessToken.getTokenValue()).thenReturn(TEST_TOKEN_VALUE);
 
-        Set<LaaApplication> mockManagedApps = Set.of(new LaaApplication());
+        Set<LaaApplicationForView> mockManagedApps = Set.of(new LaaApplicationForView());
         EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
         when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
         when(userService.getUserAssignedAppsforLandingPage(null)).thenReturn(mockManagedApps);
