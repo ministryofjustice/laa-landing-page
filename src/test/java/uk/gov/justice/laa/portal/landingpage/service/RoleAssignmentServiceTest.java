@@ -187,19 +187,6 @@ public class RoleAssignmentServiceTest {
     }
 
     @Test
-    void canUserAssignRolesForNonAuthzApp_ok() {
-        UserProfile userProfile = UserProfile.builder().id(UUID.randomUUID()).appRoles(Set.of(firmMan)).build();
-        App ccmsApp = App.builder().id(UUID.randomUUID()).name("ccms").securityGroupOid("sec_grp_oid")
-                .securityGroupName("sec_grp_name").build();
-        AppRole ccmsAppRole = AppRole.builder().id(UUID.randomUUID()).name("ccmsRole").description("ccmsRole")
-                .userTypeRestriction(new UserType[]{UserType.EXTERNAL}).app(ccmsApp).authzRole(false).build();
-        ccmsApp.setAppRoles(Set.of(ccmsAppRole));
-        AppDto appDto = mapper.map(ccmsApp, AppDto.class);
-        when(appRepository.findById(any())).thenReturn(java.util.Optional.of(ccmsApp));
-        assertThat(roleAssignmentService.canUserAssignRolesForApp(userProfile, appDto)).isTrue();
-    }
-
-    @Test
     void canUserAssignRolesForApp_fail_fum_to_fum() {
         app.setAppRoles(Set.of(firmMan));
         when(appRepository.findById(any())).thenReturn(java.util.Optional.of(app));

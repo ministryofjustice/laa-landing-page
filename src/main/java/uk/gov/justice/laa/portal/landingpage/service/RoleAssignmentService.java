@@ -75,13 +75,7 @@ public class RoleAssignmentService {
         if (appOptional.isPresent()) {
             App app = appOptional.get();
 
-            if (!isAuthzApp(app)) {
-                return true;
-            }
-
-            Set<AppRole> editorRoles = userProfile.getAppRoles().stream()
-                    .filter(appRole -> appRole.getApp().getId().equals(app.getId()))
-                    .collect(Collectors.toSet());
+            Set<AppRole> editorRoles = new HashSet<>(userProfile.getAppRoles());
 
             List<UUID> assigneeRoles = app.getAppRoles().stream()
                     .map(appRole -> appRole.getId())
