@@ -400,15 +400,17 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
         }
+        if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
+            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+                result.rejectValue("email", "error.email", "Email address already exists");
+            }
 
-        if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
-            result.rejectValue("email", "error.email", "Email address already exists");
+            if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
+                result.rejectValue("email", "email.invalidDomain",
+                        "The email address domain is not valid or cannot receive emails.");
+            }
         }
 
-        if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
-            result.rejectValue("email", "email.invalidDomain",
-                    "The email address domain is not valid or cannot receive emails.");
-        }
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
