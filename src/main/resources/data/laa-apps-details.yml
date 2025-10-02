@@ -18,7 +18,11 @@ laa-apps:
     - name: ${app.pui.name}
       oidGroupName: PUI
       title: Client and Cost Management System
-      description: For all remaining civil legal aid proceedings, managing applications, billing and payments
+      description: For all civil legal aid proceedings, managing applications, billing and payments
+      descriptionIfAppAssigned:
+        appAssigned: ${app.civil.apply.name}
+        description: >-
+          For all remaining civil legal aid proceedings, managing applications, billing and payments
       url: ${app.pui.url}
       laaApplicationDetails: ${app.pui.details}
       ordinal: 3
