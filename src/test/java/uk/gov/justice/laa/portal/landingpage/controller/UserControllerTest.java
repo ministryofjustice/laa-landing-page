@@ -1144,6 +1144,62 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRolesCheckAnswer_index_error() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userId))
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.ofNullable(userProfile));
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        UUID role1 = UUID.randomUUID();
+        UUID role2 = UUID.randomUUID();
+        UUID appId1 = UUID.randomUUID();
+        testSession.setAttribute("selectedApps", List.of(appId1.toString()));
+        existingRoles.put(0, List.of(role1.toString(), role2.toString()));
+        existingRoles.put(1, List.of());
+        UUID role3 = UUID.randomUUID();
+        UUID appId3 = UUID.randomUUID();
+        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
+        UUID appId2 = UUID.randomUUID();
+        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
+        AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
+                .app(app1).name("role1").build();
+        AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role2").build();
+        AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role3").build();
+        Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
+                role3.toString(), app1Role3Dto);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+        when(userService.getRolesByIdIn(any())).thenReturn(app1Roles);
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2, app3));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
+        // When
+        model = new ExtendedModelMap();
+        String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
+
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("edit-user-roles-check-answer");
+        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
+        assertThat(selectedAppRole).hasSize(3);
+        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
+        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
+        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+        assertThat(selectedAppRole.get(2).getAppName()).isEqualTo("Unknown app");
+        String error = model.getAttribute("errorMessage").toString();
+        assertThat(error).isEqualTo("Unknown app selected, please re-select apps");
+    }
+
+    @Test
     void editUserRolesCheckAnswer_shouldRedirectIfEmpty() {
         UUID userId = UUID.randomUUID();
         UserProfileDto userProfile = UserProfileDto.builder()
