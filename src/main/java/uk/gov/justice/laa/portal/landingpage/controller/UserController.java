@@ -1,10 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -17,7 +15,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +77,8 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -285,20 +285,22 @@ public class UserController {
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
     public String manageUser(@PathVariable String id, Model model, HttpSession session) {
-        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
-        List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
-                .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                .sorted()
-                .collect(Collectors.toList());
-        List<OfficeDto> userOffices = optionalUser.get().getOffices();
-        final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
-        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
-        optionalUser.ifPresent(user -> model.addAttribute("user", user));
+        List<AppRoleDto> userAppRoles = user.getAppRoles() != null 
+                ? user.getAppRoles().stream()
+                    .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                    .sorted()
+                    .collect(Collectors.toList())
+                : Collections.emptyList();
+        List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
+        final Boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
+        final Boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
+        boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
         // Check if current user can manage offices - align with actual endpoint authorization
@@ -308,7 +310,7 @@ public class UserController {
         model.addAttribute("showOfficesTab", canManageOffices);
 
         model.addAttribute("canEditUser", canEditUser);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
@@ -329,26 +331,28 @@ public class UserController {
             throw new AccessDeniedException("Resend verification is disabled.");
         }
 
-        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
-        List<AppRoleDto> userAppRoles = optionalUser.get().getAppRoles().stream()
-                .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                .sorted()
-                .collect(Collectors.toList());
-        List<OfficeDto> userOffices = optionalUser.get().getOffices();
-        final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
-        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
-        optionalUser.ifPresent(user -> model.addAttribute("user", user));
+        List<AppRoleDto> userAppRoles = user.getAppRoles() != null 
+                ? user.getAppRoles().stream()
+                    .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                    .sorted()
+                    .collect(Collectors.toList())
+                : Collections.emptyList();
+        List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
+        final Boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
+        final Boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL == optionalUser.get().getUserType();
+        boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
         model.addAttribute("canEditUser", canEditUser);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + optionalUser.get().getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 

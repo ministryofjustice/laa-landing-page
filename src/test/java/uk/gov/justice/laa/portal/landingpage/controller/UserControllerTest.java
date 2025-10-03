@@ -2779,6 +2779,36 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldHandleNullAppRolesAndOffices() {
+        // Given - simulates a newly created multi-firm user without initial profile data
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        user.setFirstName("Test");
+        user.setLastName("User");
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .entraUser(user)
+                .appRoles(null) // Explicitly null to test null handling
+                .offices(null) // Explicitly null to test null handling
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted(any())).thenReturn(false);
+        when(accessControlService.canEditUser(any())).thenReturn(true);
+
+        // When
+        String view = userController.manageUser(userId, model, session);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull().asList().isEmpty();
+        assertThat(model.getAttribute("userOffices")).isNotNull().asList().isEmpty();
+    }
+
+    @Test
     void addUserCreated_shouldRemoveUserFromSession() {
         // Given
         EntraUserDto user = new EntraUserDto();
