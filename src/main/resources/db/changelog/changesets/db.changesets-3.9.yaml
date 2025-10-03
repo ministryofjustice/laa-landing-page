@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3.9-1-update-firm-constraint-for-multi-firm-users
+      author: paul.snowdon
+      comment: "Remove firm_not_null_for_non_internal_users_only constraint to allow multi-firm users. PostgreSQL CHECK constraints cannot use subqueries, so application-level validation will enforce business rules."
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_profile DROP CONSTRAINT IF EXISTS firm_not_null_for_non_internal_users_only"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_profile
+                    ADD CONSTRAINT firm_not_null_for_non_internal_users_only
+                    CHECK (((firm_id IS NULL) AND ((user_type)::text = 'INTERNAL'::text)) OR ((firm_id IS NOT NULL) AND ((user_type)::text <> 'INTERNAL'::text)))"

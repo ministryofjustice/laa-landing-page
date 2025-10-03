@@ -1,12 +1,28 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -17,6 +33,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -47,29 +72,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * userService
@@ -131,7 +133,8 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
+            List<String> nonEditableRoles, UUID modifierId) {
         List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);
         List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
@@ -145,10 +148,11 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
             List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
-            boolean internal  = modifierTypes.contains(UserType.INTERNAL);
+            boolean internal = modifierTypes.contains(UserType.INTERNAL);
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(userType -> userType == userProfile.getUserType()))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                            .anyMatch(userType -> userType == userProfile.getUserType()))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -158,7 +162,8 @@ public class UserService {
             Set<AppRole> newRoles = new HashSet<>(roles);
             Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
                     : new HashSet<>(userProfile.getAppRoles());
-            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self, internal);
+            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self,
+                    internal);
             if (!error.isEmpty()) {
                 result.put("error", error);
                 return result;
@@ -172,7 +177,8 @@ public class UserService {
             diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
+                    oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
             // Save user profile with ccms sync status
@@ -209,7 +215,8 @@ public class UserService {
         return changed;
     }
 
-    protected String roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self, boolean internal) {
+    protected String roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self,
+            boolean internal) {
         if (oldRoles.isEmpty()) {
             return "";
         }
@@ -223,8 +230,10 @@ public class UserService {
             Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
             if (optionalUserManagerRole.isPresent()) {
                 AppRole userManagerRole = optionalUserManagerRole.get();
-                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), userManagerRole.getName(), pageRequest);
-                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(),
+                        userManagerRole.getName(), pageRequest);
+                boolean removeManager = removed.stream()
+                        .anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
                     logger.warn("Attempt to remove own User Manager role, from user profile {}.", userId);
                     return "You cannot remove your own User Manager role";
@@ -237,8 +246,10 @@ public class UserService {
         } else {
             Optional<AppRole> globalAdminRole = appRoleRepository.findByName("Global Admin");
             if (globalAdminRole.isPresent()) {
-                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin", pageRequest);
-                boolean removeGlobalAdmin = removed.stream().anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
+                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin",
+                        pageRequest);
+                boolean removeGlobalAdmin = removed.stream()
+                        .anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
                 if (existingAdmins.getTotalElements() < 2 && removeGlobalAdmin) {
                     logger.warn("Attempt to remove last Global Admin, from user profile {}.", userId);
                     return "Global Admin role could not be removed, this is the last Global Admin";
@@ -258,7 +269,8 @@ public class UserService {
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userProfileId);
 
-        return optionalUserProfile.map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
+        return optionalUserProfile
+                .map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
                 .orElseThrow(() -> new RuntimeException("Failed to send verification email!"));
     }
 
@@ -461,7 +473,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
 
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
         if (!registerUserResponse.isSuccess()) {
@@ -477,35 +489,57 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, isUserManager, createdBy);
+        return persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
-        Firm firm = mapper.map(firmDto, Firm.class);
+        entraUser.setMultiFirmUser(isMultiFirmUser);
+
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
             Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
             firmUserManagerRole.ifPresent(appRoles::add);
         }
-        UserProfile userProfile = UserProfile.builder()
-                .activeProfile(true)
-                .userType(UserType.EXTERNAL)
-                .appRoles(appRoles)
-                .createdDate(LocalDateTime.now())
-                .createdBy(createdBy)
-                .firm(firm)
-                .entraUser(entraUser)
-                .userProfileStatus(UserProfileStatus.PENDING)
-                .build();
 
-        entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserProfiles(Set.of(userProfile));
-        entraUser.setUserStatus(UserStatus.ACTIVE);
-        // Audit fields are automatically set by Spring Data JPA auditing
-        return entraUserRepository.saveAndFlush(entraUser);
+        // For multi-firm users, create a user profile with null firm
+        if (isMultiFirmUser) {
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(null) // No firm for multi-firm users
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            entraUser.setEntraOid(newUser.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            return entraUserRepository.saveAndFlush(entraUser);
+        } else {
+            // Regular single-firm user flow
+            Firm firm = mapper.map(firmDto, Firm.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(firm)
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            entraUser.setEntraOid(newUser.getEntraOid());
+            entraUser.setUserProfiles(Set.of(userProfile));
+            entraUser.setUserStatus(UserStatus.ACTIVE);
+            return entraUserRepository.saveAndFlush(entraUser);
+        }
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
@@ -616,7 +650,8 @@ public class UserService {
         if (optionalApp.isPresent()) {
             App app = optionalApp.get();
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(roleUserType -> roleUserType == userType))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                            .anyMatch(roleUserType -> roleUserType == userType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .sorted()
                     .toList();
@@ -677,7 +712,7 @@ public class UserService {
 
     private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
-        Set<LaaApplicationForView> userAssignedApps =  applications.stream().filter(app -> userApps.stream()
+        Set<LaaApplicationForView> userAssignedApps = applications.stream().filter(app -> userApps.stream()
                 .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .map(LaaApplicationForView::new)
                 .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
@@ -710,8 +745,7 @@ public class UserService {
                             app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
                         }
                     });
-                }
-        );
+                });
     }
 
     /**

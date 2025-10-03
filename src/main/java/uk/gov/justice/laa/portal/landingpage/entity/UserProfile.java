@@ -1,8 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
 import java.util.Set;
-
-import org.hibernate.annotations.Check;
+import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -26,10 +25,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Check;
-
-import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "user_profile", indexes = {
@@ -43,7 +38,9 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-@Check(name = "firm_not_null_for_non_internal_users_only", constraints = "(firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')")
+// Note: firm_not_null_for_non_internal_users_only constraint removed because PostgreSQL 
+// CHECK constraints cannot use subqueries. Multi-firm user validation is enforced at 
+// application level in UserService.persistNewUser()
 public class UserProfile extends AuditableEntity {
 
     @Column(name = "active_profile", nullable = false)

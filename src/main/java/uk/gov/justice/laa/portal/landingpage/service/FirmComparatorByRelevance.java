@@ -8,6 +8,29 @@ public class FirmComparatorByRelevance {
         String name = firmDto.getName();
         String code = firmDto.getCode();
 
+        // Handle null code - only compare with name
+        if (code == null) {
+            if (name.equals(query)) {
+                return 100;
+            }
+            if (name.equalsIgnoreCase(query)) {
+                return 90;
+            }
+            if (name.startsWith(query)) {
+                return 80;
+            }
+            if (name.toLowerCase().startsWith(query.toLowerCase())) {
+                return 70;
+            }
+            if (name.contains(query)) {
+                return 60;
+            }
+            if (name.toLowerCase().contains(query.toLowerCase())) {
+                return 50;
+            }
+            return 0;
+        }
+
         if (code.equals(query) || name.equals(query)) {
             return 100;
         }

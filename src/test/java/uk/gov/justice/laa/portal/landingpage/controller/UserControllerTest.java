@@ -1,23 +1,45 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -28,6 +50,13 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -69,35 +98,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -608,7 +608,7 @@ class UserControllerTest {
         assertThat(sessionUser.getEmail()).isEqualTo("email");
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
         assertThat(isUserManager).isEqualTo(true);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
     }
 
     @Test
@@ -629,7 +629,7 @@ class UserControllerTest {
         assertThat(sessionUser.getLastName()).isEqualTo("lastName");
         assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
         assertThat(sessionUser.getEmail()).isEqualTo("email");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
         boolean isUserManager = (boolean) session.getAttribute("isUserManager");
         assertThat(isUserManager).isEqualTo(true);
     }
@@ -649,7 +649,7 @@ class UserControllerTest {
         userDetailsForm.setUserManager(true);
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/select-firm");
     }
 
     @Test
@@ -686,7 +686,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -712,7 +712,7 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -727,12 +727,12 @@ class UserControllerTest {
         session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).name("test firm").build());
         session.setAttribute("isUserManager", true);
         EntraUser entraUser = EntraUser.builder().build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(entraUser);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(entraUser);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(any(), any(), anyBoolean(), any())).thenReturn(user);
+        when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
@@ -2353,7 +2353,7 @@ class UserControllerTest {
 
         String view = userController.postUser(form, result, session, model);
 
-        assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(view).isEqualTo("redirect:/admin/user/create/select-firm");
         assertThat(session.getAttribute("isUserManager")).isEqualTo(false);
         assertThat(session.getAttribute("user")).isNotNull();
     }
@@ -2386,7 +2386,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenReturn(entraUser);
 
         // When
@@ -2394,7 +2394,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/user/create/confirmation");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2409,7 +2409,8 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenThrow(new TechServicesClientException("Duplicate User"));
 
         // When
@@ -2418,7 +2419,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate User");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2433,7 +2434,8 @@ class UserControllerTest {
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
-        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester")))
+        EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
+        when(userService.createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean()))
                 .thenThrow(new RuntimeException("Bad Request!!"));
 
         // When
@@ -2443,7 +2445,7 @@ class UserControllerTest {
 
         // Then
         assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
-        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"));
+        verify(userService).createUser(eq(user), any(FirmDto.class), anyBoolean(), eq("tester"), anyBoolean());
     }
 
     @Test
@@ -2659,7 +2661,7 @@ class UserControllerTest {
         // Then
         verify(emailValidationService).isValidEmailDomain("test@valid-domain.com");
         verify(bindingResult, never()).rejectValue(eq("email"), eq("email.invalidDomain"), anyString());
-        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
 
         // Verify user details are set correctly
         EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
@@ -2774,6 +2776,36 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(userProfile); // Controller adds UserProfileDto, not EntraUserDto
         assertThat(model.getAttribute("userAppRoles")).isNotNull(); // Will be empty list, not null
         assertThat(model.getAttribute("userOffices")).isNotNull(); // Will be empty list, not null
+    }
+
+    @Test
+    void manageUser_shouldHandleNullAppRolesAndOffices() {
+        // Given - simulates a newly created multi-firm user without initial profile data
+        String userId = "user123";
+        EntraUserDto user = new EntraUserDto();
+        user.setId(userId);
+        user.setFirstName("Test");
+        user.setLastName("User");
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .entraUser(user)
+                .appRoles(null) // Explicitly null to test null handling
+                .offices(null) // Explicitly null to test null handling
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted(any())).thenReturn(false);
+        when(accessControlService.canEditUser(any())).thenReturn(true);
+
+        // When
+        String view = userController.manageUser(userId, model, session);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull().asList().isEmpty();
+        assertThat(model.getAttribute("userOffices")).isNotNull().asList().isEmpty();
     }
 
     @Test
@@ -4560,6 +4592,218 @@ class UserControllerTest {
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
         verify(userService).removeUserAppRole(userId, appId, roleName);
         // The orElseThrow() call throws NoSuchElementException, but it's caught and logged
+    }
+
+    // Multi-firm user tests
+    @Test
+    void createUserMultiFirm_get_withFeatureFlagEnabled_returnsMultiFirmPage() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-multi-firm");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Allow multi-firm access");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_withFeatureFlagDisabled_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_withNoUserInSession_redirectsToDetails() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/details");
+    }
+    
+    @Test
+    void createUserMultiFirm_get_prePopulatesFormFromSession() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        session.setAttribute("isMultiFirmUser", true);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        
+        // When
+        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-multi-firm");
+        assertThat(multiFirmForm.getIsMultiFirmUser()).isTrue();
+    }
+    
+    @Test
+    void postUserMultiFirm_withValidYes_redirectsToCheckAnswers() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(true);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(true);
+    }
+    
+    @Test
+    void postUserMultiFirm_withValidNo_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(false);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(false);
+    }
+    
+    @Test
+    void postUserMultiFirm_withNullValue_returnsError() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(null);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        verify(bindingResult).rejectValue("isMultiFirmUser", "error.multiFirmUser",
+                "You must select whether this user requires access to multiple firms");
+        assertThat(result).isEqualTo("add-user-multi-firm");
+    }
+    
+    @Test
+    void postUserMultiFirm_withFeatureFlagDisabled_redirectsToFirmSelection() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        session.setAttribute("user", user);
+        
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
+            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        multiFirmForm.setIsMultiFirmUser(true);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        
+        // When
+        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
+    }
+    
+    @Test
+    void getUserCheckAnswers_withMultiFirmUser_hidesFirm() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        MockHttpSession session = new MockHttpSession();
+        EntraUserDto user = new EntraUserDto();
+        user.setEmail("test@example.com");
+        session.setAttribute("user", user);
+        session.setAttribute("isMultiFirmUser", true);
+        session.setAttribute("isUserManager", false);
+        
+        // When
+        String result = userController.getUserCheckAnswers(model, session);
+        
+        // Then
+        assertThat(result).isEqualTo("add-user-check-answers");
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        assertThat(model.getAttribute("firm")).isNull();
+    }
+    
+    @Test
+    void postUserDetails_withMultiFirmFeatureEnabled_redirectsToMultiFirmPage() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+        UserDetailsForm userDetailsForm = new UserDetailsForm();
+        userDetailsForm.setFirstName("Test");
+        userDetailsForm.setLastName("User");
+        userDetailsForm.setEmail("test@example.com");
+        userDetailsForm.setUserManager(false);
+        
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        
+        MockHttpSession session = new MockHttpSession();
+        
+        // When
+        String result = userController.postUser(userDetailsForm, bindingResult, session, model);
+        
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/user/create/multi-firm");
     }
 
     @Test

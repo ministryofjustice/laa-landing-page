@@ -11,12 +11,8 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/users">
-                    < Back</a>
-            </li>
-        </ol>
+        <a class="govuk-back-link" href="/admin/users">
+            Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <fieldset class="govuk-fieldset">
@@ -37,13 +33,16 @@
                                 <li th:each="err : ${#fields.errors('email')}" th:if="${#fields.hasErrors('email')}">
                                     <a href="#email" th:text="${err}"></a>
                                 </li>
-                                <li th:each="err : ${#fields.errors('firstName')}" th:if="${#fields.hasErrors('firstName')}">
+                                <li th:each="err : ${#fields.errors('firstName')}"
+                                    th:if="${#fields.hasErrors('firstName')}">
                                     <a href="#firstName" th:text="${err}"></a>
                                 </li>
-                                <li th:each="err : ${#fields.errors('lastName')}" th:if="${#fields.hasErrors('lastName')}">
+                                <li th:each="err : ${#fields.errors('lastName')}"
+                                    th:if="${#fields.hasErrors('lastName')}">
                                     <a href="#lastName" th:text="${err}"></a>
                                 </li>
-                                <li th:each="err : ${#fields.errors('userManager')}" th:if="${#fields.hasErrors('userManager')}">
+                                <li th:each="err : ${#fields.errors('userManager')}"
+                                    th:if="${#fields.hasErrors('userManager')}">
                                     <a href="#userManager" th:text="${err}"></a>
                                 </li>
                             </ul>
@@ -105,7 +104,7 @@
                             </div>
                             <div class="govuk-radios__item">
                                 <input class="govuk-radios__input" id="providerUser" type="radio"
-                                   th:field="*{userManager}" th:value="false">
+                                    th:field="*{userManager}" th:value="false">
                                 <label class="govuk-label govuk-radios__label" for="providerUser">
                                     Provider User
                                 </label>

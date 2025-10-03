@@ -1,10 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Profile("test")
 public class TestController {
 
     @GetMapping(value = {"/", "/login", "/css/style.css", "/js/script.js", "/assets/image.png", "/actuator/health"})
