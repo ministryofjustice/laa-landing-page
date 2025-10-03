@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -169,10 +168,9 @@ public class LiveTechServicesClient implements TechServicesClient {
             String errorJson = httpEx.getResponseBodyAsString();
             try {
                 TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
-                if (httpEx.getStatusCode().equals(HttpStatus.CONFLICT)) {
-                    logger.debug("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
+                if (httpEx.getStatusCode().is4xxClientError()) {
+                    logger.info("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
                             user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
-                    logger.info("Handling user conflicts gracefully.");
                     return TechServicesApiResponse.error(errorResponse);
                 }
                 logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
