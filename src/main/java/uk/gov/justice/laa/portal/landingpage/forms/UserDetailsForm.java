@@ -14,12 +14,12 @@ public class UserDetailsForm implements Serializable {
 
     @NotEmpty(message = "Enter a first name")
     @ConditionalSize(min = 2, max = 99, message = "First name must be between 2-99 characters")
-    @ConditionalPattern(regexp = "^[A-Za-z](?:[A-Za-z \\-']*[A-Za-z])?$", message = "First name must not contain numbers or special characters")
+    @ConditionalPattern(regexp = "^[A-Za-z](?:[A-Za-z\\-']*[A-Za-z])?$", message = "First name must not contain numbers or special characters")
     private String firstName;
 
     @NotEmpty(message = "Enter a last name")
     @ConditionalSize(min = 2, max = 99, message = "Last name must be between 2-99 characters")
-    @ConditionalPattern(regexp = "^[A-Za-z](?:[A-Za-z \\-']*[A-Za-z])?$", message = "Last name must not contain numbers or special characters")
+    @ConditionalPattern(regexp = "^[A-Za-z](?:[A-Za-z\\-']*[A-Za-z])?$", message = "Last name must not contain numbers or special characters")
     private String lastName;
 
     @NotEmpty(message = "Enter an email address")
