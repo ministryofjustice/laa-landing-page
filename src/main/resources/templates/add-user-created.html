@@ -22,22 +22,28 @@
                 </div>
             </div>
             <h2 class="govuk-heading-m govuk-!-padding-top-3">What happens next</h2>
-            
+
             <div th:if="${userProfile != null}">
                 <p class="govuk-body">You can:</p>
-                
+
                 <ul class="govuk-list govuk-list--bullet">
-                    <li><a th:href="@{'/admin/users/grant-access/' + ${userProfile.id}} + '/apps'" class="govuk-link">add user permissions and offices</a></li>
+                    <li><a th:href="@{'/admin/users/grant-access/' + ${userProfile.id}} + '/apps'"
+                            class="govuk-link">add user permissions and offices</a></li>
                     <li><a href="/admin/user/create/details" class="govuk-link">create another new user</a></li>
                 </ul>
             </div>
             <div th:if="${userProfile == null}">
-                <p class="govuk-body" th:if="${enableMultiFirmUser && isMultiFirmUser}">This multi-firm user has been created without an initial firm profile. They will be able to request access to firms as needed.</p>
-                
+                <p class="govuk-body" th:if="${enableMultiFirmUser && isMultiFirmUser}">This multi-firm user has been
+                    created without an initial firm profile. They will be able to request access to firms as needed.</p>
+
                 <p class="govuk-body">You can:</p>
-                
+
                 <ul class="govuk-list govuk-list--bullet">
-                    <li><a href="/admin/user/create/details" class="govuk-link">create another new user</a></li>
+                    <li><a th:href="@{'/admin/users/grant-access/' + ${userProfile.id}} + '/apps'"
+                            class="govuk-link">add user permissions
+                            and offices</a></li>
+                    <li><a href="/admin/user/create/details" class="govuk-link">create another new user for this
+                            firm</a></li>
                 </ul>
             </div>
             <form class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
