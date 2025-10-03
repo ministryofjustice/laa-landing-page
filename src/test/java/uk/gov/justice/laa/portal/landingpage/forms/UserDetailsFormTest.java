@@ -135,8 +135,8 @@ class UserDetailsFormTest {
         form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
-                .contains("First name must not contain numbers or special characters",
-                        "Last name must not contain numbers or special characters");
+                .contains("First name must not contain numbers, spaces or special characters",
+                        "Last name must not contain numbers, spaces or special characters");
     }
 
     @Test
@@ -148,8 +148,8 @@ class UserDetailsFormTest {
         form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
-                .contains("First name must not contain numbers or special characters",
-                        "Last name must not contain numbers or special characters");
+                .contains("First name must not contain numbers, spaces or special characters",
+                        "Last name must not contain numbers, spaces or special characters");
     }
 
     @Test
@@ -175,14 +175,14 @@ class UserDetailsFormTest {
     }
 
     @Test
-    void spaceInFirstName_shouldNotTriggerPatternViolation() {
+    void spaceInFirstName_shouldTriggerPatternViolation() {
         UserDetailsForm form = new UserDetailsForm();
         form.setFirstName("Mary Jane");
         form.setLastName("O'Neil");
         form.setEmail("test@example.com");
         form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
-        assertThat(violations.size()).isEqualTo(0);
+        assertThat(violations.size()).isEqualTo(1);
     }
 
     @Test
