@@ -31,7 +31,6 @@
                     <li><a href="/admin/user/create/details" class="govuk-link">create another new user</a></li>
                 </ul>
             </div>
-            
             <div th:if="${userProfile == null}">
                 <p class="govuk-body" th:if="${enableMultiFirmUser && isMultiFirmUser}">This multi-firm user has been created without an initial firm profile. They will be able to request access to firms as needed.</p>
                 
@@ -41,7 +40,6 @@
                     <li><a href="/admin/user/create/details" class="govuk-link">create another new user</a></li>
                 </ul>
             </div>
-            
             <form class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
                 <button class="govuk-button govuk-button--primary" type="submit">Go back to manage your users</button>
             </form>
