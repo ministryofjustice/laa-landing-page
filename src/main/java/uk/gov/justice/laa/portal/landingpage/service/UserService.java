@@ -483,29 +483,91 @@ public class UserService {
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
             boolean isUserManager, String createdBy) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
-        // TODO revisit to set the user entra ID
-        Firm firm = mapper.map(firmDto, Firm.class);
-        Set<AppRole> appRoles = new HashSet<>();
-        if (isUserManager) {
-            Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
-            firmUserManagerRole.ifPresent(appRoles::add);
+        if (firmDto != null && !firmDto.isSkipFirmSelection()) {
+            // TODO revisit to set the user entra ID
+            Firm firm = mapper.map(firmDto, Firm.class);
+            Set<AppRole> appRoles = new HashSet<>();
+            if (isUserManager) {
+                Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
+                firmUserManagerRole.ifPresent(appRoles::add);
+            }
+
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(firm)
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+            entraUser.setUserProfiles(Set.of(userProfile));
+        } else if (!entraUser.isMultiFirmUser()) {
+            logger.error("User {} {} is not a multi-firm user", entraUser.getFirstName(), entraUser.getLastName());
+            throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
+                    entraUser.getFirstName(), entraUser.getLastName()));
         }
-        UserProfile userProfile = UserProfile.builder()
-                .activeProfile(true)
-                .userType(UserType.EXTERNAL)
-                .appRoles(appRoles)
-                .createdDate(LocalDateTime.now())
-                .createdBy(createdBy)
-                .firm(firm)
-                .entraUser(entraUser)
-                .userProfileStatus(UserProfileStatus.PENDING)
-                .build();
 
         entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserProfiles(Set.of(userProfile));
         entraUser.setUserStatus(UserStatus.ACTIVE);
         // Audit fields are automatically set by Spring Data JPA auditing
         return entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto, String createdBy) {
+        if (!entraUserDto.isMultiFirmUser()) {
+            logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(), entraUserDto.getLastName());
+            throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
+                    entraUserDto.getFirstName(), entraUserDto.getLastName()));
+        }
+
+        if (firmDto == null || (!firmDto.isSkipFirmSelection() && firmDto.getId() == null)) {
+            logger.error("Invalid firm details provided: {}", firmDto);
+            throw new RuntimeException(String.format("Invalid firm details provided: %s", firmDto));
+        }
+
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user user id: {}", entraUserDto.getId());
+                    return new RuntimeException(
+                            String.format("User not found for the given user user id: %s", entraUserDto.getId()));
+                });
+
+        if (entraUser.getUserProfiles() != null) {
+            boolean firmAlreadyAssigned = entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmDto.getId()));
+
+            if (firmAlreadyAssigned) {
+                logger.error("The user is already got a profile for the firm: {}", firmDto);
+                throw new RuntimeException(String.format("User profile already exists for this firm %s", firmDto));
+            }
+        }
+
+        boolean activeProfile = entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
+
+        Firm firm = mapper.map(firmDto, Firm.class);
+
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(activeProfile)
+                .userType(UserType.EXTERNAL)
+                .createdDate(LocalDateTime.now())
+                .createdBy(createdBy)
+                .firm(firm)
+                .userProfileStatus(UserProfileStatus.PENDING)
+                .build();
+
+        if (entraUser.getUserProfiles() == null) {
+            entraUser.setUserProfiles(Set.of(userProfile));
+        } else {
+            entraUser.getUserProfiles().add(userProfile);
+        }
+
+        userProfileRepository.save(userProfile);
+        entraUserRepository.save(entraUser);
+
+        return userProfile;
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {

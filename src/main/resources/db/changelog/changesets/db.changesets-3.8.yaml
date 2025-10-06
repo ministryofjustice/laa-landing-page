@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1759740419312-1
+      author: suresh kavali
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+                  name: multi_firm_user
+                  type: BOOLEAN
+            tableName: entra_user

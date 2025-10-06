@@ -62,6 +62,9 @@ public class EntraUser extends AuditableEntity {
     @Email(message = "User email must be a valid email address")
     private String email;
 
+    @Column(name = "multi_firm_user", nullable = false, length = 255, unique = true)
+    private boolean multiFirmUser;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
     @NotNull(message = "User status must be provided")

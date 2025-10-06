@@ -498,6 +498,7 @@ public class UserController {
         if (firmSearchForm.getSelectedFirmId() != null) {
             try {
                 FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
+                selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
                 session.setAttribute("firm", selectedFirm);
             } catch (Exception e) {
                 log.error("Error retrieving selected firm: {}", e.getMessage());
