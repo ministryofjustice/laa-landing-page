@@ -2289,11 +2289,10 @@ class UserControllerTest {
 
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
-        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false); // No edit
-                                                                                                          // permission
-        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false); // No
-                                                                                                                  // office
-                                                                                                                  // permission
+        // No edit permission
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
+        // No office permission
+        when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
 
         // When
         String view = userController.manageUser("external-user-id", model, session);
@@ -2803,10 +2802,12 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile); // Controller adds UserProfileDto, not
-                                                                       // EntraUserDto
-        assertThat(model.getAttribute("userAppRoles")).isNotNull(); // Will be empty list, not null
-        assertThat(model.getAttribute("userOffices")).isNotNull(); // Will be empty list, not null
+        // Controller adds UserProfileDto, not EntraUserDto
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        // Will be empty list, not null
+        assertThat(model.getAttribute("userAppRoles")).isNotNull();
+        // Will be empty list, not null
+        assertThat(model.getAttribute("userOffices")).isNotNull();
     }
 
     @Test
