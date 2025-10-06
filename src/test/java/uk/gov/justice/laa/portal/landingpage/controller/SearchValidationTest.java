@@ -1,22 +1,23 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 
@@ -45,6 +46,12 @@ public class SearchValidationTest {
 
     @Mock
     private Authentication authentication;
+
+    @BeforeEach
+    void setUp() {
+        // Reset mocks between tests to avoid cross-test interference
+        reset(firmService, loginService);
+    }
 
     @Test
     @DisplayName("Should return empty results only for empty queries in firm search endpoints")
@@ -82,15 +89,15 @@ public class SearchValidationTest {
         when(firmService.searchFirms(any())).thenReturn(List.of());
 
         // Empty query - should not call service
-        List<Map<String, String>> searchResult1 = userController.searchFirms("");
+        List<Map<String, String>> searchResult1 = userController.searchFirms("", 10);
         assertThat(searchResult1).isEmpty();
 
         // Single character - should call service
-        List<Map<String, String>> searchResult2 = userController.searchFirms("x");
+        List<Map<String, String>> searchResult2 = userController.searchFirms("x", 10);
         assertThat(searchResult2).isEmpty(); // Empty result but service was called
 
         // Two characters - should call service
-        List<Map<String, String>> searchResult3 = userController.searchFirms("xy");
+        List<Map<String, String>> searchResult3 = userController.searchFirms("xy", 10);
         assertThat(searchResult3).isEmpty(); // Empty result but service was called
 
         // Verify service calls for searchFirms
@@ -120,7 +127,7 @@ public class SearchValidationTest {
         assertThat(result1.get(0).getName()).isEqualTo("Test Firm");
 
         // Test /admin/user/create/firm/search endpoint with single character (now valid)
-        List<Map<String, String>> result2 = userController.searchFirms("b");
+        List<Map<String, String>> result2 = userController.searchFirms("b", 10);
         assertThat(result2).hasSize(1);
         assertThat(result2.get(0).get("name")).isEqualTo("Test Firm");
 
@@ -141,7 +148,7 @@ public class SearchValidationTest {
         List<FirmDto> result1 = userController.getFirms(authentication, "1");
         assertThat(result1).isEmpty(); // Empty but service was called
 
-        List<Map<String, String>> result2 = userController.searchFirms("2");
+        List<Map<String, String>> result2 = userController.searchFirms("2", 10);
         assertThat(result2).isEmpty(); // Empty but service was called
 
         verify(firmService).getUserAccessibleFirms(entraUser, "1");
@@ -155,7 +162,7 @@ public class SearchValidationTest {
         List<FirmDto> result3 = userController.getFirms(authentication, "  a  ");
         assertThat(result3).isEmpty(); // Empty but service was called (with original "  a  ")
 
-        List<Map<String, String>> result4 = userController.searchFirms("  b  ");
+        List<Map<String, String>> result4 = userController.searchFirms("  b  ", 10);
         assertThat(result4).isEmpty(); // Empty but service was called (with trimmed "b")
 
         // Verify the service was called - getFirms passes untrimmed, searchFirms passes trimmed

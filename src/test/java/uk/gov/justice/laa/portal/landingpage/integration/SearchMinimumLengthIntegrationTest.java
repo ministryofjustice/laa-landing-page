@@ -1,18 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.integration;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
@@ -25,7 +24,6 @@ import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
@@ -61,10 +59,10 @@ public class SearchMinimumLengthIntegrationTest {
     @Test
     public void testEmptyQueriesReturnEmpty() {
         // Empty queries should return empty lists (due to validation)
-        List<Map<String, String>> result1 = userController.searchFirms("");
+        List<Map<String, String>> result1 = userController.searchFirms("", 10);
         assertThat(result1).isEmpty();
 
-        List<Map<String, String>> result2 = userController.searchFirms("   ");
+        List<Map<String, String>> result2 = userController.searchFirms("   ", 10);
         assertThat(result2).isEmpty();
         
         // Verify that service methods were not called for empty queries
@@ -81,7 +79,7 @@ public class SearchMinimumLengthIntegrationTest {
         when(firmService.getUserAccessibleFirms(entraUser, "B")).thenReturn(List.of());
         
         // Single character queries should now work (not return empty due to minimum length restriction)
-        List<Map<String, String>> result1 = userController.searchFirms("A");
+        List<Map<String, String>> result1 = userController.searchFirms("A", 10);
         assertThat(result1).isNotNull();
         
         List<FirmDto> result2 = userController.getFirms(authentication, "B");

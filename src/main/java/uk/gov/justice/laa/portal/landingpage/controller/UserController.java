@@ -473,11 +473,6 @@ public class UserController {
 
     @GetMapping("/user/create/firm/search")
     @ResponseBody
-    // Backwards-compatible overload for tests and callers that pass only the query.
-    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query) {
-        return searchFirms(query, 10);
-    }
-
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
                                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
         // If the query is blank/whitespace-only, return an empty result and do not
