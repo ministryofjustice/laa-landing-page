@@ -1,9 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import org.junit.jupiter.api.Test;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 
 public class FirmComparatorByRelevanceTest {
 
