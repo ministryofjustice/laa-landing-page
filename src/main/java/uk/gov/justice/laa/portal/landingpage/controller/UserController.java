@@ -452,6 +452,13 @@ public class UserController {
         if (existingForm != null) {
             firmSearchForm = existingForm;
             session.removeAttribute("firmSearchForm");
+        } else if (session.getAttribute("firm") != null) {
+            // Grab firm search details from session firm if coming here from the confirmation screen.
+            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            firmSearchForm = FirmSearchForm.builder()
+                    .selectedFirmId(firm.getId())
+                    .firmSearch(firm.getName())
+                    .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
         model.addAttribute("firmSearchForm", firmSearchForm);
