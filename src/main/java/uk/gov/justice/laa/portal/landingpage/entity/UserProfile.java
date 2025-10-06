@@ -30,11 +30,10 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "user_profile", indexes = {
-        @Index(name = "UserProfileCreatedByIdx", columnList = "created_by"),
-        @Index(name = "UserProfileCreatedDateIdx", columnList = "created_date"),
-        @Index(name = "UserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
-        @Index(name = "UserProfileLastModifiedByIdx", columnList = "last_modified_by"),
-})
+    @Index(name = "UserProfileCreatedByIdx", columnList = "created_by"),
+    @Index(name = "UserProfileCreatedDateIdx", columnList = "created_date"),
+    @Index(name = "UserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
+    @Index(name = "UserProfileLastModifiedByIdx", columnList = "last_modified_by"),})
 @Getter
 @Setter
 @SuperBuilder
