@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,8 +80,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -636,13 +637,19 @@ public class UserController {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
                         userManager, currentUserDto.getName(), isMultiFirmUser != null ? isMultiFirmUser : false);
                 
-                // User profile is always created (with firm)
-                // The is_multi_firm_user flag in entra table indicates if user can work across multiple firms
-                session.setAttribute("userProfile",
-                        mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+                // Multi-firm users only have entra_user entry, no user_profile
+                // Non-multi-firm users get a user_profile with firm assignment
+                if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                    // Multi-firm user - no profile created
+                    session.setAttribute("userProfile", null);
+                } else {
+                    // Regular user - profile created with firm
+                    session.setAttribute("userProfile",
+                            mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+                }
                 
                 String firmDescription = Boolean.TRUE.equals(isMultiFirmUser) 
-                    ? selectedFirm.getName() + " (Multi-firm user)" 
+                    ? "(Multi-firm user)" 
                     : selectedFirm.getName();
                 CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                         firmDescription, userManager);
@@ -684,11 +691,18 @@ public class UserController {
             EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
             
-            // User profile is always created for all users
-            if (userProfileOptional.isPresent()) {
-                model.addAttribute("userProfile", userProfileOptional.get());
+            // Multi-firm users don't have a user profile - only entra_user entry
+            // Regular users have a user profile with firm assignment
+            if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                // No user profile for multi-firm users
+                model.addAttribute("userProfile", null);
             } else {
-                log.error("No userProfile attribute was present in request.");
+                // Regular user should have a profile
+                if (userProfileOptional.isPresent()) {
+                    model.addAttribute("userProfile", userProfileOptional.get());
+                } else {
+                    log.error("No userProfile attribute was present in request for non-multi-firm user.");
+                }
             }
         } else {
             log.error("No user attribute was present in request. User not added to model.");

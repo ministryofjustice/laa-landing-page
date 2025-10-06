@@ -497,15 +497,22 @@ public class UserService {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         // TODO revisit to set the user entra ID
         entraUser.setMultiFirmUser(isMultiFirmUser);
+        entraUser.setEntraOid(newUser.getEntraOid());
+        entraUser.setUserStatus(UserStatus.ACTIVE);
 
+        // Multi-firm users only get entra_user entry, no user_profile created
+        if (isMultiFirmUser) {
+            entraUser.setUserProfiles(Collections.emptySet());
+            return entraUserRepository.saveAndFlush(entraUser);
+        }
+
+        // Non-multi-firm users get a user_profile with firm assignment
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
             Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
             firmUserManagerRole.ifPresent(appRoles::add);
         }
 
-        // Multi-firm users still require a firm - just the flag is set
-        // User profile creation with firm is always required
         Firm firm = mapper.map(firmDto, Firm.class);
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
@@ -518,9 +525,7 @@ public class UserService {
                 .userProfileStatus(UserProfileStatus.PENDING)
                 .build();
 
-        entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserProfiles(Set.of(userProfile));
-        entraUser.setUserStatus(UserStatus.ACTIVE);
         return entraUserRepository.saveAndFlush(entraUser);
     }
 

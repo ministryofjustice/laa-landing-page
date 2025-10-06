@@ -1,14 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import org.hibernate.exception.ConstraintViolationException;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,23 +148,15 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testMultiFirmExternalUsersRequireFirm() {
-        // Test that multi-firm EXTERNAL users still require a firm (is_multi_firm_user flag indicates capability)
-        Firm firm1 = buildFirm("Multi-Firm Test", "MFT123");
-        firmRepository.save(firm1);
-        
+        // Test that multi-firm users only have entra_user entry, no user_profile
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test10@email.com", "First Name10", "Last Name10");
-        entraUser.setMultiFirmUser(true); // Mark as multi-firm user - this is just a flag
-        entraUserRepository.save(entraUser);
-
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
-        userProfile1.setFirm(firm1); // Multi-firm users still need initial firm
-        entraUser.getUserProfiles().add(userProfile1);
-
-        // Multi-firm users have a firm assigned; the flag indicates they CAN work with multiple firms
-        UserProfile saved = repository.saveAndFlush(userProfile1);
-        assertThat(saved.getFirm()).isNotNull();
-        assertThat(saved.getFirm().getName()).isEqualTo("Multi-Firm Test");
-        assertThat(saved.getUserType()).isEqualTo(UserType.EXTERNAL);
+        entraUser.setMultiFirmUser(true); // Mark as multi-firm user
+        
+        // Multi-firm users don't have any user profiles
+        EntraUser saved = entraUserRepository.saveAndFlush(entraUser);
+        
+        assertThat(saved.isMultiFirmUser()).isTrue();
+        assertThat(saved.getUserProfiles()).isEmpty(); // No profiles for multi-firm users
     }
 
     @Test

@@ -1,5 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -17,25 +29,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -2219,12 +2220,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             EntraUser capturedUser = userCaptor.getValue();
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
-            assertThat(capturedUser.getUserProfiles()).hasSize(1);
-            UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getFirm()).isNotNull(); // Multi-firm users still have initial firm
-            assertThat(profile.getFirm().getName()).isEqualTo("Test Firm");
-            assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
-            assertThat(profile.isActiveProfile()).isTrue();
+            assertThat(capturedUser.getUserProfiles()).isEmpty(); // Multi-firm users have no profile
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
         }
 
@@ -2235,13 +2231,6 @@ class UserServiceTest {
             user.setEmail("multifirm-manager@example.com");
             user.setFirstName("Multi");
             user.setLastName("Manager");
-
-            AppRole firmUserManagerRole = AppRole.builder()
-                    .id(UUID.randomUUID())
-                    .name("Firm User Manager")
-                    .build();
-            when(mockAppRoleRepository.findByName("Firm User Manager"))
-                    .thenReturn(Optional.of(firmUserManagerRole));
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
@@ -2256,20 +2245,14 @@ class UserServiceTest {
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
-            // Act
+            // Act - Note: isUserManager flag is ignored for multi-firm users since no profile is created
             EntraUser result = userService.createUser(user, firmDto, true, "admin", true);
 
             // Assert
             assertThat(result).isNotNull();
             EntraUser capturedUser = userCaptor.getValue();
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
-            assertThat(capturedUser.getUserProfiles()).hasSize(1);
-            UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getFirm()).isNotNull(); // Multi-firm users still have initial firm
-            assertThat(profile.getFirm().getName()).isEqualTo("Test Firm");
-            assertThat(profile.getAppRoles()).hasSize(1);
-            assertThat(profile.getAppRoles()).contains(firmUserManagerRole);
-            assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
+            assertThat(capturedUser.getUserProfiles()).isEmpty(); // Multi-firm users have no profile
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
         }
 
@@ -2388,8 +2371,8 @@ class UserServiceTest {
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
-            UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getUserProfileStatus()).isEqualTo(UserProfileStatus.PENDING);
+            // Multi-firm users have no profile, so no profile status to check
+            assertThat(capturedUser.getUserProfiles()).isEmpty();
         }
     }
 
