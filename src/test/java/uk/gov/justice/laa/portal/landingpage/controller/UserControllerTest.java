@@ -4049,6 +4049,31 @@ class UserControllerTest {
     }
 
     @Test
+    void testCreateUserFirm_WithExistingFirmInSession_ShouldUseExistingFirm() {
+        // Given
+        FirmDto existingFirm = FirmDto.builder()
+                .id(UUID.randomUUID())
+                .name("Existing Firm")
+                .build();
+
+        FirmSearchForm newForm = FirmSearchForm.builder().build();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("firm", existingFirm);
+        Model testModel = new ExtendedModelMap();
+
+        // When
+        String view = userController.createUserFirm(newForm, testSession, testModel, 10);
+
+        // Then
+        assertThat(view).isEqualTo("add-user-firm");
+        FirmSearchForm returnedForm = (FirmSearchForm) testModel.getAttribute("firmSearchForm");
+        assertThat(returnedForm).isNotNull();
+        assertThat(returnedForm.getSelectedFirmId()).isEqualTo(existingFirm.getId());
+        assertThat(returnedForm.getFirmSearch()).isEqualTo(existingFirm.getName());
+        assertThat(testSession.getAttribute("firmSearchForm")).isNull(); // Should be removed after use
+    }
+
+    @Test
     void testSearchFirms_ShouldReturnFirmList() {
         // Given
         String query = "Test Firm";
