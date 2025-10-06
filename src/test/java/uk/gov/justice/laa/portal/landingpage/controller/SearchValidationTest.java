@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -133,7 +134,7 @@ public class SearchValidationTest {
     void testEdgeCases() {
         // Test exactly 1 character (should be processed)
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        lenient().when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, "1")).thenReturn(List.of());
         when(firmService.searchFirms("2")).thenReturn(List.of());
 
@@ -147,18 +148,18 @@ public class SearchValidationTest {
         verify(firmService).searchFirms("2");
 
         // Test query with leading/trailing spaces
-        // The controller checks trim().length() but passes the original untrimmed query to service
+        // getFirms passes the original query to service, but searchFirms trims first
         when(firmService.getUserAccessibleFirms(entraUser, "  a  ")).thenReturn(List.of());
-        when(firmService.searchFirms("  b  ")).thenReturn(List.of());
+        when(firmService.searchFirms("b")).thenReturn(List.of());
 
         List<FirmDto> result3 = userController.getFirms(authentication, "  a  ");
         assertThat(result3).isEmpty(); // Empty but service was called (with original "  a  ")
 
         List<Map<String, String>> result4 = userController.searchFirms("  b  ");
-        assertThat(result4).isEmpty(); // Empty but service was called (with original "  b  ")
+        assertThat(result4).isEmpty(); // Empty but service was called (with trimmed "b")
 
-        // Verify the service was called with the original (untrimmed) values
+        // Verify the service was called - getFirms passes untrimmed, searchFirms passes trimmed
         verify(firmService).getUserAccessibleFirms(entraUser, "  a  ");
-        verify(firmService).searchFirms("  b  ");
+        verify(firmService).searchFirms("b");
     }
 }
