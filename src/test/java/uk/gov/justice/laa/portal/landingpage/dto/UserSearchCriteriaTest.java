@@ -194,7 +194,7 @@ class UserSearchCriteriaTest {
         // Then
         assertThat(toString).contains("UserSearchCriteria");
         assertThat(toString).contains("searchTerm='john doe'");
-        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=firm-123, selectedFirmId=" + firmSearchId + ", skipFirmSelection=false)'");
+        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=firm-123, selectedFirmId=" + firmSearchId + ", skipFirmSelection=null)'");
         assertThat(toString).contains("userType=EXTERNAL");
         assertThat(toString).contains("showFirmAdmins=true");
     }
@@ -226,7 +226,7 @@ class UserSearchCriteriaTest {
         // Then
         assertThat(toString).contains("UserSearchCriteria");
         assertThat(toString).contains("searchTerm=''");
-        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=null, selectedFirmId=null, skipFirmSelection=false)'");
+        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=null, selectedFirmId=null, skipFirmSelection=null)'");
         assertThat(toString).contains("userType=null");
         assertThat(toString).contains("showFirmAdmins=false");
     }
