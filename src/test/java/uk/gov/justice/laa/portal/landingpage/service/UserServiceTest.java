@@ -2192,7 +2192,7 @@ class UserServiceTest {
         }
 
         @Test
-        void createUser_multiFirmUser_createsUserProfileWithNullFirm() {
+        void createUser_multiFirmUser_createsUserProfileWithFirm() {
             // Arrange
             EntraUserDto user = new EntraUserDto();
             user.setEmail("multifirm@example.com");
@@ -2221,14 +2221,15 @@ class UserServiceTest {
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
             assertThat(capturedUser.getUserProfiles()).hasSize(1);
             UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getFirm()).isNull();
+            assertThat(profile.getFirm()).isNotNull(); // Multi-firm users still have initial firm
+            assertThat(profile.getFirm().getName()).isEqualTo("Test Firm");
             assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
             assertThat(profile.isActiveProfile()).isTrue();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
         }
 
         @Test
-        void createUser_multiFirmUser_withUserManagerRole_createsUserProfileWithNullFirm() {
+        void createUser_multiFirmUser_withUserManagerRole_createsUserProfileWithFirm() {
             // Arrange
             EntraUserDto user = new EntraUserDto();
             user.setEmail("multifirm-manager@example.com");
@@ -2264,7 +2265,8 @@ class UserServiceTest {
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
             assertThat(capturedUser.getUserProfiles()).hasSize(1);
             UserProfile profile = capturedUser.getUserProfiles().iterator().next();
-            assertThat(profile.getFirm()).isNull();
+            assertThat(profile.getFirm()).isNotNull(); // Multi-firm users still have initial firm
+            assertThat(profile.getFirm().getName()).isEqualTo("Test Firm");
             assertThat(profile.getAppRoles()).hasSize(1);
             assertThat(profile.getAppRoles()).contains(firmUserManagerRole);
             assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);

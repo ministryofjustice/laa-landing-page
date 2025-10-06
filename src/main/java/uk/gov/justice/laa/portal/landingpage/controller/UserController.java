@@ -636,19 +636,17 @@ public class UserController {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
                         userManager, currentUserDto.getName(), isMultiFirmUser != null ? isMultiFirmUser : false);
                 
-                // For multi-firm users, there won't be a user profile created initially
-                if (Boolean.TRUE.equals(isMultiFirmUser)) {
-                    session.setAttribute("userProfile", null);
-                    CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                            "Multi-firm user (no initial firm)", userManager);
-                    eventService.logEvent(createUserAuditEvent);
-                } else {
-                    session.setAttribute("userProfile",
-                            mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
-                    CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                            selectedFirm.getName(), userManager);
-                    eventService.logEvent(createUserAuditEvent);
-                }
+                // User profile is always created (with firm)
+                // The is_multi_firm_user flag in entra table indicates if user can work across multiple firms
+                session.setAttribute("userProfile",
+                        mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+                
+                String firmDescription = Boolean.TRUE.equals(isMultiFirmUser) 
+                    ? selectedFirm.getName() + " (Multi-firm user)" 
+                    : selectedFirm.getName();
+                CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
+                        firmDescription, userManager);
+                eventService.logEvent(createUserAuditEvent);
             } catch (TechServicesClientException techServicesClientException) {
                 log.debug("Error creating user: {}", techServicesClientException.getMessage());
                 model.addAttribute("errorMessage", techServicesClientException.getMessage());
@@ -686,13 +684,11 @@ public class UserController {
             EntraUserDto user = userOptional.get();
             model.addAttribute("user", user);
             
-            // For multi-firm users, userProfile will be null
-            if (Boolean.TRUE.equals(isMultiFirmUser)) {
-                model.addAttribute("userProfile", null);
-            } else if (userProfileOptional.isPresent()) {
+            // User profile is always created for all users
+            if (userProfileOptional.isPresent()) {
                 model.addAttribute("userProfile", userProfileOptional.get());
             } else {
-                log.error("No userProfile attribute was present for single-firm user.");
+                log.error("No userProfile attribute was present in request.");
             }
         } else {
             log.error("No user attribute was present in request. User not added to model.");

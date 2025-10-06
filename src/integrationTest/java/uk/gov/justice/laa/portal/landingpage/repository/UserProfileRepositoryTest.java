@@ -146,18 +146,23 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testFirmNullAllowedForMultiFirmExternalUsers() {
-        // Test that multi-firm EXTERNAL users can have a null firm (constraint removed for STB-2671)
+    public void testMultiFirmExternalUsersRequireFirm() {
+        // Test that multi-firm EXTERNAL users still require a firm (is_multi_firm_user flag indicates capability)
+        Firm firm1 = buildFirm("Multi-Firm Test", "MFT123");
+        firmRepository.save(firm1);
+        
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test10@email.com", "First Name10", "Last Name10");
-        entraUser.setMultiFirmUser(true); // Mark as multi-firm user
+        entraUser.setMultiFirmUser(true); // Mark as multi-firm user - this is just a flag
         entraUserRepository.save(entraUser);
 
         UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        userProfile1.setFirm(firm1); // Multi-firm users still need initial firm
         entraUser.getUserProfiles().add(userProfile1);
 
-        // Should not throw an exception - multi-firm users can have null firm
+        // Multi-firm users have a firm assigned; the flag indicates they CAN work with multiple firms
         UserProfile saved = repository.saveAndFlush(userProfile1);
-        assertThat(saved.getFirm()).isNull();
+        assertThat(saved.getFirm()).isNotNull();
+        assertThat(saved.getFirm().getName()).isEqualTo("Multi-Firm Test");
         assertThat(saved.getUserType()).isEqualTo(UserType.EXTERNAL);
     }
 

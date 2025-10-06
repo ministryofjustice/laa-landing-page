@@ -504,42 +504,24 @@ public class UserService {
             firmUserManagerRole.ifPresent(appRoles::add);
         }
 
-        // For multi-firm users, create a user profile with null firm
-        if (isMultiFirmUser) {
-            UserProfile userProfile = UserProfile.builder()
-                    .activeProfile(true)
-                    .userType(UserType.EXTERNAL)
-                    .appRoles(appRoles)
-                    .createdDate(LocalDateTime.now())
-                    .createdBy(createdBy)
-                    .firm(null) // No firm for multi-firm users
-                    .entraUser(entraUser)
-                    .userProfileStatus(UserProfileStatus.PENDING)
-                    .build();
+        // Multi-firm users still require a firm - just the flag is set
+        // User profile creation with firm is always required
+        Firm firm = mapper.map(firmDto, Firm.class);
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .appRoles(appRoles)
+                .createdDate(LocalDateTime.now())
+                .createdBy(createdBy)
+                .firm(firm)
+                .entraUser(entraUser)
+                .userProfileStatus(UserProfileStatus.PENDING)
+                .build();
 
-            entraUser.setEntraOid(newUser.getEntraOid());
-            entraUser.setUserProfiles(Set.of(userProfile));
-            entraUser.setUserStatus(UserStatus.ACTIVE);
-            return entraUserRepository.saveAndFlush(entraUser);
-        } else {
-            // Regular single-firm user flow
-            Firm firm = mapper.map(firmDto, Firm.class);
-            UserProfile userProfile = UserProfile.builder()
-                    .activeProfile(true)
-                    .userType(UserType.EXTERNAL)
-                    .appRoles(appRoles)
-                    .createdDate(LocalDateTime.now())
-                    .createdBy(createdBy)
-                    .firm(firm)
-                    .entraUser(entraUser)
-                    .userProfileStatus(UserProfileStatus.PENDING)
-                    .build();
-
-            entraUser.setEntraOid(newUser.getEntraOid());
-            entraUser.setUserProfiles(Set.of(userProfile));
-            entraUser.setUserStatus(UserStatus.ACTIVE);
-            return entraUserRepository.saveAndFlush(entraUser);
-        }
+        entraUser.setEntraOid(newUser.getEntraOid());
+        entraUser.setUserProfiles(Set.of(userProfile));
+        entraUser.setUserStatus(UserStatus.ACTIVE);
+        return entraUserRepository.saveAndFlush(entraUser);
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
