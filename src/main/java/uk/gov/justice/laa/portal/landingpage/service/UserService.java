@@ -617,6 +617,16 @@ public class UserService {
         return user.isPresent() || graphUser != null;
     }
 
+    public boolean isMultiFirmUserByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        // Check if the user exists in the local repository and is a multi-firm user
+        Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
+        return user.map(EntraUser::isMultiFirmUser).orElse(false);
+    }
+
     public List<AppRoleDto> getAppRolesByAppId(String appId) {
         UUID appUuid = UUID.fromString(appId);
         Optional<App> optionalApp = appRepository.findById(appUuid);

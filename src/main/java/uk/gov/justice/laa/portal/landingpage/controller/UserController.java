@@ -410,7 +410,13 @@ public class UserController {
         }
         if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
             if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
-                result.rejectValue("email", "error.email", "Email address already exists");
+                // Check if the existing user is a multi-firm user
+                if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
+                    result.rejectValue("email", "error.email", 
+                        "This email address is already registered as a multi-firm user");
+                } else {
+                    result.rejectValue("email", "error.email", "Email address already exists");
+                }
             }
 
             if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
