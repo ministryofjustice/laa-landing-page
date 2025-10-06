@@ -289,7 +289,7 @@ public class UserController {
                 .collect(Collectors.toList());
         List<OfficeDto> userOffices = optionalUser.get().getOffices();
         final Boolean isAccessGranted = userService.isAccessGranted(optionalUser.get().getId().toString());
-        final Boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
+        final boolean canEditUser = accessControlService.canEditUser(optionalUser.get().getId().toString());
         optionalUser.ifPresent(user -> model.addAttribute("user", user));
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -311,7 +311,7 @@ public class UserController {
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = filters != null && hasActiveFilters(filters);
+        boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
 
         return "manage-user";
@@ -505,7 +505,7 @@ public class UserController {
         if (firmSearchForm.getSelectedFirmId() != null) {
             try {
                 FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
-                selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
+                selectedFirm.setSkipFirmSelection(Boolean.TRUE.equals(firmSearchForm.getSkipFirmSelection()));
                 session.setAttribute("firm", selectedFirm);
             } catch (Exception e) {
                 log.error("Error retrieving selected firm: {}", e.getMessage());

@@ -16,7 +16,7 @@ public class FirmSearchForm implements Serializable {
 
     private UUID selectedFirmId;
 
-    private boolean skipFirmSelection;
+    private Boolean skipFirmSelection;
 
     public void setFirmSearch(String firmSearch) {
         if (firmSearch != null) {
