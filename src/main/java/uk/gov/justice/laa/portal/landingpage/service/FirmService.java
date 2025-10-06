@@ -1,18 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-
-import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -21,6 +15,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 
 /**
  * FirmService
@@ -93,8 +94,8 @@ public class FirmService {
      * @return List of FirmDto objects that match the search term
      */
     public List<FirmDto> searchFirms(String searchTerm) {
-        if (searchTerm == null || searchTerm.trim().isEmpty() || searchTerm.trim().length() < 1) {
-            return List.of(); // Return empty list for null, empty, or short search terms to prevent performance issues
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return getAllFirmsFromCache();
         }
 
         String trimmedSearchTerm = searchTerm.trim();
@@ -102,6 +103,8 @@ public class FirmService {
         return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
+                .sorted((s1, s2) ->
+                        Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                 .collect(Collectors.toList());
     }
 
@@ -135,14 +138,9 @@ public class FirmService {
                 .map(UserProfile::getUserType)
                 .orElseThrow(() -> new UnsupportedOperationException("User type not found"));
 
-        // If there's a search term, validate minimum length and use database query for better performance
+        // If there's a search term, use database query for better performance
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             String trimmedSearchTerm = searchTerm.trim();
-            
-            // Enforce minimum search length to prevent performance issues
-            if (trimmedSearchTerm.length() < 1) {
-                return List.of(); // Return empty list for short search terms
-            }
             
             switch (userType) {
                 case INTERNAL -> {
@@ -150,6 +148,8 @@ public class FirmService {
                     return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                             .stream()
                             .map(firm -> mapper.map(firm, FirmDto.class))
+                            .sorted((s1, s2) ->
+                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 case EXTERNAL -> {
@@ -159,6 +159,8 @@ public class FirmService {
                             .stream()
                             .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
                                     || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+                            .sorted((s1, s2) ->
+                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 default -> {

@@ -29,6 +29,8 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 
+import org.springframework.session.config.SessionRepositoryCustomizer;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -196,5 +198,27 @@ public class SecurityConfig {
         }
         logoutHandler.setOAuth2AuthorizedClientService(service);
         return service;
+    }
+
+    @Bean
+    public PostgreSqlJdbcHttpSessionCustomizer jdbcHttpSessionCustomizer() {
+        return new PostgreSqlJdbcHttpSessionCustomizer();
+    }
+
+    public class PostgreSqlJdbcHttpSessionCustomizer
+            implements SessionRepositoryCustomizer<JdbcIndexedSessionRepository> {
+
+        private static final String CREATE_SESSION_ATTRIBUTE_QUERY = """
+            INSERT INTO %TABLE_NAME%_ATTRIBUTES (SESSION_PRIMARY_ID, ATTRIBUTE_NAME, ATTRIBUTE_BYTES)
+            VALUES (?, ?, ?)
+            ON CONFLICT (SESSION_PRIMARY_ID, ATTRIBUTE_NAME)
+            DO UPDATE SET ATTRIBUTE_BYTES = EXCLUDED.ATTRIBUTE_BYTES
+            """;
+
+        @Override
+        public void customize(JdbcIndexedSessionRepository sessionRepository) {
+            sessionRepository.setCreateSessionAttributeQuery(CREATE_SESSION_ATTRIBUTE_QUERY);
+        }
+
     }
 }

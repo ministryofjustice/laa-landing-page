@@ -1,5 +1,53 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+import jakarta.transaction.Transactional;
+import org.apache.commons.lang3.StringUtils;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -23,55 +71,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.modelmapper.ModelMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-
-import jakarta.transaction.Transactional;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
 /**
  * userService
  */
@@ -90,8 +89,6 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
-    private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
             EntraUserRepository entraUserRepository,
@@ -134,8 +131,10 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
-        List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+        List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
@@ -220,17 +219,19 @@ public class UserService {
                 .toList();
         PageRequest pageRequest = PageRequest.of(0, 2);
         if (Objects.nonNull(firm)) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
-            if (externalUserManagerRole.isPresent()) {
-                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), "External User Manager", pageRequest);
-                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(externalUserManagerRole.get().getId()));
+            String userManagerRoleName = internal ? "External User Manager" : "Firm User Manager";
+            Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
+            if (optionalUserManagerRole.isPresent()) {
+                AppRole userManagerRole = optionalUserManagerRole.get();
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), userManagerRole.getName(), pageRequest);
+                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
-                    logger.warn("Attempt to remove own External User Manager, from user profile {}.", userId);
-                    return "You cannot remove your own External User Manager role";
+                    logger.warn("Attempt to remove own User Manager role, from user profile {}.", userId);
+                    return "You cannot remove your own User Manager role";
                 }
                 if (!internal && existingManagers.getTotalElements() < 2 && removeManager) {
-                    logger.warn("Attempt to remove last firm External User Manager, from user profile {}.", userId);
-                    return "External User Manager role could not be removed, this is the last External User Manager of " + firm.getName();
+                    logger.warn("Attempt to remove last firm User Manager, from user profile {}.", userId);
+                    return "User Manager role could not be removed, this is the last User Manager of " + firm.getName();
                 }
             }
         } else {
@@ -359,16 +360,6 @@ public class UserService {
     public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page, int pageSize,
             String sort,
             String direction) {
-        
-        // Validate search term length to prevent performance issues
-        if (searchCriteria != null && searchCriteria.getSearchTerm() != null) {
-            String searchTerm = searchCriteria.getSearchTerm().trim();
-            if (!searchTerm.isEmpty() && searchTerm.length() < 1) {
-                // Return empty result for short search terms to prevent returning all users
-                return new PaginatedUsers();
-            }
-        }
-        
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
         Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria,
                 pageRequest);
@@ -496,8 +487,8 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
         Set<AppRole> appRoles = new HashSet<>();
         if (isUserManager) {
-            Optional<AppRole> externalUserManagerRole = appRoleRepository.findByName("External User Manager");
-            externalUserManagerRole.ifPresent(appRoles::add);
+            Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
+            firmUserManagerRole.ifPresent(appRoles::add);
         }
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
@@ -643,7 +634,7 @@ public class UserService {
         }
     }
 
-    public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
+    public Set<LaaApplicationForView> getUserAssignedAppsforLandingPage(String id) {
         Optional<UserProfileDto> userProfile = getActiveProfileByUserId(id);
 
         if (userProfile.isEmpty()) {
@@ -684,12 +675,43 @@ public class UserService {
         }
     }
 
-    private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
+    private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
-        return applications.stream().filter(app -> userApps.stream()
+        Set<LaaApplicationForView> userAssignedApps =  applications.stream().filter(app -> userApps.stream()
                 .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
-                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
+                .map(LaaApplicationForView::new)
+                .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
+
+        // Make any necessary adjustments to the app display properties
+        makeAppDisplayAdjustments(userAssignedApps);
+
+        return userAssignedApps;
+    }
+
+    private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
+        List<LaaApplication> applications = laaApplicationsList.getApplications();
+
+        Set<String> userAppNames = userApps.stream()
+                .map(LaaApplicationForView::getName)
+                .collect(Collectors.toSet());
+
+        userApps.forEach(
+                app -> {
+                    Optional<LaaApplication> matchingApp = applications.stream()
+                            .filter(configApp -> configApp.getName().equals(app.getName()))
+                            .findFirst();
+
+                    matchingApp.ifPresent(configApp -> {
+                        if (configApp.getDescriptionIfAppAssigned() != null
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getAppAssigned())
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getDescription())
+                                && userAppNames.contains(configApp.getDescriptionIfAppAssigned().getAppAssigned())) {
+                            app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
+                        }
+                    });
+                }
+        );
     }
 
     /**
@@ -716,7 +738,7 @@ public class UserService {
      */
     public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
-        String diff = "";
+        String diff;
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {
