@@ -15,5 +15,5 @@ import lombok.NoArgsConstructor;
 public class MultiFirmForm implements Serializable {
 
     @NotNull(message = "You must select whether this user requires access to multiple firms")
-    private Boolean isMultiFirmUser;
+    private Boolean multiFirmUser;
 }

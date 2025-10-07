@@ -1,8 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -80,6 +77,8 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -475,7 +474,7 @@ public class UserController {
         // Pre-populate form with value from session if it exists
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         if (isMultiFirmUser != null) {
-            multiFirmForm.setIsMultiFirmUser(isMultiFirmUser);
+            multiFirmForm.setMultiFirmUser(isMultiFirmUser);
         }
         
         model.addAttribute("multiFirmForm", multiFirmForm);
@@ -493,8 +492,8 @@ public class UserController {
             return "redirect:/admin/user/create/select-firm";
         }
         
-        if (multiFirmForm.getIsMultiFirmUser() == null) {
-            result.rejectValue("isMultiFirmUser", "error.multiFirmUser",
+        if (multiFirmForm.getMultiFirmUser() == null) {
+            result.rejectValue("multiFirmUser", "error.multiFirmUser",
                     "You must select whether this user requires access to multiple firms");
         }
         
@@ -511,10 +510,10 @@ public class UserController {
             return "redirect:/admin/user/create/details";
         }
         
-        session.setAttribute("isMultiFirmUser", multiFirmForm.getIsMultiFirmUser());
+        session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
         
         // If multi-firm user, skip firm selection and go directly to check answers
-        if (Boolean.TRUE.equals(multiFirmForm.getIsMultiFirmUser())) {
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
             return "redirect:/admin/user/create/check-answers";
         } else {
             // Single firm user - go to firm selection

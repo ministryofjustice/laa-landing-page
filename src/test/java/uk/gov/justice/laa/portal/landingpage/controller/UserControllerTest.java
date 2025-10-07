@@ -4692,7 +4692,7 @@ class UserControllerTest {
         
         // Then
         assertThat(result).isEqualTo("add-user-multi-firm");
-        assertThat(multiFirmForm.getIsMultiFirmUser()).isTrue();
+        assertThat(multiFirmForm.getMultiFirmUser()).isTrue();
     }
     
     @Test
@@ -4706,7 +4706,7 @@ class UserControllerTest {
         
         uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
             new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-        multiFirmForm.setIsMultiFirmUser(true);
+        multiFirmForm.setMultiFirmUser(true);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
@@ -4730,7 +4730,7 @@ class UserControllerTest {
         
         uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
             new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-        multiFirmForm.setIsMultiFirmUser(false);
+        multiFirmForm.setMultiFirmUser(false);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
@@ -4754,7 +4754,7 @@ class UserControllerTest {
         
         uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
             new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-        multiFirmForm.setIsMultiFirmUser(null);
+        multiFirmForm.setMultiFirmUser(null);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
@@ -4763,7 +4763,7 @@ class UserControllerTest {
         String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
         
         // Then
-        verify(bindingResult).rejectValue("isMultiFirmUser", "error.multiFirmUser",
+        verify(bindingResult).rejectValue("multiFirmUser", "error.multiFirmUser",
                 "You must select whether this user requires access to multiple firms");
         assertThat(result).isEqualTo("add-user-multi-firm");
     }
@@ -4778,7 +4778,7 @@ class UserControllerTest {
         
         uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
             new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-        multiFirmForm.setIsMultiFirmUser(true);
+        multiFirmForm.setMultiFirmUser(true);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         

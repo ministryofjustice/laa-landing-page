@@ -26,8 +26,8 @@
                             </h2>
                             <div class="govuk-error-summary__body" id="error-summary-description">
                                 <ul class="govuk-list govuk-error-summary__list">
-                                    <li th:each="err : ${#fields.errors('isMultiFirmUser')}"
-                                        th:if="${#fields.hasErrors('isMultiFirmUser')}">
+                                    <li th:each="err : ${#fields.errors('multiFirmUser')[0]}"
+                                        th:if="${#fields.hasErrors('multiFirmUser')}">
                                         <a href="#multiFirmYes" th:text="${err}"></a>
                                     </li>
                                 </ul>
@@ -36,7 +36,7 @@
                     </div>
 
                     <div class="govuk-form-group"
-                        th:classappend="${#fields.hasErrors('isMultiFirmUser')} ? 'govuk-form-group--error'">
+                        th:classappend="${#fields.hasErrors('multiFirmUser')} ? 'govuk-form-group--error'">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                                 <h1 class="govuk-fieldset__heading">
@@ -49,9 +49,10 @@
                                 won't need to select a specific firm to associate them with.
                             </div>
 
-                            <div th:if="${#fields.hasErrors('isMultiFirmUser')}" class="govuk-error-message">
-                                <p th:each="err : ${#fields.errors('isMultiFirmUser')}" th:text="${err}"></p>
-                            </div>
+                            <span th:if="${#fields.hasErrors('multiFirmUser')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:text="${#fields.errors('multiFirmUser')[0]}"></span>
+                            </span>
 
                             <div class="govuk-form-group">
                                 <fieldset class="govuk-fieldset">
@@ -63,14 +64,14 @@
                                     <div class="govuk-radios" data-module="govuk-radios">
                                         <div class="govuk-radios__item">
                                             <input class="govuk-radios__input" id="multiFirmYes" type="radio"
-                                                th:field="*{isMultiFirmUser}" th:value="true">
+                                                th:field="*{multiFirmUser}" th:value="true">
                                             <label class="govuk-label govuk-radios__label" for="multiFirmYes">
                                                 Yes
                                             </label>
                                         </div>
                                         <div class="govuk-radios__item">
                                             <input class="govuk-radios__input" id="multiFirmNo" type="radio"
-                                                th:field="*{isMultiFirmUser}" th:value="false">
+                                                th:field="*{multiFirmUser}" th:value="false">
                                             <label class="govuk-label govuk-radios__label" for="multiFirmNo">
                                                 No
                                             </label>
