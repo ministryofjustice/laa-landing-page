@@ -70,7 +70,7 @@ public class EntraUser extends AuditableEntity {
     @ColumnDefault("AWAITING_APPROVAL")
     private UserStatus userStatus;
 
-    @Column(name = "is_multi_firm_user", nullable = false)
+    @Column(name = "multi_firm_user", nullable = false)
     @ColumnDefault("false")
     private boolean isMultiFirmUser;
 

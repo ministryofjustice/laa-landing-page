@@ -7,10 +7,10 @@ databaseChangeLog:
             tableName: entra_user
             columns:
               - column:
-                  name: is_multi_firm_user
+                  name: multi_firm_user
                   type: BOOLEAN
                   defaultValueBoolean: false
                   constraints:
                     nullable: false
         - sql:
-            sql: COMMENT ON COLUMN entra_user.is_multi_firm_user IS 'Flag indicating if user can access multiple firms without being tied to a specific firm initially'
+            sql: COMMENT ON COLUMN entra_user.multi_firm_user IS 'Flag indicating if user can access multiple firms without being tied to a specific firm initially'
