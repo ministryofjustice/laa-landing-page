@@ -9,12 +9,12 @@ import java.time.format.DateTimeFormatter;
 
 class ScreenshotUtil {
     static Path takeScreenshot(Page page, String testName) throws IOException {
-        Path dir = Path.of("screenshots");
+        Path dir = Path.of("screenshots"); //Directory to be set at a later date
         Files.createDirectories(dir);
 
         String safeTestName = testName.replaceAll("[^a-zA-Z0-9._-]", "_");
         String timestamp = LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                .format(DateTimeFormatter.ofPattern("ddMMyyyy_HHmmss"));
         Path path = dir.resolve(safeTestName + "_" + timestamp + ".png");
 
         page.screenshot(new Page.ScreenshotOptions()

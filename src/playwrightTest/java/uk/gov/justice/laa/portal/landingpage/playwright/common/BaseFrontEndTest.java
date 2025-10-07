@@ -1,11 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.common;
 
-import com.microsoft.playwright.*;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.extension.TestWatcher;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
