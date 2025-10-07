@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,8 +78,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -482,8 +483,7 @@ public class UserController {
         }
 
         int validatedCount = Math.max(10, Math.min(count, 100));
-        String trimmedQuery = query.trim();
-        List<FirmDto> firms = firmService.searchFirms(trimmedQuery);
+        List<FirmDto> firms = firmService.searchFirms(query.trim());
 
         List<Map<String, String>> result = firms.stream()
                 .limit(validatedCount) // Limit results to prevent overwhelming the UI
