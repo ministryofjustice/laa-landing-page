@@ -24,6 +24,7 @@ public class HomePage {
     private final Locator applyForCriminalLegalAidLink;
     private final Locator ccmsLink;
     private final Locator submitCrimeFormLink;
+    private final Locator accessRestrictionMessage;
 
     public HomePage(Page page) {
         this.page = page;
@@ -35,8 +36,11 @@ public class HomePage {
         this.applyForCriminalLegalAidLink = page.locator("a.govuk-link:has-text('Apply for criminal legal aid')");
         this.ccmsLink = page.locator("a.govuk-link:has-text('Client and Cost Management System')");
         this.submitCrimeFormLink = page.locator("a.govuk-link:has-text('Submit a crime form')");
+        this.accessRestrictionMessage = page.locator(
+                "div.govuk-inset-text p:has-text('You cannot currently access any services. Please contact the MOJ Service Desk to request access.')");
 
-        log.info("HomePage initialized");
+
+        log.info("HomePage initialised");
     }
 
     public void assertHeaderLoaded() {
@@ -69,12 +73,18 @@ public class HomePage {
     }
 
     public void assertOnManageUsersPage() {
-            log.debug("Verifying navigation to Manage Users page");
-            String expectedUrl =
-                    "https://dev.your-legal-aid-services.service.justice.gov.uk/admin/users";
-            assertEquals("URL should match the Manage Users page",
-                    expectedUrl,
-                    page.url());
+        log.debug("Verifying navigation to Manage Users page");
+        // Check URL
+        assertEquals("URL should match the Manage Users page",
+                page.url(), "https://dev.your-legal-aid-services.service.justice.gov.uk/admin/users");
+
 
     }
+
+    public void assertAccessRestrictionMessageVisible() {
+        log.debug("Checking that the access restriction message is visible for internal users");
+        assertThat(accessRestrictionMessage).isVisible();
+    }
+
 }
+
