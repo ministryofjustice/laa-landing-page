@@ -72,7 +72,7 @@ public class EntraUser extends AuditableEntity {
 
     @Column(name = "multi_firm_user", nullable = false)
     @ColumnDefault("false")
-    private boolean isMultiFirmUser;
+    private boolean multiFirmUser;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

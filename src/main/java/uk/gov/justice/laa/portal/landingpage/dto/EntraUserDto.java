@@ -21,6 +21,7 @@ public class EntraUserDto implements Serializable {
     private String entraOid;
     private String firstName;
     private String lastName;
+    private boolean multiFirmUser;
     private UserStatus userStatus;
     private boolean isMultiFirmUser;
 }

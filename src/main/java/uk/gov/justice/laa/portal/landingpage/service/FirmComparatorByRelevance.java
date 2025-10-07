@@ -40,13 +40,13 @@ public class FirmComparatorByRelevance {
         if (code.startsWith(query) || name.startsWith(query)) {
             return 80;
         }
-        if (code.toLowerCase().startsWith(query.toLowerCase()) || name.toLowerCase().startsWith(query)) {
+        if (code.toLowerCase().startsWith(query.toLowerCase()) || name.toLowerCase().startsWith(query.toLowerCase())) {
             return 70;
         }
         if (code.contains(query) || name.contains(query)) {
             return 60;
         }
-        if (code.toLowerCase().contains(query.toLowerCase()) || name.toLowerCase().contains(query)) {
+        if (code.toLowerCase().contains(query.toLowerCase()) || name.toLowerCase().contains(query.toLowerCase())) {
             return 50;
         }
 

@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -196,7 +194,7 @@ class UserSearchCriteriaTest {
         // Then
         assertThat(toString).contains("UserSearchCriteria");
         assertThat(toString).contains("searchTerm='john doe'");
-        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=firm-123, selectedFirmId=" + firmSearchId + ")'");
+        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=firm-123, selectedFirmId=" + firmSearchId + ", skipFirmSelection=null)'");
         assertThat(toString).contains("userType=EXTERNAL");
         assertThat(toString).contains("showFirmAdmins=true");
     }
@@ -228,7 +226,7 @@ class UserSearchCriteriaTest {
         // Then
         assertThat(toString).contains("UserSearchCriteria");
         assertThat(toString).contains("searchTerm=''");
-        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=null, selectedFirmId=null)'");
+        assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=null, selectedFirmId=null, skipFirmSelection=null)'");
         assertThat(toString).contains("userType=null");
         assertThat(toString).contains("showFirmAdmins=false");
     }

@@ -144,7 +144,7 @@ class UserControllerTest {
         // Arrange
         String searchQuery = "Firm 1";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1");
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1", false);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm1));
@@ -162,7 +162,7 @@ class UserControllerTest {
         // Arrange
         String searchQuery = "F2";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2");
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2", false);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm2));
@@ -181,8 +181,8 @@ class UserControllerTest {
         String searchQuery = "";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         List<FirmDto> expectedFirms = List.of(
-                new FirmDto(UUID.randomUUID(), "Firm A", "F1"),
-                new FirmDto(UUID.randomUUID(), "Firm B", "F2"));
+                new FirmDto(UUID.randomUUID(), "Firm A", "F1", false),
+                new FirmDto(UUID.randomUUID(), "Firm B", "F2", false));
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(expectedFirms);
@@ -4490,7 +4490,7 @@ class UserControllerTest {
             when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
 
             // Set up the user's firms (different from the one being accessed)
-            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1");
+            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", false);
             when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
 
             // When / Then
