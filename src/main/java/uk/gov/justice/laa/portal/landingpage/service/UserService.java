@@ -496,10 +496,6 @@ public class UserService {
             boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
         
-        // TODO revisit to set the user entra ID
-        // Check if DTO indicated multi-firm before we overwrite it
-        boolean dtoWasMultiFirm = entraUser.isMultiFirmUser();
-        entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
 
@@ -530,10 +526,6 @@ public class UserService {
                     .build();
 
             entraUser.setUserProfiles(Set.of(userProfile));
-        } else if (firmDto != null && firmDto.isSkipFirmSelection() && dtoWasMultiFirm) {
-            // Special case: DTO says multi-firm but registration param says single-firm, and firm is skipped
-            // This can happen during registration flow - allow it and leave profiles as whatever mapper set
-            // Profiles will be added later
         } else {
             logger.error("User {} {} is not a multi-firm user", entraUser.getFirstName(), entraUser.getLastName());
             throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
