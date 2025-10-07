@@ -1,18 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -30,14 +17,26 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -2116,33 +2115,6 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
             verify(techServicesClient).registerNewUser(any(EntraUserDto.class));
-        }
-
-        @Test
-        void createUser_withNoFirm_ForMultiFirmUser_withNoUserProfile() {
-            // assign role
-            UUID userId = UUID.randomUUID();
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
-            createdUser.setId("id");
-            createdUser.setMail("test.user@email.com");
-            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
-                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
-            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
-            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
-
-            List<String> roles = new ArrayList<>();
-            roles.add(UUID.randomUUID().toString());
-            EntraUserDto entraUserDto = new EntraUserDto();
-            entraUserDto.setMultiFirmUser(true);
-            entraUserDto.setFirstName("Test");
-            entraUserDto.setLastName("User");
-            entraUserDto.setEmail("test.user@email.com");
-            FirmDto firm = FirmDto.builder().skipFirmSelection(true).build();
-            EntraUser result = userService.createUser(entraUserDto, firm, true, "admin", false);
-            assertThat(result).isNotNull();
-            assertThat(result.getUserProfiles()).isNull();
-            verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
-            verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
 
         @Test

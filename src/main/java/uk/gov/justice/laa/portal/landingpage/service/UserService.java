@@ -495,7 +495,8 @@ public class UserService {
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
             boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
-        
+
+        entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
 
@@ -538,7 +539,8 @@ public class UserService {
 
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto, String createdBy) {
         if (!entraUserDto.isMultiFirmUser()) {
-            logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(), entraUserDto.getLastName());
+            logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
+                    entraUserDto.getLastName());
             throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
                     entraUserDto.getFirstName(), entraUserDto.getLastName()));
         }
