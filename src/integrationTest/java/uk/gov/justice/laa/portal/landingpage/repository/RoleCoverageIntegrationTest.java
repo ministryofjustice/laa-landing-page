@@ -19,7 +19,7 @@ public class RoleCoverageIntegrationTest extends RoleBasedAccessIntegrationTest 
     @Test
     void findFirmExternalUserManagers() {
         PageRequest pageRequest = PageRequest.of(0, 20);
-        Page<UserProfile> firm1ExternalManager = userProfileRepository.findFirmUserByAuthzRoleAndFirm(testFirm1.getId(), "External User Manager", pageRequest);
+        Page<UserProfile> firm1ExternalManager = userProfileRepository.findFirmUserByAuthzRoleAndFirm(testFirm1.getId(), "Firm User Manager", pageRequest);
         Assertions.assertThat(firm1ExternalManager).hasSize(5);
     }
 }

@@ -110,6 +110,12 @@ spec:
               value: "${APP_CCMS_ACCOUNT_LINK_DETAILS}"
             - name: APP_CCMS_ACCOUNT_LINK_URL
               value: "${APP_CCMS_ACCOUNT_LINK_URL}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_NAME
+              value: "${APP_SUBMIT_A_BULK_CLAIM_NAME}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_DETAILS
+              value: "${APP_SUBMIT_A_BULK_CLAIM_DETAILS}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_URL
+              value: "${APP_SUBMIT_A_BULK_CLAIM_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE

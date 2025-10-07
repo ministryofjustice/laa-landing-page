@@ -53,6 +53,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -71,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -601,7 +603,7 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
         when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
+        Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
         // Then
         assertThat(returnedApps.isEmpty()).isTrue();
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -676,15 +678,15 @@ class UserServiceTest {
         );
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
-        Set<LaaApplication> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+        Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
         // Then
         assertThat(returnedApps).isNotNull();
         assertThat(returnedApps.size()).isEqualTo(2);
-        Iterator<LaaApplication> iterator = returnedApps.iterator();
-        LaaApplication resultApp1 = iterator.next();
+        Iterator<LaaApplicationForView> iterator = returnedApps.iterator();
+        LaaApplicationForView resultApp1 = iterator.next();
         assertThat(resultApp1.getName()).isEqualTo("Test App 1");
-        LaaApplication resultApp2 = iterator.next();
+        LaaApplicationForView resultApp2 = iterator.next();
         assertThat(resultApp2.getName()).isEqualTo("Test App 2");
     }
 
@@ -952,7 +954,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -979,7 +981,7 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build())).build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1005,10 +1007,39 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
+    }
+
+    @Test
+    void updateUserRoles_updatesRoles_whenRestrictiveRoleUpdates() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID roleId = UUID.randomUUID();
+        UUID roleId2 = UUID.randomUUID();
+        UUID entraOid = UUID.randomUUID();
+        AppRole appRole = AppRole.builder().id(roleId).ordinal(1).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        userProfile.setEntraUser(user);
+
+        UUID modifierId = UUID.randomUUID();
+        EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
+                .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                        .userType(UserType.EXTERNAL).build())).build();
+
+        when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
+        when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
+        when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        // Act
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()), modifierId);
+
+        // Assert
+        List<AppRole> results = userProfile.getAppRoles().stream().sorted(Comparator.comparingInt(AppRole::getOrdinal)).toList();
+        assertThat(results).containsExactly(appRole, appRole2);
     }
 
     @Test
@@ -1030,7 +1061,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
 
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).isEmpty();
@@ -1045,7 +1076,8 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
 
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(UUID.randomUUID().toString()),
+                Collections.emptyList(), modifierId);
 
         // Assert
         List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -1872,11 +1904,11 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(2);
-            List<String> resultNames = result.stream().map(LaaApplication::getName).toList();
+            List<String> resultNames = result.stream().map(LaaApplicationForView::getName).toList();
             assertThat(resultNames).containsExactlyInAnyOrder("Test App 1", "Test App 2");
         }
 
@@ -1907,7 +1939,7 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).isEmpty();
@@ -1947,12 +1979,109 @@ class UserServiceTest {
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
 
             // Act
-            Set<LaaApplication> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
             // Assert
             assertThat(result).hasSize(3);
-            List<LaaApplication> resultList = new ArrayList<>(result);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
             assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(1).getName()).isEqualTo("App B");
+            assertThat(resultList.get(2).getName()).isEqualTo("App C");
+        }
+
+        @Test
+        void getUserAssignedAppsforLandingPage_returnsDefaultDescription() {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            App app1 = App.builder().name("App C").build();
+            App app2 = App.builder().name("App A").build();
+
+            AppRole role1 = AppRole.builder().app(app1).build();
+            AppRole role2 = AppRole.builder().app(app2).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .appRoles(Set.of(role1, role2))
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            List<LaaApplication> configuredApps = List.of(
+                    LaaApplication.builder().name("App C").ordinal(3).build(),
+                    LaaApplication.builder().name("App A").ordinal(1).description("Default description for App A")
+                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
+                                    .appAssigned("App B")
+                                    .description("Alternative description for App A").build()
+                            )
+                            .build(),
+                    LaaApplication.builder().name("App B").ordinal(2).build());
+            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+
+            // Act
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+
+            // Assert
+            assertThat(result).hasSize(2);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
+            assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(0).getDescription()).isEqualTo("Default description for App A");
+            assertThat(resultList.get(1).getName()).isEqualTo("App C");
+        }
+
+        @Test
+        void getUserAssignedAppsforLandingPage_returnsWithAlternativeDescription() {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+            App app1 = App.builder().name("App C").build();
+            App app2 = App.builder().name("App A").build();
+            App app3 = App.builder().name("App B").build();
+
+            AppRole role1 = AppRole.builder().app(app1).build();
+            AppRole role2 = AppRole.builder().app(app2).build();
+            AppRole role3 = AppRole.builder().app(app3).build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .appRoles(Set.of(role1, role2, role3))
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+
+            when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            List<LaaApplication> configuredApps = List.of(
+                    LaaApplication.builder().name("App C").ordinal(3).build(),
+                    LaaApplication.builder().name("App A").ordinal(1)
+                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
+                                    .appAssigned("App B")
+                                    .description("Alternative description for App A").build()
+                            )
+                            .build(),
+                    LaaApplication.builder().name("App B").ordinal(2).build());
+            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+
+            // Act
+            Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
+
+            // Assert
+            assertThat(result).hasSize(3);
+            List<LaaApplicationForView> resultList = new ArrayList<>(result);
+            assertThat(resultList.get(0).getName()).isEqualTo("App A");
+            assertThat(resultList.get(0).getDescription()).isEqualTo("Alternative description for App A");
             assertThat(resultList.get(1).getName()).isEqualTo("App B");
             assertThat(resultList.get(2).getName()).isEqualTo("App C");
         }
@@ -2107,7 +2236,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
@@ -2140,7 +2269,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(), modifierId);
+            Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(),
+                    Collections.emptyList(), modifierId);
 
             // Assert
             assertThat(result.get("error")).isNotEmpty();
@@ -2918,7 +3048,8 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles,
+                    Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2977,7 +3108,7 @@ class UserServiceTest {
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
@@ -2996,7 +3127,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.empty());
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             verify(mockUserProfileRepository, never()).save(any());
             verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
@@ -3046,7 +3177,7 @@ class UserServiceTest {
                             .userType(UserType.EXTERNAL).build())).build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
-            userService.updateUserRoles(userProfileId, selectedRoles, modifierId);
+            userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());

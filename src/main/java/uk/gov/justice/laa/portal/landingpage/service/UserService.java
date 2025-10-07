@@ -7,11 +7,11 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
 import jakarta.transaction.Transactional;
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -37,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -56,7 +57,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.function.Function;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -67,6 +67,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -88,8 +89,6 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Value("${spring.security.oauth2.client.registration.azure.redirect-uri}")
-    private String redirectUri;
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
             EntraUserRepository entraUserRepository,
@@ -132,8 +131,10 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, UUID modifierId) {
-        List<AppRole> roles = appRoleRepository.findAllById(selectedRoles.stream()
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+        List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
                 .map(UUID::fromString)
                 .collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
@@ -633,7 +634,7 @@ public class UserService {
         }
     }
 
-    public Set<LaaApplication> getUserAssignedAppsforLandingPage(String id) {
+    public Set<LaaApplicationForView> getUserAssignedAppsforLandingPage(String id) {
         Optional<UserProfileDto> userProfile = getActiveProfileByUserId(id);
 
         if (userProfile.isEmpty()) {
@@ -674,12 +675,43 @@ public class UserService {
         }
     }
 
-    private Set<LaaApplication> getUserAssignedApps(Set<AppDto> userApps) {
+    private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
-        return applications.stream().filter(app -> userApps.stream()
+        Set<LaaApplicationForView> userAssignedApps =  applications.stream().filter(app -> userApps.stream()
                 .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
-                .sorted(Comparator.comparingInt(LaaApplication::getOrdinal))
+                .map(LaaApplicationForView::new)
+                .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
                 .collect(Collectors.toCollection(TreeSet::new));
+
+        // Make any necessary adjustments to the app display properties
+        makeAppDisplayAdjustments(userAssignedApps);
+
+        return userAssignedApps;
+    }
+
+    private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
+        List<LaaApplication> applications = laaApplicationsList.getApplications();
+
+        Set<String> userAppNames = userApps.stream()
+                .map(LaaApplicationForView::getName)
+                .collect(Collectors.toSet());
+
+        userApps.forEach(
+                app -> {
+                    Optional<LaaApplication> matchingApp = applications.stream()
+                            .filter(configApp -> configApp.getName().equals(app.getName()))
+                            .findFirst();
+
+                    matchingApp.ifPresent(configApp -> {
+                        if (configApp.getDescriptionIfAppAssigned() != null
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getAppAssigned())
+                                && StringUtils.isNotEmpty(configApp.getDescriptionIfAppAssigned().getDescription())
+                                && userAppNames.contains(configApp.getDescriptionIfAppAssigned().getAppAssigned())) {
+                            app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
+                        }
+                    });
+                }
+        );
     }
 
     /**
@@ -706,7 +738,7 @@ public class UserService {
      */
     public String updateUserOffices(String userId, List<String> selectedOffices) throws IOException {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
-        String diff = "";
+        String diff;
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {

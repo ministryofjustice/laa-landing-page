@@ -506,9 +506,8 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(result.getError().getCode()).isEqualTo("USER_ALREADY_EXISTS");
         Assertions.assertThat(result.getError().getMessage()).isEqualTo("A user with this email already exists");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.DEBUG,
+        assertLogMessage(Level.INFO,
                 "Error while sending new user creation request to Tech Services for firstName lastName");
-        assertLogMessage(Level.INFO, "Handling user conflicts gracefully.");
         verify(restClient, times(1)).post();
     }
 
@@ -536,15 +535,15 @@ public class LiveTechServicesClientTest {
         when(responseSpec.toEntity(String.class)).thenThrow(exception);
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
-        RuntimeException rtEx = assertThrows(RuntimeException.class,
-                () -> liveTechServicesClient.registerNewUser(user),
-                "RuntimeException expected");
+        TechServicesApiResponse<RegisterUserResponse> result = liveTechServicesClient.registerNewUser(user);
 
-        Assertions.assertThat(rtEx).isNotNull();
-        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage()).isEqualTo("Error while sending new user creation request to Tech Services.");
-        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services");
-        assertLogMessage(Level.ERROR,
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.isSuccess()).isFalse();
+        Assertions.assertThat(result.getError()).isNotNull();
+        Assertions.assertThat(result.getError().getCode()).isEqualTo("BAD_REQUEST");
+        Assertions.assertThat(result.getError().getMessage()).isEqualTo("givenName is required and must be a non-empty string");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.INFO,
                 "Error while sending new user creation request to Tech Services for firstName lastName");
         verify(restClient, times(1)).post();
     }

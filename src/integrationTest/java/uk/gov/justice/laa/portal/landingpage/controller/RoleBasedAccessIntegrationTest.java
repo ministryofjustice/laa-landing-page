@@ -165,7 +165,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             profile.setFirm(testFirm1);
             AppRole externalUserManagerRole = allAppRoles.stream()
                     .filter(AppRole::isAuthzRole)
-                    .filter(role -> role.getName().equals("External User Manager"))
+                    .filter(role -> role.getName().equals("Firm User Manager"))
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("Could not find app role"));
             profile.setAppRoles(Set.of(externalUserManagerRole));
@@ -255,6 +255,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         externalUserViewers.add(entraUserRepository.saveAndFlush(user));
+
+        // Set up Firm User Manager
 
 
         allUsers.addAll(internalUsersNoRoles);
