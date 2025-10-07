@@ -69,11 +69,13 @@ public class HomePage {
     }
 
     public void assertOnManageUsersPage() {
-        log.debug("Verifying navigation to Manage Users page");
-        // Check URL
-        assertEquals("URL should match the Manage Users page",
-                page.url(), "https://dev.your-legal-aid-services.service.justice.gov.uk/admin/users");
-
+        public void assertOnManageUsersPage() {
+            log.debug("Verifying navigation to Manage Users page");
+            String expectedUrl =
+                    "https://dev.your-legal-aid-services.service.justice.gov.uk/admin/users";
+            assertEquals("URL should match the Manage Users page",
+                    expectedUrl,
+                    page.url());
 
     }
 }
