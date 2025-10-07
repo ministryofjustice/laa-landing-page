@@ -11,10 +11,10 @@ class ConfigLoader {
         Properties config = new Properties();
         try (var stream = ConfigLoader.class.getResourceAsStream(configFile)) {
             if (stream == null) {
-                throw new IOException(String.format("Configuration file '%s' not found", configFile));
+                throw new IOException("Could not find " + configFile + " on classpath");
             }
             config.load(stream);
-            LOGGER.info("Configuration loaded from: {}", configFile);
+            LOGGER.info("Configuration loaded successfully");
             return config;
         }
     }
