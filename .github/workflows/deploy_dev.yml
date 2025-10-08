@@ -42,7 +42,7 @@ jobs:
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@v4.3.1
+      - uses: aws-actions/configure-aws-credentials@v5.1.0
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
