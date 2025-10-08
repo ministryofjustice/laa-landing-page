@@ -96,13 +96,20 @@
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row"
-                                    th:if="${!enableMultiFirmUser || !isMultiFirmUser}">
+                                    th:if="${firm != null and firm.name != null}">
                                     <dt class="govuk-summary-list__key">Firm</dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${firm.code != null ? firm.name + ' (Firm code: ' + firm.code + ')' : firm.name}"></span>
+                                        <span th:text="${firm.name}"></span>
+                                        <br th:if="${firm.code != null}" />
+                                        <span th:if="${firm.code != null}" class="govuk-body-s" style="color: #505a5f;">
+                                            Firm code: <span th:text="${firm.code}"></span>
+                                        </span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/firm">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/firm">
+                                            <span>Change</span>
+                                            <span class="govuk-visually-hidden"> firm</span>
+                                        </a>
                                     </dd>
                                 </div>
                             </dl>
