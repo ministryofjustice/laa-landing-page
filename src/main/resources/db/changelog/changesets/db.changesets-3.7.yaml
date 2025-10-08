@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1758711876000-1
+      author: suresh kavali
+      changes:
+        # add table oauth2_authorized_client
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: client_registration_id
+                  type: VARCHAR(100)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: principal_name
+                  type: VARCHAR(200)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: access_token_type
+                  type: VARCHAR(100)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: access_token_value
+                  type: BYTEA
+              - column:
+                  constraints:
+                    nullable: false
+                  name: access_token_issued_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  constraints:
+                    nullable: false
+                  name: access_token_expires_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  name: access_token_scopes
+                  type: VARCHAR(1000)
+              - column:
+                  name: refresh_token_value
+                  type: BYTEA
+              - column:
+                  name: refresh_token_issued_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  constraints:
+                    nullable: false
+                  name: created_at
+                  type: TIMESTAMP WITHOUT TIME ZONE
+                  defaultValueComputed: current_timestamp
+            tableName: oauth2_authorized_client
+        - addPrimaryKey:
+            columnNames: client_registration_id, principal_name
+            tableName: oauth2_authorized_client

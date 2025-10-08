@@ -5,7 +5,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -102,7 +102,7 @@ public class LoginService {
 
         List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraOid());
 
-        Set<LaaApplication> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
+        Set<LaaApplicationForView> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);
     }

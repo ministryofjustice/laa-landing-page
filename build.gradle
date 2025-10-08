@@ -1,6 +1,6 @@
 plugins {
     id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.32'
-    id "io.sentry.jvm.gradle" version "5.5.0"
+    id "io.sentry.jvm.gradle" version "5.11.0"
 }
 
 ext {
@@ -30,6 +30,7 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
+    sentryVersion = "8.16.0"
     enabled = true
   }
 }
@@ -56,6 +57,7 @@ configurations {
 }
 
 dependencies {
+    implementation 'io.sentry:sentry-opentelemetry-agentless-spring:8.16.0'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
@@ -63,6 +65,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.projectlombok:lombok'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation 'org.springframework.session:spring-session-jdbc'
 
     implementation 'org.apache.httpcomponents.client5:httpclient5'
 
@@ -158,6 +161,7 @@ jacocoTestReport {
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
+                    '**/config/SecurityConfig.class',
                     '**/model/**'
             ])
         })

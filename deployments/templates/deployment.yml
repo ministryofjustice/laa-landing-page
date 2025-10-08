@@ -110,6 +110,12 @@ spec:
               value: "${APP_CCMS_ACCOUNT_LINK_DETAILS}"
             - name: APP_CCMS_ACCOUNT_LINK_URL
               value: "${APP_CCMS_ACCOUNT_LINK_URL}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_NAME
+              value: "${APP_SUBMIT_A_BULK_CLAIM_NAME}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_DETAILS
+              value: "${APP_SUBMIT_A_BULK_CLAIM_DETAILS}"
+            - name: APP_SUBMIT_A_BULK_CLAIM_URL
+              value: "${APP_SUBMIT_A_BULK_CLAIM_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE
@@ -204,3 +210,7 @@ spec:
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
+            - name: FEATURE_FLAG_ENABLE_RESEND_VER_CODE
+              value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
+            - name: SPRING_SESSION_JDBC_ENABLED
+              value: "${SPRING_SESSION_JDBC_ENABLED}"

@@ -5,10 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ServicePrincipalModel {
+public class ServicePrincipalModel implements Serializable {
     private ServicePrincipal  servicePrincipal;
     private boolean selected = false;
 }

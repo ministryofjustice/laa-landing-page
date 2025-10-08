@@ -6,13 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.Date;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterUserResponse {
+public class RegisterUserResponse implements Serializable {
     @JsonProperty("success")
     private boolean success;
     @JsonProperty("message")
@@ -24,7 +25,7 @@ public class RegisterUserResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class CreatedUser {
+    public static class CreatedUser implements Serializable {
         @JsonProperty("id")
         private String id;
         @JsonProperty("displayName")

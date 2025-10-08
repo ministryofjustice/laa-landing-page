@@ -25,6 +25,23 @@
                     Check your answers and confirm
                 </h1>
                 <form th:action="@{/admin/user/create/check-answers}" th:method="post">
+                    <div th:if="${errorMessage}">
+                        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                             aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                                There is a problem
+                            </h2>
+                            <div class="govuk-error-summary__body" id="error-summary-description">
+                                <span th:text="${errorMessage}"></span>
+                                <ul class="govuk-list govuk-error-summary__list">
+                                    <li th:each="error : ${errors}">
+                                        <span th:text="${error}"></span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="govuk-summary-card">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
@@ -72,7 +89,7 @@
                                 <div class="govuk-summary-list__row">
                                     <dt class="govuk-summary-list__key">Firm</dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${firm.name}"></span>
+                                        <span th:text="${firm.name} + ' (Firm code: ' + ${firm.code} + ')'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link" href="/admin/user/create/firm">Change</a>

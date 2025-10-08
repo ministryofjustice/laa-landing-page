@@ -6,6 +6,7 @@ import lombok.Data;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
@@ -15,10 +16,10 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @Builder
-public class UserSessionData {
+public class UserSessionData implements Serializable {
     private String name;
     private String accessToken;
     private EntraUserDto user;
-    private Set<LaaApplication> laaApplications;
+    private Set<LaaApplicationForView> laaApplications;
     List<UserType> userTypes;
 }
