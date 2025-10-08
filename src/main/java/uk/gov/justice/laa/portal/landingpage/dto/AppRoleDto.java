@@ -7,11 +7,13 @@ import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.io.Serializable;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppRoleDto implements Comparable<AppRoleDto> {
+public class AppRoleDto implements Comparable<AppRoleDto>, Serializable {
     private String id;
     private String name;
     private int ordinal;

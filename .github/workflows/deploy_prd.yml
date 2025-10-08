@@ -18,7 +18,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v5
 
 
       - name: Set up JDK
@@ -37,7 +37,7 @@ jobs:
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@v4.3.1
+      - uses: aws-actions/configure-aws-credentials@v5.1.0
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
@@ -111,6 +111,9 @@ jobs:
           APP_CCMS_ACCOUNT_LINK_NAME: ${{ vars.APP_CCMS_ACCOUNT_LINK_NAME }}
           APP_CCMS_ACCOUNT_LINK_DETAILS: ${{ vars.APP_CCMS_ACCOUNT_LINK_DETAILS }}
           APP_CCMS_ACCOUNT_LINK_URL: ${{ secrets.APP_CCMS_ACCOUNT_LINK_URL }}
+          APP_SUBMIT_A_BULK_CLAIM_NAME: ${{ vars.APP_SUBMIT_A_BULK_CLAIM_NAME }}
+          APP_SUBMIT_A_BULK_CLAIM_DETAILS: ${{ vars.APP_SUBMIT_A_BULK_CLAIM_DETAILS }}
+          APP_SUBMIT_A_BULK_CLAIM_URL: ${{ secrets.APP_SUBMIT_A_BULK_CLAIM_URL }}
           TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
           TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
           TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}
@@ -134,6 +137,7 @@ jobs:
           ENABLE_DISTRIBUTED_DB_LOCKING: ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
           DISTRIBUTED_DB_LOCKING_PERIOD: ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
           FEATURE_FLAG_ENABLE_RESEND_VER_CODE : ${{ vars.FEATURE_FLAG_ENABLE_RESEND_VER_CODE }}
+          SPRING_SESSION_JDBC_ENABLED : ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
 
       - name: Deploy to Cloud Platform
         run: |

@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serializable;
+
 /**
  * Model class representing Laa Applications
  */
@@ -14,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LaaApplication implements Comparable<LaaApplication> {
+public class LaaApplication implements Comparable<LaaApplication>, Serializable {
     private String name;
     private String oidGroupName;
     private String title;
@@ -24,6 +26,7 @@ public class LaaApplication implements Comparable<LaaApplication> {
     private String laaApplicationDetails;
     @JsonIgnore
     private LaaApplicationDetails laaApplicationDetailsObj;
+    private DescriptionIfAppAssigned descriptionIfAppAssigned;
 
     @Override
     public int compareTo(@NotNull LaaApplication o) {
@@ -45,9 +48,17 @@ public class LaaApplication implements Comparable<LaaApplication> {
 
     @AllArgsConstructor
     @Data
-    public static class LaaApplicationDetails {
+    public static class LaaApplicationDetails implements Serializable {
         private String oid;
         private String securityGroupName;
         private String securityGroupOid;
+    }
+
+    @AllArgsConstructor
+    @Data
+    @Builder
+    public static class DescriptionIfAppAssigned {
+        private String appAssigned;
+        private String description;
     }
 }

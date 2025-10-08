@@ -30,6 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -352,7 +353,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(true);
@@ -376,7 +377,7 @@ class LoginControllerTest {
                 .user(EntraUserDto.builder().id(userId).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithNoRoles);
         when(userService.isInternal(userId)).thenReturn(false);
@@ -396,14 +397,14 @@ class LoginControllerTest {
         Model model = new ConcurrentModel();
         UserSessionData userSessionDataWithRoles = UserSessionData.builder()
                 .laaApplications(Set.of(
-                    uk.gov.justice.laa.portal.landingpage.model.LaaApplication.builder()
+                    LaaApplicationForView.builder()
                         .name("Test App")
                         .title("Test Application")
                         .build()))
                 .user(EntraUserDto.builder().id(UUID.randomUUID().toString()).build())
                 .name("Test User")
                 .build();
-        
+
         when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
                 .thenReturn(userSessionDataWithRoles);
 

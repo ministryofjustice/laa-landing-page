@@ -4,9 +4,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class CreateUserAuditEvent extends AuditEvent {
+public class CreateUserAuditEvent extends AuditEvent implements Serializable {
     private final EntraUser user;
     private final String selectedFirm;
     private final boolean isUserManager;
