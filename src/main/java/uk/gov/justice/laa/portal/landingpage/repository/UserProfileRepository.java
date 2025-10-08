@@ -50,7 +50,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                                     LEFT JOIN FETCH ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL 
+                        AND (:#{#criteria.firmSearch.firmSearch} IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%'))) 
+                                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
                             (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
