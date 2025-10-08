@@ -17,7 +17,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -109,6 +109,11 @@ public class UserController {
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
     public List<FirmDto> getFirms(Authentication authentication,
             @RequestParam(value = "q", defaultValue = "") String query) {
+        // If the query is blank/whitespace-only, return an empty result and do not
+        // call the service to avoid unnecessary work.
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         return firmService.getUserAccessibleFirms(entraUser, query);
     }
@@ -453,6 +458,13 @@ public class UserController {
         if (existingForm != null) {
             firmSearchForm = existingForm;
             session.removeAttribute("firmSearchForm");
+        } else if (session.getAttribute("firm") != null) {
+            // Grab firm search details from session firm if coming here from the confirmation screen.
+            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            firmSearchForm = FirmSearchForm.builder()
+                    .selectedFirmId(firm.getId())
+                    .firmSearch(firm.getName())
+                    .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
         model.addAttribute("firmSearchForm", firmSearchForm);
@@ -465,8 +477,14 @@ public class UserController {
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
                                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        // If the query is blank/whitespace-only, return an empty result and do not
+        // call the service to avoid unnecessary work.
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
         int validatedCount = Math.max(10, Math.min(count, 100));
-        List<FirmDto> firms = firmService.searchFirms(query);
+        List<FirmDto> firms = firmService.searchFirms(query.trim());
 
         List<Map<String, String>> result = firms.stream()
                 .limit(validatedCount) // Limit results to prevent overwhelming the UI
