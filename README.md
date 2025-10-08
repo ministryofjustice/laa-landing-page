@@ -6,7 +6,7 @@
 
 The LAA Portal Landing Page is a user facing application for the LAA.
 It controls authentication and authorisation to most LAA web applications.
-Users of the Portal include both internal LAA staff and external solicitors (providers of legal aid). Hello
+Users of the Portal include both internal LAA staff and external solicitors (providers of legal aid).
 This is a prototype application developed and maintained by the LAA portal stabilisation dev team.
 
 ## Running the app locally
