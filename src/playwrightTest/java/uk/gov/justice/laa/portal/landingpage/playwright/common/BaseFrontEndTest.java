@@ -58,8 +58,8 @@ public abstract class BaseFrontEndTest {
         try {
             // Use properties for URL, username, and password
             String url = config.getProperty("laa.landing.page.url");
-            String username = config.getProperty("laa.landing.page.user");
-            String password = config.getProperty("laa.landing.page.password");
+            final String username = config.getProperty("laa.landing.page.user");
+            final String password = config.getProperty("laa.landing.page.password");
 
             page.navigate(url);
             page.locator("[id='i0116']").fill(username);

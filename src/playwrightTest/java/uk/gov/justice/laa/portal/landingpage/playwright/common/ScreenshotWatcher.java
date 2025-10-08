@@ -11,8 +11,9 @@ class ScreenshotWatcher implements TestWatcher {
 
     @Override
     public void testFailed(ExtensionContext context, Throwable cause) {
-        if (BaseFrontEndTest.page == null) return;
-
+        if (BaseFrontEndTest.page == null) {
+            return;
+        }
         try {
             Path screenshotPath = ScreenshotUtil.takeScreenshot(
                     BaseFrontEndTest.page,

@@ -14,13 +14,13 @@ public class ManageUsersPage {
 
     // Locators
     private final Locator header;
-    private final Locator createANewUserButton;
+    private final Locator createaNewUserButton;
 
 
     public ManageUsersPage(Page page) {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl"); // main header
-        this.createANewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
+        this.createaNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
 
 
     }
@@ -33,7 +33,7 @@ public class ManageUsersPage {
 
     public void clickCreateUser() {
         log.debug("Clicking 'Create user' button");
-        createANewUserButton.click();
+        createaNewUserButton.click();
     }
 
 }
