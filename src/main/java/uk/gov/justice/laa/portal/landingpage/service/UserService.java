@@ -500,14 +500,14 @@ public class UserService {
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
 
-        // Multi-firm users always get empty profiles - profiles added later via addMultiFirmUserProfile()
-        if (isMultiFirmUser) {
-            entraUser.setUserProfiles(Collections.emptySet());
-            return entraUserRepository.saveAndFlush(entraUser);
+        if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
+            logger.error("User {} {} is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getFirstName(), entraUser.getLastName());
+            throw new RuntimeException(String.format("User %s %s is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getFirstName(), entraUser.getLastName()));
         }
 
-        // Non-multi-firm users must have a firm and get a user_profile
-        if (firmDto != null && !firmDto.isSkipFirmSelection()) {
+        if (!isMultiFirmUser || !firmDto.isSkipFirmSelection()) {
             Set<AppRole> appRoles = new HashSet<>();
             if (isUserManager) {
                 Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
@@ -527,10 +527,6 @@ public class UserService {
                     .build();
 
             entraUser.setUserProfiles(Set.of(userProfile));
-        } else {
-            logger.error("User {} {} is not a multi-firm user", entraUser.getFirstName(), entraUser.getLastName());
-            throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
-                    entraUser.getFirstName(), entraUser.getLastName()));
         }
 
         // Audit fields are automatically set by Spring Data JPA auditing

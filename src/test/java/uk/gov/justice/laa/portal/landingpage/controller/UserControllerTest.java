@@ -80,6 +80,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientExcepti
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -680,8 +681,10 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswersGetFirmAdmin() {
         HttpSession session = new MockHttpSession();
+        FirmDto firmDto = new FirmDto();
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("isUserManager", false);
+        session.setAttribute("firm", firmDto);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
@@ -2376,9 +2379,11 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_shouldCallCreateUserAndRedirect() {
         MockHttpSession mockSession = new MockHttpSession();
+        FirmDto firmDto = new FirmDto();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);
+        mockSession.setAttribute("firm", firmDto);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -2400,9 +2405,11 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_duplicate_user_shouldCallCreateUserButShowErrorOnCurrentPage() {
         MockHttpSession mockSession = new MockHttpSession();
+        FirmDto firmDto = new FirmDto();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);
+        mockSession.setAttribute("firm", firmDto);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -2425,9 +2432,11 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_on_ts_error_shouldCallCreateUserAndShowErrorPage() {
         MockHttpSession mockSession = new MockHttpSession();
+        FirmDto firmDto = new FirmDto();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);
+        mockSession.setAttribute("firm", firmDto);
         // No other session attributes set
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -4077,7 +4086,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-firm");
         assertThat(testModel.getAttribute("firmSearchForm")).isEqualTo(existingForm);
-        assertThat(testSession.getAttribute("firmSearchForm")).isNull(); // Should be removed after use
+        assertThat(testSession.getAttribute("firmSearchForm")).isNotNull();
     }
 
     @Test
@@ -4380,7 +4389,6 @@ class UserControllerTest {
         when(firmService.getAllFirmsFromCache()).thenReturn(mockFirms);
         FirmSearchForm newSearch = FirmSearchForm.builder().build();
         newSearch.setFirmSearch("Test");
-        newSearch.setSelectedFirmId(UUID.fromString("014a4a45-10b9-4940-9212-7cbd0937f6d1"));
         Model testModel = new ExtendedModelMap();
 
         // When
@@ -4696,7 +4704,7 @@ class UserControllerTest {
     }
     
     @Test
-    void postUserMultiFirm_withValidYes_redirectsToCheckAnswers() {
+    void postUserMultiFirm_withValidYes_redirectsToFirmSelection() {
         // Given
         ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
@@ -4704,8 +4712,7 @@ class UserControllerTest {
         user.setEmail("test@example.com");
         session.setAttribute("user", user);
         
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = 
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        MultiFirmForm multiFirmForm = new MultiFirmForm();
         multiFirmForm.setMultiFirmUser(true);
         
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
@@ -4715,7 +4722,7 @@ class UserControllerTest {
         String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
         
         // Then
-        assertThat(result).isEqualTo("redirect:/admin/user/create/check-answers");
+        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
         assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(true);
     }
     

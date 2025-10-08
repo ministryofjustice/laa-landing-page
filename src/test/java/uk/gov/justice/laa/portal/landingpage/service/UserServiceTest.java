@@ -2165,7 +2165,7 @@ class UserServiceTest {
             RuntimeException rtEx = assertThrows(RuntimeException.class,
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
-            assertThat(rtEx.getMessage()).isEqualTo("User Test User is not a multi-firm user");
+            assertThat(rtEx.getMessage()).isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
@@ -2270,7 +2270,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             EntraUser capturedUser = userCaptor.getValue();
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
-            assertThat(capturedUser.getUserProfiles()).isEmpty(); // Multi-firm users have no profile
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
         }
 
@@ -2302,7 +2302,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             EntraUser capturedUser = userCaptor.getValue();
             assertThat(capturedUser.isMultiFirmUser()).isTrue();
-            assertThat(capturedUser.getUserProfiles()).isEmpty(); // Multi-firm users have no profile
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
         }
 
@@ -2422,7 +2422,7 @@ class UserServiceTest {
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
             // Multi-firm users have no profile, so no profile status to check
-            assertThat(capturedUser.getUserProfiles()).isEmpty();
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
         }
     }
 

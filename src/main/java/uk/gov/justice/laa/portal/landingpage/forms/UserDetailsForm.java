@@ -29,5 +29,5 @@ public class UserDetailsForm implements Serializable {
     @NotNull(message = "Select a user type")
     private Boolean userManager;
 
-    private Boolean isMultiFirmUser;
+    private Boolean multiFirmUser;
 }

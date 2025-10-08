@@ -77,6 +77,8 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
@@ -511,26 +513,22 @@ public class UserController {
         }
         
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
-        
-        // If multi-firm user, skip firm selection and go directly to check answers
-        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
-            return "redirect:/admin/user/create/check-answers";
-        } else {
-            // Single firm user - go to firm selection
-            return "redirect:/admin/user/create/firm";
-        }
+
+
+        return "redirect:/admin/user/create/firm";
     }
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
         FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
         if (existingForm != null) {
             firmSearchForm = existingForm;
-            session.removeAttribute("firmSearchForm");
         } else if (session.getAttribute("firm") != null) {
             // Grab firm search details from session firm if coming here from the confirmation screen.
             FirmDto firm = (FirmDto) session.getAttribute("firm");
@@ -540,8 +538,11 @@ public class UserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
+        boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
     }
@@ -572,30 +573,34 @@ public class UserController {
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
+            Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+            boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
+            model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+            model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
         }
-        FirmDto savedFirm = (FirmDto) session.getAttribute("firm");
-        if (!Objects.isNull(savedFirm) && !savedFirm.getName().equals(firmSearchForm.getFirmSearch())) {
-            firmSearchForm.setSelectedFirmId(null);
-        }
-        // Check if a specific firm was selected
+
+        session.removeAttribute("firm");
+
         if (firmSearchForm.getSelectedFirmId() != null) {
             try {
                 FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
-                selectedFirm.setSkipFirmSelection(Boolean.TRUE.equals(firmSearchForm.getSkipFirmSelection()));
+                selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
                 session.setAttribute("firm", selectedFirm);
             } catch (Exception e) {
                 log.error("Error retrieving selected firm: {}", e.getMessage());
                 result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
                 return "add-user-firm";
             }
-        } else {
+        } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
             // Fallback: search by name if no specific firm was selected
             List<FirmDto> firms = firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                    .sorted((s1, s2) ->
+                            Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()), relevance(s1, firmSearchForm.getFirmSearch())))
                     .findFirst()
                     .orElse(null);
 
@@ -608,6 +613,7 @@ public class UserController {
             firmSearchForm.setSelectedFirmId(selectedFirm.getId());
             session.setAttribute("firm", selectedFirm);
         }
+
         session.setAttribute("firmSearchForm", firmSearchForm);
         return "redirect:/admin/user/create/check-answers";
     }
@@ -639,12 +645,12 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String addUserCheckAnswers(HttpSession session, Authentication authentication, Model model) {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
-        Optional<FirmDto> firmOptional = Optional.ofNullable((FirmDto) session.getAttribute("firm"));
+        Optional<FirmDto> firmOptional = getObjectFromHttpSession(session, "firm", FirmDto.class);
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
-            FirmDto selectedFirm = firmOptional.orElseGet(FirmDto::new);
+            FirmDto selectedFirm = firmOptional.orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             try {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
