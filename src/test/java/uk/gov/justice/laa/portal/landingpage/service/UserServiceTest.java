@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -228,16 +230,13 @@ class UserServiceTest {
     void createUser() {
         // assign role
         UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).build();
-        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
-        userProfile.setEntraUser(entraUser);
         RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                 .success(RegisterUserResponse.builder().createdUser(createdUser).build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
-        when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
+        when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
 
         List<String> roles = new ArrayList<>();
         roles.add(UUID.randomUUID().toString());
@@ -246,7 +245,10 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, firm, true, "admin");
+        EntraUser result = userService.createUser(entraUserDto, firm, true, "admin", false);
+        assertThat(result).isNotNull();
+        assertThat(result.getUserProfiles()).isNotEmpty();
+        assertThat(result.getUserProfiles()).hasSize(1);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
     }
@@ -254,10 +256,6 @@ class UserServiceTest {
     @Test
     void createUserWithPopulatedDisplayName() {
         // assign role
-        UUID userId = UUID.randomUUID();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).build();
-        EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(Set.of(userProfile)).build();
-        userProfile.setEntraUser(entraUser);
         List<EntraUser> savedUsers = new ArrayList<>();
         when(mockEntraUserRepository.saveAndFlush(any())).then(invocation -> {
             savedUsers.add(invocation.getArgument(0));
@@ -277,7 +275,7 @@ class UserServiceTest {
         entraUserDto.setLastName("User");
         entraUserDto.setEmail("test.user@email.com");
         FirmDto firm = FirmDto.builder().name("Firm").build();
-        userService.createUser(entraUserDto, firm, false, "admin");
+        userService.createUser(entraUserDto, firm, false, "admin", false);
         verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
         assertThat(savedUsers.size()).isEqualTo(1);
         EntraUser savedUser = savedUsers.getFirst();
@@ -2121,12 +2119,65 @@ class UserServiceTest {
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            EntraUser result = userService.createUser(user, firmDto, false, "admin");
+            EntraUser result = userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
             assertThat(result).isNotNull();
             verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
             verify(techServicesClient).registerNewUser(any(EntraUserDto.class));
+        }
+
+        @Test
+        void createUser_withFirm_ForMultiFirmUser_withUserProfile() {
+            // assign role
+            UUID userId = UUID.randomUUID();
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("id");
+            createdUser.setMail("test.user@email.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
+
+            List<String> roles = new ArrayList<>();
+            roles.add(UUID.randomUUID().toString());
+            EntraUserDto entraUserDto = new EntraUserDto();
+            entraUserDto.setMultiFirmUser(true);
+            entraUserDto.setFirstName("Test");
+            entraUserDto.setLastName("User");
+            entraUserDto.setEmail("test.user@email.com");
+            FirmDto firm = FirmDto.builder().id(UUID.randomUUID()).build();
+            EntraUser result = userService.createUser(entraUserDto, firm, true, "admin", false);
+            assertThat(result).isNotNull();
+            assertThat(result.getUserProfiles()).isNotNull();
+            assertThat(result.getUserProfiles()).hasSize(1);
+            verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+            verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
+        }
+
+        @Test
+        void createUser_withNoFirm_ForNonMultiFirmUser_Fail() {
+            // assign role
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("id");
+            createdUser.setMail("test.user@email.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            List<String> roles = new ArrayList<>();
+            roles.add(UUID.randomUUID().toString());
+            EntraUserDto entraUserDto = new EntraUserDto();
+            entraUserDto.setFirstName("Test");
+            entraUserDto.setLastName("User");
+            entraUserDto.setEmail("test.user@email.com");
+            FirmDto firm = FirmDto.builder().skipFirmSelection(true).build();
+            RuntimeException rtEx = assertThrows(RuntimeException.class,
+                    () -> userService.createUser(entraUserDto, firm, true, "admin", false),
+                    "Expected Runtime Exception");
+            assertThat(rtEx.getMessage()).isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
+            verify(mockEntraUserRepository, never()).saveAndFlush(any());
+            verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
 
         @Test
@@ -2148,7 +2199,7 @@ class UserServiceTest {
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
             // Act
-            userService.createUser(user, firmDto, false, "admin");
+            userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
@@ -2172,7 +2223,7 @@ class UserServiceTest {
 
             // Act
             TechServicesClientException result = assertThrows(TechServicesClientException.class,
-                    () -> userService.createUser(user, firmDto, false, "admin"),
+                    () -> userService.createUser(user, firmDto, false, "admin", false),
                     "Expected TS Client Exception");
 
             // Assert
@@ -2193,12 +2244,195 @@ class UserServiceTest {
 
             // Act
             RuntimeException result = assertThrows(RuntimeException.class,
-                    () -> userService.createUser(user, firmDto, false, "admin"),
+                    () -> userService.createUser(user, firmDto, false, "admin", false),
                     "Expected TS Client Exception");
 
             // Assert
             assertThat(result).isNotNull();
             assertThat(result.getMessage()).isEqualTo("Error while sending new user creation request to Tech Services");
+        }
+
+        @Test
+        void createUser_multiFirmUser_createsUserProfileWithFirm() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("multifirm@example.com");
+            user.setFirstName("Multi");
+            user.setLastName("Firm");
+
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("entra-oid-123");
+            createdUser.setMail("multifirm@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            EntraUser result = userService.createUser(user, firmDto, false, "admin", true);
+
+            // Assert
+            assertThat(result).isNotNull();
+            EntraUser capturedUser = userCaptor.getValue();
+            assertThat(capturedUser.isMultiFirmUser()).isTrue();
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
+            verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
+        }
+
+        @Test
+        void createUser_multiFirmUser_withUserManagerRole_createsUserProfileWithFirm() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("multifirm-manager@example.com");
+            user.setFirstName("Multi");
+            user.setLastName("Manager");
+
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("entra-oid-456");
+            createdUser.setMail("multifirm-manager@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act - Note: isUserManager flag is ignored for multi-firm users since no profile is created
+            EntraUser result = userService.createUser(user, firmDto, true, "admin", true);
+
+            // Assert
+            assertThat(result).isNotNull();
+            EntraUser capturedUser = userCaptor.getValue();
+            assertThat(capturedUser.isMultiFirmUser()).isTrue();
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
+            verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
+        }
+
+        @Test
+        void createUser_singleFirmUser_createsUserProfileWithFirm() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("singlefirm@example.com");
+            user.setFirstName("Single");
+            user.setLastName("Firm");
+
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("entra-oid-789");
+            createdUser.setMail("singlefirm@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            EntraUser result = userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            assertThat(result).isNotNull();
+            EntraUser capturedUser = userCaptor.getValue();
+            assertThat(capturedUser.isMultiFirmUser()).isFalse();
+            assertThat(capturedUser.getUserProfiles()).hasSize(1);
+            UserProfile profile = capturedUser.getUserProfiles().iterator().next();
+            assertThat(profile.getFirm()).isNotNull();
+            assertThat(profile.getFirm().getName()).isEqualTo("Test Firm");
+            assertThat(profile.getUserType()).isEqualTo(UserType.EXTERNAL);
+            verify(mockEntraUserRepository).saveAndFlush(any(EntraUser.class));
+        }
+
+        @Test
+        void createUser_multiFirmUser_setsEntraOidFromTechServices() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("multifirm@example.com");
+
+            String expectedEntraOid = "entra-oid-from-tech-services";
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId(expectedEntraOid);
+            createdUser.setMail("multifirm@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", true);
+
+            // Assert
+            EntraUser capturedUser = userCaptor.getValue();
+            assertThat(capturedUser.getEntraOid()).isEqualTo(expectedEntraOid);
+        }
+
+        @Test
+        void createUser_multiFirmUser_setsUserStatusToActive() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("multifirm@example.com");
+
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("entra-oid-123");
+            createdUser.setMail("multifirm@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", true);
+
+            // Assert
+            EntraUser capturedUser = userCaptor.getValue();
+            assertThat(capturedUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+        }
+
+        @Test
+        void createUser_multiFirmUser_setsUserProfileStatusToPending() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("multifirm@example.com");
+
+            ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId("entra-oid-123");
+            createdUser.setMail("multifirm@example.com");
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", true);
+
+            // Assert
+            EntraUser capturedUser = userCaptor.getValue();
+            // Multi-firm users have no profile, so no profile status to check
+            assertThat(capturedUser.getUserProfiles()).isNotEmpty();
         }
     }
 
@@ -3659,5 +3893,147 @@ class UserServiceTest {
         Map<String, AppRoleDto> rolesByIdIn = userService.getRolesByIdIn(List.of());
         assertThat(rolesByIdIn).hasSize(3);
         assertThat(rolesByIdIn.get(appRole1.getId().toString()).getName()).isEqualTo("ap1");
+    }
+
+    @Nested
+    class AddUserProfileTests {
+
+        @Mock
+        private UserProfileRepository userProfileRepository;
+
+        @Mock
+        private EntraUserRepository entraUserRepository;
+
+        @Mock
+        private ModelMapper mapper;
+
+        @InjectMocks
+        private UserService userService;
+
+        @Test
+        void shouldThrowExceptionIfNotMultiFirmUser() {
+            EntraUserDto user = EntraUserDto.builder().build();
+
+            RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                    userService.addMultiFirmUserProfile(user, new FirmDto(), "admin"));
+
+            assertThat(ex.getMessage()).contains("is not a multi-firm user");
+        }
+
+        @Test
+        void shouldThrowExceptionIfFirmDetailsInvalid() {
+            EntraUserDto user = EntraUserDto.builder().multiFirmUser(true).build();
+
+            FirmDto firmDto = new FirmDto();
+            firmDto.setSkipFirmSelection(false); // invalid
+
+            RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+
+            assertThat(ex.getMessage()).contains("Invalid firm details");
+        }
+
+        @Test
+        void shouldThrowExceptionIfFirmDetailsNotProvided() {
+            EntraUserDto user = EntraUserDto.builder().multiFirmUser(true).build();
+
+            RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                    userService.addMultiFirmUserProfile(user, null, "admin"));
+
+            assertThat(ex.getMessage()).contains("Invalid firm details");
+        }
+
+        @Test
+        void shouldThrowExceptionIfFirmAlreadyAssigned() {
+            UUID firmId = UUID.randomUUID();
+            FirmDto firmDto = new FirmDto();
+            firmDto.setId(firmId);
+            firmDto.setSkipFirmSelection(true);
+
+            Firm firm = Firm.builder().id(firmId).build();
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+
+            UserProfile existingProfile = UserProfile.builder().firm(firm).build();
+            entraUser.setUserProfiles(Set.of(existingProfile));
+
+            EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+
+            RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+
+            assertThat(ex.getMessage()).contains("User profile already exists");
+        }
+
+        @Test
+        void shouldThrowErrorIfEntraUserNotPresent() {
+            UUID firmId = UUID.randomUUID();
+            FirmDto firmDto = new FirmDto();
+            firmDto.setId(firmId);
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.empty());
+
+            RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+
+            assertThat(ex.getMessage()).contains("User not found for the given user user id");
+        }
+
+        @Test
+        void shouldCreateActiveProfileIfNoExistingProfiles() {
+            UUID firmId = UUID.randomUUID();
+            FirmDto firmDto = new FirmDto();
+            firmDto.setId(firmId);
+
+            UUID existingFirmId = UUID.randomUUID();
+            Firm firm = Firm.builder().id(existingFirmId).build();
+
+            UUID entraUserId = UUID.randomUUID();
+            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(mapper.map(firmDto, Firm.class)).thenReturn(firm);
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, "admin");
+
+            assertThat(result.isActiveProfile()).isTrue();
+            verify(userProfileRepository).save(result);
+            verify(entraUserRepository).save(entraUser);
+        }
+
+        @Test
+        void shouldCreateInactiveProfileIfExistingProfilesPresent() {
+            UUID firmId = UUID.randomUUID();
+            Firm existingFirm = Firm.builder().id(firmId).build();
+
+            UUID entraUserId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            Firm newFirm = Firm.builder().id(newFirmId).build();
+            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).build();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+            UserProfile existingProfile = UserProfile.builder().firm(existingFirm).build();
+            entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+
+            when(mapper.map(newFirmDto, Firm.class)).thenReturn(newFirm);
+
+            EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+
+            UserProfile result = userService.addMultiFirmUserProfile(user,
+                    FirmDto.builder().id(newFirmId).build(), "admin");
+
+            assertThat(result.isActiveProfile()).isFalse();
+            verify(userProfileRepository).save(result);
+            verify(entraUserRepository).save(entraUser);
+        }
+
     }
 }

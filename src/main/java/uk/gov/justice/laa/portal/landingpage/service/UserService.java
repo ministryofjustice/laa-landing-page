@@ -142,7 +142,8 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles, List<String> nonEditableRoles, UUID modifierId) {
+    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
+            List<String> nonEditableRoles, UUID modifierId) {
         List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);
         List<AppRole> roles = appRoleRepository.findAllById(allAssignableRoles.stream()
@@ -156,10 +157,11 @@ public class UserService {
             UserProfile userProfile = optionalUserProfile.get();
             boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
             List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
-            boolean internal  = modifierTypes.contains(UserType.INTERNAL);
+            boolean internal = modifierTypes.contains(UserType.INTERNAL);
             int before = roles.size();
             roles = roles.stream()
-                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(userType -> userType == userProfile.getUserType()))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                            .anyMatch(userType -> userType == userProfile.getUserType()))
                     .toList();
             int after = roles.size();
             if (after < before) {
@@ -169,7 +171,8 @@ public class UserService {
             Set<AppRole> newRoles = new HashSet<>(roles);
             Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
                     : new HashSet<>(userProfile.getAppRoles());
-            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self, internal);
+            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(), userProfile.getId().toString(), self,
+                    internal);
             if (!error.isEmpty()) {
                 result.put("error", error);
                 return result;
@@ -183,7 +186,8 @@ public class UserService {
             diff = diffRole(oldRoles, newRoles);
 
             // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles,
+                    oldPuiRoles);
             userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
             // Save user profile with ccms sync status
@@ -220,7 +224,8 @@ public class UserService {
         return changed;
     }
 
-    protected String roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self, boolean internal) {
+    protected String roleCoverage(Set<AppRole> oldRoles, Set<AppRole> newRoles, Firm firm, String userId, boolean self,
+            boolean internal) {
         if (oldRoles.isEmpty()) {
             return "";
         }
@@ -234,8 +239,10 @@ public class UserService {
             Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
             if (optionalUserManagerRole.isPresent()) {
                 AppRole userManagerRole = optionalUserManagerRole.get();
-                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(), userManagerRole.getName(), pageRequest);
-                boolean removeManager = removed.stream().anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(),
+                        userManagerRole.getName(), pageRequest);
+                boolean removeManager = removed.stream()
+                        .anyMatch(role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
                     logger.warn("Attempt to remove own User Manager role, from user profile {}.", userId);
                     return "You cannot remove your own User Manager role";
@@ -248,8 +255,10 @@ public class UserService {
         } else {
             Optional<AppRole> globalAdminRole = appRoleRepository.findByName("Global Admin");
             if (globalAdminRole.isPresent()) {
-                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin", pageRequest);
-                boolean removeGlobalAdmin = removed.stream().anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
+                Page<UserProfile> existingAdmins = userProfileRepository.findInternalUserByAuthzRole("Global Admin",
+                        pageRequest);
+                boolean removeGlobalAdmin = removed.stream()
+                        .anyMatch(role -> role.getId().equals(globalAdminRole.get().getId()));
                 if (existingAdmins.getTotalElements() < 2 && removeGlobalAdmin) {
                     logger.warn("Attempt to remove last Global Admin, from user profile {}.", userId);
                     return "Global Admin role could not be removed, this is the last Global Admin";
@@ -269,7 +278,8 @@ public class UserService {
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
         Optional<UserProfileDto> optionalUserProfile = getUserProfileById(userProfileId);
 
-        return optionalUserProfile.map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
+        return optionalUserProfile
+                .map(userProfile -> techServicesClient.sendEmailVerification(userProfile.getEntraUser()))
                 .orElseThrow(() -> new RuntimeException("Failed to send verification email!"));
     }
 
@@ -472,7 +482,7 @@ public class UserService {
     }
 
     public EntraUser createUser(EntraUserDto user, FirmDto firm,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
 
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
         if (!registerUserResponse.isSuccess()) {
@@ -488,35 +498,104 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, isUserManager, createdBy);
+        return persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto,
-            boolean isUserManager, String createdBy) {
+            boolean isUserManager, String createdBy, boolean isMultiFirmUser) {
         EntraUser entraUser = mapper.map(newUser, EntraUser.class);
-        // TODO revisit to set the user entra ID
-        Firm firm = mapper.map(firmDto, Firm.class);
-        Set<AppRole> appRoles = new HashSet<>();
-        if (isUserManager) {
-            Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
-            firmUserManagerRole.ifPresent(appRoles::add);
+
+        entraUser.setMultiFirmUser(isMultiFirmUser);
+        entraUser.setEntraOid(newUser.getEntraOid());
+        entraUser.setUserStatus(UserStatus.ACTIVE);
+
+        if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
+            logger.error("User {} {} is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getFirstName(), entraUser.getLastName());
+            throw new RuntimeException(String.format("User %s %s is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getFirstName(), entraUser.getLastName()));
         }
+
+        if (!isMultiFirmUser || !firmDto.isSkipFirmSelection()) {
+            Set<AppRole> appRoles = new HashSet<>();
+            if (isUserManager) {
+                Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
+                firmUserManagerRole.ifPresent(appRoles::add);
+            }
+
+            Firm firm = mapper.map(firmDto, Firm.class);
+            UserProfile userProfile = UserProfile.builder()
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(appRoles)
+                    .createdDate(LocalDateTime.now())
+                    .createdBy(createdBy)
+                    .firm(firm)
+                    .entraUser(entraUser)
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            entraUser.setUserProfiles(Set.of(userProfile));
+        }
+
+        // Audit fields are automatically set by Spring Data JPA auditing
+        return entraUserRepository.saveAndFlush(entraUser);
+    }
+
+    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto, String createdBy) {
+        if (!entraUserDto.isMultiFirmUser()) {
+            logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
+                    entraUserDto.getLastName());
+            throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
+                    entraUserDto.getFirstName(), entraUserDto.getLastName()));
+        }
+
+        if (firmDto == null || (!firmDto.isSkipFirmSelection() && firmDto.getId() == null)) {
+            logger.error("Invalid firm details provided: {}", firmDto);
+            throw new RuntimeException(String.format("Invalid firm details provided: %s", firmDto));
+        }
+
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
+                .orElseThrow(() -> {
+                    logger.error("User not found for the given user user id: {}", entraUserDto.getId());
+                    return new RuntimeException(
+                            String.format("User not found for the given user user id: %s", entraUserDto.getId()));
+                });
+
+        if (entraUser.getUserProfiles() != null) {
+            boolean firmAlreadyAssigned = entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmDto.getId()));
+
+            if (firmAlreadyAssigned) {
+                logger.error("The user is already got a profile for the firm: {}", firmDto);
+                throw new RuntimeException(String.format("User profile already exists for this firm %s", firmDto));
+            }
+        }
+
+        boolean activeProfile = entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
+
+        Firm firm = mapper.map(firmDto, Firm.class);
+
         UserProfile userProfile = UserProfile.builder()
-                .activeProfile(true)
+                .activeProfile(activeProfile)
                 .userType(UserType.EXTERNAL)
-                .appRoles(appRoles)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
                 .firm(firm)
-                .entraUser(entraUser)
                 .userProfileStatus(UserProfileStatus.PENDING)
                 .build();
 
-        entraUser.setEntraOid(newUser.getEntraOid());
-        entraUser.setUserProfiles(Set.of(userProfile));
-        entraUser.setUserStatus(UserStatus.ACTIVE);
-        // Audit fields are automatically set by Spring Data JPA auditing
-        return entraUserRepository.saveAndFlush(entraUser);
+        if (entraUser.getUserProfiles() == null) {
+            entraUser.setUserProfiles(Set.of(userProfile));
+        } else {
+            entraUser.getUserProfiles().add(userProfile);
+        }
+
+        userProfileRepository.save(userProfile);
+        entraUserRepository.save(entraUser);
+
+        return userProfile;
     }
 
     public List<AppRoleDto> getUserAppRolesByUserId(String userId) {
@@ -607,6 +686,16 @@ public class UserService {
         return user.isPresent() || graphUser != null;
     }
 
+    public boolean isMultiFirmUserByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        // Check if the user exists in the local repository and is a multi-firm user
+        Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
+        return user.map(EntraUser::isMultiFirmUser).orElse(false);
+    }
+
     public List<AppRoleDto> getAppRolesByAppId(String appId) {
         UUID appUuid = UUID.fromString(appId);
         Optional<App> optionalApp = appRepository.findById(appUuid);
@@ -627,7 +716,8 @@ public class UserService {
         if (optionalApp.isPresent()) {
             App app = optionalApp.get();
             appRoles = app.getAppRoles().stream()
-                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction()).anyMatch(roleUserType -> roleUserType == userType))
+                    .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                            .anyMatch(roleUserType -> roleUserType == userType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .sorted()
                     .toList();
@@ -688,7 +778,7 @@ public class UserService {
 
     private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
-        Set<LaaApplicationForView> userAssignedApps =  applications.stream().filter(app -> userApps.stream()
+        Set<LaaApplicationForView> userAssignedApps = applications.stream().filter(app -> userApps.stream()
                 .map(AppDto::getName).anyMatch(appName -> appName.equals(app.getName())))
                 .map(LaaApplicationForView::new)
                 .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
@@ -721,8 +811,7 @@ public class UserService {
                             app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
                         }
                     });
-                }
-        );
+                });
     }
 
     /**
