@@ -219,9 +219,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1"),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2"),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1")
+                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", false),
+                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", false),
+                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", false)
             );
 
             // Setup cache mock
@@ -327,7 +327,7 @@ class FirmServiceTest {
 
             // Then
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("Test Firm 1");
+            assertThat(result.getFirst().getName()).isEqualTo("Test Firm 1");
         }
 
         @Test
@@ -337,7 +337,7 @@ class FirmServiceTest {
 
             // Then
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("Test Firm 1");
+            assertThat(result.getFirst().getName()).isEqualTo("Test Firm 1");
         }
 
         @Test
@@ -436,7 +436,7 @@ class FirmServiceTest {
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("ABC Legal Services");
+        assertThat(result.getFirst().getName()).isEqualTo("ABC Legal Services");
         verify(firmRepository).findByNameOrCodeContaining(trimmedSearchTerm);
         verify(firmRepository, never()).findAll();
     }
@@ -528,7 +528,7 @@ class FirmServiceTest {
 
         // Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getCode()).isEqualTo("ABC001");
+        assertThat(result.getFirst().getCode()).isEqualTo("ABC001");
         verify(firmRepository).findByNameOrCodeContaining(searchTerm.trim());
     }
 
@@ -643,7 +643,7 @@ class FirmServiceTest {
 
             // Assert
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("Cached Firm 1");
+            assertThat(result.getFirst().getName()).isEqualTo("Cached Firm 1");
             verify(firmRepository, never()).findAll();
             verify(cache, never()).put(anyString(), any());
         }
@@ -660,7 +660,7 @@ class FirmServiceTest {
 
             // Assert
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("Test Firm");
+            assertThat(result.getFirst().getName()).isEqualTo("Test Firm");
         }
 
         @Test
