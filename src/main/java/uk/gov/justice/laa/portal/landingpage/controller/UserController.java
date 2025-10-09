@@ -134,6 +134,7 @@ public class UserController {
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
+        search = search == null ? "" : search.trim();
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
                 showFirmAdmins, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
