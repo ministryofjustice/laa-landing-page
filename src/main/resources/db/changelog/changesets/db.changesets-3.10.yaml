@@ -30,7 +30,7 @@ databaseChangeLog:
         # constraint no grandparent
         - sql:
             dbms: postgresql
-            sql: "alter table firm add constraint no_grandparent check (not is_child(parent_firm_id) or parent_firm_id is null)"
+            sql: "alter table firm add constraint no_grandparent check (parent_firm_id is null or not is_child(parent_firm_id))"
         # constraint no self parent
         - sql:
             dbms: postgresql

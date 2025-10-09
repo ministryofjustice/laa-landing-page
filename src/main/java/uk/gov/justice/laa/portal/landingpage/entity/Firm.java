@@ -66,4 +66,8 @@ public class Firm extends BaseEntity {
     @JsonIgnore
     private Firm parentFirm;
 
+    @OneToMany(mappedBy = "parentFirm", fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @JsonIgnore
+    private Set<Firm> childFirms;
 }
