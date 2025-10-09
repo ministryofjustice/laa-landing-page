@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.util.Arrays;
 
-import jakarta.validation.ConstraintViolationException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
