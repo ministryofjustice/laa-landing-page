@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -73,6 +74,22 @@ public class AccessControlService {
             log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userProfileId);
         }
         return canAccess;
+    }
+
+    public boolean canDeleteUser(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        if (optionalAccessedUserProfile.get().getUserType().equals(UserType.INTERNAL)) {
+            return false;
+        }
+
+        return userHasAuthzRole(authenticatedUser, "Global Admin");
     }
 
     public boolean canEditUser(String userProfileId) {
