@@ -16,6 +16,12 @@ public class UserUtils {
         if (user.getEmail() != null) {
             userDetailsForm.setEmail(user.getEmail());
         }
+        
+        // Populate userManager from session if it exists
+        Boolean isUserManager = (Boolean) session.getAttribute("isUserManager");
+        if (isUserManager != null) {
+            userDetailsForm.setUserManager(isUserManager);
+        }
 
         return userDetailsForm;
     }

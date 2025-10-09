@@ -6,52 +6,74 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.TestWatcher;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- * Base class with login and logout for each test class
- */
 public abstract class BaseFrontEndTest {
-    private static Playwright playwright;
-    private static Browser browser;
-    public static Page page;
-    public static Properties config;
+    private static final Logger LOGGER = Logger.getLogger(BaseFrontEndTest.class.getName());
+    private static final String CONFIG_FILE = "src/playwrightTest/resources/playwright.properties";
 
-    /**
-     * Login to landing page
-     */
+    protected static Playwright playwright;
+    protected static Browser browser;
+    protected static Page page;
+    protected static Properties config;
+
+    @RegisterExtension
+    TestWatcher screenshotOnFailure = new ScreenshotWatcher();
+
     @BeforeAll
     static void setup() throws IOException {
-        config = new Properties();
-        try(InputStream stream = BaseFrontEndTest.class.getResourceAsStream("/playwright.properties")) {
-            config.load(stream);
-        }
-
-        playwright = Playwright.create();
-        boolean headless = Boolean.parseBoolean(config.getProperty("app.playwright.headless", "true"));
-
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
-
-        page = browser.newPage();
-        page.navigate(config.getProperty("laa.landing.page.url"));
-        page.locator("[id='i0116']").fill(config.getProperty("laa.landing.page.user"));
-        page.getByText("Next").click();
-        page.locator("[id='i0118']").fill(config.getProperty("laa.landing.page.password"));
-        page.waitForTimeout(1000);
-        page.getByText("Sign in").click();
-        page.getByText("Yes").click();
+        loadConfig();
+        initializeBrowser();
+        performLogin();
     }
 
-    /**
-     * Logoff Landing Page
-     */
     @AfterAll
     static void tearDown() {
-        page.close();
-        browser.close();
-        playwright.close();
+        ResourceCloser.closeAll(page, browser, playwright);
+    }
+
+    private static void loadConfig() throws IOException {
+        config = new Properties();
+        try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
+            config.load(input);
+        }
+    }
+
+    private static void initializeBrowser() {
+        LOGGER.info("Initializing browser...");
+        playwright = Playwright.create();
+        boolean headless = Boolean.parseBoolean(config.getProperty("app.playwright.headless", "false"));
+        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
+        page = browser.newPage();
+    }
+
+    private static void performLogin() {
+        LOGGER.info("Performing login...");
+        try {
+            // Use properties for URL, username, and password
+            String url = config.getProperty("laa.landing.page.url");
+            final String username = config.getProperty("laa.landing.page.user");
+            final String password = config.getProperty("laa.landing.page.password");
+
+            page.navigate(url);
+            page.locator("[id='i0116']").fill(username);
+            page.getByText("Next").click();
+            page.locator("[id='i0118']").fill(password);
+            page.waitForTimeout(1000);
+            page.locator("input[type='submit'][value='Sign in']").click();
+
+            // page.getByText("Yes").click();
+
+            LOGGER.info("Login successful");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Login failed", e);
+            throw e;
+        }
     }
 }

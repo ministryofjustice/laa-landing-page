@@ -24,7 +24,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v5
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -42,7 +42,7 @@ jobs:
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@v4.3.1
+      - uses: aws-actions/configure-aws-credentials@v5.1.0
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
@@ -141,6 +141,7 @@ jobs:
           ENABLE_DISTRIBUTED_DB_LOCKING : ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
           DISTRIBUTED_DB_LOCKING_PERIOD : ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
           FEATURE_FLAG_ENABLE_RESEND_VER_CODE : ${{ vars.FEATURE_FLAG_ENABLE_RESEND_VER_CODE }}
+          FEATURE_FLAG_ENABLE_MULTI_FIRM_USER : ${{ vars.FEATURE_FLAG_ENABLE_MULTI_FIRM_USER }}
           SPRING_SESSION_JDBC_ENABLED : ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
 
       - name: Deploy to Cloud Platform

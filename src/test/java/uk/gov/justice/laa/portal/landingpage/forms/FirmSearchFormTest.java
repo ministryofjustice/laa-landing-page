@@ -26,7 +26,7 @@ public class FirmSearchFormTest {
         form.setFirmSearch(null);
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Enter a firm name to search")));
+        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Please make a valid firm selection")));
     }
 
     @Test
@@ -35,7 +35,7 @@ public class FirmSearchFormTest {
         form.setFirmSearch("");
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Enter a firm name to search")));
+        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Please make a valid firm selection")));
     }
 
     @Test
@@ -44,6 +44,23 @@ public class FirmSearchFormTest {
         form.setFirmSearch("   ");
         Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
-        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Enter a firm name to search")));
+        assertTrue(violations.stream().anyMatch(v -> v.getMessage().equals("Please make a valid firm selection")));
+    }
+
+    @Test
+    void whenTrimFirmSearchIsNotEmpty_thenValidationSuccess() {
+        FirmSearchForm form = FirmSearchForm.builder().build();
+        form.setFirmSearch("  a ");
+        Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void whenTrimFirmSearchIsEmpty_thenValidationSuccessForSkipSelection() {
+        FirmSearchForm form = FirmSearchForm.builder().build();
+        form.setFirmSearch("");
+        form.setSkipFirmSelection(true);
+        Set<ConstraintViolation<FirmSearchForm>> violations = validator.validate(form);
+        assertTrue(violations.isEmpty());
     }
 }
