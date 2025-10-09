@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-unique-index-external-profile-per-firm
+      author: paul.snowdon
+      comment: "Creates a partial unique index to ensure each external user can only have one profile per firm. This constraint only applies to EXTERNAL user types, allowing INTERNAL users to have multiple profiles without firm associations."
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX uix_external_profile_per_firm
+              ON user_profile (entra_user_id, firm_id)
+              WHERE user_type = 'EXTERNAL'
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX IF EXISTS uix_external_profile_per_firm
