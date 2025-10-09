@@ -81,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientExcepti
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
@@ -184,9 +185,6 @@ class UserControllerTest {
         List<FirmDto> expectedFirms = List.of(
                 new FirmDto(UUID.randomUUID(), "Firm A", "F1", false),
                 new FirmDto(UUID.randomUUID(), "Firm B", "F2", false));
-
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(expectedFirms);
 
         // Act
         List<FirmDto> result = userController.getFirms(authentication, searchQuery);
@@ -4585,7 +4583,7 @@ class UserControllerTest {
             when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
 
             // Set up the user's firms (different from the one being accessed)
-            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1");
+            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", false);
             when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
 
             // When / Then
