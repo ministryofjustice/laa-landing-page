@@ -1,9 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import org.junit.jupiter.api.Test;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 
 public class FirmComparatorByRelevanceTest {
 
@@ -126,6 +126,118 @@ public class FirmComparatorByRelevanceTest {
     public void testCaseInsensitiveNumericCode() {
         FirmDto firm = FirmDto.builder().name("FirmFive").code("12345").build();
         assertEquals(100, FirmComparatorByRelevance.relevance(firm, "12345"));
+    }
+
+    // Tests for null code scenarios
+    @Test
+    public void testNullCode_ExactNameMatch() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code(null).build();
+        assertEquals(100, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    @Test
+    public void testNullCode_CaseInsensitiveNameMatch() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code(null).build();
+        assertEquals(90, FirmComparatorByRelevance.relevance(firm, "alpha"));
+    }
+
+    @Test
+    public void testNullCode_NameStartsWith() {
+        FirmDto firm = FirmDto.builder().name("AlphaTech").code(null).build();
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    @Test
+    public void testNullCode_NameStartsWithIgnoreCase() {
+        FirmDto firm = FirmDto.builder().name("AlphaTech").code(null).build();
+        assertEquals(70, FirmComparatorByRelevance.relevance(firm, "alpha"));
+    }
+
+    @Test
+    public void testNullCode_NameContains() {
+        FirmDto firm = FirmDto.builder().name("TechAlpha").code(null).build();
+        assertEquals(60, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    @Test
+    public void testNullCode_NameContainsIgnoreCase() {
+        FirmDto firm = FirmDto.builder().name("TechAlpha").code(null).build();
+        assertEquals(50, FirmComparatorByRelevance.relevance(firm, "alpha"));
+    }
+
+    @Test
+    public void testNullCode_NoMatch() {
+        FirmDto firm = FirmDto.builder().name("Beta").code(null).build();
+        assertEquals(0, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    // Edge case tests
+    @Test
+    public void testEmptyQuery() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code("ALPHA").build();
+        // Empty string matches startsWith, so relevance is 80
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, ""));
+    }
+
+    @Test
+    public void testEmptyQueryWithNullCode() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code(null).build();
+        // Empty string matches startsWith, so relevance is 80
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, ""));
+    }
+
+    @Test
+    public void testQueryLongerThanNameAndCode() {
+        FirmDto firm = FirmDto.builder().name("AB").code("CD").build();
+        assertEquals(0, FirmComparatorByRelevance.relevance(firm, "ABCDEFGH"));
+    }
+
+    @Test
+    public void testSpecialCharactersInQuery() {
+        FirmDto firm = FirmDto.builder().name("Alpha & Beta").code("A&B").build();
+        assertEquals(100, FirmComparatorByRelevance.relevance(firm, "Alpha & Beta"));
+    }
+
+    @Test
+    public void testSpecialCharactersInQueryPartialMatch() {
+        FirmDto firm = FirmDto.builder().name("Alpha & Beta").code("A&B").build();
+        assertEquals(60, FirmComparatorByRelevance.relevance(firm, "& Beta"));
+    }
+
+    @Test
+    public void testCodeMatchTakesPrecedenceOverName() {
+        FirmDto firm = FirmDto.builder().name("Different").code("Alpha").build();
+        assertEquals(100, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    @Test
+    public void testNameMatchWhenCodeDoesNotMatch() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code("BETA").build();
+        assertEquals(100, FirmComparatorByRelevance.relevance(firm, "Alpha"));
+    }
+
+    @Test
+    public void testSingleCharacterQuery() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code("ALPHA").build();
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, "A"));
+    }
+
+    @Test
+    public void testSingleCharacterQueryNullCode() {
+        FirmDto firm = FirmDto.builder().name("Alpha").code(null).build();
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, "A"));
+    }
+
+    @Test
+    public void testWhitespaceInQuery() {
+        FirmDto firm = FirmDto.builder().name("Alpha Tech").code("ALPHA TECH").build();
+        assertEquals(100, FirmComparatorByRelevance.relevance(firm, "Alpha Tech"));
+    }
+
+    @Test
+    public void testMultipleWordsPartialMatch() {
+        FirmDto firm = FirmDto.builder().name("Alpha Beta Gamma").code("ABG").build();
+        assertEquals(80, FirmComparatorByRelevance.relevance(firm, "Alpha Beta"));
     }
 
 }

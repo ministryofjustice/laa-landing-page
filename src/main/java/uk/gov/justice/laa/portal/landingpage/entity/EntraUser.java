@@ -1,6 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
+import java.util.Set;
+
+import org.hibernate.annotations.ColumnDefault;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,9 +25,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.ColumnDefault;
-
-import java.util.Set;
 
 @Entity
 @Table(name = "entra_user", indexes = {
@@ -67,6 +69,10 @@ public class EntraUser extends AuditableEntity {
     @NotNull(message = "User status must be provided")
     @ColumnDefault("AWAITING_APPROVAL")
     private UserStatus userStatus;
+
+    @Column(name = "multi_firm_user", nullable = false)
+    @ColumnDefault("false")
+    private boolean multiFirmUser;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
