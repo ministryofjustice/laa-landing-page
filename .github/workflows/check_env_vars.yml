@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get changed files in src directory
         id: changed-src-files
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           # We only care about files inside the 'src' directory
           files: |
@@ -139,7 +139,7 @@ jobs:
 
       - name: Add comment to PR
         if: failure() && steps.check-env.outputs.should_comment == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         # Pass the comment body as an environment variable to the script
         env:
           COMMENT_BODY: ${{ env.comment_body }}

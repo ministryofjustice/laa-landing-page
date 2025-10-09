@@ -115,6 +115,11 @@ public class UserController {
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
     public List<FirmDto> getFirms(Authentication authentication,
             @RequestParam(value = "q", defaultValue = "") String query) {
+        // If the query is blank/whitespace-only, return an empty result and do not
+        // call the service to avoid unnecessary work.
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         return firmService.getUserAccessibleFirms(entraUser, query);
     }
@@ -135,6 +140,7 @@ public class UserController {
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
+        search = search == null ? "" : search.trim();
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
                 showFirmAdmins, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
@@ -551,8 +557,14 @@ public class UserController {
     @ResponseBody
     public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
                                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        // If the query is blank/whitespace-only, return an empty result and do not
+        // call the service to avoid unnecessary work.
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
         int validatedCount = Math.max(10, Math.min(count, 100));
-        List<FirmDto> firms = firmService.searchFirms(query);
+        List<FirmDto> firms = firmService.searchFirms(query.trim());
 
         List<Map<String, String>> result = firms.stream()
                 .limit(validatedCount) // Limit results to prevent overwhelming the UI
