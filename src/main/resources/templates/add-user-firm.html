@@ -13,7 +13,9 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/user/create/details">
+                <a class="govuk-breadcrumbs__link"
+                   th:href="${enableMultiFirmUser} ? '/admin/user/create/multi-firm' : '/admin/user/create/details'">
+
                     < Back</a>
             </li>
         </ol>
@@ -36,11 +38,11 @@
 
             <h1 class="govuk-heading-l">Select the user's firm</h1>
 
-            <div class="govuk-form-group"
+            <div class="govuk-form-group govuk-!-margin-bottom-6"
                 th:classappend="${#fields.hasErrors('firmSearch')} ? 'govuk-form-group--error'">
-                <label class="govuk-label govuk-hint" for="firmSearch">
-                    Start typing a firm and select from the list of options
-                </label>
+                <div class="govuk-hint" id="firmSearch-hint">
+                    Start typing a firm name or ID and select from the list of options
+                </div>
                 <div th:if="${#fields.hasErrors('firmSearch')}" class="govuk-error-message">
                     <p th:each="err : ${#fields.errors('firmSearch')}" th:text="${err}"></p>
                 </div>
@@ -50,18 +52,40 @@
                         <div id="firmSearch__status--A" role="status" aria-atomic="true" aria-live="polite"></div>
                         <div id="firmSearch__status--B" role="status" aria-atomic="true" aria-live="polite"></div>
                     </div>
-                    <div style="position: relative; display: inline-block; width: 66.66%;">
+                    <div class="autocomplete__input-wrapper">
                         <input aria-expanded="false" aria-controls="firmSearch__listbox" aria-autocomplete="list"
                             autocomplete="off" class="autocomplete__input autocomplete__input--default govuk-input"
                             id="firmSearch" name="firmSearch" placeholder="" type="text" role="combobox"
                             th:value="*{firmSearch}"
-                            th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error' : null"
-                            style="width: 100%; padding-right: 40px;" />
+                            aria-describedby="firmSearch-hint"
+                            th:aria-describedby="${#fields.hasErrors('firmSearch')} ? 'firmSearch-error firmSearch-hint' : 'firmSearch-hint'" />
                         <ul aria-labelledby="firmSearch" id="firmSearch__listbox" role="listbox"
                             class="autocomplete__menu autocomplete__menu--inline autocomplete__menu--hidden">
                             <!-- Search results will be populated here via JavaScript -->
                         </ul>
                     </div>
+                    <div th:if="${showSkipFirmSelection}" class="skip-firm-container">
+                        <div class="govuk-checkboxes__divider">or</div>
+                        <div class="govuk-form-group govuk-!-margin-bottom-0">
+                            <fieldset class="govuk-fieldset">
+                                <div class="govuk-checkboxes govuk-checkboxes--small"
+                                     data-module="govuk-checkboxes">
+                                    <div class="govuk-checkboxes__item">
+                                        <input class="govuk-checkboxes__input" id="skipFirmSelection"
+                                               name="skipFirmSelection" type="checkbox" value="true"
+                                               th:checked="*{skipFirmSelection}">
+                                        <label class="govuk-label govuk-checkboxes__label" for="skipFirmSelection">
+                                            Skip firm selection
+                                        </label>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                    <div th:unless="${showSkipFirmSelection}">
+                        <input th:type="hidden" th:name="skipFirmSelection" id="skipFirmSelection" th:value="false">
+                    </div>
+
                     <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
                     <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
                 </div>
@@ -77,6 +101,17 @@
             /* Style the autocomplete to look like a GOV.UK select dropdown */
             .autocomplete__wrapper {
                 position: relative;
+            }
+
+            .autocomplete__input-wrapper {
+                position: relative;
+                display: block;
+                width: 100%;
+                max-width: 40em;
+            }
+
+            .skip-firm-container {
+                margin-top: 1.5rem;
             }
 
             .autocomplete__menu {
@@ -144,15 +179,16 @@
             }
 
             .autocomplete__option strong {
-                font-weight: 600;
+                font-weight: 700;
                 display: block;
-                margin-bottom: 2px;
+                margin-bottom: 4px;
             }
 
             .autocomplete__option small {
                 font-size: 16px;
                 color: #505a5f;
                 display: block;
+                line-height: 1.4;
             }
 
             /* Make the input look consistent with GOV.UK select styling */
@@ -170,15 +206,21 @@
                 font-weight: 400;
                 line-height: 1.31579;
                 margin: 0;
-                padding: 5px 4px 4px;
+                padding: 8px;
                 width: 100%;
             }
 
             .autocomplete__input:focus {
-                border-color: #fd0;
+                border-color: #0b0c0c;
                 box-shadow: inset 0 0 0 2px;
-                outline: 3px solid #fd0;
+                outline: 3px solid #ffdd00;
                 outline-offset: 0;
+            }
+
+            .autocomplete__input:disabled {
+                background-color: #f3f2f1;
+                color: #505a5f;
+                cursor: not-allowed;
             }
 
             /* Remove the odd styling to make it more uniform like a select */
@@ -202,6 +244,7 @@
                 const statusA = document.getElementById('firmSearch__status--A');
                 const statusB = document.getElementById('firmSearch__status--B');
                 const assistiveHint = document.getElementById('firmSearch__assistiveHint');
+                const skipFirmSelectionInput = document.getElementById('skipFirmSelection');
 
 
                 if (!firmSearchInput) {
@@ -218,6 +261,11 @@
                     assistiveHint.style.display = 'block';
                 });
 
+                skipFirmSelectionInput.addEventListener('input', function () {
+                    firmSearchInput.value = '';
+                    selectedFirmIdInput.value = '';
+                });
+
                 // Handle input changes
                 firmSearchInput.addEventListener('input', function () {
                     clearTimeout(searchTimeout);
@@ -229,6 +277,8 @@
                         selectedFirmIdInput.value = '';
                         return;
                     }
+
+                    skipFirmSelectionInput.checked = false;
 
                     // Debounce search requests
                     searchTimeout = setTimeout(() => {
