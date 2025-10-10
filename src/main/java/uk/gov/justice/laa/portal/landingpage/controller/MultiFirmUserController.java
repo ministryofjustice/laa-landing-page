@@ -105,7 +105,7 @@ public class MultiFirmUserController {
 
 
     @GetMapping("/user/create/cancel")
-    public String cancelUserCreation(HttpSession session) {
+    public String cancelUserProfileCreation(HttpSession session) {
         session.removeAttribute("entraUser");
         session.removeAttribute("multiFirmUserForm");
         return "redirect:/admin/users";
