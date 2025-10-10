@@ -522,8 +522,6 @@ class UserControllerTest {
     void deleteExternalUser_whenServiceSucceeds_returnsSuccessViewAndLogsAuditEvent() {
         // Arrange
         String userProfileId = UUID.randomUUID().toString();
-        String reason = "email typo";
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
 
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setId(UUID.randomUUID().toString());
@@ -533,10 +531,10 @@ class UserControllerTest {
                 .entraUser(entraUserDto)
                 .userType(UserType.EXTERNAL)
                 .build();
-
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-
+        String reason = "email typo";
         // Act
         String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
 
@@ -550,8 +548,6 @@ class UserControllerTest {
     void deleteExternalUser_whenServiceThrows_returnsReasonViewAndLogsAttemptEvent() {
         // Arrange
         String userProfileId = UUID.randomUUID().toString();
-        String reason = "email typo";
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
 
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setId(UUID.randomUUID().toString());
@@ -561,12 +557,12 @@ class UserControllerTest {
                 .entraUser(entraUserDto)
                 .userType(UserType.EXTERNAL)
                 .build();
-
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
         when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
-
+        String reason = "email typo";
         // Act & Assert
         RuntimeException thrown = Assertions.assertThrows(RuntimeException.class, () ->
                 userController.deleteExternalUser(userProfileId, reason, authentication, session, model)
