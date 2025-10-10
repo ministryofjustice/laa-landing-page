@@ -424,4 +424,82 @@ public class AccessControlServiceTest {
         Assertions.assertThat(result).isFalse();
     }
 
+    @Test
+    public void testGlobalAdminCanDeleteExternalUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID adminId = UUID.randomUUID();
+        AppRole globalAdminRole = AppRole.builder().authzRole(true).name("Global Admin").build();
+        EntraUser admin = EntraUser.builder().id(adminId).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile adminProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(admin)
+                .appRoles(Set.of(globalAdminRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        admin.getUserProfiles().add(adminProfile);
+
+        UUID targetProfileId = UUID.randomUUID();
+        EntraUserDto targetEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(targetProfileId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(targetEntra)
+                .build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+
+        boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
+        Assertions.assertThat(canDelete).isTrue();
+    }
+
+    @Test
+    public void testInternalUserCannotDeleteInternalUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        AppRole someRole = AppRole.builder().authzRole(true).name("External User Manager").build();
+        EntraUser user = EntraUser.builder().id(userId).userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(someRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        UUID internalTargetId = UUID.randomUUID();
+        EntraUserDto internalTargetEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto internalTarget = UserProfileDto.builder()
+                .id(internalTargetId)
+                .userType(UserType.INTERNAL)
+                .entraUser(internalTargetEntra)
+                .build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        Mockito.when(userService.getUserProfileById(internalTargetId.toString())).thenReturn(Optional.of(internalTarget));
+
+        boolean canDeleteInternal = accessControlService.canDeleteUser(internalTargetId.toString());
+        Assertions.assertThat(canDeleteInternal).isFalse();
+
+        UUID externalTargetId = UUID.randomUUID();
+        EntraUserDto externalTargetEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto externalTarget = UserProfileDto.builder()
+                .id(externalTargetId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(externalTargetEntra)
+                .build();
+        Mockito.when(userService.getUserProfileById(externalTargetId.toString())).thenReturn(Optional.of(externalTarget));
+
+        boolean canDeleteExternal = accessControlService.canDeleteUser(externalTargetId.toString());
+        Assertions.assertThat(canDeleteExternal).isFalse();
+    }
+
 }

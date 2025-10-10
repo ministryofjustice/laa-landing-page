@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'delete-user-success'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>User deleted</title>
+</head>
+<body>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-panel govuk-panel--confirmation">
+        <h1 class="govuk-panel__title">User deleted</h1>
+        <div class="govuk-panel__body">
+            <strong th:text="${deletedUserFullName}"></strong> no longer has access to SiLAS
+        </div>
+    </div>
+
+    <a class="govuk-button govuk-button--primary" data-module="govuk-button"
+       th:href="@{/admin/users}">Go back to manage your users</a>
+</main>
+</body>
+</html>

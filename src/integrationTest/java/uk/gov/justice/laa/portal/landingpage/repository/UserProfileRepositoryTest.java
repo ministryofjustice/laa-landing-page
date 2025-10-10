@@ -258,4 +258,51 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         DataIntegrityViolationException exception = assertThrows(DataIntegrityViolationException.class, () -> repository.saveAndFlush(additionalProfile));
         assertThat(exception.getCause().getMessage()).contains("one_profile_per_internal_user");
     }
+
+    @Test
+    public void testFindAllByEntraUserReturnsAssociatedProfiles() {
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "user-findall@example.com", "Find", "All");
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        Firm firm1 = buildFirm("Firm One", "FIRM1");
+        Firm firm2 = buildFirm("Firm Two", "FIRM2");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2));
+
+        UserProfile profile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile1.setFirm(firm1);
+        UserProfile profile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile2.setFirm(firm2);
+
+        entraUser.getUserProfiles().add(profile1);
+        entraUser.getUserProfiles().add(profile2);
+        repository.saveAllAndFlush(List.of(profile1, profile2));
+
+        List<UserProfile> profiles = repository.findAllByEntraUser(entraUser);
+        UUID expectedId = entraUser.getId();
+        assertThat(profiles).isNotNull();
+        assertThat(profiles).hasSize(2);
+        assertThat(profiles).extracting(UserProfile::getId)
+                .containsExactlyInAnyOrder(profile1.getId(), profile2.getId());
+        assertThat(profiles).allMatch(p -> p.getEntraUser().getId().equals(expectedId));
+    }
+
+    @Test
+    public void testFindAllByEntraUserReturnsEmptyWhenNoProfiles() {
+        EntraUser entraUserNoProfiles = buildEntraUser(generateEntraId(), "noprof@example.com", "No", "Profiles");
+        entraUserNoProfiles = entraUserRepository.saveAndFlush(entraUserNoProfiles);
+
+        EntraUser otherUser = buildEntraUser(generateEntraId(), "other@example.com", "Other", "User");
+        otherUser = entraUserRepository.saveAndFlush(otherUser);
+        Firm firm = buildFirm("Firm X", "FIRMX");
+        firmRepository.saveAndFlush(firm);
+        UserProfile otherProfile = buildLaaUserProfile(otherUser, UserType.EXTERNAL);
+        otherProfile.setFirm(firm);
+        otherUser.getUserProfiles().add(otherProfile);
+        repository.saveAndFlush(otherProfile);
+
+        List<UserProfile> result = repository.findAllByEntraUser(entraUserNoProfiles);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
+    }
 }

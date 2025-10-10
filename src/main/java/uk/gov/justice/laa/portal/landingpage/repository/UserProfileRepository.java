@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -98,4 +99,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             )
             """)
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
+
+    List<UserProfile> findAllByEntraUser(EntraUser entraUser);
 }

@@ -44,6 +44,13 @@ public class DoNothingTestServiceClientTest {
     }
 
     @Test
+    void testDeleteUser() {
+        UUID userId = UUID.randomUUID();
+        techServicesClient.deleteRoleAssignment(userId);
+        assertLogMessage("Removing all role assignments on Dummy Tech Services Client for user " + userId);
+    }
+
+    @Test
     void testRegisterUser() {
         EntraUserDto user = EntraUserDto.builder().build();
 

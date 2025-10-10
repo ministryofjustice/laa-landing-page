@@ -61,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -308,6 +309,62 @@ public class UserService {
     public Optional<UserProfileDto> getUserProfileById(String userId) {
         return userProfileRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, UserProfileDto.class));
+    }
+
+    /**
+     * Delete an EXTERNAL user and all related local records.
+     *
+     * @param userProfileId the ID of the user profile (UUID as String)
+     * @param reason        the reason for deletion, used for logging/audit
+     * @param actorId       the UUID of the actor performing the deletion (for logging)
+     */
+    @Transactional
+    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isEmpty()) {
+            throw new RuntimeException("User profile not found: " + userProfileId);
+        }
+
+        UserProfile userProfile = optionalUserProfile.get();
+        if (userProfile.getUserType() != UserType.EXTERNAL) {
+            throw new RuntimeException("Deletion is only permitted for external users");
+        }
+
+        EntraUser entraUser = userProfile.getEntraUser();
+        if (entraUser == null) {
+            throw new RuntimeException("Associated Entra user not found for profile: " + userProfileId);
+        }
+
+        logger.info("Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
+                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
+
+        // first send update to tech services
+        techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
+
+        // hard delete from silas db
+        List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+        DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
+                .deletedUserId(userProfile.getEntraUser().getId());
+        if (profiles != null && !profiles.isEmpty()) {
+            for (UserProfile up : profiles) {
+                if (up.getAppRoles() != null) {
+                    builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
+                    up.getAppRoles().clear();
+                }
+                if (up.getOffices() != null) {
+                    builder.detachedOfficesCount(up.getOffices().isEmpty() ? 0 : up.getOffices().size());
+                    up.getOffices().clear();
+                }
+                up.setEntraUser(null);
+                userProfileRepository.save(up);
+            }
+            userProfileRepository.flush();
+            userProfileRepository.deleteAll(profiles);
+            userProfileRepository.flush();
+        }
+        entraUserRepository.delete(entraUser);
+        entraUserRepository.flush();
+        return builder.build();
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {

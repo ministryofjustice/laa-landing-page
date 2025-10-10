@@ -11,6 +11,8 @@ public interface TechServicesClient {
 
     void updateRoleAssignment(UUID userId);
 
+    void deleteRoleAssignment(UUID userId);
+
     TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user);
 
     TechServicesApiResponse<SendUserVerificationEmailResponse> sendEmailVerification(EntraUserDto user);
