@@ -775,6 +775,37 @@ class UserServiceTest {
     }
 
     @Test
+    public void testGetEntraUserByEmailReturnsUserWhenOneIsPresent() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String email = "test@test.com";
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Test")
+                .lastName("User")
+                .email(email)
+                .build();
+        when(mockEntraUserRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.of(user));
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserByEmail(email);
+        // Then
+        assertThat(optionalReturnedUser.isPresent()).isTrue();
+        EntraUserDto returnedUserDto = optionalReturnedUser.get();
+        assertThat(returnedUserDto.getFullName()).isEqualTo("Test User");
+        assertThat(returnedUserDto.getEmail()).isEqualTo("test@test.com");
+    }
+
+    @Test
+    public void testGetEntraUserByEmailReturnsNothingWhenNoUserIsPresent() {
+        // Given
+        when(mockEntraUserRepository.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
+        // When
+        Optional<EntraUserDto> optionalReturnedUser = userService.getEntraUserByEmail("test@test.com");
+        // Then
+        assertThat(optionalReturnedUser.isEmpty()).isTrue();
+    }
+
+    @Test
     public void testGetUserAppsByUserIdReturnsAppsWhenUserHasAppsAssigned() {
         // Given
         UUID entraUserId = UUID.randomUUID();

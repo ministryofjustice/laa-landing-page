@@ -36,7 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 public class SearchValidationTest {
 
     @InjectMocks
-    private UserController userController;
+    private FirmSearchController firmSearchController;
 
     @Mock
     private LoginService loginService;
@@ -62,11 +62,11 @@ public class SearchValidationTest {
         when(firmService.getUserAccessibleFirms(any(), any())).thenReturn(List.of());
 
         // Test with empty query - should not call service
-        List<FirmDto> result1 = userController.getFirms(authentication, "");
+        List<FirmDto> result1 = firmSearchController.getFirms(authentication, "");
         assertThat(result1).isEmpty();
 
         // Test with whitespace only - should not call service
-        List<FirmDto> result4 = userController.getFirms(authentication, "   ");
+        List<FirmDto> result4 = firmSearchController.getFirms(authentication, "   ");
         assertThat(result4).isEmpty();
 
         // Verify that service was not called for empty queries
@@ -74,11 +74,11 @@ public class SearchValidationTest {
         verify(firmService, never()).getUserAccessibleFirms(any(), eq("   "));
 
         // Test with single character - should now call service (1-character minimum)
-        List<FirmDto> result2 = userController.getFirms(authentication, "a");
+        List<FirmDto> result2 = firmSearchController.getFirms(authentication, "a");
         assertThat(result2).isEmpty(); // Empty result but service was called
 
         // Test with two characters - should call service
-        List<FirmDto> result3 = userController.getFirms(authentication, "ab");
+        List<FirmDto> result3 = firmSearchController.getFirms(authentication, "ab");
         assertThat(result3).isEmpty(); // Empty result but service was called
 
         // Verify that service was called for valid queries (1+ characters)
@@ -89,15 +89,15 @@ public class SearchValidationTest {
         when(firmService.searchFirms(any())).thenReturn(List.of());
 
         // Empty query - should not call service
-        List<Map<String, String>> searchResult1 = userController.searchFirms("", 10);
+        List<Map<String, String>> searchResult1 = firmSearchController.searchFirms("", 10);
         assertThat(searchResult1).isEmpty();
 
         // Single character - should call service
-        List<Map<String, String>> searchResult2 = userController.searchFirms("x", 10);
+        List<Map<String, String>> searchResult2 = firmSearchController.searchFirms("x", 10);
         assertThat(searchResult2).isEmpty(); // Empty result but service was called
 
         // Two characters - should call service
-        List<Map<String, String>> searchResult3 = userController.searchFirms("xy", 10);
+        List<Map<String, String>> searchResult3 = firmSearchController.searchFirms("xy", 10);
         assertThat(searchResult3).isEmpty(); // Empty result but service was called
 
         // Verify service calls for searchFirms
@@ -122,12 +122,12 @@ public class SearchValidationTest {
         when(firmService.searchFirms("b")).thenReturn(List.of(testFirm));
 
         // Test /admin/user/firms/search endpoint with single character (now valid)
-        List<FirmDto> result1 = userController.getFirms(authentication, "a");
+        List<FirmDto> result1 = firmSearchController.getFirms(authentication, "a");
         assertThat(result1).hasSize(1);
         assertThat(result1.get(0).getName()).isEqualTo("Test Firm");
 
         // Test /admin/user/create/firm/search endpoint with single character (now valid)
-        List<Map<String, String>> result2 = userController.searchFirms("b", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms("b", 10);
         assertThat(result2).hasSize(1);
         assertThat(result2.get(0).get("name")).isEqualTo("Test Firm");
 
@@ -145,10 +145,10 @@ public class SearchValidationTest {
         when(firmService.getUserAccessibleFirms(entraUser, "1")).thenReturn(List.of());
         when(firmService.searchFirms("2")).thenReturn(List.of());
 
-        List<FirmDto> result1 = userController.getFirms(authentication, "1");
+        List<FirmDto> result1 = firmSearchController.getFirms(authentication, "1");
         assertThat(result1).isEmpty(); // Empty but service was called
 
-        List<Map<String, String>> result2 = userController.searchFirms("2", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms("2", 10);
         assertThat(result2).isEmpty(); // Empty but service was called
 
         verify(firmService).getUserAccessibleFirms(entraUser, "1");
@@ -159,10 +159,10 @@ public class SearchValidationTest {
         when(firmService.getUserAccessibleFirms(entraUser, "  a  ")).thenReturn(List.of());
         when(firmService.searchFirms("b")).thenReturn(List.of());
 
-        List<FirmDto> result3 = userController.getFirms(authentication, "  a  ");
+        List<FirmDto> result3 = firmSearchController.getFirms(authentication, "  a  ");
         assertThat(result3).isEmpty(); // Empty but service was called (with original "  a  ")
 
-        List<Map<String, String>> result4 = userController.searchFirms("  b  ", 10);
+        List<Map<String, String>> result4 = firmSearchController.searchFirms("  b  ", 10);
         assertThat(result4).isEmpty(); // Empty but service was called (with trimmed "b")
 
         // Verify the service was called - getFirms passes untrimmed, searchFirms passes trimmed

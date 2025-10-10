@@ -305,6 +305,11 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<EntraUserDto> getEntraUserByEmail(String email) {
+        return entraUserRepository.findByEmailIgnoreCase(email)
+                .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
     public Optional<UserProfileDto> getUserProfileById(String userId) {
         return userProfileRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, UserProfileDto.class));
@@ -569,6 +574,7 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
 
         UserProfile userProfile = UserProfile.builder()
+                .entraUser(entraUser)
                 .activeProfile(activeProfile)
                 .userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now())
