@@ -48,3 +48,17 @@ laa-apps:
       url: ${app.submit.a.bulk.claim.url}
       laaApplicationDetails: ${app.submit.a.bulk.claim.details}
       ordinal: 5
+    - name: ${app.amend.a.claim.name}
+      title: Amend a Claim
+      description: >-
+        Amend a Claim
+      url: ${app.amend.a.claim.url}
+      laaApplicationDetails: ${app.amend.a.claim.details}
+      ordinal: 6
+    - name: ${app.civil.decide.name}
+      title: Civil Decide
+      description: >-
+        Civil Decide
+      url: ${app.civil.decide.url}
+      laaApplicationDetails: ${app.civil.decide.details}
+      ordinal: 7

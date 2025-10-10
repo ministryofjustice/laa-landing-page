@@ -116,6 +116,18 @@ spec:
               value: "${APP_SUBMIT_A_BULK_CLAIM_DETAILS}"
             - name: APP_SUBMIT_A_BULK_CLAIM_URL
               value: "${APP_SUBMIT_A_BULK_CLAIM_URL}"
+            - name: APP_AMEND_A_CLAIM_NAME
+              value: "${APP_AMEND_A_CLAIM_NAME}"
+            - name: APP_AMEND_A_CLAIM_DETAILS
+              value: "${APP_AMEND_A_CLAIM_DETAILS}"
+            - name: APP_AMEND_A_CLAIM_URL
+              value: "${APP_AMEND_A_CLAIM_URL}"
+            - name: APP_CIVIL_DECIDE_NAME
+              value: "${APP_CIVIL_DECIDE_NAME}"
+            - name: APP_CIVIL_DECIDE_DETAILS
+              value: "${APP_CIVIL_DECIDE_DETAILS}"
+            - name: APP_CIVIL_DECIDE_URL
+              value: "${APP_CIVIL_DECIDE_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE
