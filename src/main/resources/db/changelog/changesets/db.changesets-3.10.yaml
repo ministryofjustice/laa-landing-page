@@ -27,6 +27,9 @@ databaseChangeLog:
             sql: "CREATE FUNCTION is_child()
                   RETURNS TRIGGER LANGUAGE plpgsql STRICT STABLE AS '
                   BEGIN
+                    IF NEW.parent_firm_id IS NULL THEN
+                      RETURN NEW;
+                    END IF;
                     IF (
                       SELECT EXISTS(SELECT 1 FROM firm AS f
                       WHERE f.parent_firm_id is not null and f.id = NEW.parent_firm_id )
