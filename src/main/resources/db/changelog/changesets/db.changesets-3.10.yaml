@@ -24,13 +24,25 @@ databaseChangeLog:
         # create function is_child
         - sql:
             dbms: postgresql
-            sql: "CREATE FUNCTION is_child(uuid) RETURNS boolean AS '
-                      SELECT EXISTS(SELECT 1 from firm where id = $1 and parent_firm_id is not null);
-                  ' LANGUAGE SQL;"
+            sql: "CREATE FUNCTION is_child()
+                  RETURNS TRIGGER LANGUAGE plpgsql STRICT STABLE AS '
+                  BEGIN
+                    IF (
+                      SELECT EXISTS(SELECT * FROM firm AS f
+                      WHERE f.parent_firm_id is not null and f.id = NEW.parent_firm_id )
+                    ) THEN
+                      RAISE EXCEPTION ''parent firm (%) already has parent'', NEW.parent_firm_id;
+                    ELSE
+                      RETURN NEW;
+                    END IF;
+                  END;';"
         # constraint no grandparent
         - sql:
             dbms: postgresql
-            sql: "alter table firm add constraint no_grandparent check (parent_firm_id is null or not is_child(parent_firm_id))"
+            sql: "CREATE TRIGGER valid_grandparent
+                  BEFORE INSERT OR UPDATE 
+                  ON firm
+                  FOR EACH ROW EXECUTE PROCEDURE is_child();"
         # constraint no self parent
         - sql:
             dbms: postgresql
