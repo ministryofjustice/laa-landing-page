@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>User Details</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link" href="/admin/multi-firm/user/add/profile/before-start">
+        Back</a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <fieldset class="govuk-fieldset">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h1 class="govuk-fieldset__heading">
+                User details
+            </h1>
+        </legend>
+
+        <form th:action="@{/admin/multi-firm/user/add/profile}" th:method="post" th:object="${multiFirmUserForm}">
+            <div th:if="${#fields.hasErrors()}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="govuk-form-group"
+                 th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
+                <label class="govuk-label govuk-hint" for="email">
+                    Enter the email address of the 3rd party user
+                </label>
+                <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
+                    <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
+                </div>
+                <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
+                       th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
+            </div>
+
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+            </div>
+        </form>
+    </fieldset>
+</main>
+</body>
+
+</html>
