@@ -50,9 +50,16 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                                     LEFT JOIN FETCH ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
-                        AND (:#{#criteria.firmSearch.firmSearch} IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%'))) 
-                                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+            WHERE (
+                (:#{#criteria.firmSearch.selectedFirmId} IS NULL AND
+                    (
+                        :#{#criteria.firmSearch.firmSearch} IS NULL
+                        OR :#{#criteria.firmSearch.firmSearch} = ''
+                        OR (LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%')))
+                    )
+                )
+                OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
+            )
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
                             (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
@@ -80,7 +87,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         JOIN FETCH ups.entraUser u
             WHERE ups.firm.id = :firmId
             AND EXISTS (
-                SELECT 1 FROM ups.appRoles ar
+                SELECT 1 FROM ups.appRoles ar 
                 WHERE ar.authzRole = true 
                 AND ar.name = :role
             )
@@ -92,7 +99,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         JOIN FETCH ups.entraUser u
             WHERE ups.firm IS NULL
             AND EXISTS (
-                SELECT 1 FROM ups.appRoles ar
+                SELECT 1 FROM ups.appRoles ar 
                 WHERE ar.authzRole = true 
                 AND ar.name = :role
             )
