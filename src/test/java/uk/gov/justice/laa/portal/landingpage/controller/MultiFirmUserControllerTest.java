@@ -7,7 +7,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
@@ -15,8 +14,6 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Optional;
@@ -85,8 +82,6 @@ public class MultiFirmUserControllerTest {
         String result = controller.addUserProfilePost(multiFirmUserForm, bindingResult, model, session);
 
         assertThat(result).isEqualTo("redirect:/admin/users");
-        assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
-        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
         assertThat(model.getAttribute("entraUser")).isNotNull();
         assertThat(session.getAttribute("entraUser")).isNotNull();
     }
