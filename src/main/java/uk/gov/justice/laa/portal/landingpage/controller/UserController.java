@@ -1,5 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,10 +81,6 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -462,7 +462,7 @@ public class UserController {
             return "redirect:/admin/user/create/multi-firm";
         } else {
             // Skip multi-firm screen and go directly to firm selection
-            return "redirect:/admin/user/create/select-firm";
+            return "redirect:/admin/user/create/firm";
         }
     }
 
@@ -471,7 +471,7 @@ public class UserController {
     public String createUserMultiFirm(MultiFirmForm multiFirmForm, HttpSession session, Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/select-firm";
+            return "redirect:/admin/user/create/firm";
         }
         
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
