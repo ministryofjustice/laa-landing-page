@@ -28,7 +28,7 @@ databaseChangeLog:
                   RETURNS TRIGGER LANGUAGE plpgsql STRICT STABLE AS '
                   BEGIN
                     IF (
-                      SELECT EXISTS(SELECT * FROM firm AS f
+                      SELECT EXISTS(SELECT 1 FROM firm AS f
                       WHERE f.parent_firm_id is not null and f.id = NEW.parent_firm_id )
                     ) THEN
                       RAISE EXCEPTION ''parent firm (%) already has parent'', NEW.parent_firm_id;
