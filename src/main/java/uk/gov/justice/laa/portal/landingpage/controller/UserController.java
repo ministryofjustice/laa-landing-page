@@ -659,10 +659,22 @@ public class UserController {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = getObjectFromHttpSession(session, "firm", FirmDto.class);
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
+        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
-            FirmDto selectedFirm = firmOptional.orElseThrow();
+            
+            // Handle firm selection - multi-firm users can skip firm selection
+            FirmDto selectedFirm = firmOptional.orElseGet(() -> {
+                // For multi-firm users who skip firm selection, create a placeholder
+                if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                    FirmDto firm = new FirmDto();
+                    firm.setSkipFirmSelection(true);
+                    return firm;
+                }
+                throw new CreateUserDetailsIncompleteException();
+            });
+            
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             try {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
