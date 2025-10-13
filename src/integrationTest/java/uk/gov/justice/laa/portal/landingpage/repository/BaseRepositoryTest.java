@@ -56,6 +56,11 @@ public class BaseRepositoryTest {
                 .code(firmCode).type(FirmType.INDIVIDUAL).build();
     }
 
+    protected Firm buildChildFirm(String name, String firmCode, Firm parentFirm) {
+        return Firm.builder().name(name).offices(HashSet.newHashSet(11))
+                .code(firmCode).type(FirmType.INDIVIDUAL).parentFirm(parentFirm).build();
+    }
+
     protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
         Office.Address addr = Office.Address.builder().addressLine1(address).city("city").postcode("postcode").build();
         return Office.builder().code(officeCode).address(addr).firm(firm).build();
