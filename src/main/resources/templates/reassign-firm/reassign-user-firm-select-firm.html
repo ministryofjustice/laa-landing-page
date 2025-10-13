@@ -35,19 +35,24 @@
                     </div>
                 </div>
 
+                <div class="govuk-notification-banner govuk-notification-banner--important" role="region" aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+                    <div class="govuk-notification-banner__header">
+                        <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                            Important
+                        </h2>
+                    </div>
+                    <div class="govuk-notification-banner__content">
+                        <p class="govuk-body">
+                            <strong>Reassigning this user will remove them from their current firm and delete all roles and office access. A new profile will be created with a new system ID. This cannot be undone and may affect other services. Only use this if the firm was set in error.</strong>
+                        </p>
+                    </div>
+                </div>
+
                 <h1 class="govuk-heading-l">Select the user's firm</h1>
                 
                 <p class="govuk-body" th:text="'Start typing a firm name or ID and select from the list of options'">
                     Start typing a firm name or ID and select from the list of options
                 </p>
-
-                <div class="govuk-warning-text">
-                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
-                    <strong class="govuk-warning-text__text">
-                        <span class="govuk-warning-text__assistive">Warning</span>
-                        This action will remove all current roles and office assignments for this user.
-                    </strong>
-                </div>
 
                 <form method="post" th:action="@{'/admin/users/reassign-firm/' + ${user.id} + '/select-firm'}" th:object="${firmReassignmentForm}">
                     
