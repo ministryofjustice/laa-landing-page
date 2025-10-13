@@ -476,7 +476,7 @@ public class UserController {
             return "redirect:/admin/user/create/multi-firm";
         } else {
             // Skip multi-firm screen and go directly to firm selection
-            return "redirect:/admin/user/create/select-firm";
+            return "redirect:/admin/user/create/firm";
         }
     }
 
@@ -485,7 +485,7 @@ public class UserController {
     public String createUserMultiFirm(MultiFirmForm multiFirmForm, HttpSession session, Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/select-firm";
+            return "redirect:/admin/user/create/firm";
         }
         
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
@@ -674,10 +674,22 @@ public class UserController {
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "user", EntraUserDto.class);
         Optional<FirmDto> firmOptional = getObjectFromHttpSession(session, "firm", FirmDto.class);
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class).orElseThrow();
+        boolean userManager = getObjectFromHttpSession(session, "isUserManager", Boolean.class)
+                .orElseThrow(CreateUserDetailsIncompleteException::new);
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
-            FirmDto selectedFirm = firmOptional.orElseThrow();
+            
+            // Handle firm selection - multi-firm users can skip firm selection
+            FirmDto selectedFirm = firmOptional.orElseGet(() -> {
+                // For multi-firm users who skip firm selection, create a placeholder
+                if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                    FirmDto firm = new FirmDto();
+                    firm.setSkipFirmSelection(true);
+                    return firm;
+                }
+                throw new CreateUserDetailsIncompleteException();
+            });
+            
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             try {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
