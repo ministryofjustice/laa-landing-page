@@ -9,10 +9,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -25,6 +28,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -32,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -44,7 +49,8 @@ class LoginControllerTest {
     @Mock
     private FirmService firmService;
     @Mock
-    private UserService userService;
+    private UserService userService;@Mock
+    private EventService eventService;
 
     @Mock
     private HttpSession session;
@@ -305,11 +311,11 @@ class LoginControllerTest {
         UUID firmId = UUID.randomUUID();
         UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
                 .firm(Firm.builder().id(firmId).name("name").build()).build();
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(up)).build());
         when(firmService.getUserAllFirms(any()))
                 .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
         Model model = new ConcurrentModel();
-        String view = controller.userFirmsPage(model, authentication);
+        String view = controller.userFirmsPage(null, model, authentication);
         assertThat(view).isEqualTo("switch-firm");
         List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
         assertThat(firmDtoList).hasSize(1);
@@ -318,14 +324,14 @@ class LoginControllerTest {
 
     @Test
     void switchFirm_get_no_active() {
-        UUID firmId = UUID.randomUUID();
-        UserProfile up = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE)
-                .firm(Firm.builder().id(firmId).name("name").build()).build();
-        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().userProfiles(Set.of(up)).build());
+        UUID firm1Id = UUID.randomUUID();
+        UserProfile up1 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm1Id).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(up1)).build());
         when(firmService.getUserAllFirms(any()))
-                .thenReturn(List.of(FirmDto.builder().id(firmId).name("name").build()));
+                .thenReturn(List.of(FirmDto.builder().id(firm1Id).name("name").build()));
         Model model = new ConcurrentModel();
-        String view = controller.userFirmsPage(model, authentication);
+        String view = controller.userFirmsPage(null, model, authentication);
         assertThat(view).isEqualTo("switch-firm");
         List<FirmDto> firmDtoList = (List<FirmDto>) model.getAttribute("firmDtoList");
         assertThat(firmDtoList).hasSize(1);
@@ -333,14 +339,65 @@ class LoginControllerTest {
     }
 
     @Test
-    void switchFirm_post() throws IOException {
-        String firmId = UUID.randomUUID().toString();
+    void switchFirm_single_firm_user() {
+        UUID firmId = UUID.randomUUID();
+        UserProfile up = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firmId).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().multiFirmUser(false).userProfiles(Set.of(up)).build());
+        Model model = new ConcurrentModel();
+        String view = controller.userFirmsPage(null, model, authentication);
+        assertThat(view).isEqualTo("redirect:/home");
+    }
 
-        RedirectView view = controller.switchFirm(firmId, authentication, session, authClient);
+    @Test
+    void switchFirm_post_ok() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UserProfile up1 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm1Id).name("name").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm2Id).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(userId).userProfiles(Set.of(up1, up2)).multiFirmUser(true).build());
+        RedirectView view = controller.switchFirm(firm1Id.toString(), authentication);
 
         verify(loginService).getCurrentEntraUser(any());
         verify(userService).setDefaultActiveProfile(any(), any());
-        assertThat(view.getUrl()).isEqualTo("/logout?azure_logout=true");
+        ArgumentCaptor<SwitchProfileAuditEvent> eventCaptor = ArgumentCaptor.forClass(SwitchProfileAuditEvent.class);
+        verify(eventService).logEvent(eventCaptor.capture());
+        SwitchProfileAuditEvent auditEvent = eventCaptor.getValue();
+        assertThat(view.getUrl()).isEqualTo("/switchfirm?message=Switch firm successful");
+        assertThat(auditEvent.getDescription()).contains("User firm switched, user id " + userId + ", from firm " + firm2Id + " to firm " + firm1Id);
+    }
+
+    @Test
+    void switchFirm_post_not_multiFirmUser() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm1Id).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(userId).userProfiles(Set.of(up1)).multiFirmUser(false).build());
+        RedirectView view = controller.switchFirm(firm1Id.toString(), authentication);
+
+        verify(loginService).getCurrentEntraUser(any());
+        verify(userService, never()).setDefaultActiveProfile(any(), any());
+        assertThat(view.getUrl()).isEqualTo("/switchfirm?message=Apply to multi firm user only");
+    }
+
+    @Test
+    void switchFirm_post_same_firm() throws IOException {
+        UUID firm1Id = UUID.randomUUID();
+        UUID firm2Id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UserProfile up1 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm1Id).name("name").build()).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE)
+                .firm(Firm.builder().id(firm2Id).name("name").build()).build();
+        when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().id(userId).userProfiles(Set.of(up1, up2)).multiFirmUser(true).build());
+        RedirectView view = controller.switchFirm(firm2Id.toString(), authentication);
+
+        verify(loginService).getCurrentEntraUser(any());
+        assertThat(view.getUrl()).isEqualTo("/switchfirm?message=Can not switch to the same Firm");
     }
 
     @Test
