@@ -13,16 +13,18 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '/reason?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName}}">Back</a>
+                <a class="govuk-breadcrumbs__link"
+                    th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '/reason?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName}}">Back</a>
             </li>
         </ol>
     </nav>
-    
+
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
-            <div class="govuk-grid-column-two-thirds">
-                
-                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+            <div class="govuk-grid-column-two-thirds-from-desktop">
+
+                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert"
+                    aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
                     <h2 class="govuk-error-summary__title" id="error-summary-title">
                         There is a problem
                     </h2>
@@ -48,21 +50,27 @@
                 <p class="govuk-body">This action will:</p>
 
                 <ul class="govuk-list govuk-list--bullet">
-                    <li>Will remove the user from their current firm and delete all associated roles and office assignments.</li>
-                    <li>Will create the user again from scratch in the new firm</li>
-                    <li>Will not update any in-flight or historic work items for the user associated with the old firm to the new firm</li>
-                    <li>May have unintended results if the user has undertaken any actions in LAA Services for the old firm</li>
+                    <li>Remove the user from their current firm and delete all associated roles and office assignments
+                    </li>
+                    <li>Create the user again from scratch in the new firm</li>
+                    <li>Not update any in-flight or historic work items for the user associated with the old firm to the
+                        new firm</li>
+                    <li>May have unintended results if the user has undertaken any actions in LAA Services for the old
+                        firm</li>
                 </ul>
 
-                <p class="govuk-body">This process is intended for correcting firm assignment errors. Use with caution for established users. You cannot undo this action once it's completed.</p>
+                <p class="govuk-body">This process is intended for correcting firm assignment errors. Use with caution
+                    for established users. You cannot undo this action once it's completed.</p>
+
 
                 <dl class="govuk-summary-list">
                     <!-- Current Firm -->
                     <div class="govuk-summary-list__row">
                         <dt class="govuk-summary-list__key">
-                            Current Firm
+                            Current firm
                         </dt>
-                        <dd class="govuk-summary-list__value" th:text="${user.firm != null ? user.firm.name : 'No firm assigned'}">
+                        <dd class="govuk-summary-list__value"
+                            th:text="${user.firm != null ? user.firm.name : 'No firm assigned'}">
                             Current Firm Name
                         </dd>
                         <dd class="govuk-summary-list__actions">
@@ -72,14 +80,15 @@
                     <!-- New Firm Name -->
                     <div class="govuk-summary-list__row">
                         <dt class="govuk-summary-list__key">
-                            New Firm name
+                            New firm
                         </dt>
                         <dd class="govuk-summary-list__value" th:text="${selectedFirmName}">
                             New Firm Name
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a class="govuk-link" th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName} + '&reason=' + ${#strings.escapeXml(reason)}}">
-                                Change<span class="govuk-visually-hidden"> new firm name</span>
+                            <a class="govuk-link"
+                                th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName} + '&reason=' + ${#strings.escapeXml(reason)}}">
+                                Change<span class="govuk-visually-hidden"> new firm</span>
                             </a>
                         </dd>
                     </div>
@@ -93,7 +102,8 @@
                             Reason for change
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a class="govuk-link" th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '/reason?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName} + '&reason=' + ${#strings.escapeXml(reason)}}">
+                            <a class="govuk-link"
+                                th:href="@{'/admin/users/reassign-firm/' + ${user.id} + '/reason?selectedFirmId=' + ${selectedFirmId} + '&selectedFirmName=' + ${selectedFirmName} + '&reason=' + ${#strings.escapeXml(reason)}}">
                                 Change<span class="govuk-visually-hidden"> reason for change</span>
                             </a>
                         </dd>
@@ -105,7 +115,7 @@
                     <input type="hidden" name="selectedFirmId" th:value="${selectedFirmId}" />
                     <input type="hidden" name="selectedFirmName" th:value="${selectedFirmName}" />
                     <input type="hidden" name="reason" th:value="${reason}" />
-                    
+
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Confirm
