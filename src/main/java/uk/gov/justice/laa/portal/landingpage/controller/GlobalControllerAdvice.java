@@ -17,7 +17,7 @@ public class GlobalControllerAdvice {
 
     private final LoginService loginService;
 
-    public GlobalControllerAdvice(LoginService loginService, ModelMapper mapper) {
+    public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
     }
 
