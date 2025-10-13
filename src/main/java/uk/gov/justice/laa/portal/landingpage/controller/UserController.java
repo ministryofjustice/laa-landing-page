@@ -2109,6 +2109,8 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error processing firm selection for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while processing your selection");
+            // Try to add user to model if available
+            userService.getUserProfileById(id).ifPresent(u -> model.addAttribute("user", u));
             return "reassign-firm/reassign-user-firm-select-firm";
         }
     }
