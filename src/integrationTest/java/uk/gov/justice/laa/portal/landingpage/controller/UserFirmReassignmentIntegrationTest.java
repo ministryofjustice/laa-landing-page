@@ -106,7 +106,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             MvcResult result = mockMvc.perform(get("/admin/users/reassign-firm/" + externalUserProfile.getId())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-select-firm"))
+                    .andExpect(view().name("reassign-firm/select-firm"))
                     .andExpect(model().attributeExists("user"))
                     .andExpect(model().attributeExists("firmReassignmentForm"))
                     .andReturn();
@@ -150,7 +150,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("reason", "Test reason")
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-select-firm"))
+                    .andExpect(view().name("reassign-firm/select-firm"))
                     .andExpect(model().attributeExists("preservedReason"))
                     .andReturn();
 
@@ -201,7 +201,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-select-firm"));
+                    .andExpect(view().name("reassign-firm/select-firm"));
         }
 
         @Test
@@ -227,7 +227,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-select-firm"));
+                    .andExpect(view().name("reassign-firm/select-firm"));
         }
     }
 
@@ -241,7 +241,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("selectedFirmName", firm2.getName())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-reason"))
+                    .andExpect(view().name("reassign-firm/reason"))
                     .andExpect(model().attributeExists("user"))
                     .andExpect(model().attributeExists("selectedFirmId"))
                     .andExpect(model().attributeExists("selectedFirmName"))
@@ -258,7 +258,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("reason", existingReason)
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-reason"))
+                    .andExpect(view().name("reassign-firm/reason"))
                     .andReturn();
 
             assertThat(result.getModelAndView()).isNotNull();
@@ -301,7 +301,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-reason"));
+                    .andExpect(view().name("reassign-firm/reason"));
         }
 
         @Test
@@ -330,7 +330,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("reason", "Test reason")
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-check-answers"))
+                    .andExpect(view().name("reassign-firm/check-answers"))
                     .andExpect(model().attributeExists("user"))
                     .andExpect(model().attributeExists("selectedFirmId"))
                     .andExpect(model().attributeExists("selectedFirmName"))
@@ -356,7 +356,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
 
         @Test
         void shouldRedirectToConfirmation_whenReassignmentSuccessful() throws Exception {
-            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirm")
+            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirmation")
                     .param("selectedFirmId", firm2.getId().toString())
                     .param("selectedFirmName", firm2.getName())
                     .param("reason", "Correction of firm assignment error")
@@ -372,14 +372,14 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
 
         @Test
         void shouldReturnError_whenReasonIsEmpty() throws Exception {
-            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirm")
+            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirmation")
                     .param("selectedFirmId", firm2.getId().toString())
                     .param("selectedFirmName", firm2.getName())
                     .param("reason", "")
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-check-answers"))
+                    .andExpect(view().name("reassign-firm/check-answers"))
                     .andExpect(model().attributeExists("errorMessage"));
         }
 
@@ -393,21 +393,21 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             String currentFirmName = currentProfile.getFirm().getName();
             
             // Try to reassign to the same firm - the service will throw an exception which gets caught and shown in the view
-            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirm")
+            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirmation")
                     .param("selectedFirmId", currentFirmId.toString())
                     .param("selectedFirmName", currentFirmName)
                     .param("reason", "Test reason")
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-check-answers"));
+                    .andExpect(view().name("reassign-firm/check-answers"));
         }
 
         @Test
         void shouldReturnError_whenUserNotFound() throws Exception {
             UUID nonExistentId = UUID.randomUUID();
 
-            mockMvc.perform(post("/admin/users/reassign-firm/" + nonExistentId + "/confirm")
+            mockMvc.perform(post("/admin/users/reassign-firm/" + nonExistentId + "/confirmation")
                     .param("selectedFirmId", firm2.getId().toString())
                     .param("selectedFirmName", firm2.getName())
                     .param("reason", "Test reason")
@@ -421,14 +421,14 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
         void shouldReturnError_whenFirmNotFound() throws Exception {
             UUID nonExistentFirmId = UUID.randomUUID();
 
-            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirm")
+            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile.getId() + "/confirmation")
                     .param("selectedFirmId", nonExistentFirmId.toString())
                     .param("selectedFirmName", "Non-existent Firm")
                     .param("reason", "Test reason")
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("reassign-firm/reassign-user-firm-check-answers"))
+                    .andExpect(view().name("reassign-firm/check-answers"))
                     .andExpect(model().attributeExists("errorMessage"));
         }
     }

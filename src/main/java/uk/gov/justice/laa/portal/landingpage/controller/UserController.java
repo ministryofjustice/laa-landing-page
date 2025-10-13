@@ -2039,7 +2039,7 @@ public class UserController {
                 model.addAttribute("preservedReason", reason);
             }
 
-            return "reassign-firm/reassign-user-firm-select-firm";
+            return "reassign-firm/select-firm";
 
         } catch (Exception e) {
             log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
@@ -2075,20 +2075,20 @@ public class UserController {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
                 model.addAttribute("user", user);
-                return "reassign-firm/reassign-user-firm-select-firm";
+                return "reassign-firm/select-firm";
             }
 
             // Check for validation errors (firm selection)
             if (bindingResult.hasFieldErrors("firmSearch") || bindingResult.hasFieldErrors("selectedFirmId")) {
                 model.addAttribute("user", user);
-                return "reassign-firm/reassign-user-firm-select-firm";
+                return "reassign-firm/select-firm";
             }
 
             // Validate that a firm was actually selected
             if (form.getSelectedFirmId() == null) {
                 model.addAttribute("errorMessage", "Please select a firm from the search results");
                 model.addAttribute("user", user);
-                return "reassign-firm/reassign-user-firm-select-firm";
+                return "reassign-firm/select-firm";
             }
 
             // Get firm details for the reason page
@@ -2097,7 +2097,7 @@ public class UserController {
             if (selectedFirm == null) {
                 model.addAttribute("errorMessage", "Selected firm not found");
                 model.addAttribute("user", user);
-                return "reassign-firm/reassign-user-firm-select-firm";
+                return "reassign-firm/select-firm";
             }
 
             // Store firm details in redirect attributes to pass to reason page
@@ -2111,7 +2111,7 @@ public class UserController {
             model.addAttribute("errorMessage", "An error occurred while processing your selection");
             // Try to add user to model if available
             userService.getUserProfileById(id).ifPresent(u -> model.addAttribute("user", u));
-            return "reassign-firm/reassign-user-firm-select-firm";
+            return "reassign-firm/select-firm";
         }
     }
 
@@ -2156,7 +2156,7 @@ public class UserController {
             model.addAttribute("selectedFirmName", selectedFirmName);
             model.addAttribute("reassignmentReasonForm", reasonForm);
 
-            return "reassign-firm/reassign-user-firm-reason";
+            return "reassign-firm/reason";
 
         } catch (Exception e) {
             log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
@@ -2201,13 +2201,13 @@ public class UserController {
 
             // Check for validation errors (only reason field should be validated here)
             if (bindingResult.hasFieldErrors("reason")) {
-                return "reassign-firm/reassign-user-firm-reason";
+                return "reassign-firm/reason";
             }
 
             // Validate reason is not empty
             if (reasonForm.getReason() == null || reasonForm.getReason().trim().isEmpty()) {
                 model.addAttribute("errorMessage", "Please provide a reason for the reassignment");
-                return "reassign-firm/reassign-user-firm-reason";
+                return "reassign-firm/reason";
             }
 
             // Redirect to check answers page with all parameters
@@ -2261,7 +2261,7 @@ public class UserController {
             model.addAttribute("selectedFirmName", selectedFirmName);
             model.addAttribute("reason", reason);
 
-            return "reassign-firm/reassign-user-firm-check-answers";
+            return "reassign-firm/check-answers";
 
         } catch (Exception e) {
             log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
@@ -2273,7 +2273,7 @@ public class UserController {
     /**
      * Process final confirmation and perform firm reassignment
      */
-    @PostMapping("/users/reassign-firm/{id}/confirm")
+    @PostMapping("/users/reassign-firm/{id}/confirmation")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
     public String processFirmReassignment(@PathVariable String id,
             @RequestParam("selectedFirmId") String selectedFirmId,
@@ -2302,7 +2302,7 @@ public class UserController {
                 model.addAttribute("selectedFirmId", selectedFirmId);
                 model.addAttribute("selectedFirmName", selectedFirmName);
                 model.addAttribute("reason", reason);
-                return "reassign-firm/reassign-user-firm-check-answers";
+                return "reassign-firm/check-answers";
             }
 
             // Validate all required parameters are present
@@ -2312,7 +2312,7 @@ public class UserController {
                 model.addAttribute("selectedFirmId", selectedFirmId);
                 model.addAttribute("selectedFirmName", selectedFirmName);
                 model.addAttribute("reason", reason);
-                return "reassign-firm/reassign-user-firm-check-answers";
+                return "reassign-firm/check-answers";
             }
 
             // Get current user info for audit logging
@@ -2337,7 +2337,7 @@ public class UserController {
             model.addAttribute("selectedFirmId", selectedFirmId);
             model.addAttribute("selectedFirmName", selectedFirmName);
             model.addAttribute("reason", reason);
-            return "reassign-firm/reassign-user-firm-check-answers";
+            return "reassign-firm/check-answers";
 
         } catch (IllegalStateException e) {
             log.warn("Invalid state for reassignment of user {}: {}", id, e.getMessage());
@@ -2346,7 +2346,7 @@ public class UserController {
             model.addAttribute("selectedFirmId", selectedFirmId);
             model.addAttribute("selectedFirmName", selectedFirmName);
             model.addAttribute("reason", reason);
-            return "reassign-firm/reassign-user-firm-check-answers";
+            return "reassign-firm/check-answers";
 
         } catch (Exception e) {
             log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
@@ -2355,7 +2355,7 @@ public class UserController {
             model.addAttribute("selectedFirmId", selectedFirmId);
             model.addAttribute("selectedFirmName", selectedFirmName);
             model.addAttribute("reason", reason);
-            return "reassign-firm/reassign-user-firm-check-answers";
+            return "reassign-firm/check-answers";
         }
     }
 
@@ -2380,7 +2380,7 @@ public class UserController {
             // Add user to the model
             model.addAttribute("user", user);
 
-            return "reassign-firm/reassign-user-firm-confirmation";
+            return "reassign-firm/confirmation";
 
         } catch (Exception e) {
             log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);

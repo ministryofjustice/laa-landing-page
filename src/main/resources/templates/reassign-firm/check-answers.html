@@ -100,7 +100,7 @@
                     </div>
                 </dl>
 
-                <form method="post" th:action="@{'/admin/users/reassign-firm/' + ${user.id} + '/confirm'}">
+                <form method="post" th:action="@{'/admin/users/reassign-firm/' + ${user.id} + '/confirmation'}">
                     <!-- Hidden fields to carry forward all the data -->
                     <input type="hidden" name="selectedFirmId" th:value="${selectedFirmId}" />
                     <input type="hidden" name="selectedFirmName" th:value="${selectedFirmName}" />
