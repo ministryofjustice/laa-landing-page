@@ -81,13 +81,6 @@
                             </div>
                         </div>
                     </form>
-                    <div class="moj-page-header-actions__actions" th:if="${canDeleteUser}" style="margin-top:8px;">
-                        <div class="moj-button-group">
-                            <a th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}"
-                               class="govuk-button govuk-button--warning"
-                               data-module="govuk-button">Delete user</a>
-                        </div>
-                    </div>
                 </div>
                 <!-- <div id="event-name-hint" class="govuk-hint">
                     Last logged in <span th:text="${user.lastLoggedIn}"></span>

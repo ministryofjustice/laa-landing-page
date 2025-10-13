@@ -432,12 +432,13 @@ public class AccessControlServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
-        AppRole globalAdminRole = AppRole.builder().authzRole(true).name("Global Admin").build();
+        Permission userPermission = Permission.DELETE_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser admin = EntraUser.builder().id(adminId).userProfiles(HashSet.newHashSet(1)).build();
         UserProfile adminProfile = UserProfile.builder()
                 .activeProfile(true)
                 .entraUser(admin)
-                .appRoles(Set.of(globalAdminRole))
+                .appRoles(Set.of(appRole))
                 .userType(UserType.INTERNAL)
                 .build();
         admin.getUserProfiles().add(adminProfile);
@@ -465,12 +466,13 @@ public class AccessControlServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
-        AppRole someRole = AppRole.builder().authzRole(true).name("External User Manager").build();
+        Permission userPermission = Permission.DELETE_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(HashSet.newHashSet(1)).build();
         UserProfile userProfile = UserProfile.builder()
                 .activeProfile(true)
                 .entraUser(user)
-                .appRoles(Set.of(someRole))
+                .appRoles(Set.of(appRole))
                 .userType(UserType.INTERNAL)
                 .build();
         user.getUserProfiles().add(userProfile);
@@ -488,18 +490,6 @@ public class AccessControlServiceTest {
 
         boolean canDeleteInternal = accessControlService.canDeleteUser(internalTargetId.toString());
         Assertions.assertThat(canDeleteInternal).isFalse();
-
-        UUID externalTargetId = UUID.randomUUID();
-        EntraUserDto externalTargetEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
-        UserProfileDto externalTarget = UserProfileDto.builder()
-                .id(externalTargetId)
-                .userType(UserType.EXTERNAL)
-                .entraUser(externalTargetEntra)
-                .build();
-        Mockito.when(userService.getUserProfileById(externalTargetId.toString())).thenReturn(Optional.of(externalTarget));
-
-        boolean canDeleteExternal = accessControlService.canDeleteUser(externalTargetId.toString());
-        Assertions.assertThat(canDeleteExternal).isFalse();
     }
 
 }

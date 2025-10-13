@@ -89,7 +89,7 @@ public class AccessControlService {
             return false;
         }
 
-        return userHasAuthzRole(authenticatedUser, "Global Admin");
+        return userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
     }
 
     public boolean canEditUser(String userProfileId) {
