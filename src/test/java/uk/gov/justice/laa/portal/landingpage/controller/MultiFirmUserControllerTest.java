@@ -11,25 +11,33 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
@@ -40,15 +48,20 @@ public class MultiFirmUserControllerTest {
 
     @Mock
     private UserService userService;
+    @Mock
+    private LoginService loginService;
+    @Mock
+    private Authentication authentication;
 
     private HttpSession session;
     private Model model;
 
     @BeforeEach
     public void setUp() {
+        ModelMapper mapper = new ModelMapper();
         model = new ExtendedModelMap();
         session = new MockHttpSession();
-        controller = new MultiFirmUserController(userService);
+        controller = new MultiFirmUserController(userService, loginService, mapper);
         enableMultiFirmUser(true);
     }
 
@@ -56,8 +69,8 @@ public class MultiFirmUserControllerTest {
         ReflectionTestUtils.setField(controller, "enableMultiFirmUser", enabled);
     }
 
-    private MultiFirmUserForm createForm(String email) {
-        return MultiFirmUserForm.builder().email(email).build();
+    private MultiFirmUserForm createForm() {
+        return MultiFirmUserForm.builder().email("test@email.com").build();
     }
 
     private BindingResult mockBindingResult(boolean hasErrors) {
@@ -106,13 +119,58 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
-    public void addUserProfilePost_validMultiFirmUser() {
-        MultiFirmUserForm form = createForm("test@email.com");
+    public void addUserProfilePost_NotaMultiFirmUser() {
+        MultiFirmUserForm form = createForm();
         BindingResult bindingResult = mockBindingResult(false);
-        EntraUserDto entraUser = EntraUserDto.builder().multiFirmUser(true).email(form.getEmail()).build();
-        when(userService.getEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
 
-        String result = controller.addUserProfilePost(form, bindingResult, model, session);
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().multiFirmUser(false).email(form.getEmail())
+                .userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        verify(bindingResult).rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+    }
+
+    @Test
+    public void addUserProfilePost_AlreadyaMemberOfTheFirm() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().multiFirmUser(true).email(form.getEmail())
+                .userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        UserProfile adminUserProfile = UserProfile.builder().firm(userFirm).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        verify(bindingResult).rejectValue("email", "error.email", "This user already has access for your firm. Manage them from the Manage Your Users screen.");
+    }
+
+    @Test
+    public void addUserProfilePost_validMultiFirmUser() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().email(form.getEmail())
+                .multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        Firm adminFirm = Firm.builder().name("admin firm").build();
+        UserProfile adminUserProfile = UserProfile.builder().firm(adminFirm).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("redirect:/admin/users");
         assertThat(model.getAttribute("entraUser")).isNotNull();
@@ -121,26 +179,28 @@ public class MultiFirmUserControllerTest {
 
     @Test
     public void addUserProfilePost_notMultiFirmUser() {
-        MultiFirmUserForm form = createForm("test@email.com");
+        MultiFirmUserForm form = createForm();
         BindingResult bindingResult = mockBindingResult(false);
-        EntraUserDto entraUser = EntraUserDto.builder().multiFirmUser(false).email(form.getEmail()).build();
-        when(userService.getEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+        EntraUser entraUser = EntraUser.builder().multiFirmUser(false).email(form.getEmail()).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
 
-        String result = controller.addUserProfilePost(form, bindingResult, model, session);
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        verify(bindingResult).rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
         assertSessionAndModelCleared(model, session);
     }
 
     @Test
     public void addUserProfilePost_userNotFound() {
-        MultiFirmUserForm form = createForm("test@email.com");
+        MultiFirmUserForm form = createForm();
         BindingResult bindingResult = mockBindingResult(false);
-        when(userService.getEntraUserByEmail(form.getEmail())).thenReturn(Optional.empty());
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.empty());
 
-        String result = controller.addUserProfilePost(form, bindingResult, model, session);
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        verify(bindingResult).rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
         assertSessionAndModelCleared(model, session);
     }
 
@@ -149,7 +209,7 @@ public class MultiFirmUserControllerTest {
         MultiFirmUserForm form = MultiFirmUserForm.builder().build();
         BindingResult bindingResult = mockBindingResult(true);
 
-        String result = controller.addUserProfilePost(form, bindingResult, model, session);
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("add-multi-firm-user-profile");
         assertSessionAndModelPopulated(model, session);
@@ -164,7 +224,7 @@ public class MultiFirmUserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
         RuntimeException rtEx = assertThrows(RuntimeException.class, () ->
-                controller.addUserProfilePost(form, bindingResult, model, session));
+                controller.addUserProfilePost(form, bindingResult, model, session, authentication));
         assertThat(rtEx.getMessage()).contains("The page you are trying to access is not available.");
     }
 

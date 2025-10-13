@@ -5,9 +5,12 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,8 +21,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+
+import java.util.Optional;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
@@ -30,9 +38,14 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
+@PreAuthorize("@accessControlService.isUserManager()")
 public class MultiFirmUserController {
 
     private final UserService userService;
+
+    private final LoginService loginService;
+
+    private final ModelMapper mapper;
 
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
@@ -65,7 +78,8 @@ public class MultiFirmUserController {
     }
 
     @PostMapping("/user/add/profile")
-    public String addUserProfilePost(@Valid MultiFirmUserForm multiFirmUserForm, BindingResult result, Model model, HttpSession session) {
+    public String addUserProfilePost(@Valid MultiFirmUserForm multiFirmUserForm, BindingResult result,
+                                     Model model, HttpSession session, Authentication authentication) {
 
         if (!enableMultiFirmUser) {
             throw new RuntimeException("The page you are trying to access is not available."
@@ -79,22 +93,47 @@ public class MultiFirmUserController {
             return "add-multi-firm-user-profile";
         }
 
-        EntraUserDto entraUserDto = userService.getEntraUserByEmail(multiFirmUserForm.getEmail()).orElse(null);
+        Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
 
-        if (entraUserDto == null) {
-            log.debug("No user present with the email provided: {}.", multiFirmUserForm.getEmail());
-            result.rejectValue("email", "error.email", "No user present with the email provided.");
+        if (entraUserOptional.isEmpty()) {
+            log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
+            result.rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
             return "add-multi-firm-user-profile";
-        } else if (!entraUserDto.isMultiFirmUser()) {
-            log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
-            result.rejectValue("email", "error.email", "The user is not a multi firm user.");
-            return "add-multi-firm-user-profile";
+        } else {
+
+            EntraUser entraUser = entraUserOptional.get();
+
+            if (!entraUser.isMultiFirmUser()) {
+                log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
+                result.rejectValue("email", "error.email",
+                        "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+                return "add-multi-firm-user-profile";
+            }
+
+            if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+                UserProfile authenticatedUserProfile = loginService.getCurrentProfile(authentication);
+
+                Optional<UserProfile> sameFirmProfile = entraUser.getUserProfiles().stream()
+                        .filter(up -> up.getFirm().equals(authenticatedUserProfile.getFirm()))
+                        .findFirst();
+
+                if (sameFirmProfile.isPresent()) {
+                    log.debug("This user already has access for your firm. Manage them from the Manage Your Users screen.");
+                    result.rejectValue("email", "error.email", "This user already has access for your firm. Manage them from the Manage Your Users screen.");
+                    model.addAttribute("userProfileExistsOnFirm", true);
+                    model.addAttribute("existingUserProfileId", sameFirmProfile.get().getId());
+                    return "add-multi-firm-user-profile";
+                }
+
+                EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
+
+                model.addAttribute("entraUser", entraUserDto);
+                session.setAttribute("entraUser", entraUserDto);
+
+                model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
+            }
+
         }
-
-        model.addAttribute("entraUser", entraUserDto);
-        session.setAttribute("entraUser", entraUserDto);
-
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
 
         // TODO: Delete when next page implemented - Start
         return "redirect:/admin/users";
@@ -108,6 +147,7 @@ public class MultiFirmUserController {
     public String cancelUserProfileCreation(HttpSession session) {
         session.removeAttribute("entraUser");
         session.removeAttribute("multiFirmUserForm");
+        session.removeAttribute("existingUserProfile");
         return "redirect:/admin/users";
     }
 
