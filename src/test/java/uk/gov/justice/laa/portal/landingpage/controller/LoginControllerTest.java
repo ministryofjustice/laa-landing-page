@@ -49,7 +49,8 @@ class LoginControllerTest {
     @Mock
     private FirmService firmService;
     @Mock
-    private UserService userService;@Mock
+    private UserService userService;
+    @Mock
     private EventService eventService;
 
     @Mock
