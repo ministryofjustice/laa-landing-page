@@ -33,6 +33,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRe
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -61,7 +62,6 @@ public class LiveTechServicesClient implements TechServicesClient {
     private String accessTokenRequestScope;
     @Value("${app.laa.default.user.access.security.group}")
     private String defaultSecurityGroup;
-
 
     public LiveTechServicesClient(ClientSecretCredential clientSecretCredential, RestClient restClient,
                                   EntraUserRepository entraUserRepository, CacheManager cacheManager,
@@ -127,17 +127,21 @@ public class LiveTechServicesClient implements TechServicesClient {
 
     @Override
     public void deleteRoleAssignment(UUID userId) {
+        EntraUser entraUser = null;
         try {
-            String accessToken = getAccessToken();
+            entraUser = entraUserRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
-            EntraUser entraUser = entraUserRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-
-            UpdateSecurityGroupsRequest request = UpdateSecurityGroupsRequest.builder().build();
-
-            logger.info("Sending request to tech services to remove group memberships for deleting: {}", request);
+            UpdateSecurityGroupsRequest request = UpdateSecurityGroupsRequest
+                    .builder()
+                    .groups(Collections.emptySet())
+                    .build();
 
             String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraUser.getEntraOid());
 
+            logger.info("TechServices DELETE groups: userId={}, entraOid={}, uri={}", userId, entraUser.getEntraOid(), uri);
+            logger.info("Sending request to tech services to remove group memberships for deleting: {}", request);
+
+            String accessToken = getAccessToken();
             ResponseEntity<UpdateSecurityGroupsResponse> response = restClient
                     .patch()
                     .uri(uri)
@@ -156,6 +160,11 @@ public class LiveTechServicesClient implements TechServicesClient {
                 logger.error("Failed to remove security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
                 throw new RuntimeException("Failed to remove security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
             }
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            logger.error("Tech Services DELETE groups failed for userId={}, entraOid={}, status={}, body={}",
+                    userId, (entraUser != null ? entraUser.getEntraOid() : null), httpEx.getStatusCode(), errorJson, httpEx);
+            throw new RuntimeException("Error while sending security group removal to Tech Services: " + httpEx.getStatusCode(), httpEx);
         } catch (Exception ex) {
             logger.error("Error while sending security group removal to Tech Services.", ex);
             throw new RuntimeException("Error while sending security group removal to Tech Services.", ex);
