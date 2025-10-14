@@ -102,6 +102,28 @@ class FirmServiceTest {
     }
 
     @Test
+    void getUserActiveAllFirms_hasChildrenFirm() {
+        Firm firm1 = Firm.builder().name("F1").childFirms(Set.of(Firm.builder().name("FC1").build())).build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).multiFirmUser(true).build();
+        List<FirmDto> firms = firmService.getUserActiveAllFirms(entraUser);
+        assertThat(firms).hasSize(2);
+    }
+
+    @Test
+    void getUserActiveAllFirms_has_no_ChildrenFirm() {
+        Firm firm1 = Firm.builder().name("F1").build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).multiFirmUser(true).build();
+        List<FirmDto> firms = firmService.getUserActiveAllFirms(entraUser);
+        assertThat(firms).hasSize(1);
+    }
+
+    @Test
     void getUserFirmsByUserId() {
         // Given
         UUID userId = UUID.randomUUID();

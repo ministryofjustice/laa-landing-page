@@ -100,7 +100,7 @@ public class AccessControlServiceTest {
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
         Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
@@ -211,7 +211,7 @@ public class AccessControlServiceTest {
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         UUID accessedUserId = UUID.randomUUID();
-        Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto2));
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com").build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().activeProfile(true).entraUser(accessedUser).build();
@@ -240,7 +240,7 @@ public class AccessControlServiceTest {
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(Collections.emptyList());
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
@@ -302,7 +302,7 @@ public class AccessControlServiceTest {
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
         Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
         Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
 
@@ -335,7 +335,7 @@ public class AccessControlServiceTest {
         Mockito.when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
-        Mockito.when(firmService.getUserAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(AccessControlService.class);
