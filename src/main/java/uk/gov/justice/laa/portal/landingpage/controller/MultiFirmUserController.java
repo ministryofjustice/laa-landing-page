@@ -57,7 +57,7 @@ public class MultiFirmUserController {
                     + "Please contact your system administrator for assistance.");
         }
 
-        return "add-multi-firm-user-profile-start";
+        return "multi-firm-user/add-profile-start";
     }
 
     @GetMapping("/user/add/profile")
@@ -74,7 +74,7 @@ public class MultiFirmUserController {
         session.setAttribute("multiFirmUserForm", multiFirmUserForm);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
-        return "add-multi-firm-user-profile";
+        return "multi-firm-user/select-user";
     }
 
     @PostMapping("/user/add/profile")
@@ -90,7 +90,7 @@ public class MultiFirmUserController {
             log.debug("Validation errors occurred while searching for user: {}", result.getAllErrors());
             session.setAttribute("multiFirmUserForm", multiFirmUserForm);
             model.addAttribute("multiFirmUserForm", multiFirmUserForm);
-            return "add-multi-firm-user-profile";
+            return "multi-firm-user/select-user";
         }
 
         Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
@@ -98,7 +98,7 @@ public class MultiFirmUserController {
         if (entraUserOptional.isEmpty()) {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
-            return "add-multi-firm-user-profile";
+            return "multi-firm-user/select-user";
         } else {
 
             EntraUser entraUser = entraUserOptional.get();
@@ -107,7 +107,7 @@ public class MultiFirmUserController {
                 log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
                 result.rejectValue("email", "error.email",
                         "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
-                return "add-multi-firm-user-profile";
+                return "multi-firm-user/select-user";
             }
 
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -122,7 +122,7 @@ public class MultiFirmUserController {
                     result.rejectValue("email", "error.email", "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     model.addAttribute("userProfileExistsOnFirm", true);
                     model.addAttribute("existingUserProfileId", sameFirmProfile.get().getId());
-                    return "add-multi-firm-user-profile";
+                    return "multi-firm-user/select-user";
                 }
 
                 EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
