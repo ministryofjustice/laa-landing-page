@@ -1,24 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -34,14 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -87,6 +66,25 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
 /**
  * User Controller
  */
@@ -112,20 +110,6 @@ public class UserController {
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
 
-    @GetMapping("/user/firms/search")
-    @ResponseBody
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
-    public List<FirmDto> getFirms(Authentication authentication,
-            @RequestParam(value = "q", defaultValue = "") String query) {
-        // If the query is blank/whitespace-only, return an empty result and do not
-        // call the service to avoid unnecessary work.
-        if (query == null || query.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        return firmService.getUserAccessibleFirms(entraUser, query);
-    }
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -204,6 +188,9 @@ public class UserController {
             session.removeAttribute("successMessage");
         }
 
+        boolean allowDelegateUserAccess = accessControlService
+                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
@@ -217,6 +204,8 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
 
@@ -608,32 +597,6 @@ public class UserController {
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
-    }
-
-    @GetMapping("/user/create/firm/search")
-    @ResponseBody
-    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
-                                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
-        // If the query is blank/whitespace-only, return an empty result and do not
-        // call the service to avoid unnecessary work.
-        if (query == null || query.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        int validatedCount = Math.max(10, Math.min(count, 100));
-        List<FirmDto> firms = firmService.searchFirms(query.trim());
-
-        List<Map<String, String>> result = firms.stream()
-                .limit(validatedCount) // Limit results to prevent overwhelming the UI
-                .map(firm -> {
-                    Map<String, String> firmData = new HashMap<>();
-                    firmData.put("id", firm.getId().toString());
-                    firmData.put("name", firm.getName());
-                    firmData.put("code", firm.getCode());
-                    return firmData;
-                })
-                .collect(Collectors.toList());
-        return result;
     }
 
     @PostMapping("/user/create/firm")
