@@ -10,10 +10,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +48,68 @@ class EventServiceTest {
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User with user id " + adminUuid
                 + ", New user created, user id " + userId + ", with firm Firm and user type External User Manager");
+    }
+
+    @Test
+    void auditDeleteUserAttempt() {
+        // Given
+        UUID adminUuid = UUID.randomUUID();
+        UUID deletedUserId = UUID.randomUUID();
+        String reason = "duplicate user";
+        String error = "Tech Services unavailable";
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+        currentUserDto.setUserId(adminUuid);
+
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+
+        DeleteUserAttemptAuditEvent event = new DeleteUserAttemptAuditEvent(
+                deletedUserId.toString(), reason, adminUuid, error);
+
+        // When
+        eventService.logEvent(event);
+
+        // Then
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        String message = infoLogs.get(0).getFormattedMessage();
+        assertThat(message).contains("Audit event USER_DELETE_ATTEMPT, by User with user id " + adminUuid);
+        assertThat(message).contains("User delete attempted, user id " + deletedUserId + " for reason " + reason + ", error: " + error);
+    }
+
+    @Test
+    void auditDeleteUserSuccess() {
+        // Given
+        UUID adminUuid = UUID.randomUUID();
+        UUID deletedUserId = UUID.randomUUID();
+        String reason = "left organisation";
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+        currentUserDto.setUserId(adminUuid);
+
+        DeletedUser deletedUser = DeletedUser.builder()
+                .deletedUserId(deletedUserId)
+                .removedRolesCount(3)
+                .detachedOfficesCount(2)
+                .build();
+
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+
+        DeleteUserSuccessAuditEvent event = new DeleteUserSuccessAuditEvent(
+                reason, adminUuid, deletedUser);
+
+        // When
+        eventService.logEvent(event);
+
+        // Then
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        String message = infoLogs.get(0).getFormattedMessage();
+        assertThat(message).contains("Audit event USER_DELETE_EXECUTED, by User with user id " + adminUuid);
+        assertThat(message).contains("User deleted successfully, deleted user id " + deletedUserId
+                + " for reason " + reason + ". 3 roles removed. 2 offices detached");
     }
 
     @Test

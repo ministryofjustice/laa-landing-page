@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -28,6 +29,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
@@ -119,6 +121,163 @@ public class LiveTechServicesClientTest {
 
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
+        verify(restClient, times(1)).patch();
+    }
+
+    @Test
+    void testDeleteRoleAssignment_sendsEmptyGroupsPayload() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        ArgumentCaptor<UpdateSecurityGroupsRequest> captor = ArgumentCaptor.forClass(UpdateSecurityGroupsRequest.class);
+        when(requestBodySpec.body(captor.capture())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
+                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        liveTechServicesClient.deleteRoleAssignment(userId);
+
+        UpdateSecurityGroupsRequest sent = captor.getValue();
+        assertThat(sent).isNotNull();
+        assertThat(sent.getGroups()).isNotNull();
+        assertThat(sent.getGroups()).isEmpty();
+    }
+
+    @Test
+    void testDeleteRoleAssignment_httpClientErrorExceptionLogsBody() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        String errorBody = "{\n  \"success\": false, \n  \"code\": \"BAD_REQUEST\", \n  \"message\": \"Validation failed\"\n}";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
+                "Bad Request", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        assertLogMessage(Level.ERROR, "status=400");
+        assertLogMessage(Level.ERROR, "Validation failed");
+    }
+
+    @Test
+    void testDeleteRoleAssignment_success() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
+                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        liveTechServicesClient.deleteRoleAssignment(userId);
+
+        assertLogMessage(Level.INFO, "Sending request to tech services to remove group memberships for deleting:");
+        assertLogMessage(Level.INFO, "Security Groups removed successfully for firstName lastName");
+        verify(restClient, times(1)).patch();
+    }
+
+    @Test
+    void testDeleteRoleAssignmentUserNotFound() {
+        UUID userId = UUID.randomUUID();
+        AccessToken token = new AccessToken("token", null);
+        when(entraUserRepository.findById(userId)).thenThrow(new RuntimeException("User not found"));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
+        assertLogMessage(Level.ERROR, "Error while sending security group removal to Tech Services.");
+    }
+
+    @Test
+    void testDeleteRoleAssignmentError() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenThrow(new RuntimeException("Rest error"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
+        assertLogMessage(Level.ERROR, "Error while sending security group removal to Tech Services.");
+    }
+
+    @Test
+    void testDeleteRoleAssignment4xxResponse() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenReturn(ResponseEntity.badRequest().build());
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
+        assertLogMessage(Level.ERROR, "Failed to remove security groups for user firstName lastName with error code 400 BAD_REQUEST");
+        verify(restClient, times(1)).patch();
+    }
+
+    @Test
+    void testDeleteRoleAssignment5xxResponse() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenReturn(ResponseEntity.internalServerError().build());
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
+        assertLogMessage(Level.ERROR, "Failed to remove security groups for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
         verify(restClient, times(1)).patch();
     }
 

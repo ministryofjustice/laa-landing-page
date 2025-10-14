@@ -12,7 +12,9 @@ public enum Permission {
     EDIT_EXTERNAL_USER,
     EDIT_USER_FIRM, // Not used.
     EDIT_USER_OFFICE,
-    EDIT_USER_DETAILS; // Not used.
+    EDIT_USER_DETAILS,
+    DELEGATE_EXTERNAL_USER_ACCESS,
+    DELETE_EXTERNAL_USER;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),
@@ -24,5 +26,6 @@ public enum Permission {
             EDIT_USER_FIRM.name(),
             EDIT_USER_OFFICE.name(),
             EDIT_USER_DETAILS.name(),
+            DELETE_EXTERNAL_USER.name()
     };
 }

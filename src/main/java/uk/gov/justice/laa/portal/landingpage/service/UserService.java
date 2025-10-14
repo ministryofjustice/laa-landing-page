@@ -1,5 +1,54 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+import jakarta.transaction.Transactional;
+import org.apache.commons.lang3.StringUtils;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -22,56 +71,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.modelmapper.ModelMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-
-import jakarta.transaction.Transactional;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 /**
  * userService
@@ -305,9 +304,70 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<EntraUserDto> getEntraUserByEmail(String email) {
+        return entraUserRepository.findByEmailIgnoreCase(email)
+                .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
     public Optional<UserProfileDto> getUserProfileById(String userId) {
         return userProfileRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, UserProfileDto.class));
+    }
+
+    /**
+     * Delete an EXTERNAL user and all related local records.
+     *
+     * @param userProfileId the ID of the user profile (UUID as String)
+     * @param reason        the reason for deletion, used for logging/audit
+     * @param actorId       the UUID of the actor performing the deletion (for logging)
+     */
+    @Transactional
+    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isEmpty()) {
+            throw new RuntimeException("User profile not found: " + userProfileId);
+        }
+
+        UserProfile userProfile = optionalUserProfile.get();
+        if (userProfile.getUserType() != UserType.EXTERNAL) {
+            throw new RuntimeException("Deletion is only permitted for external users");
+        }
+
+        EntraUser entraUser = userProfile.getEntraUser();
+        if (entraUser == null) {
+            throw new RuntimeException("Associated Entra user not found for profile: " + userProfileId);
+        }
+
+        logger.info("Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
+                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
+
+        // first send update to tech services
+        techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
+
+        // hard delete from silas db
+        List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+        DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
+                .deletedUserId(userProfile.getEntraUser().getId());
+        if (profiles != null && !profiles.isEmpty()) {
+            for (UserProfile up : profiles) {
+                if (up.getAppRoles() != null) {
+                    builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
+                    up.getAppRoles().clear();
+                }
+                if (up.getOffices() != null) {
+                    builder.detachedOfficesCount(up.getOffices().isEmpty() ? 0 : up.getOffices().size());
+                    up.getOffices().clear();
+                }
+                up.setEntraUser(null);
+                userProfileRepository.save(up);
+            }
+            userProfileRepository.flush();
+            userProfileRepository.deleteAll(profiles);
+            userProfileRepository.flush();
+        }
+        entraUserRepository.delete(entraUser);
+        entraUserRepository.flush();
+        return builder.build();
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -569,6 +629,7 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
 
         UserProfile userProfile = UserProfile.builder()
+                .entraUser(entraUser)
                 .activeProfile(activeProfile)
                 .userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now())
@@ -685,6 +746,10 @@ public class UserService {
         // Check if the user exists in the local repository and is a multi-firm user
         Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
         return user.map(EntraUser::isMultiFirmUser).orElse(false);
+    }
+
+    public Optional<EntraUser> findEntraUserByEmail(String email) {
+        return entraUserRepository.findByEmailIgnoreCase(email);
     }
 
     public List<AppRoleDto> getAppRolesByAppId(String appId) {
