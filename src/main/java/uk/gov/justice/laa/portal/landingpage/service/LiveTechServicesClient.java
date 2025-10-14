@@ -309,7 +309,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
         String accessToken = Objects.requireNonNull(clientSecretCredential.getToken(new TokenRequestContext()
                 .setScopes(List.of(accessTokenRequestScope))).timeout(Duration.of(60, ChronoUnit.SECONDS)).block()).getToken();
-        cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE).put(ACCESS_TOKEN, accessToken);;
+        cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE).put(ACCESS_TOKEN, accessToken);
 
         return accessToken;
     }
