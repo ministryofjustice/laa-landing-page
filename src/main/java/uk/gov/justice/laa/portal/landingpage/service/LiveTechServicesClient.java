@@ -298,8 +298,6 @@ public class LiveTechServicesClient implements TechServicesClient {
                     Jwt jwt = jwtDecoder.decode(accessTokenFromCache);
                     assert jwt.getExpiresAt() != null;
                     if (jwt.getExpiresAt().isAfter(Instant.now().plusSeconds(30))) {
-                        long ttlSeconds = Instant.now().until(jwt.getExpiresAt(), ChronoUnit.SECONDS);
-                        logger.debug("Tech Services access token retrieved from cache, TTL={}s", ttlSeconds);
                         return accessTokenFromCache;
                     }
                 }
@@ -311,13 +309,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
         String accessToken = Objects.requireNonNull(clientSecretCredential.getToken(new TokenRequestContext()
                 .setScopes(List.of(accessTokenRequestScope))).timeout(Duration.of(60, ChronoUnit.SECONDS)).block()).getToken();
-        Cache putCache = cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
-        if (putCache != null) {
-            putCache.put(ACCESS_TOKEN, accessToken);
-        } else {
-            logger.warn("Tech Services cache '{}' not available, skipping token cache put", CachingConfig.TECH_SERVICES_DETAILS_CACHE);
-        }
-        logger.debug("Tech Services access token acquired from AAD and cached");
+        cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE).put(ACCESS_TOKEN, accessToken);;
 
         return accessToken;
     }
