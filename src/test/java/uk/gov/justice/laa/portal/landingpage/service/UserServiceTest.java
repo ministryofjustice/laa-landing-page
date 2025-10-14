@@ -3931,4 +3931,324 @@ class UserServiceTest {
         }
 
     }
+
+    @Nested
+    class PaginationAndSortingTests {
+
+        @Test
+        void getPageOfUsersBySearch_withMultiplePages_returnsCorrectTotalPages() {
+            // Given - 116 total users with 10 per page should give 12 pages
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = null;
+            boolean showFirmAdmins = false;
+            int page = 1;
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(10);
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    116 // Total elements
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(10);
+            assertThat(result.getTotalUsers()).isEqualTo(116);
+            assertThat(result.getTotalPages()).isEqualTo(12); // 116/10 = 11.6, rounds up to 12
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_withSorting_maintainsCorrectCount() {
+            // Given - Sorting should not affect the total count
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = UserType.EXTERNAL;
+            boolean showFirmAdmins = false;
+            int page = 1;
+            int pageSize = 10;
+            String sort = "firmName";
+            String direction = "DESC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(10);
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "firm.name")),
+                    50 // Total elements
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(10);
+            assertThat(result.getTotalUsers()).isEqualTo(50);
+            assertThat(result.getTotalPages()).isEqualTo(5); // 50/10 = 5 pages
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_lastPagePartial_returnsCorrectCount() {
+            // Given - Last page with only 6 users (page 12 of 116 total)
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = null;
+            boolean showFirmAdmins = false;
+            int page = 12;
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(6); // Only 6 users on last page
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(11, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    116 // Total elements
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(6);
+            assertThat(result.getTotalUsers()).isEqualTo(116);
+            assertThat(result.getTotalPages()).isEqualTo(12);
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_withFirmFilter_returnsCorrectPagination() {
+            // Given - Filtering by firm should maintain accurate pagination
+            String searchTerm = "";
+            UUID selectedFirmId = UUID.randomUUID();
+            FirmSearchForm firmSearch = FirmSearchForm.builder()
+                    .selectedFirmId(selectedFirmId)
+                    .firmSearch("Test Firm")
+                    .build();
+            UserType userType = UserType.EXTERNAL;
+            boolean showFirmAdmins = false;
+            int page = 1;
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(10);
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    25 // Total elements after firm filter
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(10);
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3); // 25/10 = 2.5, rounds up to 3
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_withSearchTerm_returnsFilteredPagination() {
+            // Given - Search term should filter results and update pagination
+            String searchTerm = "john";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = null;
+            boolean showFirmAdmins = false;
+            int page = 1;
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(5); // Search returns 5 results
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    5 // Total elements matching search
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(5);
+            assertThat(result.getTotalUsers()).isEqualTo(5);
+            assertThat(result.getTotalPages()).isEqualTo(1); // Only 1 page needed
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_withShowFirmAdminsFilter_returnsFilteredPagination() {
+            // Given - Show firm admins filter should work correctly with pagination
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = UserType.EXTERNAL;
+            boolean showFirmAdmins = true;
+            int page = 1;
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(8); // 8 firm admins
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    18 // Total firm admins
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(8);
+            assertThat(result.getTotalUsers()).isEqualTo(18);
+            assertThat(result.getTotalPages()).isEqualTo(2); // 18/10 = 1.8, rounds up to 2
+            verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
+        }
+
+        @Test
+        void getPageOfUsersBySearch_differentSortFields_returnsConsistentCounts() {
+            // Given - Different sort fields should not affect total counts
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = null;
+            boolean showFirmAdmins = false;
+            int pageSize = 10;
+            int totalElements = 50;
+
+            List<UserProfile> users = createUserProfiles(10);
+            
+            // Test sorting by different fields
+            String[][] sortConfigs = {
+                {"firstName", "ASC"},
+                {"lastName", "DESC"},
+                {"email", "ASC"},
+                {"firmName", "DESC"},
+                {"userType", "ASC"},
+                {"userStatus", "DESC"}
+            };
+
+            for (String[] config : sortConfigs) {
+                String sort = config[0];
+                String direction = config[1];
+                
+                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+                Page<UserProfile> userProfilePage = new PageImpl<>(
+                        users,
+                        PageRequest.of(0, pageSize, Sort.by(Sort.Direction.valueOf(direction), "entraUser.firstName")),
+                        totalElements
+                );
+
+                when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                        .thenReturn(userProfilePage);
+
+                // When
+                PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, 1, pageSize, sort, direction);
+
+                // Then
+                assertThat(result.getTotalUsers()).isEqualTo(totalElements);
+                assertThat(result.getTotalPages()).isEqualTo(5);
+            }
+        }
+
+        @Test
+        void getPageOfUsersBySearch_pageNumberZero_treatedAsPageOne() {
+            // Given - Page 0 should be converted to page 1 (1-indexed to 0-indexed)
+            String searchTerm = "";
+            FirmSearchForm firmSearch = FirmSearchForm.builder().build();
+            UserType userType = null;
+            boolean showFirmAdmins = false;
+            int page = 0; // Invalid page number
+            int pageSize = 10;
+            String sort = "firstName";
+            String direction = "ASC";
+
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+
+            List<UserProfile> users = createUserProfiles(10);
+            
+            Page<UserProfile> userProfilePage = new PageImpl<>(
+                    users,
+                    PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
+                    30
+            );
+
+            when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                    .thenReturn(userProfilePage);
+
+            // When
+            PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(10);
+            assertThat(result.getTotalUsers()).isEqualTo(30);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+        }
+
+        private List<UserProfile> createUserProfiles(int count) {
+            List<UserProfile> profiles = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                UserProfile profile = UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .userProfileStatus(UserProfileStatus.COMPLETE)
+                        .userType(UserType.EXTERNAL)
+                        .entraUser(EntraUser.builder()
+                                .firstName("User" + i)
+                                .lastName("Test" + i)
+                                .email("user" + i + "@example.com")
+                                .build())
+                        .firm(Firm.builder()
+                                .id(UUID.randomUUID())
+                                .name("Firm " + i)
+                                .build())
+                        .build();
+                profiles.add(profile);
+            }
+            return profiles;
+        }
+    }
 }
