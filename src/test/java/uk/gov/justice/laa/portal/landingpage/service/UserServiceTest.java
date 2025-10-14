@@ -137,6 +137,89 @@ class UserServiceTest {
     }
 
     @Test
+    void deleteExternalUser_successPath_removesAssociationsAndDeletesUser() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .build();
+
+        AppRole role1 = AppRole.builder().name("Role1").build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(role1)))
+                .build();
+        entraUser.setUserProfiles(Set.of(profile));
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+
+        // Act
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+
+        // Assert
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserProfileRepository, times(1)).deleteAll(any());
+        verify(mockEntraUserRepository, times(1)).delete(entraUser);
+        assertThat(result).isNotNull();
+        assertThat(result.getDeletedUserId()).isEqualTo(entraId);
+    }
+
+    @Test
+    void deleteExternalUser_techServicesFailure_bubblesExceptionAndNoDbDeletes() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(entraId).email("user@example.com").build();
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .build();
+        entraUser.setUserProfiles(Set.of(profile));
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        org.mockito.Mockito.doThrow(new RuntimeException("tech services down"))
+                .when(techServicesClient).deleteRoleAssignment(entraId);
+
+        // Act & Assert
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
+        assertThat(ex.getMessage()).contains("tech services down");
+        verify(mockUserProfileRepository, never()).deleteAll(any());
+        verify(mockEntraUserRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteExternalUser_whenTargetIsInternal_rejected() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().id(entraId).build();
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .entraUser(entraUser)
+                .build();
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+
+        // Act & Assert
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
+        assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
+        verify(techServicesClient, never()).deleteRoleAssignment(any());
+    }
+
+    @Test
     void disableUsers() throws IOException {
         BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
         when(mockGraphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);

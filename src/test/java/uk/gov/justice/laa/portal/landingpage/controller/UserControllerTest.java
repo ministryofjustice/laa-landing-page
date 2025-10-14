@@ -61,6 +61,8 @@ import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
@@ -495,6 +497,61 @@ class UserControllerTest {
 
         // Assert
         assertThat(accEx.getMessage()).isEqualTo("Resend verification is disabled.");
+    }
+
+    @Test
+    void deleteExternalUser_whenServiceSucceeds_returnsSuccessViewAndLogsAuditEvent() {
+        // Arrange
+        String userProfileId = UUID.randomUUID().toString();
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setFullName("Delete Target");
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userProfileId))
+                .entraUser(entraUserDto)
+                .userType(UserType.EXTERNAL)
+                .build();
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+        String reason = "email typo";
+        // Act
+        String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
+
+        // Assert
+        assertThat(view).isEqualTo("delete-user-success");
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
+    }
+
+    @Test
+    void deleteExternalUser_whenServiceThrows_returnsReasonViewAndLogsAttemptEvent() {
+        // Arrange
+        String userProfileId = UUID.randomUUID().toString();
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setFullName("Delete Target");
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userProfileId))
+                .entraUser(entraUserDto)
+                .userType(UserType.EXTERNAL)
+                .build();
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
+                .thenThrow(new RuntimeException("Tech Services unavailable"));
+        String reason = "email typo";
+        // Act & Assert
+        RuntimeException thrown = Assertions.assertThrows(RuntimeException.class, () ->
+                userController.deleteExternalUser(userProfileId, reason, authentication, session, model)
+        );
+
+        assertThat(thrown.getMessage()).isEqualTo("Tech Services unavailable");
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
 
     @Test

@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1760366208000-1
+      author: sankavi-moj
+      comment: "Assign DELETE_EXTERNAL_USER permission to Global Admin and External User Admin roles"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'DELETE_EXTERNAL_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELETE_EXTERNAL_USER')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'DELETE_EXTERNAL_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'DELETE_EXTERNAL_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"

@@ -20,6 +20,12 @@ public class DoNothingTechServicesClient implements TechServicesClient {
     }
 
     @Override
+    public void deleteRoleAssignment(UUID userId) {
+        logger.info("Removing all role assignments on Dummy Tech Services Client for user {}", userId);
+        // Do Nothing
+    }
+
+    @Override
     public TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user) {
         logger.info("Register new user request received on Dummy Tech Services Client for user {} {}", user.getFirstName(), user.getLastName());
         // return success response with random uuid
