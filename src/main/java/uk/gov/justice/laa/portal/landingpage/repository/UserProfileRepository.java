@@ -52,16 +52,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                                     LEFT JOIN FETCH ups.firm f
-            WHERE (
-                        :#{#criteria.firmSearch.selectedFirmId} IS NULL 
-                        OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
-                    )
-                        AND (
-                        :#{#criteria.firmSearch.selectedFirmId} IS NOT NULL
-                        OR :#{#criteria.firmSearch.firmSearch} IS NULL 
-                        OR :#{#criteria.firmSearch.firmSearch} = ''
-                        OR LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%'))
-                    )
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
                             (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
@@ -80,16 +71,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             countQuery = """
                         SELECT COUNT(DISTINCT ups) FROM UserProfile ups
                                     LEFT JOIN ups.firm f
-            WHERE (
-                        :#{#criteria.firmSearch.selectedFirmId} IS NULL 
-                        OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
-                    )
-                        AND (
-                        :#{#criteria.firmSearch.selectedFirmId} IS NOT NULL
-                        OR :#{#criteria.firmSearch.firmSearch} IS NULL 
-                        OR :#{#criteria.firmSearch.firmSearch} = ''
-                        OR LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%'))
-                    )
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
                             (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR

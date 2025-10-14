@@ -79,6 +79,14 @@
                                                         </div>
                                                         <div
                                                             style="position: relative; display: inline-block; width: 100%;">
+                                                            <svg class="autocomplete__search-icon" width="16"
+                                                                height="16" viewBox="0 0 16 16"
+                                                                xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                                                                focusable="false">
+                                                                <path
+                                                                    d="M6.5 1a5.5 5.5 0 1 0 3.278 9.907l3.657 3.658a.75.75 0 1 0 1.061-1.061L10.84 9.846A5.5 5.5 0 0 0 6.5 1ZM2.5 6.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"
+                                                                    fill="currentColor"></path>
+                                                            </svg>
                                                             <input class="autocomplete__input govuk-input"
                                                                 id="firmSearch" name="firmSearch" type="text"
                                                                 autocomplete="off" aria-autocomplete="list"
@@ -132,8 +140,10 @@
                                         </div>
 
                                         <!-- Hidden inputs to preserve current search state -->
-                                        <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden" name="size" th:value="${requestedPageSize}">
-                                        <input th:if="${showFirmAdmins}" type="hidden" name="showFirmAdmins" th:value="${showFirmAdmins}">
+                                        <input th:if="${requestedPageSize != null and requestedPageSize != 10}"
+                                            type="hidden" name="size" th:value="${requestedPageSize}">
+                                        <input th:if="${showFirmAdmins}" type="hidden" name="showFirmAdmins"
+                                            th:value="${showFirmAdmins}">
                                     </form>
                                 </fieldset>
                             </div>
@@ -143,13 +153,20 @@
                         <div class="govuk-!-padding-top-2 govuk-!-padding-left-2">
                             <form method="get" th:action="@{/admin/users}" role="search" id="firm-admins-form">
                                 <!-- Hidden inputs to preserve current search state -->
-                                <input th:if="${sort != null and sort != ''}" type="hidden" name="sort" th:value="${sort}">
-                                <input th:if="${direction != null and direction != ''}" type="hidden" name="direction" th:value="${direction}">
-                                <input th:if="${page != null and page != 1}" type="hidden" name="page" th:value="${page}">
-                                <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden" name="size" th:value="${requestedPageSize}">
-                                <input th:if="${search != null and search != ''}" type="hidden" name="search" th:value="${search}">
-                                <input th:if="${firmSearch.firmSearch != null and firmSearch.firmSearch != ''}" type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
-                                <input th:if="${firmSearch.selectedFirmId != null and firmSearch.selectedFirmId != ''}" type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
+                                <input th:if="${sort != null and sort != ''}" type="hidden" name="sort"
+                                    th:value="${sort}">
+                                <input th:if="${direction != null and direction != ''}" type="hidden" name="direction"
+                                    th:value="${direction}">
+                                <input th:if="${page != null and page != 1}" type="hidden" name="page"
+                                    th:value="${page}">
+                                <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden"
+                                    name="size" th:value="${requestedPageSize}">
+                                <input th:if="${search != null and search != ''}" type="hidden" name="search"
+                                    th:value="${search}">
+                                <input th:if="${firmSearch.firmSearch != null and firmSearch.firmSearch != ''}"
+                                    type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
+                                <input th:if="${firmSearch.selectedFirmId != null and firmSearch.selectedFirmId != ''}"
+                                    type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
 
                                 <div class="govuk-form-group">
                                     <fieldset class="govuk-fieldset">
@@ -268,8 +285,20 @@
                         font-weight: 400;
                         line-height: 1.31579;
                         margin: 0;
-                        padding: 5px 4px 4px;
+                        padding: 5px 4px 4px 30px;
                         width: 100%;
+                    }
+
+                    .autocomplete__search-icon {
+                        position: absolute;
+                        top: 50%;
+                        left: 12px;
+                        transform: translateY(-50%);
+                        color: #0b0c0c;
+                        pointer-events: none;
+                        width: 16px;
+                        height: 16px;
+                        z-index: 1;
                     }
 
                     .autocomplete__input:focus {
@@ -370,10 +399,11 @@
                             assistiveHint.style.display = 'block';
                         });
 
-                        // Hide firmSearchIdInput when firm search box is empty
+                        // Clear firm search input if no valid firm was selected
                         firmSearchInput.addEventListener('blur', function () {
-                            if (!firmSearchInput.value) {
-                                firmSearchIdInput.value = '';
+                            // If there's text in the search box but no firm ID selected, clear the input
+                            if (firmSearchInput.value && !firmSearchIdInput.value) {
+                                firmSearchInput.value = '';
                             }
                         });
 
@@ -411,9 +441,29 @@
                                 if (selectedIndex >= 0) {
                                     updateStatus(`${selectedIndex + 1} of ${items.length}`);
                                 }
-                            } else if (e.key === 'Enter' && selectedIndex >= 0) {
-                                e.preventDefault();
-                                items[selectedIndex].click();
+                            } else if (e.key === 'Enter') {
+                                // If an item is selected, use it
+                                if (selectedIndex >= 0 && items[selectedIndex]) {
+                                    e.preventDefault();
+                                    items[selectedIndex].click();
+                                    // Submit the form after selection
+                                    setTimeout(() => {
+                                        document.getElementById('search-form').submit();
+                                    }, 100);
+                                } 
+                                // If no item is selected but dropdown has results, select the first one
+                                else if (items.length > 0 && !firmSearchListbox.classList.contains('autocomplete__menu--hidden')) {
+                                    // Check if the first item is not a "No firms found" message
+                                    const firstItem = items[0];
+                                    if (firstItem && firstItem.textContent !== 'No firms found') {
+                                        e.preventDefault();
+                                        firstItem.click();
+                                        // Submit the form after selection
+                                        setTimeout(() => {
+                                            document.getElementById('search-form').submit();
+                                        }, 100);
+                                    }
+                                }
                             } else if (e.key === 'Escape') {
                                 hideResults();
                             }
@@ -567,10 +617,10 @@
                     });
 
                     // Handle sort button clicks
-                    document.addEventListener('DOMContentLoaded', function() {
+                    document.addEventListener('DOMContentLoaded', function () {
                         const sortButtons = document.querySelectorAll('.sort-button');
                         sortButtons.forEach(button => {
-                            button.addEventListener('click', function() {
+                            button.addEventListener('click', function () {
                                 const params = {
                                     size: this.dataset.size,
                                     page: this.dataset.page,
@@ -589,13 +639,13 @@
                         // Clean up form submissions to remove empty parameters
                         const forms = document.querySelectorAll('form[method="get"]');
                         forms.forEach(form => {
-                            form.addEventListener('submit', function(e) {
+                            form.addEventListener('submit', function (e) {
                                 e.preventDefault(); // Prevent default form submission
-                                
+
                                 // Collect form data
                                 const formData = new FormData(form);
                                 const params = {};
-                                
+
                                 for (const [key, value] of formData.entries()) {
                                     // Only add non-empty values
                                     if (value && value.trim() !== '') {
@@ -606,7 +656,7 @@
                                         params[key] = value;
                                     }
                                 }
-                                
+
                                 // Navigate to clean URL
                                 const actionUrl = form.getAttribute('action') || '/admin/users';
                                 window.location.href = buildCleanUrl(actionUrl, params);
@@ -616,7 +666,7 @@
                         // Handle showFirmAdmins checkbox change
                         const showFirmAdminsCheckbox = document.getElementById('showFirmAdmins');
                         if (showFirmAdminsCheckbox) {
-                            showFirmAdminsCheckbox.addEventListener('change', function() {
+                            showFirmAdminsCheckbox.addEventListener('change', function () {
                                 const form = document.getElementById('firm-admins-form');
                                 if (form) {
                                     form.submit();
