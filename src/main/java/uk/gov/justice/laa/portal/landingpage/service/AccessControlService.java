@@ -114,7 +114,7 @@ public class AccessControlService {
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        List<UUID> userManagerFirms = firmService.getUserAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
+        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
         return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }
