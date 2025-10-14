@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 759998901000-1
+      author: pijian.liao
+      changes:
+        # update table firm, add field parent_firm_id, add constraint
+        - addColumn:
+            columns:
+              - column:
+                  name: parent_firm_id
+                  type: UUID
+            tableName: firm
+        - addForeignKeyConstraint:
+            baseColumnNames: parent_firm_id
+            baseTableName: firm
+            constraintName: FK_parent_firm_firm_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: firm
+            validate: true
+        # create function is_child
+        - sql:
+            dbms: postgresql
+            sql: "CREATE FUNCTION is_child()
+                  RETURNS TRIGGER LANGUAGE plpgsql STRICT STABLE AS '
+                  BEGIN
+                    IF NEW.parent_firm_id IS NULL THEN
+                      RETURN NEW;
+                    END IF;
+                    IF (
+                      SELECT EXISTS(SELECT 1 FROM firm AS f
+                      WHERE f.parent_firm_id is not null and f.id = NEW.parent_firm_id )
+                    ) THEN
+                      RAISE EXCEPTION ''parent firm (%) already has parent'', NEW.parent_firm_id;
+                    ELSE
+                      RETURN NEW;
+                    END IF;
+                  END;';"
+        # constraint no grandparent
+        - sql:
+            dbms: postgresql
+            sql: "CREATE TRIGGER valid_grandparent
+                  BEFORE INSERT OR UPDATE 
+                  ON firm
+                  FOR EACH ROW EXECUTE PROCEDURE is_child();"
+        # constraint no self parent
+        - sql:
+            dbms: postgresql
+            sql: "alter table firm add constraint self_parent check (parent_firm_id != id)"
