@@ -94,7 +94,7 @@ public class MultiFirmUserControllerTest {
     @Test
     public void addUserProfileStart_shouldReturnViewName() {
         String result = controller.addUserProfileStart();
-        assertThat(result).isEqualTo("add-multi-firm-user-profile-start");
+        assertThat(result).isEqualTo("multi-firm-user/add-profile-start");
     }
 
     @Test
@@ -107,7 +107,7 @@ public class MultiFirmUserControllerTest {
     @Test
     public void addUserProfile() {
         String result = controller.addUserProfile(model, session);
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         assertSessionAndModelPopulated(model, session);
     }
 
@@ -131,7 +131,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
     }
 
@@ -151,7 +151,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "This user already has access for your firm. Manage them from the Manage Your Users screen.");
     }
 
@@ -186,7 +186,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
         assertSessionAndModelCleared(model, session);
     }
@@ -199,7 +199,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
         assertSessionAndModelCleared(model, session);
     }
@@ -211,7 +211,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("add-multi-firm-user-profile");
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
         assertSessionAndModelPopulated(model, session);
         assertThat(model.getAttribute("entraUser")).isNull();
         assertThat(session.getAttribute("entraUser")).isNull();
