@@ -69,7 +69,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         ))
                         """,
             countQuery = """
-                        SELECT COUNT(DISTINCT ups) FROM UserProfile ups
+                        SELECT COUNT(ups) FROM UserProfile ups
                                     LEFT JOIN ups.firm f
             WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
