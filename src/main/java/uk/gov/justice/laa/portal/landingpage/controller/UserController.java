@@ -185,7 +185,8 @@ public class UserController {
             session.removeAttribute("successMessage");
         }
 
-        boolean isProviderAdmin = accessControlService.authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+        boolean allowDelegateUserAccess = accessControlService
+                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -201,7 +202,7 @@ public class UserController {
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
-        model.addAttribute("isProviderAdmin", isProviderAdmin);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
 
