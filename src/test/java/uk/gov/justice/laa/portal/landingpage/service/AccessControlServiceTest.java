@@ -22,7 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.Collections;
@@ -33,7 +32,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -50,9 +48,6 @@ public class AccessControlServiceTest {
 
     @Mock
     private LoginService loginService;
-
-    @Mock
-    private AppRoleRepository appRoleRepository;
 
     @InjectMocks
     private AccessControlService accessControlService;
@@ -430,7 +425,7 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    public void isUserManager_roleNotFound() {
+    public void isUserManager_userNotProviderAdmin() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
         Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -440,7 +435,7 @@ public class AccessControlServiceTest {
         UUID appRoleId = UUID.randomUUID();
 
         Permission userPermission = Permission.EDIT_EXTERNAL_USER;
-        AppRole appRole = AppRole.builder().id(appRoleId).name("Firm User Manager").authzRole(true).permissions(Set.of(userPermission)).build();
+        AppRole appRole = AppRole.builder().id(appRoleId).name("Firm User").authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser authenticatedUser = EntraUser.builder().id(userId).email("external@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
         UserProfile authenticatedUserProfile = UserProfile.builder()
@@ -451,40 +446,8 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(appRoleRepository.findByName("Firm User Manager")).thenReturn(Optional.empty());
 
-        RuntimeException rtEx = assertThrows(RuntimeException.class, () -> accessControlService.isUserManager());
-        Assertions.assertThat(rtEx).isNotNull();
-        Assertions.assertThat(rtEx.getMessage()).isEqualTo("No User Manager role found.");
-    }
-
-    @Test
-    public void isUserManager_userNotProviderAdmin() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        UUID userId = UUID.randomUUID();
-        UUID appRoleId1 = UUID.randomUUID();
-        UUID appRoleId2 = UUID.randomUUID();
-
-        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
-        AppRole appRole1 = AppRole.builder().id(appRoleId1).name("Firm User Manager").authzRole(true).permissions(Set.of(userPermission)).build();
-        AppRole appRole2 = AppRole.builder().id(appRoleId2).name("Firm User").authzRole(true).permissions(Set.of(userPermission)).build();
-        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("external@email.com")
-                .userProfiles(HashSet.newHashSet(1)).build();
-        UserProfile authenticatedUserProfile = UserProfile.builder()
-                .activeProfile(true)
-                .entraUser(authenticatedUser)
-                .appRoles(Set.of(appRole2))
-                .userType(UserType.EXTERNAL) // External user type
-                .build();
-        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(appRoleRepository.findByName("Firm User Manager")).thenReturn(Optional.of(appRole1));
-
-        boolean result = accessControlService.isUserManager();
+        boolean result = accessControlService.authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
         Assertions.assertThat(result).isFalse();
     }
 
@@ -498,7 +461,7 @@ public class AccessControlServiceTest {
         UUID userId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
 
-        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission userPermission = Permission.DELEGATE_EXTERNAL_USER_ACCESS;
         AppRole appRole = AppRole.builder().id(appRoleId).name("Firm User Manager").authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser authenticatedUser = EntraUser.builder().id(userId).email("external@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
@@ -510,9 +473,8 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(appRoleRepository.findByName("Firm User Manager")).thenReturn(Optional.of(appRole));
 
-        boolean result = accessControlService.isUserManager();
+        boolean result = accessControlService.authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
         Assertions.assertThat(result).isTrue();
     }
 

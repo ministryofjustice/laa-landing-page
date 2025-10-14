@@ -38,7 +38,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
-@PreAuthorize("@accessControlService.isUserManager()")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
 public class MultiFirmUserController {
 
     private final UserService userService;

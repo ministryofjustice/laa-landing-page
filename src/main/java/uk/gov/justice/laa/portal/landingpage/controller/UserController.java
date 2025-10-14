@@ -185,7 +185,7 @@ public class UserController {
             session.removeAttribute("successMessage");
         }
 
-        boolean isProviderAdmin = accessControlService.isUserManager();
+        boolean isProviderAdmin = accessControlService.authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);

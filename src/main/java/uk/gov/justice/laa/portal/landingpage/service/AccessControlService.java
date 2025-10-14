@@ -13,7 +13,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,15 +30,12 @@ public class AccessControlService {
 
     private final LoginService loginService;
 
-    private final AppRoleRepository appRoleRepository;
-
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
-    public AccessControlService(UserService userService, LoginService loginService, FirmService firmService, AppRoleRepository appRoleRepository) {
+    public AccessControlService(UserService userService, LoginService loginService, FirmService firmService) {
         this.userService = userService;
         this.loginService = loginService;
         this.firmService = firmService;
-        this.appRoleRepository = appRoleRepository;
     }
 
     public boolean canAccessUser(String userProfileId) {
@@ -172,21 +168,6 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser,
                 Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
-    }
-
-    public boolean isUserManager() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-
-        AppRole role = appRoleRepository.findByName("Firm User Manager").orElseThrow(() -> new RuntimeException("No User Manager role found."));
-
-        Optional<AppRole> userManagerRole = authenticatedUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                .filter(AppRole::isAuthzRole)
-                .findFirst();
-
-        return userManagerRole.isPresent() && userManagerRole.get().getId().equals(role.getId());
     }
 
 }
