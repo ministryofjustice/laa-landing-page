@@ -639,7 +639,7 @@
                                 th:aria-sort="${sort == 'firstName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firstName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=${page ?: 1}, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
                                     Name
                                     <img th:if="${sort == 'firstName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -653,7 +653,7 @@
                                 th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firmName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=${page ?: 1}, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
                                     Firm
                                     <img th:if="${sort == 'firmName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -667,7 +667,7 @@
                                 th:aria-sort="${sort == 'email' ? direction : 'none'}"
                                 style="width: 30%; min-width: 200px;">
                                 <button type="button" class="sort-button" data-sort="email"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=${page ?: 1}, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
                                     Email
                                     <img th:if="${sort == 'email' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -681,7 +681,7 @@
                                 th:aria-sort="${sort == 'userType' ? direction : 'none'}"
                                 style="width: 15%; min-width: 110px;">
                                 <button type="button" class="sort-button" data-sort="userType"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=${page ?: 1}, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
                                     User Type
                                     <img th:if="${sort == 'userType' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
@@ -695,7 +695,7 @@
                                 th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
                                 style="width: 15%; min-width: 90px;">
                                 <button type="button" class="sort-button" data-sort="userStatus"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=${page ?: 1}, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
                                     Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
