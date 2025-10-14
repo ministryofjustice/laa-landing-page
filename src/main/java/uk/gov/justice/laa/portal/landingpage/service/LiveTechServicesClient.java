@@ -129,8 +129,6 @@ public class LiveTechServicesClient implements TechServicesClient {
     public void deleteRoleAssignment(UUID userId) {
         EntraUser entraUser = null;
         try {
-            String accessToken = getAccessToken();
-
             entraUser = entraUserRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
             UpdateSecurityGroupsRequest request = UpdateSecurityGroupsRequest
@@ -143,6 +141,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             logger.info("TechServices DELETE groups: userId={}, entraOid={}, uri={}", userId, entraUser.getEntraOid(), uri);
             logger.info("Sending request to tech services to remove group memberships for deleting: {}", request);
 
+            String accessToken = getAccessToken();
             ResponseEntity<UpdateSecurityGroupsResponse> response = restClient
                     .patch()
                     .uri(uri)
