@@ -655,9 +655,9 @@ public class LiveTechServicesClientTest {
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage()).contains("Error while sending new user creation request to Tech Services.");
+        Assertions.assertThat(rtEx.getMessage()).contains("Unexpected error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.ERROR, "Error while sending new user creation request to Tech Services.");
+        assertLogMessage(Level.ERROR, "Unexpected error while sending new user creation request to Tech Services.");
     }
 
     @Test
@@ -758,10 +758,10 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
-                .contains("Error while sending new user creation request to Tech Services.");
+                .contains("Unexpected error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR,
-                "Error while sending new user creation request to Tech Services");
+                "Unexpected error while sending new user creation request to Tech Services");
         verify(restClient, times(1)).post();
     }
 
