@@ -181,6 +181,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
     @Override
     public TechServicesApiResponse<RegisterUserResponse> registerNewUser(EntraUserDto user) {
+        ResponseEntity<String> response = null;
         try {
             String accessToken = getAccessToken();
 
@@ -200,7 +201,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
-            ResponseEntity<String> response = restClient
+            response = restClient
                     .post()
                     .uri(uri)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
@@ -231,12 +232,14 @@ public class LiveTechServicesClient implements TechServicesClient {
                         user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                logger.error("Error while sending new user creation request to Tech Services.", ex);
+                String responseBody = response != null ? response.getBody() : "Unknown";
+                logger.error("Error while sending new user creation request to Tech Services. The response body is {}", responseBody, ex);
                 throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
-            logger.error("Error while sending new user creation request to Tech Services.", ex);
-            throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
+            String responseBody = response != null ? response.getBody() : "Unknown";
+            logger.error("Unexpected error while sending new user creation request to Tech Services. The response is {}", responseBody, ex);
+            throw new RuntimeException("Unexpected error while sending new user creation request to Tech Services.", ex);
         }
     }
 
