@@ -14,20 +14,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 
-import uk.gov.justice.laa.portal.landingpage.controller.UserController;
+import uk.gov.justice.laa.portal.landingpage.controller.FirmSearchController;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 /**
  * Unit tests to verify search minimum length validation works correctly.
@@ -36,35 +29,26 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 @ExtendWith(MockitoExtension.class)
 public class SearchMinimumLengthIntegrationTest {
 
-    private UserController userController;
+    private FirmSearchController firmSearchController;
     
     @Mock private FirmService firmService;
     @Mock private LoginService loginService;
-    @Mock private UserService userService;
-    @Mock private OfficeService officeService;
-    @Mock private EventService eventService;
-    @Mock private ModelMapper mapper;
-    @Mock private AccessControlService accessControlService;
-    @Mock private RoleAssignmentService roleAssignmentService;
-    @Mock private EmailValidationService emailValidationService;
     @Mock private Authentication authentication;
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(
-            loginService, userService, officeService, eventService, 
-            firmService, mapper, accessControlService, roleAssignmentService, 
-            emailValidationService
+        firmSearchController = new FirmSearchController(
+            loginService, firmService
         );
     }
 
     @Test
     public void testEmptyQueriesReturnEmpty() {
         // Empty queries should return empty lists (due to validation)
-        List<Map<String, String>> result1 = userController.searchFirms("", 10);
+        List<Map<String, String>> result1 = firmSearchController.searchFirms("", 10);
         assertThat(result1).isEmpty();
 
-        List<Map<String, String>> result2 = userController.searchFirms("   ", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms("   ", 10);
         assertThat(result2).isEmpty();
         
         // Verify that service methods were not called for empty queries
@@ -81,10 +65,10 @@ public class SearchMinimumLengthIntegrationTest {
         when(firmService.getUserAccessibleFirms(entraUser, "B")).thenReturn(List.of());
         
         // Single character queries should now work (not return empty due to minimum length restriction)
-        List<Map<String, String>> result1 = userController.searchFirms("A", 10);
+        List<Map<String, String>> result1 = firmSearchController.searchFirms("A", 10);
         assertThat(result1).isNotNull();
         
-        List<FirmDto> result2 = userController.getFirms(authentication, "B");
+        List<FirmDto> result2 = firmSearchController.getFirms(authentication, "B");
         assertThat(result2).isNotNull();
         
         // Verify that service methods were called for single character queries

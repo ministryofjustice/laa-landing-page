@@ -12,9 +12,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 
@@ -153,5 +153,19 @@ class EventServiceTest {
         assertEquals(1, infoLogs.size());
         assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User with user id " + adminUuid
                 + ", Existing user id " + entraUser.getId() + " updated, profile id " + profileId + ", with office Removed : Office1, Added : Office2");
+    }
+
+    @Test
+    void auditSwitchFirm() {
+        String oldFirm = "Old Firm";
+        String newFirm = "New Firm";
+        UUID userId = UUID.randomUUID();
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
+        SwitchProfileAuditEvent switchProfileAuditEvent = new SwitchProfileAuditEvent(userId, oldFirm, newFirm);
+        eventService.logEvent(switchProfileAuditEvent);
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event SWITCH_FIRM, by User with user id "
+                + userId + ", User firm switched, user id " + userId + ", from firm Old Firm to firm New Firm");
     }
 }

@@ -85,6 +85,7 @@ public class CcmsRoleGroupsUtil {
             "XXCCMS_FIRM_",
             "XXCCMS_OFFICE_",
             "XXCCMS_CROSS_OFFICE",
+            "XXCCMS_FINANCE_USER_PROVIDER",
             "XXCCMS_PROVIDER_",
             "XXCCMS_CASE_",
             "XXCCMS_BILL_"
@@ -97,6 +98,7 @@ public class CcmsRoleGroupsUtil {
     private static List<String> getChambersPatterns() {
         return List.of(
             "XXCCMS_CHAMBERS_",
+            "XXCCMS_FINANCE_USER_COUNSEL",
             "XXCCMS_COUNSEL"
         );
     }
@@ -106,6 +108,7 @@ public class CcmsRoleGroupsUtil {
      */
     private static List<String> getAdvocatePatterns() {
         return List.of(
+            "XXCCMS_FINANCE_USER_ADVOCATE",
             "XXCCMS_ADVOCATE"
         );
     }
