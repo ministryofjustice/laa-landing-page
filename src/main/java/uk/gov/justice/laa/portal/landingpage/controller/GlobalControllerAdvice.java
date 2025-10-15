@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.modelmapper.ModelMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -22,7 +22,14 @@ public class GlobalControllerAdvice {
     }
 
     @ModelAttribute("activeFirm")
-    public FirmDto getActiveFirm(Authentication authentication) {
+    public FirmDto getActiveFirm(Authentication authentication, HttpServletRequest request) {
+        // Skip for claim enrichment and other rest endpoints
+        if (request != null) {
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/")) {
+                return null;
+            }
+        }
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         FirmDto firm = new FirmDto();
         if (Objects.nonNull(entraUser)) {
