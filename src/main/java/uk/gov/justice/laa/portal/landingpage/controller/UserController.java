@@ -339,7 +339,7 @@ public class UserController {
 
         if (reason == null || reason.trim().length() < 10) {
             model.addAttribute("user", optionalUser.get());
-            model.addAttribute("errorMessage", "Please enter a reason (minimum 10 characters).");
+            model.addAttribute("fieldErrorMessage", "Please enter a reason (minimum 10 characters).");
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
             return "delete-user-reason";
         }
@@ -357,7 +357,10 @@ public class UserController {
                     reason.trim(), current.getId(), ex.getMessage()
             );
             eventService.logEvent(deleteUserAttemptAuditEvent);
-            throw ex;
+            model.addAttribute("user", optionalUser.get());
+            model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
+            return "delete-user-reason";
         }
 
         model.addAttribute("deletedUserFullName", optionalUser.get().getFullName());

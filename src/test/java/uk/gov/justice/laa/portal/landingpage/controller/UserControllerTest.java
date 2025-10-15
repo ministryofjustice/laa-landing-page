@@ -544,12 +544,12 @@ class UserControllerTest {
         when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
         String reason = "email typo";
-        // Act & Assert
-        RuntimeException thrown = Assertions.assertThrows(RuntimeException.class, () ->
-                userController.deleteExternalUser(userProfileId, reason, authentication, session, model)
-        );
+        // Act
+        String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
 
-        assertThat(thrown.getMessage()).isEqualTo("Tech Services unavailable");
+        // Assert
+        assertThat(view).isEqualTo("delete-user-reason");
+        assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
         verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
