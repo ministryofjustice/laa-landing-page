@@ -96,7 +96,7 @@ public class LiveTechServicesClientTest {
         ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment_404NotFoundContinues() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -152,7 +152,7 @@ public class LiveTechServicesClientTest {
         verify(restClient, times(1)).patch();
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment_sendsEmptyGroupsPayload() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -180,7 +180,7 @@ public class LiveTechServicesClientTest {
         assertThat(sent.getGroups()).isEmpty();
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment_httpClientErrorExceptionLogsBody() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -207,7 +207,7 @@ public class LiveTechServicesClientTest {
         assertLogMessage(Level.ERROR, "Validation failed");
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment_success() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -233,7 +233,7 @@ public class LiveTechServicesClientTest {
         verify(restClient, times(1)).patch();
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignmentUserNotFound() {
         UUID userId = UUID.randomUUID();
         AccessToken token = new AccessToken("token", null);
@@ -244,7 +244,7 @@ public class LiveTechServicesClientTest {
         assertLogMessage(Level.ERROR, "Error while sending security group removal to Tech Services.");
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignmentError() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -261,7 +261,7 @@ public class LiveTechServicesClientTest {
         assertLogMessage(Level.ERROR, "Error while sending security group removal to Tech Services.");
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment4xxResponse() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -285,7 +285,7 @@ public class LiveTechServicesClientTest {
         verify(restClient, times(1)).patch();
     }
 
-    //@Test
+    @Test
     void testDeleteRoleAssignment5xxResponse() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
