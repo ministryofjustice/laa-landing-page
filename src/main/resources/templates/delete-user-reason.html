@@ -9,7 +9,7 @@
 </head>
 <body>
 <main class="govuk-main-wrapper" id="main-content">
-    <div th:if="${errorMessage}">
+    <div th:if="${globalErrorMessage}">
         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
              aria-describedby="error-summary-description" data-module="govuk-error-summary">
             <h2 class="govuk-error-summary__title" id="error-summary-title">
@@ -17,7 +17,7 @@
             </h2>
             <div class="govuk-error-summary__body" id="error-summary-description">
                 <ul class="govuk-list govuk-error-summary__list">
-                    <li><a href="#reason" th:text="${errorMessage}"></a></li>
+                    <li th:text="${globalErrorMessage}"></li>
                 </ul>
             </div>
         </div>
@@ -32,13 +32,13 @@
     <p class="govuk-body">This will remove the user's access in SiLAS right away and start the process to remove their access in Microsoft Entra. Their account may still be active for a short time until Microsoft fully deletes it.</p>
 
     <form th:action="@{'/admin/users/manage/' + ${user.id} + '/delete'}" method="post" novalidate>
-        <div class="govuk-form-group" th:classappend="${errorMessage} ? ' govuk-form-group--error'">
+        <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
             <label class="govuk-label" for="reason">Please enter a reason (minimum 10 characters).</label>
-            <span class="govuk-error-message" th:if="${errorMessage}">
+            <span class="govuk-error-message" th:if="${fieldErrorMessage}">
                 <span class="govuk-visually-hidden">Error:</span>
-                <span th:text="${errorMessage}"></span>
+                <span th:text="${fieldErrorMessage}"></span>
             </span>
-            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:attr="aria-describedby=${errorMessage} ? 'reason-error' : null"></textarea>
+            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
         </div>
 
         <div class="moj-button-group">
