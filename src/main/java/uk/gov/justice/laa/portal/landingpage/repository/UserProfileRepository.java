@@ -67,6 +67,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
+                        ))
                         """,
             countQuery = """
                         SELECT COUNT(ups) FROM UserProfile ups
@@ -86,6 +90,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             SELECT 1 FROM ups.appRoles ar
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
                         ))
                         """)
     Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);

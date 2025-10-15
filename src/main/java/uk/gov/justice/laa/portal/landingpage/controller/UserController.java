@@ -123,13 +123,14 @@ public class UserController {
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             @RequestParam(name = "backButton", required = false) boolean backButton,
+            @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
             FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
         search = search == null ? "" : search.trim();
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
-                showFirmAdmins, backButton, session, firmSearchForm);
+                showFirmAdmins, showMultiFirmUsers, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
         page = (Integer) processedFilters.get("page");
         sort = (String) processedFilters.get("sort");
@@ -138,6 +139,7 @@ public class UserController {
         search = (String) processedFilters.get("search");
         firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
         showFirmAdmins = (Boolean) processedFilters.get("showFirmAdmins");
+        showMultiFirmUsers = (Boolean) processedFilters.get("showMultiFirmUsers");
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -146,19 +148,19 @@ public class UserController {
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
 
         // Debug logging
-        log.debug("UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}",
-                search, firmSearchForm, showFirmAdmins);
+        log.debug("UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}, showMultiFirmUsers: {}",
+                search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins, showMultiFirmUsers);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins);
+                    showFirmAdmins, showMultiFirmUsers);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins);
+                    showFirmAdmins, showMultiFirmUsers);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -173,7 +175,7 @@ public class UserController {
                         .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins);
+                        showFirmAdmins, showMultiFirmUsers);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -206,6 +208,7 @@ public class UserController {
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
+        model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
 
@@ -238,6 +241,7 @@ public class UserController {
         String sort = (String) filters.get("sort");
         String direction = (String) filters.get("direction");
         Boolean showFirmAdmins = (Boolean) filters.get("showFirmAdmins");
+        Boolean showMultiFirmUsers = (Boolean) filters.get("showMultiFirmUsers");
         Integer size = (Integer) filters.get("size");
         Integer page = (Integer) filters.get("page");
         FirmSearchForm firmSearchForm = (FirmSearchForm) filters.get("firmSearchForm");
@@ -247,6 +251,7 @@ public class UserController {
                 || (sort != null && !sort.isEmpty())
                 || (direction != null && !direction.isEmpty())
                 || (showFirmAdmins != null && showFirmAdmins)
+                || (showMultiFirmUsers != null && showMultiFirmUsers)
                 || (size != null && size != 10)
                 || (page != null && page != 1)
                 || (firmSearchForm != null
@@ -2016,7 +2021,7 @@ public class UserController {
     }
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
-            String usertype, String search, boolean showFirmAdmins,
+            String usertype, String search, boolean showFirmAdmins, boolean showMultiFirmUsers,
             boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
 
         if (backButton) {
@@ -2035,6 +2040,9 @@ public class UserController {
                 showFirmAdmins = sessionFilters.containsKey("showFirmAdmins")
                         ? (Boolean) sessionFilters.get("showFirmAdmins")
                         : showFirmAdmins;
+                showMultiFirmUsers = sessionFilters.containsKey("showMultiFirmUsers")
+                        ? (Boolean) sessionFilters.get("showMultiFirmUsers")
+                        : showMultiFirmUsers;
                 firmSearchForm = sessionFilters.containsKey("firmSearchForm")
                         ? (FirmSearchForm) sessionFilters.get("firmSearchForm")
                         : firmSearchForm;
@@ -2062,6 +2070,7 @@ public class UserController {
                 "direction", direction != null ? direction : "",
                 "search", search != null ? search : "",
                 "showFirmAdmins", showFirmAdmins,
+                "showMultiFirmUsers", showMultiFirmUsers,
                 "usertype", usertype != null ? usertype : "",
                 "firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
 
