@@ -97,6 +97,34 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    void testDeleteRoleAssignment_404NotFoundContinues() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        String errorBody = "{\n  \"success\": false, \n  \"code\": \"NOT_FOUND\", \n  \"message\": \"User not found\"\n}";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.NOT_FOUND,
+                "Not Found", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        // Should not throw error
+        liveTechServicesClient.deleteRoleAssignment(userId);
+
+        assertLogMessage(Level.WARN, "404 Not Found");
+    }
+
+    @Test
     void testUpdateRoleAssignment() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
