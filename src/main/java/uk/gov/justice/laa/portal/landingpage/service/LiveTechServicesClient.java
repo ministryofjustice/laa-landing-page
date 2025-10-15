@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -162,6 +163,12 @@ public class LiveTechServicesClient implements TechServicesClient {
             }
         } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
             String errorJson = httpEx.getResponseBodyAsString();
+            // Do not throw error for 404, user may already be deleted in entra
+            if (httpEx.getStatusCode() == HttpStatus.NOT_FOUND) {
+                logger.warn("Tech Services DELETE groups returned 404 Not Found for userId={}, entraOid={}. User will be deleted from Silas db. Body={}",
+                        userId, (entraUser != null ? entraUser.getEntraOid() : null), errorJson);
+                return;
+            }
             logger.error("Tech Services DELETE groups failed for userId={}, entraOid={}, status={}, body={}",
                     userId, (entraUser != null ? entraUser.getEntraOid() : null), httpEx.getStatusCode(), errorJson, httpEx);
             throw new RuntimeException("Error while sending security group removal to Tech Services: " + httpEx.getStatusCode(), httpEx);
