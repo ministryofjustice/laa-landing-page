@@ -307,7 +307,12 @@ public class UserController {
         boolean canManageOffices = externalUser
                 && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)
                 && canEditUser;
-        model.addAttribute("showOfficesTab", canManageOffices);
+
+        // Show offices tab for external users
+        boolean showOfficesTab = externalUser;
+        model.addAttribute("showOfficesTab", showOfficesTab);
+
+        model.addAttribute("canEditUser", canEditUser);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
@@ -405,7 +410,8 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
+        boolean showOfficesTab; // Hide for internal users, show for external users
+        showOfficesTab = externalUser;
         model.addAttribute("showOfficesTab", showOfficesTab);
 
         model.addAttribute("canEditUser", canEditUser);
