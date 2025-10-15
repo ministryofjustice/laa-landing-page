@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -34,14 +35,22 @@ class GlobalControllerAdviceTest {
     @Test
     void getActiveFirm_notLoggedIn() {
         when(loginService.getCurrentEntraUser(any())).thenReturn(null);
-        assertThat(controller.getActiveFirm(authentication)).isNull();
+        assertThat(controller.getActiveFirm(authentication, null)).isNull();
+    }
+
+    @Test
+    void skipControllerAdvice_forClaimEnrichment() {
+        when(loginService.getCurrentEntraUser(any())).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/claims");
+        assertThat(controller.getActiveFirm(authentication, null)).isNull();
     }
 
     @Test
     void getActiveFirm_noProfileSet() {
         EntraUser entraUser = EntraUser.builder().build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("You currently don’t have access to any profiles. Please contact the admin to be added.");
         assertThat(firmDto.isCanChange()).isFalse();
     }
@@ -52,7 +61,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).firm(firm).build();
         EntraUser entraUser = EntraUser.builder().multiFirmUser(false).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
         assertThat(firmDto.isCanChange()).isFalse();
     }
@@ -62,7 +71,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
         EntraUser entraUser = EntraUser.builder().multiFirmUser(false).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto).isNull();
     }
 
@@ -72,7 +81,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).firm(firm).build();
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("You currently don’t have access to any Provider Firms. Please contact the provider firm’s admin to be added.");
         assertThat(firmDto.isCanChange()).isFalse();
     }
@@ -83,7 +92,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(true).firm(firm).build();
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
         assertThat(firmDto.isCanChange()).isFalse();
     }
@@ -96,7 +105,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile2 = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(true).firm(firm2).build();
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile1, userProfile2)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        FirmDto firmDto = controller.getActiveFirm(authentication);
+        FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("Firm2 (Code2)");
         assertThat(firmDto.isCanChange()).isTrue();
     }
