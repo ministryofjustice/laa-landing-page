@@ -210,6 +210,8 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .retrieve()
                     .toEntity(String.class);
 
+            logger.info("The create user response from TS: {}", response.getBody());
+
             if (response.getStatusCode().is2xxSuccessful()) {
                 RegisterUserResponse responseBody = objectMapper.readValue(response.getBody(), RegisterUserResponse.class);
                 logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
