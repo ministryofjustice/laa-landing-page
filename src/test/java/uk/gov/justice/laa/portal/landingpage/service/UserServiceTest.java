@@ -2765,7 +2765,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
         ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
         userService.setDefaultActiveProfile(entraUser, firm2Id);
-        verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+        verify(mockEntraUserRepository, times(2)).saveAndFlush(captor.capture());
         EntraUser updatedEntraUser = captor.getValue();
         for (UserProfile userProfile : updatedEntraUser.getUserProfiles()) {
             if (userProfile.getFirm().getId().equals(firm1Id)) {

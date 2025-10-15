@@ -4616,7 +4616,7 @@ class UserControllerTest {
             when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
 
             // Set up the user's firms (different from the one being accessed)
-            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", false);
+            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", false, false);
             when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
 
             // When / Then

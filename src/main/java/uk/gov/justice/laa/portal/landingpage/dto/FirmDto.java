@@ -18,6 +18,7 @@ public class FirmDto implements Serializable {
     private String name;
     private String code;
     private boolean skipFirmSelection;
+    private boolean canChange;
 
     public String getDisplayName() {
         return name + (StringUtils.isNotEmpty(code) ? " (" + code + ")" : "");

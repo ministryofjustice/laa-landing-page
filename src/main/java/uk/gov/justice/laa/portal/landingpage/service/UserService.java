@@ -1020,19 +1020,20 @@ public class UserService {
     }
 
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
-        boolean foundFirm = false;
+        UserProfile active = null;
         for (UserProfile userProfile : entraUser.getUserProfiles()) {
             if (userProfile.getFirm().getId().equals(firmId)) {
-                userProfile.setActiveProfile(true);
-                foundFirm = true;
+                active = userProfile;
             } else {
                 userProfile.setActiveProfile(false);
             }
         }
-        if (!foundFirm) {
+        if (Objects.isNull(active)) {
             logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
+        entraUserRepository.saveAndFlush(entraUser);
+        active.setActiveProfile(true);
         entraUserRepository.saveAndFlush(entraUser);
     }
 
