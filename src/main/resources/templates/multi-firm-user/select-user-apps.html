@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Services</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/user/create/details">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <form method="post" th:action="@{/admin/multi-firm/user/add/profile/select/apps}" th:object="${applicationsForm}">
+            <div class="govuk-form-group">
+                <fieldset class="govuk-fieldset">
+                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                        <h1 class="govuk-fieldset__heading">
+                            Which of these services will <span th:text="${user.firstName}"></span> <span
+                                th:text="${user.lastName}"></span> need access?
+                        </h1>
+                    </legend>
+                    <div id="offices-hint" class="govuk-hint">
+                        Select all that apply
+                    </div>
+                    <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
+                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
+                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
+                                th:value="${app.id}" type="checkbox">
+                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
+                                <span th:text="${app.name}"></span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+            </div>
+        </form>
+    </main>
+</body>
+
+</html>
