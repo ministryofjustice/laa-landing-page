@@ -223,6 +223,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             }
         } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
             String errorJson = httpEx.getResponseBodyAsString();
+            logger.info("The create user error response from TS: {}", errorJson);
             try {
                 TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
                 if (httpEx.getStatusCode().is4xxClientError()) {
