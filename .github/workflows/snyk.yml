@@ -82,7 +82,7 @@ jobs:
 
       # A snyk.sarif file is generated in the above steps, which is uploaded to GitHub Code Scanning
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: sarif_files
 
