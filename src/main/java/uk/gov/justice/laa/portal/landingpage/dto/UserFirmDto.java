@@ -26,23 +26,4 @@ public class UserFirmDto implements Serializable {
     private String firmName;
     private String firmCode;
     private String firmType;
-    
-    /**
-     * Returns the display name for the firm, combining name and code if available.
-     * 
-     * @return formatted firm display name
-     */
-    public String getFirmDisplayName() {
-        StringBuilder displayName = new StringBuilder(firmName);
-        
-        if (firmCode != null && !firmCode.isEmpty()) {
-            displayName.append(" (").append(firmCode).append(")");
-        }
-        
-        if (isActiveProfile) {
-            displayName.append(" - Active");
-        }
-        
-        return displayName.toString();
-    }
 }

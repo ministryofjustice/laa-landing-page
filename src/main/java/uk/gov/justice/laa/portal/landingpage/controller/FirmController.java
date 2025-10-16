@@ -70,7 +70,7 @@ public class FirmController {
                             .firmName(userProfile.getFirm().getName())
                             .firmCode(userProfile.getFirm().getCode())
                             .firmType(userProfile.getFirm().getType() != null 
-                                    ? userProfile.getFirm().getType().toString() 
+                                    ? userProfile.getFirm().getType().getValue() 
                                     : null)
                             .build())
                     .toList();
@@ -111,6 +111,9 @@ public class FirmController {
                     switch (sortField) {
                         case "firmName":
                             comparison = compareNullable(a.getFirmName(), b.getFirmName());
+                            break;
+                        case "firmCode":
+                            comparison = compareNullable(a.getFirmCode(), b.getFirmCode());
                             break;
                         case "firmType":
                             comparison = compareNullable(a.getFirmType(), b.getFirmType());

@@ -64,6 +64,18 @@
                                     width="22" height="22" alt="">
                             </button>
                         </th>
+                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmCode' ? direction : 'none'}">
+                            <button type="button" class="sort-button" data-sort="firmCode"
+                                th:attr="data-direction=${sort == 'firmCode' and direction == 'asc' ? 'desc' : 'asc'}">
+                                Firm code
+                                <img th:if="${sort == 'firmCode' and direction == 'asc'}"
+                                    th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort == 'firmCode' and direction == 'desc'}"
+                                    th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort != 'firmCode'}" th:src="@{/assets/images/sort-none.svg}"
+                                    width="22" height="22" alt="">
+                            </button>
+                        </th>
                         <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmType' ? direction : 'none'}">
                             <button type="button" class="sort-button" data-sort="firmType"
                                 th:attr="data-direction=${sort == 'firmType' and direction == 'asc' ? 'desc' : 'asc'}">
@@ -101,10 +113,11 @@
                                 </button>
                             </form>
                         </td>
+                        <td class="govuk-table__cell" th:text="${userFirm.firmCode != null ? userFirm.firmCode : '-'}"></td>
                         <td class="govuk-table__cell" th:text="${userFirm.firmType != null ? userFirm.firmType : '-'}"></td>
                         <td class="govuk-table__cell">
                             <span th:if="${userFirm.isActiveProfile}" class="moj-badge moj-badge--green">Active</span>
-                            <span th:unless="${userFirm.isActiveProfile}">-</span>
+                            <span th:unless="${userFirm.isActiveProfile}"></span>
                         </td>
                     </tr>
                 </tbody>
