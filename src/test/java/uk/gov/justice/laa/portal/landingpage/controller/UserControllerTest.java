@@ -215,7 +215,6 @@ class UserControllerTest {
     @Test
     void editUserRolesCheckAnswer_backUrlPointsToLastValidIndex() {
         // Arrange
-        String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
 
         Map<Integer, List<String>> selected = new HashMap<>();
@@ -224,7 +223,7 @@ class UserControllerTest {
         httpSession.setAttribute("editUserAllSelectedRoles", selected);
         List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
         httpSession.setAttribute("selectedApps", selectedApps);
-
+        String id = UUID.randomUUID().toString();
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
                 .userType(UserType.EXTERNAL)
