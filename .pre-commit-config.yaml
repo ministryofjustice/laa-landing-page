@@ -19,7 +19,7 @@ repos:
         stages: ["pre-commit"] 
   # TruffleHog secret scanner
   - repo: https://github.com/trufflesecurity/trufflehog
-    rev: v3.90.8
+    rev: v3.90.11
     hooks:
       - id: trufflehog
         stages: ["pre-commit"] 
