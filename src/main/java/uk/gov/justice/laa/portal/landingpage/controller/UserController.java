@@ -303,17 +303,11 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
-        // Check if current user can manage offices - align with actual endpoint authorization
-        boolean canManageOffices = externalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)
-                && canEditUser;
 
         // Show offices tab for external users
         boolean showOfficesTab = externalUser;
         model.addAttribute("showOfficesTab", showOfficesTab);
-
         model.addAttribute("canEditUser", canEditUser);
-
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final Boolean canDeleteUser = accessControlService.canDeleteUser(id);
