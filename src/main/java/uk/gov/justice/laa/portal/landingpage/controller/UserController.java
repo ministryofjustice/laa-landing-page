@@ -410,8 +410,7 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab; // Hide for internal users, show for external users
-        showOfficesTab = externalUser;
+        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
         model.addAttribute("canEditUser", canEditUser);
