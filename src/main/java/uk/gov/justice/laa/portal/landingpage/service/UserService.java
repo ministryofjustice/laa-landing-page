@@ -89,15 +89,16 @@ public class UserService {
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
+    private final FirmService firmService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository,
-            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-            OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService) {
+                       EntraUserRepository entraUserRepository,
+                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -108,6 +109,7 @@ public class UserService {
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
+        this.firmService = firmService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -593,7 +595,8 @@ public class UserService {
         return entraUserRepository.saveAndFlush(entraUser);
     }
 
-    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto, String createdBy) {
+    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
+                                               List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
         if (!entraUserDto.isMultiFirmUser()) {
             logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
                     entraUserDto.getLastName());
@@ -601,9 +604,27 @@ public class UserService {
                     entraUserDto.getFirstName(), entraUserDto.getLastName()));
         }
 
-        if (firmDto == null || (!firmDto.isSkipFirmSelection() && firmDto.getId() == null)) {
-            logger.error("Invalid firm details provided: {}", firmDto);
-            throw new RuntimeException(String.format("Invalid firm details provided: %s", firmDto));
+        Set<Office> offices = null;
+        Firm firm = null;
+        if (!(userOfficeDtos == null || userOfficeDtos.isEmpty())) {
+            offices = userOfficeDtos.stream()
+                    .map(userOfficeDto -> officeRepository.findById(userOfficeDto.getId())
+                            .orElseThrow(() -> new RuntimeException(String.format("Office not found for: %s", userOfficeDto.getId())))).collect(Collectors.toSet());
+        } else if (firmDto == null || firmDto.getId() == null) {
+            logger.error("Invalid firm details provided for: {}", entraUserDto.getFullName());
+            throw new RuntimeException(String.format("Invalid firm details provided for: %s", entraUserDto.getFullName()));
+        } else {
+            firm = firmService.getById(firmDto.getId());
+        }
+
+        Set<AppRole> appRoles;
+        if (appRoleDtos == null || appRoleDtos.isEmpty()) {
+            logger.error("Invalid app role selection for: {}", entraUserDto.getFullName());
+            throw new RuntimeException(String.format("Invalid app role selection for: %s", entraUserDto.getFullName()));
+        }else {
+            appRoles = appRoleDtos.stream()
+                    .map(appRoleDto -> appRoleRepository.findById(UUID.fromString(appRoleDto.getId()))
+                            .orElseThrow(() -> new RuntimeException(String.format("App role not found for: %s", appRoleDto.getId())))).collect(Collectors.toSet());
         }
 
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
@@ -626,7 +647,6 @@ public class UserService {
 
         boolean activeProfile = entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
 
-        Firm firm = mapper.map(firmDto, Firm.class);
 
         UserProfile userProfile = UserProfile.builder()
                 .entraUser(entraUser)
@@ -634,7 +654,9 @@ public class UserService {
                 .userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
+                .appRoles(appRoles)
                 .firm(firm)
+                .offices(offices)
                 .userProfileStatus(UserProfileStatus.PENDING)
                 .build();
 

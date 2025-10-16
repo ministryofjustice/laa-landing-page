@@ -25,7 +25,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -36,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -45,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,6 +76,8 @@ public class MultiFirmUserController {
     private final LoginService loginService;
 
     private final RoleAssignmentService roleAssignmentService;
+
+    private final EventService eventService;
 
     private final ModelMapper mapper;
 
@@ -517,7 +524,91 @@ public class MultiFirmUserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
 
-        return "redirect:/admin/multi-firm/user/add/profile/select/check-answers";
+        return "redirect:/admin/multi-firm/user/add/profile/check-answers";
+    }
+
+    @GetMapping("/user/add/profile/check-answers")
+    public String checkAnswerAddProfile(Model model, Authentication authentication) {
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+
+        // Get user's current app roles
+        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
+                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .toList();
+
+        // Group roles by app name and sort by app name
+        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getName(),
+                        LinkedHashMap::new, // Preserve insertion order
+                        Collectors.toList()));
+
+        // Sort the map by app name
+        Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
+
+        // Get user's current offices
+        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
+
+        model.addAttribute("user", user);
+        model.addAttribute("userAppRoles", editableUserAppRoles);
+        model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
+        model.addAttribute("userOffices", userOffices);
+        model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
+
+        return "multi-firm-user/add-profile-checkanswers";
+    }
+
+    @PostMapping("/user/add/profile/check-answers")
+    public String checkAnswerAddProfilePost(Authentication authentication, HttpSession session) {
+        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
+        List<AppRoleDto> appRoleDtos = getListFromHttpSession(session, "userAppRoles", AppRoleDto.class).orElseThrow();
+        List<OfficeDto> userOfficeDtos = getListFromHttpSession(session, "userOffices", OfficeDto.class).orElse(List.of());
+
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfileDto currentUserProfileDto = getObjectFromHttpSession(session, "userProfile", UserProfileDto.class).orElseThrow();
+
+        FirmDto firmDto = currentUserProfileDto.getFirm();
+
+        try {
+
+            userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos, appRoleDtos, currentUserDto.getName());
+
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    currentUserProfileDto.getId(),
+                    currentUserDto,
+                    currentUserProfileDto.getEntraUser(),
+                    "Access granted",
+                    "access_grant_complete");
+            eventService.logEvent(updateUserAuditEvent);
+
+        } catch (Exception e) {
+            log.error("Error creating new profile for user: {}", user.getFullName(), e);
+        }
+
+        // Clear grant access session data
+        session.removeAttribute("grantAccessUserOfficesModel");
+        session.removeAttribute("grantAccessSelectedApps");
+        session.removeAttribute("grantAccessUserRoles");
+        session.removeAttribute("grantAccessUserRolesModel");
+        session.removeAttribute("grantAccessAllSelectedRoles");
+
+        return "redirect:/admin/multi-firm/user/add/profile/confirmation";
+    }
+
+    @GetMapping("/user/add/profile/confirmation")
+    public String addProfileConfirmation(Model model, HttpSession session) {
+        UserProfileDto user = getObjectFromHttpSession(session, "userProfile", UserProfileDto.class).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "User profile created - " + user.getFullName());
+        return "multi-firm-user/add-profile-confirmation";
     }
 
     @GetMapping("/user/create/cancel")
