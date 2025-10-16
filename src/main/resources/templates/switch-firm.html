@@ -1,20 +1,153 @@
-<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<div class="govuk-summary-card" th:if="${firmDtoList != null}">
-    <div class="govuk-summary-card__title-wrapper">
-        <h2 class="govuk-summary-card__title">
-            Select Firm
-        </h2>
-    </div>
-    <div sec:authorize="isAuthenticated()" class="govuk-summary-card__content">
-        <dl class="govuk-summary-list">
-            <th:block th:each="firm : ${firmDtoList}" >
-                <div class="govuk-summary-list__row">
-                    <form th:action="@{/switchfirm}" method="post">
-                        <input type="hidden" id="firmid" name="firmid" th:value="${firm.id}">
-                        <button type="submit" th:text="${firm.getName()}"></button></form>
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'switch-firm'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Switch firm</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/admin/users}">Back</a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div th:if="${message}" class="govuk-notification-banner" role="region"
+            aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                    Important
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content">
+                <p class="govuk-notification-banner__heading" th:text="${message}">
+                </p>
+            </div>
+        </div>
+
+        <h1 class="govuk-heading-l">Search</h1>
+
+        <form method="get" th:action="@{/switch-firm}">
+            <div class="govuk-form-group">
+                <label class="govuk-label govuk-label--m" for="firm-search">
+                    Firm name or firm code
+                </label>
+                <div class="govuk-grid-row">
+                    <div class="govuk-grid-column-two-thirds">
+                        <input class="govuk-input" id="firm-search" name="search" type="text" th:value="${search}">
+                    </div>
+                    <div class="govuk-grid-column-one-third">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Search
+                        </button>
+                    </div>
                 </div>
-            </th:block>
-        </dl>
-    </div>
-</div>
+            </div>
+        </form>
+
+        <div sec:authorize="isAuthenticated()" th:if="${userFirmList != null and !userFirmList.isEmpty()}">
+            <table class="govuk-table">
+                <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmName' ? direction : 'none'}">
+                            <button type="button" class="sort-button" data-sort="firmName"
+                                th:attr="data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}">
+                                Firm name
+                                <img th:if="${sort == 'firmName' and direction == 'asc'}"
+                                    th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort == 'firmName' and direction == 'desc'}"
+                                    th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
+                                    width="22" height="22" alt="">
+                            </button>
+                        </th>
+                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmType' ? direction : 'none'}">
+                            <button type="button" class="sort-button" data-sort="firmType"
+                                th:attr="data-direction=${sort == 'firmType' and direction == 'asc' ? 'desc' : 'asc'}">
+                                Firm type
+                                <img th:if="${sort == 'firmType' and direction == 'asc'}"
+                                    th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort == 'firmType' and direction == 'desc'}"
+                                    th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort != 'firmType'}" th:src="@{/assets/images/sort-none.svg}"
+                                    width="22" height="22" alt="">
+                            </button>
+                        </th>
+                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'activeProfile' ? direction : 'none'}">
+                            <button type="button" class="sort-button" data-sort="activeProfile"
+                                th:attr="data-direction=${sort == 'activeProfile' and direction == 'asc' ? 'desc' : 'asc'}">
+                                Active profile
+                                <img th:if="${sort == 'activeProfile' and direction == 'asc'}"
+                                    th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort == 'activeProfile' and direction == 'desc'}"
+                                    th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                <img th:if="${sort != 'activeProfile'}" th:src="@{/assets/images/sort-none.svg}"
+                                    width="22" height="22" alt="">
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row" th:each="userFirm : ${userFirmList}">
+                        <td class="govuk-table__cell">
+                            <form th:action="@{/switch-firm}" method="post" style="display: inline;">
+                                <input type="hidden" id="firmid" name="firmid" th:value="${userFirm.firmId}">
+                                <button type="submit" class="govuk-link"
+                                    style="background: none; border: none; padding: 0; color: #1d70b8; text-decoration: underline; cursor: pointer; font-size: 19px;"
+                                    th:text="${userFirm.firmName}">
+                                </button>
+                            </form>
+                        </td>
+                        <td class="govuk-table__cell" th:text="${userFirm.firmType != null ? userFirm.firmType : '-'}"></td>
+                        <td class="govuk-table__cell">
+                            <span th:if="${userFirm.isActiveProfile}" class="moj-badge moj-badge--green">Active</span>
+                            <span th:unless="${userFirm.isActiveProfile}">-</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <nav class="govuk-pagination" role="navigation" aria-label="Pagination">
+                <ul class="govuk-pagination__list">
+                    <li class="govuk-pagination__item govuk-pagination__item--current">
+                        <a class="govuk-link govuk-pagination__link" href="#" aria-label="Page 1" aria-current="page">
+                            1
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <div th:if="${userFirmList == null or userFirmList.isEmpty()}">
+            <p class="govuk-body">No firms available.</p>
+        </div>
+    </main>
+
+    <script>
+        // Handle sort button clicks
+        document.addEventListener('DOMContentLoaded', function () {
+            const sortButtons = document.querySelectorAll('.sort-button');
+            sortButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const sort = this.dataset.sort;
+                    const direction = this.dataset.direction;
+                    const currentSearch = new URLSearchParams(window.location.search).get('search') || '';
+                    
+                    // Build URL with sort parameters
+                    let url = '/switch-firm?';
+                    if (currentSearch) {
+                        url += 'search=' + encodeURIComponent(currentSearch) + '&';
+                    }
+                    url += 'sort=' + sort + '&direction=' + direction;
+                    
+                    window.location.href = url;
+                });
+            });
+        });
+    </script>
+</body>
+
 </html>
