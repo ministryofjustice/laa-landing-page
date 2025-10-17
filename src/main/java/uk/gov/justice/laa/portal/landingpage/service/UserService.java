@@ -352,9 +352,14 @@ public class UserService {
                 .deletedUserId(userProfile.getEntraUser().getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
+                Set<AppRole> puiRoles = new HashSet<>();
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
+                    puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
+                    if (!puiRoles.isEmpty()) {
+                        roleChangeNotificationService.sendMessage(up, Collections.emptySet(), puiRoles);
+                    }
                 }
                 if (up.getOffices() != null) {
                     builder.detachedOfficesCount(up.getOffices().isEmpty() ? 0 : up.getOffices().size());
