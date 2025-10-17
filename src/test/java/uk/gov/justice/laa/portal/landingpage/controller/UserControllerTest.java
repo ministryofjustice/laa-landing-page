@@ -2514,7 +2514,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
+        assertThat(model.getAttribute("showOfficesTab")).isEqualTo(true);
     }
 
     @Test
