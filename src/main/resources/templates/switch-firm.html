@@ -15,11 +15,12 @@
         <a class="govuk-back-link" th:href="@{/admin/users}">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <div th:if="${message}" class="govuk-notification-banner" role="region"
+        <!-- Success message -->
+        <div th:if="${message != null and messageType != null and messageType == 'success'}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
             aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
             <div class="govuk-notification-banner__header">
                 <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
-                    Important
+                    Success
                 </h2>
             </div>
             <div class="govuk-notification-banner__content">
@@ -28,9 +29,24 @@
             </div>
         </div>
 
+        <!-- Error/Warning message -->
+        <div th:if="${message != null and messageType != null and messageType == 'error'}" class="govuk-error-summary" role="alert"
+            aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                There is a problem
+            </h2>
+            <div class="govuk-error-summary__body">
+                <p th:text="${message}"></p>
+            </div>
+        </div>
+
         <h1 class="govuk-heading-l">Search</h1>
 
         <form method="get" th:action="@{/switch-firm}">
+            <input type="hidden" name="page" th:value="1">
+            <input type="hidden" name="pageSize" th:value="${pageSize}">
+            <input type="hidden" name="sort" th:value="${sort}" th:if="${sort != null}">
+            <input type="hidden" name="direction" th:value="${direction}" th:if="${direction != null}">
             <div class="govuk-form-group">
                 <label class="govuk-label govuk-label--m" for="firm-search">
                     Firm name or firm code
@@ -49,54 +65,75 @@
         </form>
 
         <div sec:authorize="isAuthenticated()" th:if="${userFirmList != null and !userFirmList.isEmpty()}">
+            <style>
+                .sort-button {
+                    background: none;
+                    border: none;
+                    padding: 0;
+                    color: #1d70b8;
+                    cursor: pointer;
+                    font-size: 19px;
+                    font-weight: 700;
+                    text-align: left;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .sort-button:hover {
+                    text-decoration: underline;
+                }
+                .sort-button img {
+                    vertical-align: middle;
+                }
+            </style>
             <table class="govuk-table">
                 <thead class="govuk-table__head">
                     <tr class="govuk-table__row">
-                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmName' ? direction : 'none'}">
+                        <th scope="col" class="govuk-table__header">
                             <button type="button" class="sort-button" data-sort="firmName"
-                                th:attr="data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}">
+                                th:data-direction="${sort != null and sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}">
                                 Firm name
-                                <img th:if="${sort == 'firmName' and direction == 'asc'}"
+                                <img th:if="${sort != null and sort == 'firmName' and direction == 'asc'}"
                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort == 'firmName' and direction == 'desc'}"
+                                <img th:if="${sort != null and sort == 'firmName' and direction == 'desc'}"
                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort == null or sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
                                     width="22" height="22" alt="">
                             </button>
                         </th>
-                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmCode' ? direction : 'none'}">
+                        <th scope="col" class="govuk-table__header">
                             <button type="button" class="sort-button" data-sort="firmCode"
-                                th:attr="data-direction=${sort == 'firmCode' and direction == 'asc' ? 'desc' : 'asc'}">
+                                th:data-direction="${sort != null and sort == 'firmCode' and direction == 'asc' ? 'desc' : 'asc'}">
                                 Firm code
-                                <img th:if="${sort == 'firmCode' and direction == 'asc'}"
+                                <img th:if="${sort != null and sort == 'firmCode' and direction == 'asc'}"
                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort == 'firmCode' and direction == 'desc'}"
+                                <img th:if="${sort != null and sort == 'firmCode' and direction == 'desc'}"
                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort != 'firmCode'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort == null or sort != 'firmCode'}" th:src="@{/assets/images/sort-none.svg}"
                                     width="22" height="22" alt="">
                             </button>
                         </th>
-                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'firmType' ? direction : 'none'}">
+                        <th scope="col" class="govuk-table__header">
                             <button type="button" class="sort-button" data-sort="firmType"
-                                th:attr="data-direction=${sort == 'firmType' and direction == 'asc' ? 'desc' : 'asc'}">
+                                th:data-direction="${sort != null and sort == 'firmType' and direction == 'asc' ? 'desc' : 'asc'}">
                                 Firm type
-                                <img th:if="${sort == 'firmType' and direction == 'asc'}"
+                                <img th:if="${sort != null and sort == 'firmType' and direction == 'asc'}"
                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort == 'firmType' and direction == 'desc'}"
+                                <img th:if="${sort != null and sort == 'firmType' and direction == 'desc'}"
                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort != 'firmType'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort == null or sort != 'firmType'}" th:src="@{/assets/images/sort-none.svg}"
                                     width="22" height="22" alt="">
                             </button>
                         </th>
-                        <th scope="col" class="govuk-table__header" th:aria-sort="${sort == 'activeProfile' ? direction : 'none'}">
+                        <th scope="col" class="govuk-table__header">
                             <button type="button" class="sort-button" data-sort="activeProfile"
-                                th:attr="data-direction=${sort == 'activeProfile' and direction == 'asc' ? 'desc' : 'asc'}">
+                                th:data-direction="${sort != null and sort == 'activeProfile' and direction == 'asc' ? 'desc' : 'asc'}">
                                 Active profile
-                                <img th:if="${sort == 'activeProfile' and direction == 'asc'}"
+                                <img th:if="${sort != null and sort == 'activeProfile' and direction == 'asc'}"
                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort == 'activeProfile' and direction == 'desc'}"
+                                <img th:if="${sort != null and sort == 'activeProfile' and direction == 'desc'}"
                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
-                                <img th:if="${sort != 'activeProfile'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort == null or sort != 'activeProfile'}" th:src="@{/assets/images/sort-none.svg}"
                                     width="22" height="22" alt="">
                             </button>
                         </th>
@@ -123,44 +160,126 @@
                 </tbody>
             </table>
 
-            <nav class="govuk-pagination" role="navigation" aria-label="Pagination">
+            <!-- Pagination -->
+            <nav class="govuk-pagination" role="navigation" aria-label="Pagination" th:if="${totalPages > 1}">
+                <!-- Previous page link -->
+                <div class="govuk-pagination__prev" th:if="${currentPage > 1}">
+                    <a class="govuk-link govuk-pagination__link" 
+                       th:href="@{/switch-firm(page=${currentPage - 1}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                       rel="prev">
+                        <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                            <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
+                        </svg>
+                        <span class="govuk-pagination__link-title">Previous</span>
+                    </a>
+                </div>
+
                 <ul class="govuk-pagination__list">
-                    <li class="govuk-pagination__item govuk-pagination__item--current">
-                        <a class="govuk-link govuk-pagination__link" href="#" aria-label="Page 1" aria-current="page">
-                            1
+                    <!-- First page -->
+                    <li class="govuk-pagination__item" th:classappend="${currentPage == 1} ? 'govuk-pagination__item--current'">
+                        <a class="govuk-link govuk-pagination__link" 
+                           th:href="@{/switch-firm(page=1, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                           th:attr="aria-label='Page 1', aria-current=${currentPage == 1 ? 'page' : null}"
+                           th:text="1">
+                        </a>
+                    </li>
+
+                    <!-- Ellipsis before current page group -->
+                    <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${currentPage > 3 and totalPages > 4}">
+                        &ctdot;
+                    </li>
+
+                    <!-- Pages around current page (only show middle pages, not first or last) -->
+                    <th:block th:if="${totalPages > 2}" th:each="pageNum : ${#numbers.sequence(2, totalPages - 1)}">
+                        <li class="govuk-pagination__item" 
+                            th:if="${pageNum >= currentPage - 1 and pageNum <= currentPage + 1}"
+                            th:classappend="${pageNum == currentPage} ? 'govuk-pagination__item--current'">
+                            <a class="govuk-link govuk-pagination__link" 
+                               th:href="@{/switch-firm(page=${pageNum}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                               th:attr="aria-label='Page ' + ${pageNum}, aria-current=${pageNum == currentPage ? 'page' : null}"
+                               th:text="${pageNum}">
+                            </a>
+                        </li>
+                    </th:block>
+
+                    <!-- Ellipsis after current page group -->
+                    <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${currentPage < totalPages - 2 and totalPages > 4}">
+                        &ctdot;
+                    </li>
+
+                    <!-- Last page (only if different from first page) -->
+                    <li class="govuk-pagination__item" 
+                        th:if="${totalPages > 1}"
+                        th:classappend="${currentPage == totalPages} ? 'govuk-pagination__item--current'">
+                        <a class="govuk-link govuk-pagination__link" 
+                           th:href="@{/switch-firm(page=${totalPages}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                           th:attr="aria-label='Page ' + ${totalPages}, aria-current=${currentPage == totalPages ? 'page' : null}"
+                           th:text="${totalPages}">
                         </a>
                     </li>
                 </ul>
+
+                <!-- Next page link -->
+                <div class="govuk-pagination__next" th:if="${currentPage < totalPages}">
+                    <a class="govuk-link govuk-pagination__link" 
+                       th:href="@{/switch-firm(page=${currentPage + 1}, pageSize=${pageSize}, sort=${sort}, direction=${direction}, search=${search})}"
+                       rel="next">
+                        <span class="govuk-pagination__link-title">Next</span>
+                        <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                            <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
+                        </svg>
+                    </a>
+                </div>
             </nav>
+
+            <!-- Results summary -->
+            <p class="govuk-body govuk-!-margin-top-4">
+                Showing <span th:text="${(currentPage - 1) * pageSize + 1}"></span> 
+                to <span th:text="${currentPage * pageSize > totalItems ? totalItems : currentPage * pageSize}"></span> 
+                of <span th:text="${totalItems}"></span> firms
+            </p>
         </div>
 
         <div th:if="${userFirmList == null or userFirmList.isEmpty()}">
             <p class="govuk-body">No firms available.</p>
         </div>
-    </main>
 
-    <script>
-        // Handle sort button clicks
-        document.addEventListener('DOMContentLoaded', function () {
-            const sortButtons = document.querySelectorAll('.sort-button');
-            sortButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const sort = this.dataset.sort;
-                    const direction = this.dataset.direction;
-                    const currentSearch = new URLSearchParams(window.location.search).get('search') || '';
-                    
-                    // Build URL with sort parameters
-                    let url = '/switch-firm?';
-                    if (currentSearch) {
-                        url += 'search=' + encodeURIComponent(currentSearch) + '&';
-                    }
-                    url += 'sort=' + sort + '&direction=' + direction;
-                    
-                    window.location.href = url;
+        <script th:inline="javascript">
+            // Handle sort button clicks
+            (function() {
+                console.log('Sort script loaded');
+                const sortButtons = document.querySelectorAll('.sort-button');
+                console.log('Found ' + sortButtons.length + ' sort buttons');
+                
+                sortButtons.forEach(button => {
+                    button.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        console.log('Sort button clicked');
+                        
+                        const sort = this.getAttribute('data-sort');
+                        const direction = this.getAttribute('data-direction');
+                        console.log('Sort:', sort, 'Direction:', direction);
+                        
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const currentSearch = urlParams.get('search') || '';
+                        const currentPageSize = urlParams.get('pageSize') || '5';
+                        
+                        // Build URL with sort and pagination parameters
+                        // Reset to page 1 when sorting
+                        let url = '/switch-firm?page=1';
+                        if (currentSearch) {
+                            url += '&search=' + encodeURIComponent(currentSearch);
+                        }
+                        url += '&sort=' + sort + '&direction=' + direction;
+                        url += '&pageSize=' + currentPageSize;
+                        
+                        console.log('Navigating to:', url);
+                        window.location.href = url;
+                    });
                 });
-            });
-        });
-    </script>
+            })();
+        </script>
+    </main>
 </body>
 
 </html>

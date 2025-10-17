@@ -1154,4 +1154,15 @@ public class UserService {
         }
         return Collections.emptyList();
     }
+
+    /**
+     * Get user profiles by Entra user ID with optional search filter
+     *
+     * @param entraUserId The Entra user ID
+     * @param search Optional search term to filter by firm name or code
+     * @return List of user profiles matching the search criteria
+     */
+    public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
+        return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
+    }
 }
