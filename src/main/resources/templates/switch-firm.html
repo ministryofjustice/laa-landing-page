@@ -15,20 +15,7 @@
         <a class="govuk-back-link" th:href="@{/admin/users}">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <!-- Success message -->
-        <div th:if="${message != null and messageType != null and messageType == 'success'}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
-            aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
-            <div class="govuk-notification-banner__header">
-                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
-                    Success
-                </h2>
-            </div>
-            <div class="govuk-notification-banner__content">
-                <p class="govuk-notification-banner__heading" th:text="${message}">
-                </p>
-            </div>
-        </div>
-
+        
         <!-- Error/Warning message -->
         <div th:if="${message != null and messageType != null and messageType == 'error'}" class="govuk-error-summary" role="alert"
             aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">

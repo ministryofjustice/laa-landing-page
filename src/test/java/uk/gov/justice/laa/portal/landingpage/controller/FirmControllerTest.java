@@ -319,7 +319,7 @@ public class FirmControllerTest {
         RedirectView result = controller.switchFirm(targetFirmId, authentication, redirectAttributes);
 
         // Then
-        assertThat(result.getUrl()).isEqualTo("/switch-firm");
+        assertThat(result.getUrl()).isEqualTo("/home");
         assertThat(redirectAttributes.getFlashAttributes().get("message"))
                 .isEqualTo("Switch firm successful");
         assertThat(redirectAttributes.getFlashAttributes().get("messageType"))

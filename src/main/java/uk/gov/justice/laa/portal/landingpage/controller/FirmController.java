@@ -155,10 +155,9 @@ public class FirmController {
         if (Objects.nonNull(user) && user.isMultiFirmUser()) {
             UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
                     .orElse(null);
-            String oldFirm = "";
 
             if (Objects.nonNull(up)) {
-                oldFirm = up.getFirm().getId().toString();
+                String oldFirm = up.getFirm().getId().toString();
 
                 if (oldFirm.equals(firmId)) {
                     message = "Can not switch to the same Firm";
@@ -173,17 +172,18 @@ public class FirmController {
                 eventService.logEvent(auditEvent);
                 message = "Switch firm successful";
                 logger.debug("User {} successfully switched from firm {} to firm {}", user.getId(), oldFirm, firmId);
+                
+                redirectAttributes.addFlashAttribute("message", message);
+                redirectAttributes.addFlashAttribute("messageType", "success");
+                // Redirect to home to refresh the security context with new permissions
+                return new RedirectView("/home");
             }
-        } else {
-            message = "Apply to multi firm user only";
-            logger.debug("Non-multi-firm user attempted to switch firms: {}", user != null ? user.getId() : "null");
-            redirectAttributes.addFlashAttribute("message", message);
-            redirectAttributes.addFlashAttribute("messageType", "error");
-            return new RedirectView("/switch-firm");
         }
-
+        
+        message = "Apply to multi firm user only";
+        logger.debug("Non-multi-firm user attempted to switch firms: {}", user != null ? user.getId() : "null");
         redirectAttributes.addFlashAttribute("message", message);
-        redirectAttributes.addFlashAttribute("messageType", "success");
+        redirectAttributes.addFlashAttribute("messageType", "error");
         return new RedirectView("/switch-firm");
     }
 
