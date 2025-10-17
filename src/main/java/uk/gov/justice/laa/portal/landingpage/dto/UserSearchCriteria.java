@@ -18,15 +18,17 @@ public class UserSearchCriteria implements Serializable {
     private FirmSearchForm firmSearch;
     private UserType userType;
     private boolean showFirmAdmins;
+    private boolean showMultiFirmUsers;
 
     public UserSearchCriteria() {
     }
 
-    public UserSearchCriteria(String searchTerm, FirmSearchForm firmSearch, UserType userType, boolean showFirmAdmins) {
+    public UserSearchCriteria(String searchTerm, FirmSearchForm firmSearch, UserType userType, boolean showFirmAdmins, boolean showMultiFirmUsers) {
         this.searchTerm = searchTerm;
         this.firmSearch = firmSearch;
         this.userType = userType;
         this.showFirmAdmins = showFirmAdmins;
+        this.showMultiFirmUsers = showMultiFirmUsers;
     }
 
     @Override
@@ -36,6 +38,7 @@ public class UserSearchCriteria implements Serializable {
                 + ", firmSearch='" + firmSearch + '\''
                 + ", userType=" + userType
                 + ", showFirmAdmins=" + showFirmAdmins
+                + ", showMultiFirmUsers=" + showMultiFirmUsers
                 + '}';
     }
 }

@@ -3,8 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.List;
 import java.util.Objects;
 
+import jakarta.servlet.http.HttpSession;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -309,6 +311,51 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         Assertions.assertThat(users).hasSize(expectedSize);
         for (UserProfileDto userProfile : users) {
             Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        }
+    }
+
+    @Test
+    public void testGlobalAdminCanSeeOnlyMultiFirmUsersWhenFiltered() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showMultiFirmUsers=true")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        int expectedSize = multiFirmUsers.size();
+        Assertions.assertThat(users).hasSize(expectedSize);
+        for (UserProfileDto userProfile : users) {
+            Assertions.assertThat(userProfile.getEntraUser().isMultiFirmUser()).isTrue();
+        }
+    }
+
+    @Test
+    public void testGlobalAdminCanSeeOnlyMultiFirmUsersWhenUsingBackButtonAndFiltered() throws Exception {
+        EntraUser loggedInUser = globalAdmins.getFirst();
+        MockHttpSession testSession = new MockHttpSession();
+        // Send an initial request for user list with filter applied.
+        this.mockMvc.perform(get("/admin/users?size=100&showMultiFirmUsers=true")
+                        .with(userOauth2Login(loggedInUser))
+                        .session(testSession))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        // Send a second request with only the back button property set
+        MvcResult result = this.mockMvc.perform(get("/admin/users?backButton=true")
+                        .with(userOauth2Login(loggedInUser))
+                        .session(testSession))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+        // Check filter is kept when sending back button request.
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        int expectedSize = multiFirmUsers.size();
+        Assertions.assertThat(users).hasSize(expectedSize);
+        for (UserProfileDto userProfile : users) {
+            Assertions.assertThat(userProfile.getEntraUser().isMultiFirmUser()).isTrue();
         }
     }
 

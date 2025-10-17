@@ -82,7 +82,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withNoFilters_returns116TotalElements() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -97,7 +97,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_lastPage_hasCorrectNumberOfElements() {
         // Given - Request page 12 (0-indexed as 11)
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(11, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -112,7 +112,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withSortByFirstName_maintainsCorrectCount() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -126,7 +126,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withSortByFirmName_maintainsCorrectCount() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "firm.name"));
 
         // When
@@ -140,7 +140,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withSortByEmail_maintainsCorrectCount() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.email"));
 
         // When
@@ -157,7 +157,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder()
                 .selectedFirmId(testFirm1.getId())
                 .build();
-        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -171,7 +171,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withSearchTerm_returnsFilteredResults() {
         // Given - Search for "User10" which should match User10, User100-109
-        UserSearchCriteria criteria = new UserSearchCriteria("User10", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("User10", FirmSearchForm.builder().build(), null, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -189,7 +189,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withUserTypeFilter_returnsCorrectCount() {
         // Given - All test users are EXTERNAL type
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), UserType.EXTERNAL, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), UserType.EXTERNAL, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -203,7 +203,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_withInternalUserTypeFilter_returnsZero() {
         // Given - No INTERNAL users in test data
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), UserType.INTERNAL, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), UserType.INTERNAL, false, false);
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
@@ -217,7 +217,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_differentPageSizes_maintainsSameTotal() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
 
         // Test different page sizes
         int[] pageSizes = {5, 10, 20, 50};
@@ -236,7 +236,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
     @Test
     void findBySearchParams_multipleSorts_allReturnSameCount() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", FirmSearchForm.builder().build(), null, false, false);
 
         // Test different sort fields and directions
         Sort[] sorts = {

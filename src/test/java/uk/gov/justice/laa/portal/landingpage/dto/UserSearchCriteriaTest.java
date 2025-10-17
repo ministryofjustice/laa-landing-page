@@ -32,15 +32,17 @@ class UserSearchCriteriaTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = true;
+        boolean showMultiFirmUsers = true;
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
         // Then
         assertThat(criteria.getSearchTerm()).isEqualTo(searchTerm);
         assertThat(criteria.getFirmSearch()).isEqualTo(firmSearch);
         assertThat(criteria.getUserType()).isEqualTo(userType);
         assertThat(criteria.isShowFirmAdmins()).isEqualTo(showFirmAdmins);
+        assertThat(criteria.isShowMultiFirmUsers()).isEqualTo(showMultiFirmUsers);
     }
 
     @Test
@@ -116,7 +118,7 @@ class UserSearchCriteriaTest {
         // Test with all available user types
         for (UserType userType : UserType.values()) {
             // When
-            UserSearchCriteria criteria = new UserSearchCriteria("test", null, userType, true);
+            UserSearchCriteria criteria = new UserSearchCriteria("test", null, userType, true, true);
             
             // Then
             assertThat(criteria.getUserType()).isEqualTo(userType);
@@ -129,7 +131,7 @@ class UserSearchCriteriaTest {
         UserType userType = UserType.EXTERNAL;
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria("search", null, userType, true);
+        UserSearchCriteria criteria = new UserSearchCriteria("search", null, userType, true, true);
 
         // Then
         assertThat(criteria.getUserType()).isEqualTo(UserType.EXTERNAL);
@@ -141,7 +143,7 @@ class UserSearchCriteriaTest {
         UserType userType = UserType.EXTERNAL;
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, userType, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, userType, false, false);
 
         // Then
         assertThat(criteria.getUserType()).isEqualTo(userType);
@@ -153,7 +155,7 @@ class UserSearchCriteriaTest {
         UserType userType = UserType.INTERNAL;
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, userType, true);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, userType, true, true);
 
         // Then
         assertThat(criteria.getUserType()).isEqualTo(userType);
@@ -162,7 +164,7 @@ class UserSearchCriteriaTest {
     @Test
     void testShowFirmAdminsFlagTrue() {
         // Given & When
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, true);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, true, true);
 
         // Then
         assertThat(criteria.isShowFirmAdmins()).isTrue();
@@ -171,7 +173,7 @@ class UserSearchCriteriaTest {
     @Test
     void testShowFirmAdminsFlagFalse() {
         // Given & When
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, false, false);
 
         // Then
         assertThat(criteria.isShowFirmAdmins()).isFalse();
@@ -185,8 +187,9 @@ class UserSearchCriteriaTest {
         FirmSearchForm firmSearchForm = FirmSearchForm.builder().firmSearch("firm-123").selectedFirmId(firmSearchId).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = true;
+        boolean showMultiFirmUsers = true;
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearchForm, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearchForm, userType, showFirmAdmins, showMultiFirmUsers);
 
         // When
         String toString = criteria.toString();
@@ -197,12 +200,13 @@ class UserSearchCriteriaTest {
         assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=firm-123, selectedFirmId=" + firmSearchId + ", skipFirmSelection=false)'");
         assertThat(toString).contains("userType=EXTERNAL");
         assertThat(toString).contains("showFirmAdmins=true");
+        assertThat(toString).contains("showMultiFirmUsers=true");
     }
 
     @Test
     void testToStringWithNullValues() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria(null, null, null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria(null, null, null, false, false);
 
         // When
         String toString = criteria.toString();
@@ -213,12 +217,13 @@ class UserSearchCriteriaTest {
         assertThat(toString).contains("firmSearch='null'");
         assertThat(toString).contains("userType=null");
         assertThat(toString).contains("showFirmAdmins=false");
+        assertThat(toString).contains("showMultiFirmUsers=false");
     }
 
     @Test
     void testToStringWithEmptyValues() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, null, false, false);
 
         // When
         String toString = criteria.toString();
@@ -229,6 +234,7 @@ class UserSearchCriteriaTest {
         assertThat(toString).contains("firmSearch='FirmSearchForm(firmSearch=null, selectedFirmId=null, skipFirmSelection=false)'");
         assertThat(toString).contains("userType=null");
         assertThat(toString).contains("showFirmAdmins=false");
+        assertThat(toString).contains("showMultiFirmUsers=false");
     }
 
     @Test
@@ -238,7 +244,7 @@ class UserSearchCriteriaTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(validUuid).build();
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, UserType.INTERNAL, false, false);
 
         // Verify it's a valid UUID format
         assertThat(criteria.getFirmSearch().getSelectedFirmId()).isNotNull();
@@ -251,7 +257,7 @@ class UserSearchCriteriaTest {
         String longSearchTerm = "This is a very long search term that contains multiple words and should be handled properly by the UserSearchCriteria class";
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(longSearchTerm, firmSearch, UserType.INTERNAL, true);
+        UserSearchCriteria criteria = new UserSearchCriteria(longSearchTerm, firmSearch, UserType.INTERNAL, true, false);
 
         // Then
         assertThat(criteria.getSearchTerm()).isEqualTo(longSearchTerm);
@@ -263,7 +269,7 @@ class UserSearchCriteriaTest {
         String specialCharSearchTerm = "john@doe.com & jane's-name (test) [user] {search} 100%";
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(specialCharSearchTerm, firmSearch, UserType.INTERNAL, false);
+        UserSearchCriteria criteria = new UserSearchCriteria(specialCharSearchTerm, firmSearch, UserType.INTERNAL, false, false);
 
         // Then
         assertThat(criteria.getSearchTerm()).isEqualTo(specialCharSearchTerm);
@@ -275,7 +281,7 @@ class UserSearchCriteriaTest {
         String unicodeSearchTerm = "José García-López 李小明 Ñiño Müller";
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(unicodeSearchTerm, firmSearch, UserType.INTERNAL, true);
+        UserSearchCriteria criteria = new UserSearchCriteria(unicodeSearchTerm, firmSearch, UserType.INTERNAL, true, true);
 
         // Then
         assertThat(criteria.getSearchTerm()).isEqualTo(unicodeSearchTerm);
@@ -284,13 +290,14 @@ class UserSearchCriteriaTest {
     @Test
     void testConstructorWithAllParametersNull() {
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(null, null, null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria(null, null, null, false, false);
 
         // Then
         assertThat(criteria.getSearchTerm()).isNull();
         assertThat(criteria.getFirmSearch()).isNull();
         assertThat(criteria.getUserType()).isNull();
         assertThat(criteria.isShowFirmAdmins()).isFalse();
+        assertThat(criteria.isShowMultiFirmUsers()).isFalse();
     }
 
     @Test
@@ -300,7 +307,7 @@ class UserSearchCriteriaTest {
         FirmSearchForm firmSearchForm = FirmSearchForm.builder().firmSearch("firm-123").build();
 
         // When
-        UserSearchCriteria criteria = new UserSearchCriteria(null, firmSearchForm, userType, true);
+        UserSearchCriteria criteria = new UserSearchCriteria(null, firmSearchForm, userType, true, true);
 
         // Then
         assertThat(criteria.getSearchTerm()).isNull();
@@ -308,12 +315,13 @@ class UserSearchCriteriaTest {
         assertThat(criteria.getFirmSearch().getFirmSearch()).isEqualTo("firm-123");
         assertThat(criteria.getUserType()).isEqualTo(userType);
         assertThat(criteria.isShowFirmAdmins()).isTrue();
+        assertThat(criteria.isShowMultiFirmUsers()).isTrue();
     }
 
     @Test
     void testModifyingUserTypesAfterConstruction() {
         // Given
-        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, null, false);
+        UserSearchCriteria criteria = new UserSearchCriteria("test", firmSearch, null, false, false);
         
         // When
         criteria.setUserType(UserType.INTERNAL);
