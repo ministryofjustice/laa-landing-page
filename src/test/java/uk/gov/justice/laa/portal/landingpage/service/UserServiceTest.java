@@ -137,6 +137,86 @@ class UserServiceTest {
     }
 
     @Test
+    void deleteExternalUser_sendsCcmsNotification_whenCcmsRolesRemoved() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .build();
+
+        AppRole ccmsRole = AppRole.builder()
+                .name("CCMS Role")
+                .ccmsCode("CCMS_PUI_TEST")
+                .legacySync(true)
+                .build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(ccmsRole)))
+                .build();
+        entraUser.setUserProfiles(Set.of(profile));
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                .thenReturn(true);
+
+        // Act
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+
+        // Assert
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockRoleChangeNotificationService, times(1))
+                .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
+        verify(mockUserProfileRepository, times(1)).deleteAll(any());
+        verify(mockEntraUserRepository, times(1)).delete(entraUser);
+    }
+
+    @Test
+    void deleteExternalUser_doesNotSendCcmsNotification_whenNoCcmsRoles() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .build();
+
+        AppRole nonCcmsRole = AppRole.builder()
+                .name("Non CCMS Role")
+                .build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(nonCcmsRole)))
+                .build();
+        entraUser.setUserProfiles(Set.of(profile));
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+
+        // Act
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+
+        // Assert
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockRoleChangeNotificationService, never())
+                .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
+        verify(mockUserProfileRepository, times(1)).deleteAll(any());
+        verify(mockEntraUserRepository, times(1)).delete(entraUser);
+    }
+
+    @Test
     void deleteExternalUser_successPath_removesAssociationsAndDeletesUser() {
         // Arrange
         UUID entraId = UUID.randomUUID();
