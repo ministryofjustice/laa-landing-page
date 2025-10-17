@@ -143,6 +143,112 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRoles_shouldSetBackUrlToPreviousIndex() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        // Two apps in session, we are on index 1 and expect back to index 0
+        httpSession.setAttribute("selectedApps", List.of(
+                UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of(roleDto));
+        when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+
+        // Act
+        String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/roles?selectedAppIndex=0");
+    }
+
+    @Test
+    void editUserRoles_firstIndex_backUrlPointsToApps() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute("selectedApps", List.of(UUID.randomUUID().toString()));
+
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of(roleDto));
+        when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+
+        // Act
+        String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/apps");
+    }
+
+    @Test
+    void editUserRolesCheckAnswer_backUrlPointsToLastValidIndex() {
+        // Arrange
+        MockHttpSession httpSession = new MockHttpSession();
+
+        Map<Integer, List<String>> selected = new HashMap<>();
+        selected.put(0, List.of());
+        selected.put(1, List.of());
+        httpSession.setAttribute("editUserAllSelectedRoles", selected);
+        List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        httpSession.setAttribute("selectedApps", selectedApps);
+        String id = UUID.randomUUID().toString();
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+        AppDto app1 = AppDto.builder().id(selectedApps.get(0)).name("A1").build();
+        AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
+        when(roleAssignmentService.canUserAssignRolesForApp(any(UserProfile.class), any(AppDto.class)))
+            .thenReturn(true);
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+
+        // Act
+        String view = userController.editUserRolesCheckAnswer(id, null, model, httpSession, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles-check-answer");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
+    }
+
+    @Test
     void displayAllUsers() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());

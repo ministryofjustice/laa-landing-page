@@ -1018,8 +1018,8 @@ public class UserController {
         }
         // Get currently selected roles from session or use user's existing roles
         List<String> selectedRoles;
-        if (editUserAllSelectedRoles.get(selectedAppIndex) != null) {
-            selectedRoles = editUserAllSelectedRoles.get(selectedAppIndex);
+        if (editUserAllSelectedRoles.get(currentSelectedAppIndex) != null) {
+            selectedRoles = editUserAllSelectedRoles.get(currentSelectedAppIndex);
         } else {
             selectedRoles = userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList());
         }
@@ -1058,6 +1058,11 @@ public class UserController {
         model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
+
+        String rolesBackUrl = currentSelectedAppIndex == 0
+                ? "/admin/users/edit/" + id + "/apps"
+                : "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + (currentSelectedAppIndex - 1);
+        model.addAttribute("backUrl", rolesBackUrl);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
         if (errorMessage != null) {
@@ -1140,7 +1145,7 @@ public class UserController {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
             int size = editUserAllSelectedRoles.size();
-            backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + size;
+            backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + Math.max(0, size - 1);
             for (Integer key : editUserAllSelectedRoles.keySet()) {
                 String url = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + key;
                 if (Objects.nonNull(editUserAllSelectedRoles.get(key))
