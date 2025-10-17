@@ -62,7 +62,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(false).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
+        assertThat(firmDto.getName()).isEqualTo("Firm");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 
@@ -93,7 +93,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
+        assertThat(firmDto.getName()).isEqualTo("Firm");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 
@@ -106,7 +106,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile1, userProfile2)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm2 (Code2)");
+        assertThat(firmDto.getName()).isEqualTo("Firm2");
         assertThat(firmDto.isCanChange()).isTrue();
     }
 

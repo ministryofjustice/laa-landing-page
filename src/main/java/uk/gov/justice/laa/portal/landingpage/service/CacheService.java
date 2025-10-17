@@ -1,11 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 
 @Slf4j
@@ -24,7 +25,7 @@ public class CacheService {
         }
     }
 
-    @Scheduled(cron = "${app.firms.clear.cache.schedule}")
+    @Scheduled(cron = "0 0 0 * * *", zone = "Europe/London")
     public void clearCache() {
         log.debug("Clearing Firms Cache");
         Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
