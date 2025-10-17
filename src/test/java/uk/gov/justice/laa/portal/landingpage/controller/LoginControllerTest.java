@@ -297,27 +297,6 @@ class LoginControllerTest {
         assertThat(result).isEqualTo("logout");
     }
 
-    // These tests have been moved to FirmControllerTest since the firm switching functionality
-    // was refactored into a separate FirmController
-    
-    // @Test
-    // void switchFirm_get_active() - See FirmControllerTest
-    
-    // @Test
-    // void switchFirm_get_no_active() - See FirmControllerTest
-    
-    // @Test
-    // void switchFirm_single_firm_user() - See FirmControllerTest
-    
-    // @Test
-    // void switchFirm_post_ok() - See FirmControllerTest
-    
-    // @Test
-    // void switchFirm_post_not_multiFirmUser() - See FirmControllerTest
-    
-    // @Test
-    // void switchFirm_post_same_firm() - See FirmControllerTest
-
     @Test
     void home_userWithNoRoles_internalUser() throws IOException {
         // Given

@@ -134,6 +134,60 @@ public class FirmController {
     }
 
     /**
+     * Handles the firm switching action when a user submits the form.
+     * Changes the active firm profile for the user and logs the event.
+     *
+     * @param firmId             the ID of the firm to switch to
+     * @param authentication     the authentication object containing user
+     *                           credentials
+     * @param redirectAttributes attributes to pass to the redirect
+     * @return redirects back to switchfirm page with appropriate message
+     * @throws IOException if an error occurs during the switch
+     */
+    @PostMapping("/switch-firm")
+    public RedirectView switchFirm(@RequestParam("firmid") String firmId,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes)
+            throws IOException {
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
+        String message = "";
+
+        if (Objects.nonNull(user) && user.isMultiFirmUser()) {
+            UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                    .orElse(null);
+            String oldFirm = "";
+
+            if (Objects.nonNull(up)) {
+                oldFirm = up.getFirm().getId().toString();
+
+                if (oldFirm.equals(firmId)) {
+                    message = "Can not switch to the same Firm";
+                    logger.debug("User {} attempted to switch to the same firm: {}", user.getId(), firmId);
+                    redirectAttributes.addFlashAttribute("message", message);
+                    redirectAttributes.addFlashAttribute("messageType", "error");
+                    return new RedirectView("/switch-firm");
+                }
+
+                userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
+                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId(), oldFirm, firmId);
+                eventService.logEvent(auditEvent);
+                message = "Switch firm successful";
+                logger.debug("User {} successfully switched from firm {} to firm {}", user.getId(), oldFirm, firmId);
+            }
+        } else {
+            message = "Apply to multi firm user only";
+            logger.debug("Non-multi-firm user attempted to switch firms: {}", user != null ? user.getId() : "null");
+            redirectAttributes.addFlashAttribute("message", message);
+            redirectAttributes.addFlashAttribute("messageType", "error");
+            return new RedirectView("/switch-firm");
+        }
+
+        redirectAttributes.addFlashAttribute("message", message);
+        redirectAttributes.addFlashAttribute("messageType", "success");
+        return new RedirectView("/switch-firm");
+    }
+
+    /**
      * Sorts the user firm list based on the specified field and direction.
      *
      * @param list      the list to sort
@@ -188,59 +242,5 @@ public class FirmController {
             return 1;
         }
         return a.compareToIgnoreCase(b);
-    }
-
-    /**
-     * Handles the firm switching action when a user submits the form.
-     * Changes the active firm profile for the user and logs the event.
-     *
-     * @param firmId             the ID of the firm to switch to
-     * @param authentication     the authentication object containing user
-     *                           credentials
-     * @param redirectAttributes attributes to pass to the redirect
-     * @return redirects back to switchfirm page with appropriate message
-     * @throws IOException if an error occurs during the switch
-     */
-    @PostMapping("/switch-firm")
-    public RedirectView switchFirm(@RequestParam("firmid") String firmId,
-            Authentication authentication,
-            RedirectAttributes redirectAttributes)
-            throws IOException {
-        EntraUser user = loginService.getCurrentEntraUser(authentication);
-        String message = "";
-
-        if (Objects.nonNull(user) && user.isMultiFirmUser()) {
-            UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                    .orElse(null);
-            String oldFirm = "";
-
-            if (Objects.nonNull(up)) {
-                oldFirm = up.getFirm().getId().toString();
-
-                if (oldFirm.equals(firmId)) {
-                    message = "Can not switch to the same Firm";
-                    logger.debug("User {} attempted to switch to the same firm: {}", user.getId(), firmId);
-                    redirectAttributes.addFlashAttribute("message", message);
-                    redirectAttributes.addFlashAttribute("messageType", "error");
-                    return new RedirectView("/switch-firm");
-                }
-
-                userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId(), oldFirm, firmId);
-                eventService.logEvent(auditEvent);
-                message = "Switch firm successful";
-                logger.debug("User {} successfully switched from firm {} to firm {}", user.getId(), oldFirm, firmId);
-            }
-        } else {
-            message = "Apply to multi firm user only";
-            logger.debug("Non-multi-firm user attempted to switch firms: {}", user != null ? user.getId() : "null");
-            redirectAttributes.addFlashAttribute("message", message);
-            redirectAttributes.addFlashAttribute("messageType", "error");
-            return new RedirectView("/switch-firm");
-        }
-
-        redirectAttributes.addFlashAttribute("message", message);
-        redirectAttributes.addFlashAttribute("messageType", "success");
-        return new RedirectView("/switch-firm");
     }
 }
