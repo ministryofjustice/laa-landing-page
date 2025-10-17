@@ -61,8 +61,11 @@ public class FirmController {
 
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
-            // Fetch all user profiles and convert them to UserFirmDtos
-            List<UserFirmDto> userFirmList = entraUser.getUserProfiles().stream()
+            // Fetch all user profiles through the service layer
+            List<UserProfile> userProfiles = userService.getUserProfilesByEntraUserId(entraUser.getId());
+            
+            // Convert user profiles to UserFirmDtos
+            List<UserFirmDto> userFirmList = userProfiles.stream()
                     .map(userProfile -> UserFirmDto.builder()
                             .userProfileId(userProfile.getId())
                             .isActiveProfile(userProfile.isActiveProfile())
