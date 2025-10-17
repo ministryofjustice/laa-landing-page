@@ -676,6 +676,8 @@ public class UserService {
         userProfileRepository.save(userProfile);
         entraUserRepository.save(entraUser);
 
+        techServicesClient.updateRoleAssignment(entraUser.getId());
+
         return userProfile;
     }
 
