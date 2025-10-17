@@ -28,7 +28,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.List;
@@ -52,6 +56,14 @@ public class MultiFirmUserControllerTest {
     private LoginService loginService;
     @Mock
     private Authentication authentication;
+    @Mock
+    private AppRoleService appRoleService;
+    @Mock
+    private RoleAssignmentService roleAssignmentService;
+    @Mock
+    private OfficeService officeService;
+    @Mock
+    private EventService eventService;
 
     private HttpSession session;
     private Model model;
@@ -61,7 +73,8 @@ public class MultiFirmUserControllerTest {
         ModelMapper mapper = new ModelMapper();
         model = new ExtendedModelMap();
         session = new MockHttpSession();
-        controller = new MultiFirmUserController(userService, loginService, mapper);
+        controller = new MultiFirmUserController(userService, loginService, appRoleService,
+                roleAssignmentService, officeService, eventService, mapper);
         enableMultiFirmUser(true);
     }
 

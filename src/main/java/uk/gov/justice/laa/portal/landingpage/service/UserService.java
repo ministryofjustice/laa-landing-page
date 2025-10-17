@@ -605,26 +605,28 @@ public class UserService {
         }
 
         Set<Office> offices = null;
-        Firm firm = null;
         if (!(userOfficeDtos == null || userOfficeDtos.isEmpty())) {
             offices = userOfficeDtos.stream()
                     .map(userOfficeDto -> officeRepository.findById(userOfficeDto.getId())
                             .orElseThrow(() -> new RuntimeException(String.format("Office not found for: %s", userOfficeDto.getId())))).collect(Collectors.toSet());
-        } else if (firmDto == null || firmDto.getId() == null) {
+        }
+
+        Firm firm;
+        if (!(firmDto == null || firmDto.getId() == null)) {
+            firm = firmService.getById(firmDto.getId());
+        } else {
             logger.error("Invalid firm details provided for: {}", entraUserDto.getFullName());
             throw new RuntimeException(String.format("Invalid firm details provided for: %s", entraUserDto.getFullName()));
-        } else {
-            firm = firmService.getById(firmDto.getId());
         }
 
         Set<AppRole> appRoles;
-        if (appRoleDtos == null || appRoleDtos.isEmpty()) {
-            logger.error("Invalid app role selection for: {}", entraUserDto.getFullName());
-            throw new RuntimeException(String.format("Invalid app role selection for: %s", entraUserDto.getFullName()));
-        }else {
+        if (!(appRoleDtos == null || appRoleDtos.isEmpty())) {
             appRoles = appRoleDtos.stream()
                     .map(appRoleDto -> appRoleRepository.findById(UUID.fromString(appRoleDto.getId()))
                             .orElseThrow(() -> new RuntimeException(String.format("App role not found for: %s", appRoleDto.getId())))).collect(Collectors.toSet());
+        } else {
+            logger.error("Invalid app role selection for: {}", entraUserDto.getFullName());
+            throw new RuntimeException(String.format("Invalid app role selection for: %s", entraUserDto.getFullName()));
         }
 
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
