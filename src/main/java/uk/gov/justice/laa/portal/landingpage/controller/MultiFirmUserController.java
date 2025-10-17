@@ -49,7 +49,6 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -211,8 +210,6 @@ public class MultiFirmUserController {
                                      Authentication authentication,
                                      Model model, HttpSession session) {
 
-        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
-
         List<String> selectedAppIds = getListFromHttpSession(session, "addProfileSelectedApps", String.class).orElse(List.of());
 
         if (selectedAppIds.isEmpty()) {
@@ -246,6 +243,8 @@ public class MultiFirmUserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).sorted().toList();
+
+        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
         model.addAttribute("entraUser", user);
         model.addAttribute("roles", appRoleViewModels);
@@ -425,44 +424,26 @@ public class MultiFirmUserController {
 
     @GetMapping("/user/add/profile/check-answers")
     public String checkAnswerAndAddProfile(Model model, Authentication authentication, HttpSession session) {
-        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
         Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addProfileAllSelectedRoles");
         if (appRolesByPage == null) {
             appRolesByPage = new HashMap<>();
         }
         List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
 
-        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
-
-        // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = appRoleDtoList.stream().sorted()
-                .collect(Collectors.groupingBy(
-                        appRole -> appRole.getApp().getName(),
-                        LinkedHashMap::new, // Preserve insertion order
-                        Collectors.toList()));
-
-        // Sort the map by app name
-        Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new));
-
-        List<OfficeDto> userOfficeDtos = officeService.getOfficesByIds(userOfficeIds);
-
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
-
+        List<OfficeDto> userOfficeDtos = officeService.getOfficesByIds(userOfficeIds);
         FirmDto firmDto = currentUserProfileDto.getFirm();
 
-
         session.setAttribute("userProfile", currentUserProfileDto);
+        model.addAttribute("userOffices", userOfficeDtos);
+        model.addAttribute("firm", firmDto);
+
+        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
+        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
+
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", appRoleDtoList);
-        model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
-        model.addAttribute("firm", firmDto);
-        model.addAttribute("userOffices", userOfficeDtos);
         model.addAttribute("externalUser", true);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 

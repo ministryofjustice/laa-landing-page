@@ -24,7 +24,7 @@ public class AppRoleService {
 
         List<AppRole> appRoles = appRoleRepository.findAllById(appRoleIds);
 
-        if(appRoles.size() != ids.size()){
+        if (appRoles.size() != ids.size()) {
             throw new RuntimeException("Failed to load all app roles from request: " + ids);
         }
 

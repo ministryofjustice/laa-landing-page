@@ -120,6 +120,8 @@ class UserServiceTest {
     private UserProfileRepository mockUserProfileRepository;
     @Mock
     private RoleChangeNotificationService mockRoleChangeNotificationService;
+    @Mock
+    private FirmService firmService;
 
     @BeforeEach
     void setUp() {
@@ -133,7 +135,8 @@ class UserServiceTest {
                 laaApplicationsList,
                 techServicesClient,
                 mockUserProfileRepository,
-                mockRoleChangeNotificationService);
+                mockRoleChangeNotificationService,
+                firmService);
     }
 
     @Test
@@ -3940,7 +3943,7 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().build();
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, new FirmDto(), userOfficeDtos, appRoleDtos, "admin"));
+                    userService.addMultiFirmUserProfile(user, new FirmDto(), null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("is not a multi-firm user");
         }
@@ -3953,7 +3956,7 @@ class UserServiceTest {
             firmDto.setSkipFirmSelection(false); // invalid
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos, appRoleDtos, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
         }
@@ -3963,7 +3966,7 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().multiFirmUser(true).build();
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, null, userOfficeDtos, appRoleDtos, "admin"));
+                    userService.addMultiFirmUserProfile(user, null, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
         }
@@ -3988,7 +3991,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos, appRoleDtos, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("User profile already exists");
         }
@@ -4005,7 +4008,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.empty());
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos, appRoleDtos, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("User not found for the given user user id");
         }
@@ -4026,7 +4029,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(mapper.map(firmDto, Firm.class)).thenReturn(firm);
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, userOfficeDtos, appRoleDtos, "admin");
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
             assertThat(result.isActiveProfile()).isTrue();
             verify(userProfileRepository).save(result);
@@ -4053,7 +4056,7 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
 
             UserProfile result = userService.addMultiFirmUserProfile(user,
-                    FirmDto.builder().id(newFirmId).build(), userOfficeDtos, appRoleDtos, "admin");
+                    FirmDto.builder().id(newFirmId).build(), null, null, "admin");
 
             assertThat(result.isActiveProfile()).isFalse();
             verify(userProfileRepository).save(result);
