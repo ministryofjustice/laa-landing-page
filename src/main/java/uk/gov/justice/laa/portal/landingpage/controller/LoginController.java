@@ -1,10 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,15 +17,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
-import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
@@ -42,14 +31,10 @@ public class LoginController {
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
     private final LoginService loginService;
     private final UserService userService;
-    private final FirmService firmService;
-    private final EventService eventService;
 
-    public LoginController(LoginService loginService, UserService userService, FirmService firmService, EventService eventService) {
+    public LoginController(LoginService loginService, UserService userService) {
         this.loginService = loginService;
         this.userService = userService;
-        this.firmService = firmService;
-        this.eventService = eventService;
     }
 
     @GetMapping("/")
@@ -105,10 +90,12 @@ public class LoginController {
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
                 }
                 model.addAttribute("isAdminUser", isAdmin);
-                
-                // Check if user has no roles assigned and determine user type for custom message
-                if (userSessionData.getUser() != null 
-                    && (userSessionData.getLaaApplications() == null || userSessionData.getLaaApplications().isEmpty())) {
+
+                // Check if user has no roles assigned and determine user type for custom
+                // message
+                if (userSessionData.getUser() != null
+                        && (userSessionData.getLaaApplications() == null
+                                || userSessionData.getLaaApplications().isEmpty())) {
                     boolean isInternal = userService.isInternal(userSessionData.getUser().getId());
                     model.addAttribute("userHasNoRoles", true);
                     model.addAttribute("isInternalUser", isInternal);
@@ -130,56 +117,9 @@ public class LoginController {
         return new RedirectView("/error");
     }
 
-    @PostMapping("/switchfirm")
-    public RedirectView switchFirm(@RequestParam("firmid") String firmId, Authentication authentication) throws IOException {
-        EntraUser user = loginService.getCurrentEntraUser(authentication);
-        String message = "";
-        if (Objects.nonNull(user) && user.isMultiFirmUser()) {
-            UserProfile up = user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                    .orElse(null);
-            String oldFirm = "";
-            if (Objects.nonNull(up)) {
-                oldFirm = up.getFirm().getId().toString();
-                if (oldFirm.equals(firmId)) {
-                    message = "Can not switch to the same Firm";
-                    return new RedirectView("/switchfirm?message=" + message);
-                }
-                userService.setDefaultActiveProfile(user, UUID.fromString(firmId));
-                SwitchProfileAuditEvent auditEvent = new SwitchProfileAuditEvent(user.getId(), oldFirm, firmId);
-                eventService.logEvent(auditEvent);
-                message = "Switch firm successful";
-            }
-        } else {
-            message = "Apply to multi firm user only";
-        }
-        return new RedirectView("/switchfirm?message=" + message);
-    }
-
     @GetMapping("/logout-success")
     public String logoutSuccess() {
         return "logout";
-    }
-
-    @GetMapping("/switchfirm")
-    public String userFirmsPage(@RequestParam(name = "message", required = false) String message, Model model, Authentication authentication) {
-        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
-            List<FirmDto> firmDtoList = firmService.getUserAllFirms(entraUser);
-            for (FirmDto firmDto : firmDtoList) {
-                UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                        .orElse(null);
-                if (Objects.nonNull(up) && Objects.nonNull(up.getFirm()) && firmDto.getId().equals(up.getFirm().getId())) {
-                    firmDto.setName(firmDto.getName() + " - Active");
-                }
-            }
-            model.addAttribute("firmDtoList", firmDtoList);
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Switch firm");
-            if (Objects.nonNull(message)) {
-                model.addAttribute("message", message);
-            }
-            return "switch-firm";
-        }
-        return "redirect:/home";
     }
 
 }
