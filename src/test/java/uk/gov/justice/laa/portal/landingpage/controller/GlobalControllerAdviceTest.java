@@ -1,24 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
+
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalControllerAdviceTest {
@@ -82,7 +82,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("You currently don’t have access to any Provider Firms. Please contact the provider firm’s admin to be added.");
+        assertThat(firmDto.getName()).isEqualTo("You currently don't have access to any Provider Firms. Please contact the provider firm's admin to be added.");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 

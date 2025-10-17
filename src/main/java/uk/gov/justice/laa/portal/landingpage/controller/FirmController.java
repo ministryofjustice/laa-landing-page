@@ -95,8 +95,12 @@ public class FirmController {
                 userFirmList = userFirmList.stream()
                         .sorted((a, b) -> {
                             // Active profile always comes first
-                            if (a.isActiveProfile() && !b.isActiveProfile()) return -1;
-                            if (!a.isActiveProfile() && b.isActiveProfile()) return 1;
+                            if (a.isActiveProfile() && !b.isActiveProfile()) {
+                                return -1;
+                            }
+                            if (!a.isActiveProfile() && b.isActiveProfile()) {
+                                return 1;
+                            }
                             // If both active or both inactive, sort alphabetically by firm name
                             return compareNullable(a.getFirmName(), b.getFirmName());
                         })
@@ -174,12 +178,15 @@ public class FirmController {
      * @return comparison result
      */
     private int compareNullable(String a, String b) {
-        if (a == null && b == null)
+        if (a == null && b == null) {
             return 0;
-        if (a == null)
+        }
+        if (a == null) {
             return -1;
-        if (b == null)
+        }
+        if (b == null) {
             return 1;
+        }
         return a.compareToIgnoreCase(b);
     }
 

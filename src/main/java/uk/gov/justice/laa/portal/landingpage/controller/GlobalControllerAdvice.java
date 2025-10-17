@@ -1,16 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.Objects;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+
+import jakarta.servlet.http.HttpServletRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-
-import java.util.Objects;
 
 @ControllerAdvice
 public class GlobalControllerAdvice {
@@ -40,20 +41,25 @@ public class GlobalControllerAdvice {
                 UserProfile up = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElse(null);
                 //have active profile
                 if (Objects.nonNull(up)) {
-                    firm.setName(up.getFirm().getName());
+                    String firmName = up.getFirm().getName();
+                    String firmCode = up.getFirm().getCode();
+                    firm.setName(firmCode != null ? firmName + " (" + firmCode + ")" : firmName);
                     //have more than 1 firms
                     if (entraUser.getUserProfiles().size() > 1) {
                         firm.setCanChange(true);
                     }
                 } else {
                     //have no active profile
-                    firm.setName("You currently don’t have access to any Provider Firms. Please contact the provider firm’s admin to be added.");
+                    firm.setName("You currently don't have access to any Provider Firms. Please contact the provider firm's admin to be added.");
+                    firm.setCanChange(false);
                 }
             } else {
                 //single firm
                 UserProfile up = entraUser.getUserProfiles().stream().findFirst().get();
                 if (up.getUserType().equals(UserType.EXTERNAL)) {
-                    firm.setName(up.getFirm().getName());
+                    String firmName = up.getFirm().getName();
+                    String firmCode = up.getFirm().getCode();
+                    firm.setName(firmCode != null ? firmName + " (" + firmCode + ")" : firmName);
                     firm.setCanChange(false);
                 } else {
                     //internal
