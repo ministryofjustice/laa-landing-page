@@ -44,7 +44,6 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import java.util.ArrayList;
@@ -247,27 +246,6 @@ public class MultiFirmUserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).sorted().toList();
-
-        // Check if this is the CCMS app and organize roles by section
-        boolean isCcmsApp = (currentApp.getName().contains("CCMS")
-                && !currentApp.getName().contains("CCMS case transfer requests"))
-                || assignableRoles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
-
-        if (isCcmsApp) {
-            // Filter to only CCMS roles for organization
-            List<AppRoleDto> ccmsRoles = assignableRoles.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
-                    .sorted().collect(Collectors.toList());
-
-            if (!ccmsRoles.isEmpty()) {
-                // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                model.addAttribute("ccmsRolesBySection", organizedRoles);
-            }
-            model.addAttribute("isCcmsApp", true);
-        } else {
-            model.addAttribute("isCcmsApp", false);
-        }
 
         model.addAttribute("entraUser", user);
         model.addAttribute("roles", appRoleViewModels);
