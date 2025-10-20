@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Convert to multi-firm user</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
+            Back</a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <form th:action="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}" th:method="post" th:object="${convertToMultiFirmForm}">
+                    <div th:if="${#fields.hasErrors()}">
+                        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                            aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                                There is a problem
+                            </h2>
+                            <div class="govuk-error-summary__body" id="error-summary-description">
+                                <ul class="govuk-list govuk-error-summary__list">
+                                    <li th:each="err : ${#fields.errors('convertToMultiFirm')[0]}"
+                                        th:if="${#fields.hasErrors('convertToMultiFirm')}">
+                                        <a href="#convertToMultiFirmYes" th:text="${err}"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="govuk-form-group"
+                        th:classappend="${#fields.hasErrors('convertToMultiFirm')} ? 'govuk-form-group--error'">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                                <h1 class="govuk-fieldset__heading">
+                                    Convert user to multi-firm access
+                                </h1>
+                            </legend>
+                            <div class="govuk-hint">
+                                <p class="govuk-body">
+                                    User: <strong th:text="${user.fullName}"></strong>
+                                </p>
+                                <p class="govuk-body">
+                                    This action will allow this user to be delegated access to multiple firms. 
+                                    This would be relevant for users who work on behalf of different legal firms, 
+                                    like a cost draftsperson.
+                                </p>
+                                <div class="govuk-warning-text">
+                                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                                    <strong class="govuk-warning-text__text">
+                                        <span class="govuk-visually-hidden">Warning</span>
+                                        Once converted to a multi-firm user, this action cannot be reversed.
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <span th:if="${#fields.hasErrors('convertToMultiFirm')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:text="${#fields.errors('convertToMultiFirm')[0]}"></span>
+                            </span>
+
+                            <div class="govuk-form-group">
+                                <fieldset class="govuk-fieldset">
+                                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                        <h2 class="govuk-fieldset__heading">
+                                            Do you want to convert this user to multi-firm access?
+                                        </h2>
+                                    </legend>
+                                    <div class="govuk-radios" data-module="govuk-radios">
+                                        <div class="govuk-radios__item">
+                                            <input class="govuk-radios__input" id="convertToMultiFirmYes" type="radio"
+                                                th:field="*{convertToMultiFirm}" th:value="true">
+                                            <label class="govuk-label govuk-radios__label" for="convertToMultiFirmYes">
+                                                Yes
+                                            </label>
+                                        </div>
+                                        <div class="govuk-radios__item">
+                                            <input class="govuk-radios__input" id="convertToMultiFirmNo" type="radio"
+                                                th:field="*{convertToMultiFirm}" th:value="false">
+                                            <label class="govuk-label govuk-radios__label" for="convertToMultiFirmNo">
+                                                No
+                                            </label>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button">Continue</button>
+                        <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

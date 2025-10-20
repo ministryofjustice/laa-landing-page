@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Check your answers</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
+            Back</a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-l">Check your answers before converting the user</h1>
+                
+                <form th:action="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm-confirm'}" th:method="post">
+                    
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User details
+                            </h2>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">User name</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.fullName}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Email</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.entraUser.email}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Current status</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span>Single-firm user</span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">New status</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <strong class="govuk-tag govuk-tag--blue">Multi-firm user</strong>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a class="govuk-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">Change</a>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="govuk-warning-text">
+                        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                        <strong class="govuk-warning-text__text">
+                            <span class="govuk-visually-hidden">Warning</span>
+                            Once you confirm, this user will be able to be delegated access to multiple firms. 
+                            This action cannot be undone.
+                        </strong>
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button">Confirm and convert</button>
+                        <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

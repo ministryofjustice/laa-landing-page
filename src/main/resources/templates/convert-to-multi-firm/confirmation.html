@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>User converted to multi-firm</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <div class="govuk-panel govuk-panel--confirmation">
+                    <h1 class="govuk-panel__title">
+                        User successfully converted
+                    </h1>
+                    <div class="govuk-panel__body">
+                        <span th:text="${user.fullName}"></span> is now a multi-firm user
+                    </div>
+                </div>
+
+                <p class="govuk-body">
+                    The user has been successfully converted to multi-firm status. They can now be delegated 
+                    access to multiple firms.
+                </p>
+
+                <h2 class="govuk-heading-m">What happens next</h2>
+                <p class="govuk-body">
+                    The change has been recorded in the audit log. You can now delegate access to additional 
+                    firms for this user using the "Add profile" functionality.
+                </p>
+
+                <p class="govuk-body">
+                    <a th:href="@{'/admin/users/manage/' + ${user.id}}" class="govuk-link">View user details</a>
+                </p>
+                <p class="govuk-body">
+                    <a href="/admin/users" class="govuk-link">Go back to manage your users</a>
+                </p>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
