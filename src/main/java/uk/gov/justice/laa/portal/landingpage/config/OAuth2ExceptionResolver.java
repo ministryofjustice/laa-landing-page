@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 public class OAuth2ExceptionResolver implements HandlerExceptionResolver {
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2ExceptionResolver.class);

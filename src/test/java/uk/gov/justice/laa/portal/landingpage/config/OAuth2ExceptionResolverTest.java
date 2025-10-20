@@ -8,6 +8,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.web.servlet.ModelAndView;
 
+@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 class OAuth2ExceptionResolverTest {
 
     private OAuth2ExceptionResolver resolver;
@@ -22,6 +23,7 @@ class OAuth2ExceptionResolverTest {
     }
 
     @Test
+    @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
     void resolveException_withClientAuthorizationRequiredException_redirectsToOAuth2Authorization() {
         // Given
         ClientAuthorizationRequiredException exception = 
