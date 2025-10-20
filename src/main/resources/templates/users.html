@@ -36,13 +36,15 @@
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider">
-                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button" class="govuk-button" data-module="govuk-button"
-                                        data-govuk-button-init="" onclick="location.href='/admin/multi-firm/user/add/profile/before-start';">
+                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button"
+                                    class="govuk-button" data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/multi-firm/user/add/profile/before-start';">
                                     Delegate access to an external user
                                 </button>
 
-                                <button th:if="${allowCreateUser}" type="button" class="govuk-button" data-module="govuk-button"
-                                    data-govuk-button-init="" onclick="location.href='/admin/user/create/details';">
+                                <button th:if="${allowCreateUser}" type="button" class="govuk-button"
+                                    data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/user/create/details';">
                                     Create a new user
                                 </button>
 
