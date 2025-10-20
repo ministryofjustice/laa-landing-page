@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
@@ -51,6 +52,7 @@ public class FirmController {
      * @param pageSize       optional page size (default: 5)
      * @param model          the model to populate with firm data
      * @param authentication the authentication object containing user credentials
+     * @param response       the HTTP response to set cache control headers
      * @return the switch-firm view if user is a multi-firm user, otherwise
      *         redirects to home
      */
@@ -62,7 +64,13 @@ public class FirmController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "pageSize", defaultValue = "5") int pageSize,
             Model model,
-            Authentication authentication) {
+            Authentication authentication,
+            HttpServletResponse response) {
+
+        // Prevent browser caching to ensure fresh permissions after firm switch
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
 
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         if (Objects.nonNull(entraUser) && entraUser.isMultiFirmUser()) {
@@ -119,7 +127,15 @@ public class FirmController {
             int endIndex = Math.min(startIndex + pageSize, totalItems);
             List<UserFirmDto> paginatedList = userFirmList.subList(startIndex, endIndex);
 
+            // Get active firm name
+            String activeFirmName = userFirmList.stream()
+                    .filter(UserFirmDto::isActiveProfile)
+                    .map(UserFirmDto::getFirmName)
+                    .findFirst()
+                    .orElse(null);
+
             model.addAttribute("userFirmList", paginatedList);
+            model.addAttribute("activeFirmName", activeFirmName);
             model.addAttribute("currentPage", currentPage);
             model.addAttribute("totalPages", totalPages);
             model.addAttribute("totalItems", totalItems);

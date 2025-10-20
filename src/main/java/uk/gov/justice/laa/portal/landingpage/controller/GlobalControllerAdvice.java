@@ -2,9 +2,14 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -16,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 @ControllerAdvice
 public class GlobalControllerAdvice {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
     private final LoginService loginService;
 
     public GlobalControllerAdvice(LoginService loginService) {
@@ -67,5 +73,20 @@ public class GlobalControllerAdvice {
             return firm;
         }
         return null;
+    }
+
+    /**
+     * Handles OAuth2 client authorization exceptions by redirecting to re-authenticate.
+     * This typically occurs when the access token has expired or is invalid.
+     *
+     * @param ex the ClientAuthorizationRequiredException
+     * @return a redirect to the OAuth2 authorization endpoint
+     */
+    @ExceptionHandler(ClientAuthorizationRequiredException.class)
+    public RedirectView handleClientAuthorizationRequired(ClientAuthorizationRequiredException ex) {
+        logger.warn("OAuth2 authorization required for client: {}. Redirecting to re-authenticate.", 
+                ex.getClientRegistrationId());
+        // Redirect to the OAuth2 authorization endpoint to get a new token
+        return new RedirectView("/oauth2/authorization/" + ex.getClientRegistrationId());
     }
 }

@@ -26,6 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
+import jakarta.servlet.http.HttpServletResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.SwitchProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -51,6 +52,9 @@ public class FirmControllerTest {
 
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private HttpServletResponse response;
 
     private Model model;
     private RedirectAttributes redirectAttributes;
@@ -112,7 +116,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -133,7 +137,7 @@ public class FirmControllerTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("redirect:/home");
@@ -146,7 +150,7 @@ public class FirmControllerTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("redirect:/home");
@@ -164,7 +168,7 @@ public class FirmControllerTest {
                 .thenReturn(filteredProfiles);
 
         // When
-        String result = controller.switchFirm("Firm A", null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm("Firm A", null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -183,7 +187,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, "firmName", "asc", 1, 5, model, authentication);
+        String result = controller.switchFirm(null, "firmName", "asc", 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -204,7 +208,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, "firmCode", "desc", 1, 5, model, authentication);
+        String result = controller.switchFirm(null, "firmCode", "desc", 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -221,7 +225,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -251,7 +255,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -273,7 +277,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When - request page 10 when only 1 page exists
-        String result = controller.switchFirm(null, null, null, 10, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 10, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -289,7 +293,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When - request negative page
-        String result = controller.switchFirm(null, null, null, -1, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, -1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -415,7 +419,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm("", null, null, 1, 5, model, authentication);
+        String result = controller.switchFirm("", null, null, 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -432,7 +436,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, null, null, 1, 10, model, authentication);
+        String result = controller.switchFirm(null, null, null, 1, 10, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -452,7 +456,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, "activeProfile", "desc", 1, 5, model, authentication);
+        String result = controller.switchFirm(null, "activeProfile", "desc", 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -469,7 +473,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, "firmType", "asc", 1, 5, model, authentication);
+        String result = controller.switchFirm(null, "firmType", "asc", 1, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");
@@ -493,7 +497,7 @@ public class FirmControllerTest {
                 .thenReturn(new ArrayList<>(user.getUserProfiles()));
 
         // When
-        String result = controller.switchFirm(null, null, null, 2, 5, model, authentication);
+        String result = controller.switchFirm(null, null, null, 2, 5, model, authentication, response);
 
         // Then
         assertThat(result).isEqualTo("switch-firm");

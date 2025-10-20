@@ -12,10 +12,10 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/admin/users}">Back</a>
+        <a class="govuk-back-link" th:href="@{/home}">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        
+
         <!-- Error/Warning message -->
         <div th:if="${message != null and messageType != null and messageType == 'error'}" class="govuk-error-summary" role="alert"
             aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
@@ -26,6 +26,26 @@
                 <p th:text="${message}"></p>
             </div>
         </div>
+
+        <!-- Important banner -->
+        <div class="govuk-notification-banner govuk-notification-banner--important" role="region" 
+             aria-labelledby="important-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="important-banner-title">
+                    Important
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content">
+                <p class="govuk-notification-banner__heading">
+                    When you switch firms, the new firm selected will become your default the next time you sign in to SILAS.
+                </p>
+            </div>
+        </div>
+
+        <!-- Current active firm -->
+        <p class="govuk-body" th:if="${activeFirmName != null}">
+            You are currently working on behalf of <strong th:text="${activeFirmName}">Firm Name</strong>
+        </p>
 
         <h1 class="govuk-heading-l">Search</h1>
 

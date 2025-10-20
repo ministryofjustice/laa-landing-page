@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.web.servlet.view.RedirectView;
 
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -108,6 +110,20 @@ class GlobalControllerAdviceTest {
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
         assertThat(firmDto.getName()).isEqualTo("Firm2");
         assertThat(firmDto.isCanChange()).isTrue();
+    }
+
+    @Test
+    void handleClientAuthorizationRequired_redirectsToAuthorization() {
+        // Given
+        ClientAuthorizationRequiredException exception = 
+                new ClientAuthorizationRequiredException("azure");
+        
+        // When
+        RedirectView redirectView = controller.handleClientAuthorizationRequired(exception);
+        
+        // Then
+        assertThat(redirectView).isNotNull();
+        assertThat(redirectView.getUrl()).isEqualTo("/oauth2/authorization/azure");
     }
 
 }
