@@ -604,6 +604,8 @@ public class UserService {
 
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
                                                List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
+        logger.info("Adding user profile for user: {} ({})", entraUserDto.getFullName(), entraUserDto.getId());
+
         if (!entraUserDto.isMultiFirmUser()) {
             logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
                     entraUserDto.getLastName());
@@ -666,7 +668,7 @@ public class UserService {
                 .appRoles(appRoles)
                 .firm(firm)
                 .offices(offices)
-                .userProfileStatus(UserProfileStatus.PENDING)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
 
         if (entraUser.getUserProfiles() == null) {
@@ -679,6 +681,8 @@ public class UserService {
         entraUserRepository.save(entraUser);
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
+
+        logger.info("User profile added successfully for user: {} ({})", entraUserDto.getFullName(), entraUserDto.getId());
 
         return userProfile;
     }

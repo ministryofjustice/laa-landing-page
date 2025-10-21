@@ -11,9 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link govuk-!-margin-bottom-3"
-            th:href="@{/admin/multi-firm/user/add/profile/select/roles}">
-            Back </a>
+        <a class="govuk-back-link govuk-!-margin-bottom-3" th:href="${backUrl}">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <form method="post" th:action="@{/admin/multi-firm/user/add/profile/select/roles}" th:object="${rolesForm}">
@@ -62,7 +60,7 @@
             </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a th:href="@{'/admin/users/grant-access/' + ${entraUser.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
             </div>
         </form>
     </main>

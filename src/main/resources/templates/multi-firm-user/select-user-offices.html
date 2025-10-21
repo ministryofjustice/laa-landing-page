@@ -13,7 +13,7 @@
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/admin/user/create/roles">
+                <a class="govuk-breadcrumbs__link" href="/admin/multi-firm/user/add/profile/select/apps">
                     < Back</a>
             </li>
         </ol>
@@ -50,7 +50,7 @@
                         <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                             <div class="govuk-checkboxes__item">
                                 <input class="govuk-checkboxes__input" id="offices-all" name="offices" type="checkbox"
-                                    value="" data-behaviour="exclusive">
+                                    value="ALL" data-behaviour="exclusive" th:checked="${hasAllOffices}">
                                 <label class="govuk-label govuk-checkboxes__label" for="offices-all">
                                     Access to all offices
                                     <div id="all-offices-hint" class="govuk-hint">
@@ -75,7 +75,7 @@
             </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
             </div>
         </form>
     </main>

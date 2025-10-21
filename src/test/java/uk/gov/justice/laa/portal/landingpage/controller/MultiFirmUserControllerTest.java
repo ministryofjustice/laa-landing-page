@@ -106,14 +106,14 @@ public class MultiFirmUserControllerTest {
 
     @Test
     public void addUserProfileStart_shouldReturnViewName() {
-        String result = controller.addUserProfileStart();
+        String result = controller.addUserProfileStart(session);
         assertThat(result).isEqualTo("multi-firm-user/add-profile-start");
     }
 
     @Test
     public void addUserProfileStart_multiFirmDisabled() {
         enableMultiFirmUser(false);
-        RuntimeException rtEx = assertThrows(RuntimeException.class, () -> controller.addUserProfileStart());
+        RuntimeException rtEx = assertThrows(RuntimeException.class, () -> controller.addUserProfileStart(session));
         assertThat(rtEx.getMessage()).contains("The page you are trying to access is not available.");
     }
 

@@ -38,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
+import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -47,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -85,7 +87,9 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     @GetMapping("/user/add/profile/before-start")
-    public String addUserProfileStart() {
+    public String addUserProfileStart(HttpSession session) {
+        clearSessionAttributes(session);
+
         return "multi-firm-user/add-profile-start";
     }
 
@@ -94,7 +98,7 @@ public class MultiFirmUserController {
         MultiFirmUserForm multiFirmUserForm =
                 getObjectFromHttpSession(session, "multiFirmUserForm", MultiFirmUserForm.class).orElse(new MultiFirmUserForm());
         model.addAttribute("multiFirmUserForm", multiFirmUserForm);
-
+        model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
         return "multi-firm-user/select-user";
     }
@@ -109,6 +113,8 @@ public class MultiFirmUserController {
             model.addAttribute("multiFirmUserForm", multiFirmUserForm);
             return "multi-firm-user/select-user";
         }
+
+        session.setAttribute("multiFirmUserForm", multiFirmUserForm);
 
         Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
 
@@ -168,7 +174,7 @@ public class MultiFirmUserController {
         List<String> selectedApps = applicationsForm.getApps() == null ? List.of() : applicationsForm.getApps();
 
         assignableApps.forEach(app -> app.setSelected(selectedApps.stream()
-                .anyMatch(userApp -> userApp.equals(app.getName()))));
+                .anyMatch(userApp -> userApp.equals(app.getId()))));
 
         EntraUserDto entraUserDto = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
         model.addAttribute("entraUser", entraUserDto);
@@ -196,6 +202,8 @@ public class MultiFirmUserController {
             return "multi-firm-user/select-user-apps";
         }
 
+        session.setAttribute("applicationsForm", applicationsForm);
+
         List<String> selectedAppIds = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
@@ -216,15 +224,8 @@ public class MultiFirmUserController {
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
         }
 
-        Model modelFromSession = (Model) session.getAttribute("addProfileUserRolesModel");
-        Integer currentSelectedAppIndex;
-        if (modelFromSession != null && modelFromSession.getAttribute("addProfileSelectedAppIndex") != null) {
-            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("addProfileSelectedAppIndex");
-        } else {
-            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
-        }
+        Integer currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
 
-        assert currentSelectedAppIndex != null;
         if (currentSelectedAppIndex >= selectedAppIds.size()) {
             currentSelectedAppIndex = 0;
         }
@@ -233,9 +234,20 @@ public class MultiFirmUserController {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(), availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
 
-        AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
+        final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
 
-        List<String> selectedRoles = getListFromHttpSession(session, "addProfileUserRoles", String.class).orElse(List.of());
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        if (Objects.isNull(editUserAllSelectedRoles)) {
+            editUserAllSelectedRoles = new HashMap<>();
+        }
+
+        List<String> selectedRoles;
+        if (editUserAllSelectedRoles.get(currentSelectedAppIndex) != null) {
+            selectedRoles = editUserAllSelectedRoles.get(currentSelectedAppIndex);
+        } else {
+            selectedRoles = new ArrayList<>();
+        }
 
         List<AppRoleViewModel> appRoleViewModels = assignableRoles.stream()
                 .map(appRoleDto -> {
@@ -251,8 +263,11 @@ public class MultiFirmUserController {
         model.addAttribute("addProfileSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("addProfileCurrentApp", currentApp);
 
-        // Store the model in session to handle validation errors later and track
-        // currently selected app.
+        String rolesBackUrl = currentSelectedAppIndex == 0
+                ? "/admin/multi-firm/user/add/profile/select/apps"
+                : "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + (currentSelectedAppIndex - 1);
+        model.addAttribute("backUrl", rolesBackUrl);
+
         session.setAttribute("addProfileUserRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Select roles - " + user.getFullName());
         return "multi-firm-user/select-user-app-roles";
@@ -292,7 +307,7 @@ public class MultiFirmUserController {
                 .orElseGet(ArrayList::new);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
-                .getAttribute("addProfileAllSelectedRoles");
+                .getAttribute("addUserProfileAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
         }
@@ -302,7 +317,7 @@ public class MultiFirmUserController {
             List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
-            session.setAttribute("addProfileAllSelectedRoles", allSelectedRolesByPage);
+            session.setAttribute("addUserProfileAllSelectedRoles", allSelectedRolesByPage);
 
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (!roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
@@ -312,7 +327,7 @@ public class MultiFirmUserController {
             return "redirect:/admin/multi-firm/user/add/profile/select/offices";
         } else {
             modelFromSession.addAttribute("addProfileSelectedAppIndex", selectedAppIndex + 1);
-            session.setAttribute("addProfileAllSelectedRoles", allSelectedRolesByPage);
+            session.setAttribute("addUserProfileAllSelectedRoles", allSelectedRolesByPage);
             session.setAttribute("addProfileUserRolesModel", modelFromSession);
             return "redirect:/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + (selectedAppIndex + 1);
         }
@@ -341,22 +356,10 @@ public class MultiFirmUserController {
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
 
-        // Create form object
-        OfficesForm officesForm = new OfficesForm();
-        List<String> selectedOffices = new ArrayList<>();
-
-        // Check if user has access to all offices
-        boolean hasAllOffices = userOfficeIds.isEmpty();
-        if (hasAllOffices) {
-            selectedOffices.add("ALL");
-        } else {
-            selectedOffices.addAll(userOfficeIds);
-        }
-
-        officesForm.setOffices(selectedOffices);
+        boolean hasAllOffices = userOfficeIds.contains("ALL");
 
         model.addAttribute("entraUser", user);
-        model.addAttribute("officesForm", officesForm);
+        model.addAttribute("officesForm", userOfficesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", hasAllOffices);
 
@@ -396,35 +399,16 @@ public class MultiFirmUserController {
             return "multi-firm-user/select-user-offices";
         }
 
-        // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-        List<String> selectOfficesDisplay = new ArrayList<>();
-        // Handle "ALL" option
-        if (!selectedOffices.contains("ALL")) {
-            Model modelFromSession = (Model) session.getAttribute("addProfileUserOfficesModel");
-            if (modelFromSession != null) {
-                @SuppressWarnings("unchecked")
-                List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
-                if (officeData != null) {
-                    List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
-                            : new ArrayList<>();
-                    for (OfficeModel office : officeData) {
-                        if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getCode());
-                        }
-                    }
-                }
-            }
-        }
-
         session.setAttribute("userOffices", selectedOffices);
+        session.setAttribute("officesForm", officesForm);
 
         return "redirect:/admin/multi-firm/user/add/profile/check-answers";
     }
 
     @GetMapping("/user/add/profile/check-answers")
     public String checkAnswerAndAddProfile(Model model, Authentication authentication, HttpSession session) {
-        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addProfileAllSelectedRoles");
+        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
         if (appRolesByPage == null) {
             appRolesByPage = new HashMap<>();
         }
@@ -432,18 +416,24 @@ public class MultiFirmUserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
-        List<OfficeDto> userOfficeDtos = officeService.getOfficesByIds(userOfficeIds);
+        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of() : officeService.getOfficesByIds(userOfficeIds);
         FirmDto firmDto = currentUserProfileDto.getFirm();
 
         session.setAttribute("userProfile", currentUserProfileDto);
         model.addAttribute("userOffices", userOfficeDtos);
         model.addAttribute("firm", firmDto);
 
-        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
+        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream()
+                .filter(Objects::nonNull).flatMap(List::stream).toList())
+                .stream().sorted(Comparator.comparingInt(AppRoleDto::getOrdinal)).toList();
+        List<UserRole> selectedAppRole = appRoleDtoList.stream()
+                .map(appRoleDto -> UserRole.builder().appName(appRoleDto.getName())
+                        .roleName(appRoleDto.getName()).url("/admin/multi-firm/user/add/profile/select/roles").build())
+                .toList();
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
         model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", appRoleDtoList);
+        model.addAttribute("selectedAppRole", selectedAppRole);
         model.addAttribute("externalUser", true);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
@@ -454,7 +444,7 @@ public class MultiFirmUserController {
     public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
-        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addProfileAllSelectedRoles");
+        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
         if (appRolesByPage == null) {
             appRolesByPage = new HashMap<>();
         }
@@ -491,11 +481,15 @@ public class MultiFirmUserController {
             UserProfile newUserProfile = userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos,
                     appRoleDtoList, currentUserDto.getName());
 
+            String rolesAdded = appRoleDtoList.stream().map(AppRoleDto::getName)
+                    .collect(Collectors.joining(",", "(", ")"));
             AddUserProfileAuditEvent addUserProfileAuditEvent = new AddUserProfileAuditEvent(
                     currentUserDto,
                     newUserProfile.getId(),
                     user,
-                    firmDto.getId());
+                    firmDto.getId(),
+                    "roles",
+                    rolesAdded);
             eventService.logEvent(addUserProfileAuditEvent);
         } catch (Exception e) {
             log.error("Error creating new profile for user: {}", user.getFullName(), e);
@@ -517,19 +511,25 @@ public class MultiFirmUserController {
         return "multi-firm-user/add-profile-confirmation";
     }
 
-    @GetMapping("/user/create/cancel")
+    @GetMapping("/user/cancel")
     public String cancelUserProfileCreation(HttpSession session) {
-        session.removeAttribute("addProfileAllSelectedRoles");
+        clearSessionAttributes(session);
+
+        return "redirect:/admin/users";
+    }
+
+    private void clearSessionAttributes(HttpSession session) {
+        session.removeAttribute("addUserProfileAllSelectedRoles");
         session.removeAttribute("addProfileSelectedApps");
         session.removeAttribute("addProfileUserAppsModel");
         session.removeAttribute("addProfileUserOfficesModel");
         session.removeAttribute("addProfileUserRolesModel");
         session.removeAttribute("entraUser");
         session.removeAttribute("multiFirmUserForm");
+        session.removeAttribute("applicationsForm");
         session.removeAttribute("userOffices");
         session.removeAttribute("userProfile");
-
-        return "redirect:/admin/users";
+        session.removeAttribute("officesForm");
     }
 
     /**
