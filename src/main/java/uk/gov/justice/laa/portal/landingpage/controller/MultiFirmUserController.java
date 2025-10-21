@@ -446,7 +446,7 @@ public class MultiFirmUserController {
     }
 
     @PostMapping("/user/add/profile/check-answers")
-    public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session) {
+    public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session, Model model) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
         Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
@@ -497,13 +497,10 @@ public class MultiFirmUserController {
                     "roles",
                     rolesAdded);
             eventService.logEvent(addUserProfileAuditEvent);
-        } catch (Exception e) {
-            log.error("Error creating new profile for user: {}", user.getFullName(), e);
+        } catch (Exception ex) {
+            log.error("Error creating new profile for user: {}", user.getFullName(), ex);
+            throw ex;
         }
-
-        // Clear grant access session data
-        session.removeAttribute("userAppRoles");
-        session.removeAttribute("userOffices");
 
         return "redirect:/admin/multi-firm/user/add/profile/confirmation";
     }
@@ -513,6 +510,7 @@ public class MultiFirmUserController {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class)
                 .orElse(EntraUserDto.builder().firstName("Unknown").lastName("Unknown").build());
         model.addAttribute("user", user);
+        clearSessionAttributes(session);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User profile created - " + user.getFullName());
         return "multi-firm-user/add-profile-confirmation";
     }
