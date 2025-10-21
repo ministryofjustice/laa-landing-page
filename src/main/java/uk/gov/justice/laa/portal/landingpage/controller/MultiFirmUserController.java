@@ -300,6 +300,11 @@ public class MultiFirmUserController {
                     modelFromSession.getAttribute("addProfileSelectedAppIndex"));
             model.addAttribute("addProfileCurrentApp", modelFromSession.getAttribute("addProfileCurrentApp"));
 
+            String rolesBackUrl = selectedAppIndex == 0
+                    ? "/admin/multi-firm/user/add/profile/select/apps"
+                    : "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + (selectedAppIndex - 1);
+            model.addAttribute("backUrl", rolesBackUrl);
+
             return "multi-firm-user/select-user-app-roles";
         }
 
