@@ -461,7 +461,8 @@ public class MultiFirmUserController {
         }
 
         // Validate if the office assignment is fully permitted
-        List<OfficeDto> userOfficeDtos = getListFromHttpSession(session, "userOffices", OfficeDto.class).orElse(List.of());
+        List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
+        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of() : officeService.getOfficesByIds(userOfficeIds);
         if (!userOfficeDtos.isEmpty()) {
             if (userProfile.getFirm() == null || userProfile.getFirm().getOffices() == null
                     || !userOfficeDtos.stream().map(OfficeDto::getCode).allMatch(code ->
