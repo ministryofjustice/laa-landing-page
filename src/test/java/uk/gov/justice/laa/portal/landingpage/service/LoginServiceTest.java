@@ -223,6 +223,11 @@ class LoginServiceTest {
     }
 
     @Test
+    void getCurrentEntraUser_fail_null() {
+        assertThat(loginService.getCurrentEntraUser(null)).isNull();
+    }
+
+    @Test
     void getCurrentEntraUser_singleProfile() {
         UUID userId = UUID.randomUUID();
         OAuth2User realPrincipal = new DefaultOAuth2User(

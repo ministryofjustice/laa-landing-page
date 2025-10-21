@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -28,6 +29,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
@@ -95,6 +97,34 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    void testDeleteRoleAssignment_404NotFoundContinues() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        String errorBody = "{\n  \"success\": false, \n  \"code\": \"NOT_FOUND\", \n  \"message\": \"User not found\"\n}";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.NOT_FOUND,
+                "Not Found", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        // Should not throw error
+        liveTechServicesClient.deleteRoleAssignment(userId);
+
+        assertLogMessage(Level.WARN, "404 Not Found");
+    }
+
+    @Test
     void testUpdateRoleAssignment() {
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
@@ -120,6 +150,61 @@ public class LiveTechServicesClientTest {
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
         verify(restClient, times(1)).patch();
+    }
+
+    @Test
+    void testDeleteRoleAssignment_sendsEmptyGroupsPayload() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        ArgumentCaptor<UpdateSecurityGroupsRequest> captor = ArgumentCaptor.forClass(UpdateSecurityGroupsRequest.class);
+        when(requestBodySpec.body(captor.capture())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class))
+                .thenReturn(ResponseEntity.ok(UpdateSecurityGroupsResponse.builder().build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        liveTechServicesClient.deleteRoleAssignment(userId);
+
+        UpdateSecurityGroupsRequest sent = captor.getValue();
+        assertThat(sent).isNotNull();
+        assertThat(sent.getGroups()).isNotNull();
+        assertThat(sent.getGroups()).isEmpty();
+    }
+
+    @Test
+    void testDeleteRoleAssignment_httpClientErrorExceptionLogsBody() {
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .userProfiles(new java.util.HashSet<>())
+                .firstName("firstName").lastName("lastName").build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(entraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateSecurityGroupsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        String errorBody = "{\n  \"success\": false, \n  \"code\": \"BAD_REQUEST\", \n  \"message\": \"Validation failed\"\n}";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
+                "Bad Request", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
+        assertLogMessage(Level.ERROR, "status=400");
+        assertLogMessage(Level.ERROR, "Validation failed");
     }
 
     @Test
@@ -152,9 +237,7 @@ public class LiveTechServicesClientTest {
     void testDeleteRoleAssignmentUserNotFound() {
         UUID userId = UUID.randomUUID();
         AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(entraUserRepository.findById(userId)).thenThrow(new RuntimeException("User not found"));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
         Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
@@ -572,9 +655,9 @@ public class LiveTechServicesClientTest {
                 "RuntimeException expected");
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
-        Assertions.assertThat(rtEx.getMessage()).contains("Error while sending new user creation request to Tech Services.");
+        Assertions.assertThat(rtEx.getMessage()).contains("Unexpected error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.ERROR, "Error while sending new user creation request to Tech Services.");
+        assertLogMessage(Level.ERROR, "Unexpected error while sending new user creation request to Tech Services.");
     }
 
     @Test
@@ -675,10 +758,10 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage())
-                .contains("Error while sending new user creation request to Tech Services.");
+                .contains("Unexpected error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.ERROR,
-                "Error while sending new user creation request to Tech Services");
+                "Unexpected error while sending new user creation request to Tech Services");
         verify(restClient, times(1)).post();
     }
 

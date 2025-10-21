@@ -306,6 +306,11 @@ public class UserService {
                 .map(user -> mapper.map(user, EntraUserDto.class));
     }
 
+    public Optional<EntraUserDto> getEntraUserByEmail(String email) {
+        return entraUserRepository.findByEmailIgnoreCase(email)
+                .map(user -> mapper.map(user, EntraUserDto.class));
+    }
+
     public Optional<UserProfileDto> getUserProfileById(String userId) {
         return userProfileRepository.findById(UUID.fromString(userId))
                 .map(user -> mapper.map(user, UserProfileDto.class));
@@ -347,9 +352,14 @@ public class UserService {
                 .deletedUserId(userProfile.getEntraUser().getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
+                Set<AppRole> puiRoles = new HashSet<>();
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
+                    puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
+                    if (!puiRoles.isEmpty()) {
+                        roleChangeNotificationService.sendMessage(up, Collections.emptySet(), puiRoles);
+                    }
                 }
                 if (up.getOffices() != null) {
                     builder.detachedOfficesCount(up.getOffices().isEmpty() ? 0 : up.getOffices().size());
@@ -626,6 +636,7 @@ public class UserService {
         Firm firm = mapper.map(firmDto, Firm.class);
 
         UserProfile userProfile = UserProfile.builder()
+                .entraUser(entraUser)
                 .activeProfile(activeProfile)
                 .userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now())
@@ -742,6 +753,10 @@ public class UserService {
         // Check if the user exists in the local repository and is a multi-firm user
         Optional<EntraUser> user = entraUserRepository.findByEmailIgnoreCase(email);
         return user.map(EntraUser::isMultiFirmUser).orElse(false);
+    }
+
+    public Optional<EntraUser> findEntraUserByEmail(String email) {
+        return entraUserRepository.findByEmailIgnoreCase(email);
     }
 
     public List<AppRoleDto> getAppRolesByAppId(String appId) {
@@ -1012,19 +1027,20 @@ public class UserService {
     }
 
     public void setDefaultActiveProfile(EntraUser entraUser, UUID firmId) throws IOException {
-        boolean foundFirm = false;
+        UserProfile active = null;
         for (UserProfile userProfile : entraUser.getUserProfiles()) {
             if (userProfile.getFirm().getId().equals(firmId)) {
-                userProfile.setActiveProfile(true);
-                foundFirm = true;
+                active = userProfile;
             } else {
                 userProfile.setActiveProfile(false);
             }
         }
-        if (!foundFirm) {
+        if (Objects.isNull(active)) {
             logger.warn("Firm with id {} not found in user profile. Could not update profile.", firmId);
             throw new IOException("Firm not found for firm ID: " + firmId);
         }
+        entraUserRepository.saveAndFlush(entraUser);
+        active.setActiveProfile(true);
         entraUserRepository.saveAndFlush(entraUser);
     }
 
@@ -1127,5 +1143,31 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toMap(AppRoleDto::getId,
                         Function.identity()));
+    }
+
+    /**
+     * Get user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return List of user profiles for the Entra user
+     */
+    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(entraUserId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream().toList();
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Get user profiles by Entra user ID with optional search filter
+     *
+     * @param entraUserId The Entra user ID
+     * @param search Optional search term to filter by firm name or code
+     * @return List of user profiles matching the search criteria
+     */
+    public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
+        return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
     }
 }

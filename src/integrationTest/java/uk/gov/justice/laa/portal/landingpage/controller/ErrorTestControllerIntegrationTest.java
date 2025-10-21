@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -17,9 +18,10 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import uk.gov.justice.laa.portal.landingpage.exception.GlobalExceptionHandler;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @WebMvcTest(controllers = ErrorTestController.class)
-@Import(GlobalExceptionHandler.class)  // Import exception handler for proper error handling
+@Import({GlobalExceptionHandler.class, GlobalControllerAdvice.class})  // Import exception handler for proper error handling
 @TestPropertySource(properties = {
     "app.test.error-pages.enabled=true"
 })
@@ -34,6 +36,9 @@ class ErrorTestControllerIntegrationTest {
 
     @MockBean
     private OAuth2AuthorizedClientRepository authorizedClientRepository;
+
+    @MockBean
+    private LoginService loginService;
 
     @Test
     @WithMockUser  // Add authenticated user to bypass security
