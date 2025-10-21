@@ -3288,12 +3288,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -3332,12 +3333,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userTypes = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins, showMultiFirmUsers);
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
                 List.of(),
@@ -3398,12 +3400,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -4075,12 +4078,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4110,12 +4114,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firmName";
             String direction = "DESC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4145,12 +4150,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 12;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(6); // Only 6 users on last page
             
@@ -4184,12 +4190,13 @@ class UserServiceTest {
                     .build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4219,12 +4226,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(5); // Search returns 5 results
             
@@ -4254,12 +4262,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = true;
+            boolean showMultiFirmUsers = true;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(8); // 8 firm admins
             
@@ -4289,6 +4298,7 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int pageSize = 10;
             int totalElements = 50;
 
@@ -4308,7 +4318,7 @@ class UserServiceTest {
                 String sort = config[0];
                 String direction = config[1];
                 
-                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
                 Page<UserProfile> userProfilePage = new PageImpl<>(
                         users,
@@ -4335,12 +4345,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 0; // Invalid page number
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
