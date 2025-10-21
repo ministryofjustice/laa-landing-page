@@ -1178,4 +1178,30 @@ public class UserService {
                 .collect(Collectors.toMap(AppRoleDto::getId,
                         Function.identity()));
     }
+
+    /**
+     * Get user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return List of user profiles for the Entra user
+     */
+    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(entraUserId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream().toList();
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Get user profiles by Entra user ID with optional search filter
+     *
+     * @param entraUserId The Entra user ID
+     * @param search Optional search term to filter by firm name or code
+     * @return List of user profiles matching the search criteria
+     */
+    public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
+        return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
+    }
 }
