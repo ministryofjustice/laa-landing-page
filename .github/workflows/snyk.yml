@@ -29,7 +29,7 @@ jobs:
       SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
     steps:
       - name: Git checkout
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v5
 
       - name: Run Snyk to check Docker images for vulnerabilities
         run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache

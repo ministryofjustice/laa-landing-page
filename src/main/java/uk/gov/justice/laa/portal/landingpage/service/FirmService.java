@@ -16,7 +16,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -70,6 +72,21 @@ public class FirmService {
     public List<FirmDto> getUserAllFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
+    }
+
+    public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
+        List<FirmDto> userFirms = new java.util.ArrayList<>(entraUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
+        if (entraUser.isMultiFirmUser()) {
+            List<FirmDto> child = entraUser.getUserProfiles().stream()
+                    .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
+                    .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
+                    .map(firm -> mapper.map(firm, FirmDto.class))
+                    .toList();
+            userFirms.addAll(child);
+        }
+        return userFirms;
     }
 
     /**

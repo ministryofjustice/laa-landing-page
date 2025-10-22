@@ -1,17 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import jakarta.transaction.Transactional;
-import org.assertj.core.api.Assertions;
-import org.hibernate.exception.ConstraintViolationException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.dao.DataIntegrityViolationException;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -19,8 +9,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.dao.DataIntegrityViolationException;
+
+import jakarta.transaction.Transactional;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @DataJpaTest
 public class UserProfileRepositoryTest extends BaseRepositoryTest {
@@ -147,39 +147,36 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testFirmNotNullForNonInternalUsers() {
+    public void testMultiFirmExternalUsersRequireFirm() {
+        // Test that multi-firm users only have entra_user entry, no user_profile
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test10@email.com", "First Name10", "Last Name10");
-        entraUserRepository.save(entraUser);
-
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
-        entraUser.getUserProfiles().add(userProfile1);
-
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(userProfile1),
-                "DataIntegrityViolationException expected");
-        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
-
+        entraUser.setMultiFirmUser(true); // Mark as multi-firm user
+        
+        // Multi-firm users don't have any user profiles
+        EntraUser saved = entraUserRepository.saveAndFlush(entraUser);
+        
+        assertThat(saved.isMultiFirmUser()).isTrue();
+        assertThat(saved.getUserProfiles()).isEmpty(); // No profiles for multi-firm users
     }
 
     @Test
-    public void testFirmNotNullForInternalUsers() {
+    public void testFirmNotNullForSingleFirmExternalUsers() {
+        // Test that single-firm EXTERNAL users still need a firm assigned
         Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firmRepository.save(firm1);
 
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test11@email.com", "First Name11", "Last Name11");
+        entraUser.setMultiFirmUser(false); // Mark as single-firm user
         entraUserRepository.save(entraUser);
 
-        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.INTERNAL);
+        UserProfile userProfile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile1.setFirm(firm1);
         entraUser.getUserProfiles().add(userProfile1);
 
-        DataIntegrityViolationException diEx = assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(userProfile1),
-                "DataIntegrityViolationException expected");
-        assertThat(diEx.getCause()).isInstanceOf(ConstraintViolationException.class);
-        assertThat(diEx.getCause().getMessage()).contains("firm_not_null_for_non_internal_users_only");
-
+        // Should save successfully with a firm
+        UserProfile saved = repository.saveAndFlush(userProfile1);
+        assertThat(saved.getFirm()).isNotNull();
+        assertThat(saved.getFirm().getName()).isEqualTo("Firm1");
     }
 
     @Test
@@ -260,5 +257,52 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         UserProfile additionalProfile = buildLaaUserProfile(internalUser, UserType.INTERNAL, false);
         DataIntegrityViolationException exception = assertThrows(DataIntegrityViolationException.class, () -> repository.saveAndFlush(additionalProfile));
         assertThat(exception.getCause().getMessage()).contains("one_profile_per_internal_user");
+    }
+
+    @Test
+    public void testFindAllByEntraUserReturnsAssociatedProfiles() {
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "user-findall@example.com", "Find", "All");
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        Firm firm1 = buildFirm("Firm One", "FIRM1");
+        Firm firm2 = buildFirm("Firm Two", "FIRM2");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2));
+
+        UserProfile profile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile1.setFirm(firm1);
+        UserProfile profile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile2.setFirm(firm2);
+
+        entraUser.getUserProfiles().add(profile1);
+        entraUser.getUserProfiles().add(profile2);
+        repository.saveAllAndFlush(List.of(profile1, profile2));
+
+        List<UserProfile> profiles = repository.findAllByEntraUser(entraUser);
+        UUID expectedId = entraUser.getId();
+        assertThat(profiles).isNotNull();
+        assertThat(profiles).hasSize(2);
+        assertThat(profiles).extracting(UserProfile::getId)
+                .containsExactlyInAnyOrder(profile1.getId(), profile2.getId());
+        assertThat(profiles).allMatch(p -> p.getEntraUser().getId().equals(expectedId));
+    }
+
+    @Test
+    public void testFindAllByEntraUserReturnsEmptyWhenNoProfiles() {
+        EntraUser entraUserNoProfiles = buildEntraUser(generateEntraId(), "noprof@example.com", "No", "Profiles");
+        entraUserNoProfiles = entraUserRepository.saveAndFlush(entraUserNoProfiles);
+
+        EntraUser otherUser = buildEntraUser(generateEntraId(), "other@example.com", "Other", "User");
+        otherUser = entraUserRepository.saveAndFlush(otherUser);
+        Firm firm = buildFirm("Firm X", "FIRMX");
+        firmRepository.saveAndFlush(firm);
+        UserProfile otherProfile = buildLaaUserProfile(otherUser, UserType.EXTERNAL);
+        otherProfile.setFirm(firm);
+        otherUser.getUserProfiles().add(otherProfile);
+        repository.saveAndFlush(otherProfile);
+
+        List<UserProfile> result = repository.findAllByEntraUser(entraUserNoProfiles);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
     }
 }

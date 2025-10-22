@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -75,6 +76,22 @@ public class AccessControlService {
         return canAccess;
     }
 
+    public boolean canDeleteUser(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        if (optionalAccessedUserProfile.get().getUserType().equals(UserType.INTERNAL)) {
+            return false;
+        }
+
+        return userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+    }
+
     public boolean canEditUser(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
@@ -114,7 +131,7 @@ public class AccessControlService {
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        List<UUID> userManagerFirms = firmService.getUserAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
+        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
         return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }

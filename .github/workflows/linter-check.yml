@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v5
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -31,7 +31,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest checkStyleIntegrationTest
+        run: ./gradlew checkstyleMain checkstyleTest checkStyleIntegrationTest checkstylePlaywrightTest
         env:
           GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR}}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

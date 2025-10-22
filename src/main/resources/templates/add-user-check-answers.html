@@ -27,7 +27,7 @@
                 <form th:action="@{/admin/user/create/check-answers}" th:method="post">
                     <div th:if="${errorMessage}">
                         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
-                             aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                            aria-describedby="error-summary-description" data-module="govuk-error-summary">
                             <h2 class="govuk-error-summary__title" id="error-summary-title">
                                 There is a problem
                             </h2>
@@ -86,23 +86,42 @@
                                         <a class="govuk-link" href="/admin/user/create/details">Change</a>
                                     </dd>
                                 </div>
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Firm</dt>
+                                <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                                    <dt class="govuk-summary-list__key">Multi-firm access</dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${firm.name} + ' (Firm code: ' + ${firm.code} + ')'"></span>
+                                        <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/firm">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/multi-firm">Change</a>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row"
+                                    th:if="${firm != null and firm.name != null}">
+                                    <dt class="govuk-summary-list__key">Firm</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firm.name}"></span>
+                                        <br th:if="${firm.code != null}" />
+                                        <span th:if="${firm.code != null}" class="govuk-body-s" style="color: #505a5f;">
+                                            Firm code: <span th:text="${firm.code}"></span>
+                                        </span>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a class="govuk-link" href="/admin/user/create/firm">
+                                            <span>Change</span>
+                                            <span class="govuk-visually-hidden"> firm</span>
+                                        </a>
                                     </dd>
                                 </div>
                             </dl>
                         </div>
                     </div>
                     <h2 class="govuk-heading-m">Create new user</h2>
-                    <p class="govuk-body">When you confirm, this user will be created and they will be sent an email invitation to complete their account setup.
+                    <p class="govuk-body">When you confirm, this user will be created and they will be sent an email
+                        invitation to complete their account setup.
                     </p>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button" onclick="this.disabled=true; this.form.submit();">Confirm</button>
+                        <button type="submit" class="govuk-button"
+                            onclick="this.disabled=true; this.form.submit();">Confirm</button>
                         <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                     </div>
 
