@@ -18,7 +18,6 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -40,7 +39,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,11 +73,6 @@ public class MultiFirmUserControllerTest {
         session = new MockHttpSession();
         controller = new MultiFirmUserController(userService, loginService, appRoleService,
                 roleAssignmentService, officeService, eventService, mapper);
-        enableMultiFirmUser(true);
-    }
-
-    private void enableMultiFirmUser(boolean enabled) {
-        ReflectionTestUtils.setField(controller, "enableMultiFirmUser", enabled);
     }
 
     private MultiFirmUserForm createForm() {
@@ -90,13 +83,6 @@ public class MultiFirmUserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(hasErrors);
         return bindingResult;
-    }
-
-    private void assertSessionAndModelCleared(Model model, HttpSession session) {
-        assertThat(model.getAttribute("multiFirmUserForm")).isNull();
-        assertThat(session.getAttribute("multiFirmUserForm")).isNull();
-        assertThat(model.getAttribute("entraUser")).isNull();
-        assertThat(session.getAttribute("entraUser")).isNull();
     }
 
     private void assertSessionAndModelPopulated(Model model, HttpSession session) {
@@ -111,24 +97,27 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
-    public void addUserProfileStart_multiFirmDisabled() {
-        enableMultiFirmUser(false);
-        RuntimeException rtEx = assertThrows(RuntimeException.class, () -> controller.addUserProfileStart(session));
-        assertThat(rtEx.getMessage()).contains("The page you are trying to access is not available.");
-    }
-
-    @Test
     public void addUserProfile() {
         String result = controller.addUserProfile(model, session);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
-        assertSessionAndModelPopulated(model, session);
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
+        assertThat(model.getAttribute("email")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
     }
 
     @Test
-    public void addUserProfile_multiFirmDisabled() {
-        enableMultiFirmUser(false);
-        RuntimeException rtEx = assertThrows(RuntimeException.class, () -> controller.addUserProfile(model, session));
-        assertThat(rtEx.getMessage()).contains("The page you are trying to access is not available.");
+    public void addUserProfileOnRevisit() {
+        MultiFirmUserForm form = createForm();
+        session.setAttribute("multiFirmUserForm", form);
+        String result = controller.addUserProfile(model, session);
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
+        assertThat(model.getAttribute("email")).isNotNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
     }
 
     @Test
@@ -185,7 +174,7 @@ public class MultiFirmUserControllerTest {
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
-        assertThat(result).isEqualTo("redirect:/admin/users");
+        assertThat(result).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/apps");
         assertThat(model.getAttribute("entraUser")).isNotNull();
         assertThat(session.getAttribute("entraUser")).isNotNull();
     }
@@ -201,7 +190,11 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
-        assertSessionAndModelCleared(model, session);
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
+        assertThat(model.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
     }
 
     @Test
@@ -214,7 +207,11 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
-        assertSessionAndModelCleared(model, session);
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
+        assertThat(model.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
     }
 
     @Test
@@ -228,17 +225,6 @@ public class MultiFirmUserControllerTest {
         assertSessionAndModelPopulated(model, session);
         assertThat(model.getAttribute("entraUser")).isNull();
         assertThat(session.getAttribute("entraUser")).isNull();
-    }
-
-    @Test
-    public void addUserProfilePost_multiFirmDisabled() {
-        enableMultiFirmUser(false);
-        MultiFirmUserForm form = MultiFirmUserForm.builder().build();
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-
-        RuntimeException rtEx = assertThrows(RuntimeException.class, () ->
-                controller.addUserProfilePost(form, bindingResult, model, session, authentication));
-        assertThat(rtEx.getMessage()).contains("The page you are trying to access is not available.");
     }
 
     @Test

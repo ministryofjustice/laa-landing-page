@@ -628,14 +628,11 @@ public class UserService {
             throw new RuntimeException(String.format("Invalid firm details provided for: %s", entraUserDto.getFullName()));
         }
 
-        Set<AppRole> appRoles;
+        Set<AppRole> appRoles = null;
         if (!(appRoleDtos == null || appRoleDtos.isEmpty())) {
             appRoles = appRoleDtos.stream()
                     .map(appRoleDto -> appRoleRepository.findById(UUID.fromString(appRoleDto.getId()))
                             .orElseThrow(() -> new RuntimeException(String.format("App role not found for: %s", appRoleDto.getId())))).collect(Collectors.toSet());
-        } else {
-            logger.error("Invalid app role selection for: {}", entraUserDto.getFullName());
-            throw new RuntimeException(String.format("Invalid app role selection for: %s", entraUserDto.getFullName()));
         }
 
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
