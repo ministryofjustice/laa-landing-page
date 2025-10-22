@@ -1,0 +1,6 @@
+# Additional Gitleaks config - see https://github.com/gitleaks/gitleaks#configuration
+title = "Custom Gitleaks configuration"
+
+[extend]
+# Extend the default built-in Gitleaks configuration
+useDefault = true
