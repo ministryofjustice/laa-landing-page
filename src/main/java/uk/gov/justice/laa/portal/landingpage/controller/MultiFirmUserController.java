@@ -508,10 +508,10 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile/confirmation")
     public String addProfileConfirmation(Model model, HttpSession session) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class)
-                .orElse(EntraUserDto.builder().firstName("Unknown").lastName("Unknown").build());
+                .orElse(EntraUserDto.builder().firstName("Unknown").lastName("Unknown").fullName("Unknown Unknown").build());
         model.addAttribute("user", user);
-        clearSessionAttributes(session);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User profile created - " + user.getFullName());
+        clearSessionAttributes(session);
         return "multi-firm-user/add-profile-confirmation";
     }
 
