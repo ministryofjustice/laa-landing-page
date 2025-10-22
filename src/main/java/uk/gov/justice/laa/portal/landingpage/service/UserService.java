@@ -45,6 +45,7 @@ import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
@@ -375,6 +376,96 @@ public class UserService {
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
         return builder.build();
+    }
+
+    /**
+     * Delete a specific firm profile from a multi-firm user.
+     * 
+     * @param userProfileId the ID of the user profile to delete (UUID as String)
+     * @param actorId the UUID of the actor performing the deletion (for logging)
+     * @return DeleteFirmProfileAuditEvent containing audit information
+     * @throws RuntimeException if profile not found, user not multi-firm, or attempting to delete last profile
+     */
+    @Transactional
+    public DeleteFirmProfileAuditEvent deleteFirmProfile(String userProfileId, UUID actorId) {
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isEmpty()) {
+            throw new RuntimeException("User profile not found: " + userProfileId);
+        }
+
+        UserProfile userProfile = optionalUserProfile.get();
+        EntraUser entraUser = userProfile.getEntraUser();
+        
+        if (entraUser == null) {
+            throw new RuntimeException("Associated Entra user not found for profile: " + userProfileId);
+        }
+
+        // Verify this is a multi-firm user
+        if (!entraUser.isMultiFirmUser()) {
+            throw new RuntimeException("User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
+        }
+
+        // Check if this is the last profile - cannot delete the last profile
+        List<UserProfile> allProfiles = userProfileRepository.findAllByEntraUser(entraUser);
+        if (allProfiles == null || allProfiles.size() <= 1) {
+            throw new RuntimeException("Cannot delete the last firm profile. User must have at least one profile.");
+        }
+
+        String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
+        String firmCode = userProfile.getFirm() != null ? userProfile.getFirm().getCode() : null;
+        int removedRolesCount = userProfile.getAppRoles() != null ? userProfile.getAppRoles().size() : 0;
+        int detachedOfficesCount = userProfile.getOffices() != null ? userProfile.getOffices().size() : 0;
+
+        logger.info("Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={}, email={}, firm={}",
+                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), firmName);
+
+        // Handle PUI role changes notification (like in deleteExternalUser)
+        Set<AppRole> puiRoles = new HashSet<>();
+        if (userProfile.getAppRoles() != null && !userProfile.getAppRoles().isEmpty()) {
+            puiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            userProfile.getAppRoles().clear();
+            if (!puiRoles.isEmpty()) {
+                roleChangeNotificationService.sendMessage(userProfile, Collections.emptySet(), puiRoles);
+            }
+        }
+
+        // Clear offices association
+        if (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty()) {
+            userProfile.getOffices().clear();
+        }
+
+        // Remove entra user association before deleting profile
+        userProfile.setEntraUser(null);
+        userProfileRepository.save(userProfile);
+        userProfileRepository.flush();
+        
+        // Delete the profile
+        userProfileRepository.delete(userProfile);
+        userProfileRepository.flush();
+
+        // If this was the active profile, set another one as active
+        if (userProfile.isActiveProfile()) {
+            List<UserProfile> remainingProfiles = userProfileRepository.findAllByEntraUser(entraUser);
+            if (!remainingProfiles.isEmpty()) {
+                UserProfile newActiveProfile = remainingProfiles.get(0);
+                newActiveProfile.setActiveProfile(true);
+                userProfileRepository.save(newActiveProfile);
+                logger.info("Set new active profile for user {} to firm {}", 
+                        entraUser.getEmail(), 
+                        newActiveProfile.getFirm() != null ? newActiveProfile.getFirm().getName() : "Unknown");
+            }
+        }
+
+        // Create and return audit event
+        return new DeleteFirmProfileAuditEvent(
+                actorId,
+                UUID.fromString(userProfileId),
+                entraUser.getEmail(),
+                firmName,
+                firmCode,
+                removedRolesCount,
+                detachedOfficesCount
+        );
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {

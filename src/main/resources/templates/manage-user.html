@@ -82,6 +82,14 @@
                         </div>
                     </form>
                 </div>
+                
+                <div th:if="${isMultiFirmUser and enableMultiFirmUser}" class="govuk-warning-text" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <span class="govuk-warning-text__icon" aria-hidden="true" style="top: 35%;">!</span>
+                    <strong class="govuk-warning-text__text">
+                        <span class="govuk-warning-text__assistive">Information</span>
+                        This user is set up as a multi-firm user. <a href="#firm-profiles" class="govuk-link">View all firms for <span th:text="${user.fullName}"></span>.</a>
+                    </strong>
+                </div>
                 <!-- <div id="event-name-hint" class="govuk-hint">
                     Last logged in <span th:text="${user.lastLoggedIn}"></span>
                 </div> -->
@@ -103,6 +111,11 @@
                         <li th:if="${showOfficesTab}" class="govuk-tabs__list-item">
                             <a class="govuk-tabs__tab" href="#offices">
                                 Offices
+                            </a>
+                        </li>
+                        <li th:if="${isMultiFirmUser and enableMultiFirmUser}" class="govuk-tabs__list-item">
+                            <a class="govuk-tabs__tab" href="#firm-profiles">
+                                Firm Profiles
                             </a>
                         </li>
                     </ul>
@@ -216,6 +229,63 @@
                                     <p class="govuk-body">Access to All Offices</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div th:if="${isMultiFirmUser and enableMultiFirmUser}" class="govuk-tabs__panel govuk-tabs__panel--hidden" id="firm-profiles">
+                        <h2 class="govuk-heading-m">Firm Access Profiles</h2>
+                        <p class="govuk-body">This user has access to multiple firms. Each firm profile below shows the services and offices assigned for that firm.</p>
+                        
+                        <div th:if="${userProfiles != null and !userProfiles.isEmpty()}">
+                            <div th:each="profile : ${userProfiles}" class="govuk-summary-card">
+                                <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
+                                    <h2 class="govuk-summary-card__title">
+                                        <span th:text="${profile.firm.name}"></span>
+                                        <strong th:if="${profile.activeProfile}" 
+                                            class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-left-2">ACTIVE</strong>
+                                    </h2>
+                                    <ul class="govuk-summary-card__actions" 
+                                        th:if="${canDeleteFirmProfile and userProfiles.size() > 1}">
+                                        <li class="govuk-summary-card__action">
+                                            <a class="govuk-link govuk-!-font-weight-regular" 
+                                               style="font-weight: normal; color: #d4351c;"
+                                               th:href="@{'/admin/multi-firm/user/delete-profile/' + ${profile.id}}">
+                                                Delete firm access
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="govuk-summary-card__content">
+                                    <dl class="govuk-summary-list">
+                                        <div class="govuk-summary-list__row" th:if="${profile.firm.code != null}">
+                                            <dt class="govuk-summary-list__key">Firm code</dt>
+                                            <dd class="govuk-summary-list__value" th:text="${profile.firm.code}"></dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Services</dt>
+                                            <dd class="govuk-summary-list__value">
+                                                <ul class="govuk-list" th:if="${profile.appRoles != null and !profile.appRoles.isEmpty()}">
+                                                    <li th:each="role : ${profile.appRoles}">
+                                                        <span th:text="${role.app.name}"></span> - <span th:text="${role.name}"></span>
+                                                    </li>
+                                                </ul>
+                                                <span th:if="${profile.appRoles == null or profile.appRoles.isEmpty()}">No services assigned</span>
+                                            </dd>
+                                        </div>
+                                        <div class="govuk-summary-list__row">
+                                            <dt class="govuk-summary-list__key">Offices</dt>
+                                            <dd class="govuk-summary-list__value">
+                                                <span th:if="${profile.offices != null and !profile.offices.isEmpty()}" 
+                                                      th:text="${profile.offices.size()} + ' office(s) assigned'"></span>
+                                                <span th:if="${profile.offices == null or profile.offices.isEmpty()}">No offices assigned</span>
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div th:if="${userProfiles == null or userProfiles.isEmpty()}">
+                            <p class="govuk-body">No firm profiles found.</p>
                         </div>
                     </div>
                 </div>

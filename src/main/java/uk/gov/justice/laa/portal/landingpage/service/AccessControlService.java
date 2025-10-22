@@ -1,10 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -14,13 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class AccessControlService {
@@ -90,6 +91,53 @@ public class AccessControlService {
         }
 
         return userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+    }
+
+    /**
+     * Check if the authenticated user can delete a specific firm profile.
+     * Used for multi-firm users where we delete individual firm access.
+     * 
+     * @param userProfileId the ID of the user profile to delete
+     * @return true if user has permission to delete this firm profile
+     */
+    public boolean canDeleteFirmProfile(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
+        
+        // Only external user profiles can be deleted
+        if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
+            return false;
+        }
+
+        // Must be a multi-firm user
+        if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+            return false;
+        }
+
+        // Check if user has DELEGATE_EXTERNAL_USER_ACCESS permission (firm admin)
+        // or DELETE_EXTERNAL_USER permission (external user admin)
+        boolean hasPermission = userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)
+                || userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+
+        if (!hasPermission) {
+            return false;
+        }
+
+        // If user has DELEGATE_EXTERNAL_USER_ACCESS, they can only delete profiles from their own firm
+        if (userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)
+                && !userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER)) {
+            return usersAreInSameFirm(authenticatedUser, userProfileId);
+        }
+
+        // Users with DELETE_EXTERNAL_USER can delete any firm profile
+        return true;
     }
 
     public boolean canEditUser(String userProfileId) {

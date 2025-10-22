@@ -1,10 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,6 +35,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -65,25 +85,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -320,6 +321,25 @@ public class UserController {
         model.addAttribute("canDeleteUser", canDeleteUser);
         boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        // Multi-firm user information
+        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        
+        if (isMultiFirmUser && enableMultiFirmUser) {
+            // Get all profiles for this multi-firm user
+            List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
+            List<UserProfileDto> allProfileDtos = allProfiles.stream()
+                    .map(up -> mapper.map(up, UserProfileDto.class))
+                    .collect(Collectors.toList());
+            model.addAttribute("userProfiles", allProfileDtos);
+            
+            // Check if user can delete firm profiles
+            boolean canDeleteAnyProfile = allProfileDtos.stream()
+                    .anyMatch(up -> accessControlService.canDeleteFirmProfile(up.getId().toString()));
+            model.addAttribute("canDeleteFirmProfile", canDeleteAnyProfile);
+        }
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")

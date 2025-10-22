@@ -26,6 +26,15 @@
                         fill="currentColor" />
                 </svg>
             </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">
+                    <span th:text="${successMessage}">Success</span>
+                </h2>
+                <p class="moj-alert__message" th:if="${deletedUserEmail and deletedUserName}">
+                    For <span th:text="${deletedUserName}"></span> (<span th:text="${deletedUserEmail}"></span>).
+                    <a href="/admin/users" class="govuk-link">Dismiss</a>
+                </p>
+            </div>
         </div>
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
