@@ -95,12 +95,12 @@ public class UserService {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository,
-                       AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
+            EntraUserRepository entraUserRepository,
+            AppRepository appRepository, AppRoleRepository appRoleRepository, ModelMapper mapper,
+            OfficeRepository officeRepository,
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
