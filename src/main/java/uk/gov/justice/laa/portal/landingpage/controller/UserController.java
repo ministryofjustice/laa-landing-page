@@ -1502,6 +1502,7 @@ public class UserController {
                                          @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
                                          BindingResult result,
                                          HttpSession session,
+                                         Authentication authentication,
                                          Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
@@ -1510,8 +1511,6 @@ public class UserController {
         }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        session.setAttribute("user", user);
-        session.setAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while converting user to multi-firm: {}", result.getAllErrors());
@@ -1523,46 +1522,10 @@ public class UserController {
 
         // If user chose not to convert, redirect back to manage user page
         if (Boolean.FALSE.equals(convertToMultiFirmForm.getConvertToMultiFirm())) {
-            session.removeAttribute("convertToMultiFirmForm");
-            session.removeAttribute("user");
             return "redirect:/admin/users/manage/" + id;
         }
 
-        return "redirect:/admin/users/edit/" + id + "/convert-to-multi-firm-check-answers";
-    }
-
-    @GetMapping("/users/edit/{id}/convert-to-multi-firm-check-answers")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
-    public String convertToMultiFirmCheckAnswers(@PathVariable String id, Model model, HttpSession session) {
-        ConvertToMultiFirmForm convertToMultiFirmForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
-        if (convertToMultiFirmForm == null || Boolean.FALSE.equals(convertToMultiFirmForm.getConvertToMultiFirm())) {
-            return "redirect:/admin/users/edit/" + id + "/convert-to-multi-firm";
-        }
-
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
-        if (user == null) {
-            user = userService.getUserProfileById(id).orElseThrow();
-            session.setAttribute("user", user);
-        }
-
-        model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers - Convert to multi-firm user");
-        return "convert-to-multi-firm/check-answers";
-    }
-
-    @PostMapping("/users/edit/{id}/convert-to-multi-firm-confirm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
-    public String convertToMultiFirmConfirm(@PathVariable String id, 
-                                             HttpSession session,
-                                             Authentication authentication,
-                                             Model model) {
-        ConvertToMultiFirmForm convertToMultiFirmForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
-        if (convertToMultiFirmForm == null || Boolean.FALSE.equals(convertToMultiFirmForm.getConvertToMultiFirm())) {
-            return "redirect:/admin/users/edit/" + id + "/convert-to-multi-firm";
-        }
-
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
+        // User chose "Yes" - perform the conversion
         try {
             // Convert the user to multi-firm
             userService.convertToMultiFirmUser(user.getEntraUser().getId());
@@ -1572,21 +1535,18 @@ public class UserController {
             EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
             ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
             eventService.logEvent(auditEvent);
-
-            // Clear session
-            session.removeAttribute("convertToMultiFirmForm");
-            session.removeAttribute("user");
-
-            // Refresh user data
-            user = userService.getUserProfileById(id).orElseThrow();
-            model.addAttribute("user", user);
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "User converted - " + user.getFullName());
-            return "convert-to-multi-firm/confirmation";
+            
+            log.info("Successfully converted user {} to multi-firm status", id);
+            
+            // Redirect to manage user page
+            return "redirect:/admin/users/manage/" + id;
 
         } catch (Exception e) {
             log.error("Failed to convert user {} to multi-firm: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "Failed to convert user to multi-firm: " + e.getMessage());
-            return "redirect:/admin/users/manage/" + id;
+            model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+            model.addAttribute("user", user);
+            return "convert-to-multi-firm/index";
         }
     }
 

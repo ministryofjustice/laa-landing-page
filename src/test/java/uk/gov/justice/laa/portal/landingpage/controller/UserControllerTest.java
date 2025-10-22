@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -63,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
@@ -5312,11 +5311,12 @@ class UserControllerTest {
         }
 
         @Test
-        void convertToMultiFirmPost_withValidYes_redirectsToCheckAnswers() {
+        void convertToMultiFirmPost_withValidYes_convertsUserAndRedirectsToManageUser() {
             // Given
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(UUID.fromString(userId))
@@ -5336,14 +5336,19 @@ class UserControllerTest {
             BindingResult bindingResult = Mockito.mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(false);
             when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
 
             // Then
-            assertThat(result).isEqualTo("redirect:/admin/users/edit/" + userId + "/convert-to-multi-firm-check-answers");
-            assertThat(session.getAttribute("user")).isEqualTo(user);
-            assertThat(session.getAttribute("convertToMultiFirmForm")).isEqualTo(form);
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+            verify(userService).convertToMultiFirmUser(userId);
+            verify(eventService).logEvent(any(ConvertToMultiFirmAuditEvent.class));
         }
 
         @Test
@@ -5352,6 +5357,7 @@ class UserControllerTest {
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(UUID.fromString(userId))
@@ -5373,12 +5379,12 @@ class UserControllerTest {
             when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
 
             // Then
             assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
-            assertThat(session.getAttribute("convertToMultiFirmForm")).isNull();
-            assertThat(session.getAttribute("user")).isNull();
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
         }
 
         @Test
@@ -5387,6 +5393,7 @@ class UserControllerTest {
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(UUID.fromString(userId))
@@ -5409,12 +5416,13 @@ class UserControllerTest {
             when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
 
             // Then
             assertThat(result).isEqualTo("convert-to-multi-firm/index");
             assertThat(model.getAttribute("user")).isEqualTo(user);
             assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Convert to multi-firm user - John Doe");
+            verify(userService, never()).convertToMultiFirmUser(anyString());
         }
 
         @Test
@@ -5423,6 +5431,7 @@ class UserControllerTest {
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
             String userId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
 
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
                     new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
@@ -5432,12 +5441,53 @@ class UserControllerTest {
 
             // When & Then
             RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                    userController.convertToMultiFirmPost(userId, form, bindingResult, session, model));
+                    userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model));
             assertThat(exception.getMessage()).contains("multi-firm feature is not available");
         }
-
+        
         @Test
-        void convertToMultiFirmCheckAnswers_withValidSession_returnsCheckAnswersPage() {
+        void convertToMultiFirmPost_withConversionFailure_returnsFormWithError() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .fullName("John Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
+                    new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(bindingResult.hasErrors()).thenReturn(false);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            // Simulate conversion failure
+            Mockito.doThrow(new RuntimeException("Database error")).when(userService).convertToMultiFirmUser(userId);
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
+
+            // Then
+            assertThat(result).isEqualTo("convert-to-multi-firm/index");
+            assertThat(model.getAttribute("errorMessage")).isNotNull();
+            assertThat(model.getAttribute("errorMessage").toString()).contains("Failed to convert user to multi-firm");
+            assertThat(model.getAttribute("user")).isEqualTo(user);
+        }
+    }
+
+    // Grant Access Tests
             // Given
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             String userId = UUID.randomUUID().toString();
