@@ -3942,6 +3942,9 @@ class UserServiceTest {
                     userService.addMultiFirmUserProfile(user, new FirmDto(), null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("is not a multi-firm user");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3955,6 +3958,9 @@ class UserServiceTest {
                     userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3965,6 +3971,9 @@ class UserServiceTest {
                     userService.addMultiFirmUserProfile(user, null, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3990,6 +3999,9 @@ class UserServiceTest {
                     userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
 
             assertThat(ex.getMessage()).contains("User profile already exists");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4007,6 +4019,9 @@ class UserServiceTest {
                     userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("User not found for the given user user id");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4029,6 +4044,7 @@ class UserServiceTest {
             assertThat(result.isActiveProfile()).isTrue();
             verify(userProfileRepository).save(result);
             verify(entraUserRepository).save(entraUser);
+            verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4059,6 +4075,7 @@ class UserServiceTest {
             assertThat(result.isActiveProfile()).isFalse();
             verify(userProfileRepository).save(result);
             verify(entraUserRepository).save(entraUser);
+            verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
     }

@@ -9,14 +9,13 @@ import java.util.UUID;
 @Getter
 public class AddUserProfileAuditEvent extends AuditEvent implements Serializable {
 
+    private static final String UPDATE_USER_ROLE_TEMPLATE
+            = "New user profile with id %s added to user id %s, for the firm %s, added by %s and added %s (%s)";
     private final EntraUserDto user;
     private final UUID newUserProfileId;
     private final UUID firmId;
     private final String field;
     private final String changeString;
-    private static final String UPDATE_USER_ROLE_TEMPLATE = """
-            New user profile with id %s added to user id %s, for the firm %s, added by %s and added %s (%s)
-            """;
 
     public AddUserProfileAuditEvent(CurrentUserDto currentUserDto, UUID newUserProfileId, EntraUserDto user,
                                     UUID firmId, String field, String changeString) {
