@@ -208,6 +208,7 @@ public class MultiFirmUserController {
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
         session.removeAttribute("addProfileUserAppsModel");
+        session.removeAttribute("addUserProfileAllSelectedRoles");
 
         return "redirect:/admin/multi-firm/user/add/profile/select/roles";
     }
