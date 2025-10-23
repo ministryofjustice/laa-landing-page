@@ -317,4 +317,236 @@ public class MultiFirmUserControllerTest {
         // Assert
         assertThat(result.getUrl()).isEqualTo("/error");
     }
+
+    @Test
+    public void deleteFirmProfileConfirm_shouldReturnConfirmationView() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        java.util.UUID entraUserId = java.util.UUID.randomUUID();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto.builder()
+                .name("Test Law Firm")
+                .code("12345")
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(entraUserId.toString())
+                .firstName("John")
+                .lastName("Doe")
+                .email("john.doe@example.com")
+                .multiFirmUser(true)
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .activeProfile(true)
+                .build();
+        
+        UserProfile profile1 = UserProfile.builder().build();
+        UserProfile profile2 = UserProfile.builder().build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(profile1, profile2));
+
+        // Act
+        String result = controller.deleteFirmProfileConfirm(userProfileId, model);
+
+        // Assert
+        assertThat(result).isEqualTo("multi-firm-user/delete-profile-confirm");
+        assertThat(model.getAttribute("userProfile")).isNotNull();
+        assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+    }
+
+    @Test
+    public void deleteFirmProfileConfirm_featureFlagDisabled_shouldThrowException() {
+        // Arrange
+        enableMultiFirmUser(false);
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> 
+                controller.deleteFirmProfileConfirm(userProfileId, model));
+    }
+
+    @Test
+    public void deleteFirmProfileConfirm_notMultiFirmUser_shouldThrowException() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .multiFirmUser(false) // Not multi-firm
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> 
+                controller.deleteFirmProfileConfirm(userProfileId, model));
+    }
+
+    @Test
+    public void deleteFirmProfileConfirm_lastProfile_shouldReturnRedirect() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        java.util.UUID entraUserId = java.util.UUID.randomUUID();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(entraUserId.toString())
+                .multiFirmUser(true)
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build())); // Only one profile
+
+        // Act
+        String result = controller.deleteFirmProfileConfirm(userProfileId, model);
+
+        // Assert
+        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_withYes_shouldDeleteAndRedirect() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        String confirm = "yes";
+        java.util.UUID actorId = java.util.UUID.randomUUID();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto.builder()
+                .name("Test Law Firm")
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .firstName("John")
+                .lastName("Doe")
+                .email("john.doe@example.com")
+                .multiFirmUser(true)
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent auditEvent = 
+                new uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent(
+                        actorId,
+                        java.util.UUID.fromString(userProfileId),
+                        "john.doe@example.com",
+                        "Test Law Firm",
+                        "12345",
+                        5,
+                        2
+                );
+
+        uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto currentUserDto = new uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto();
+        currentUserDto.setUserId(actorId);
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.deleteFirmProfile(Mockito.eq(userProfileId), Mockito.eq(actorId))).thenReturn(auditEvent);
+
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = 
+                Mockito.mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act
+        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes, model);
+
+        // Assert
+        assertThat(result).isEqualTo("redirect:/admin/users");
+        verify(userService).deleteFirmProfile(Mockito.eq(userProfileId), Mockito.eq(actorId));
+        verify(redirectAttributes).addFlashAttribute(Mockito.eq("successMessage"), Mockito.anyString());
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_withNo_shouldRedirectToManageUser() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        String confirm = "no";
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = 
+                Mockito.mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act
+        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes, model);
+
+        // Assert
+        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
+        verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_withNoSelection_shouldShowError() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        String confirm = null; // No selection
+        java.util.UUID entraUserId = java.util.UUID.randomUUID();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto.builder()
+                .name("Test Law Firm")
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto.builder()
+                .id(entraUserId.toString())
+                .firstName("John")
+                .lastName("Doe")
+                .multiFirmUser(true)
+                .build();
+        
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto.builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build(), UserProfile.builder().build()));
+
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = 
+                Mockito.mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act
+        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes, model);
+
+        // Assert
+        assertThat(result).isEqualTo("multi-firm-user/delete-profile-confirm");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat(model.getAttribute("errorMessage")).asString().contains("Please select an option");
+        verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_featureFlagDisabled_shouldThrowException() {
+        // Arrange
+        enableMultiFirmUser(false);
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = 
+                Mockito.mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> 
+                controller.deleteFirmProfileExecute(userProfileId, "yes", authentication, redirectAttributes, model));
+    }
 }

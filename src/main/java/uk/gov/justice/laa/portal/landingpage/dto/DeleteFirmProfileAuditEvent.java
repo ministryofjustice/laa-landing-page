@@ -29,6 +29,30 @@ public class DeleteFirmProfileAuditEvent extends AuditEvent {
         this.detachedOfficesCount = detachedOfficesCount;
     }
 
+    public UUID getUserProfileId() {
+        return userProfileId;
+    }
+
+    public String getFirmName() {
+        return firmName;
+    }
+
+    public String getFirmCode() {
+        return firmCode;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public int getRemovedRolesCount() {
+        return removedRolesCount;
+    }
+
+    public int getDetachedOfficesCount() {
+        return detachedOfficesCount;
+    }
+
     @Override
     public EventType getEventType() {
         return EventType.USER_DELETE_ATTEMPT;

@@ -1,8 +1,50 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.core.content.BatchResponseContent;
 import com.microsoft.graph.core.requests.BatchRequestBuilder;
@@ -17,21 +59,11 @@ import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import okhttp3.Request;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -66,36 +98,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
-import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -4390,6 +4392,408 @@ class UserServiceTest {
                 profiles.add(profile);
             }
             return profiles;
+        }
+    }
+
+    @Nested
+    class DeleteFirmProfileTests {
+
+        @Test
+        void deleteFirmProfile_Success_ReturnsAuditEvent() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            // Create EntraUser with multi-firm flag
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            // Create firm
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Law Firm")
+                    .code("12345")
+                    .build();
+
+            // Create offices
+            Office office1 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+            Office office2 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+
+            // Create app roles with CCMS codes for PUI roles
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI")
+                    .build();
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("SOME_OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            // Create user profile to delete (active profile)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>(Arrays.asList(office1, office2)))
+                    .build();
+
+            // Create another profile for the same user (will become active)
+            UUID otherFirmId = UUID.randomUUID();
+            Firm otherFirm = Firm.builder()
+                    .id(otherFirmId)
+                    .name("Other Law Firm")
+                    .code("67890")
+                    .build();
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(otherFirm)
+                    .activeProfile(false)
+                    .build();
+
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            var result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUserProfileId()).isEqualTo(userProfileId);
+            assertThat(result.getFirmName()).isEqualTo("Test Law Firm");
+            assertThat(result.getFirmCode()).isEqualTo("12345");
+            assertThat(result.getUserEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getRemovedRolesCount()).isEqualTo(3);
+            assertThat(result.getDetachedOfficesCount()).isEqualTo(2);
+
+            // Verify profile was cleared of roles and offices
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify save was called (for clearing entra user ref and potentially setting new active profile)
+            verify(mockUserProfileRepository, atLeast(2)).save(any(UserProfile.class));
+
+            // Verify PUI notifications were sent (once with empty new roles and PUI old roles)
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), any(), any());
+        }
+
+        @Test
+        void deleteFirmProfile_NotMultiFirmUser_ThrowsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .multiFirmUser(false) // Not a multi-firm user
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
+
+            assertThat(exception.getMessage())
+                    .contains("User is not a multi-firm user");
+
+            // Verify no deletion occurred
+            verify(mockUserProfileRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteFirmProfile_LastProfile_ThrowsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Bob")
+                    .lastName("Jones")
+                    .email("bob.jones@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Collections.singletonList(userProfile)); // Only one profile
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
+
+            assertThat(exception.getMessage())
+                    .contains("Cannot delete the last firm profile");
+
+            // Verify no deletion occurred
+            verify(mockUserProfileRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteFirmProfile_ProfileNotFound_ThrowsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
+
+            assertThat(exception.getMessage())
+                    .contains("User profile not found");
+
+            // Verify no deletion occurred
+            verify(mockUserProfileRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteFirmProfile_NonActiveProfile_DoesNotReassignActive() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Alice")
+                    .lastName("Williams")
+                    .email("alice.williams@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            // Profile to delete (NOT active)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm A").code("AAA").build())
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>())
+                    .offices(new HashSet<>())
+                    .build();
+
+            // Another profile (already active)
+            UserProfile activeProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm B").build())
+                    .activeProfile(true)
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, activeProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            var result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isNotNull();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify active profile was NOT modified since deletion of non-active profile
+            // The service still saves after clearing entra user ref, but shouldn't reassign active
+            assertThat(activeProfile.isActiveProfile()).isTrue();
+        }
+
+        @Test
+        void deleteFirmProfile_ClearsRolesAndOffices() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Charlie")
+                    .lastName("Brown")
+                    .email("charlie.brown@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .build();
+
+            // Create multiple roles and offices
+            Set<AppRole> roles = IntStream.range(0, 5)
+                    .mapToObj(i -> AppRole.builder()
+                            .id(UUID.randomUUID())
+                            .name("ROLE_" + i)
+                            .app(App.builder().id(UUID.randomUUID()).name("App").build())
+                            .build())
+                    .collect(Collectors.toSet());
+
+            Set<Office> offices = IntStream.range(0, 3)
+                    .mapToObj(i -> Office.builder()
+                            .id(UUID.randomUUID())
+                            .firm(firm)
+                            .build())
+                    .collect(Collectors.toSet());
+
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm").code("123").build())
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>(roles))
+                    .offices(new HashSet<>(offices))
+                    .build();
+
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Other Firm").build())
+                    .activeProfile(true)
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            var result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result.getRemovedRolesCount()).isEqualTo(5);
+            assertThat(result.getDetachedOfficesCount()).isEqualTo(3);
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+        }
+
+        @Test
+        void deleteFirmProfile_SendsPuiNotifications() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("David")
+                    .lastName("Miller")
+                    .email("david.miller@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI")
+                    .build();
+
+            // Mix of PUI roles (with CCMS code and legacySync) and non-PUI roles
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("999")
+                    .build();
+
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>())
+                    .build();
+
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Other Firm").build())
+                    .activeProfile(true)
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then - verify notification service was called with PUI roles
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), eq(Collections.emptySet()), any());
         }
     }
 }
