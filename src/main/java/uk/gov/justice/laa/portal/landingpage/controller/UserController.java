@@ -315,16 +315,11 @@ public class UserController {
         boolean hasEditOfficePermission =
                 accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
 
-
-        boolean canViewOffices =
-                externalUser && hasViewOfficePermission;
-
-
         boolean canManageOffices =
                 hasEditOfficePermission && canEditUser;
 
 
-        boolean showOfficesTab = canViewOffices || canManageOffices;
+        boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
         model.addAttribute("showOfficesTab",  showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
 
