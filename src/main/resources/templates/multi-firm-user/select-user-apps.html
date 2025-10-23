@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Services</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/multi-firm/user/add/profile">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <form method="post" th:action="@{/admin/multi-firm/user/add/profile/select/apps}" th:object="${applicationsForm}">
+            <div th:if="${#fields.hasErrors()}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="govuk-form-group">
+                <fieldset class="govuk-fieldset">
+                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                        <h1 class="govuk-fieldset__heading">
+                            Which of these services will <span th:text="${entraUser.firstName}"></span> <span
+                                th:text="${entraUser.lastName}"></span> need access?
+                        </h1>
+                    </legend>
+                    <div id="offices-hint" class="govuk-hint">
+                        Select all that apply
+                    </div>
+                    <p class="govuk-error-message" th:if="${#fields.hasErrors('apps')}" th:errors="*{apps}"></p>
+                    <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
+                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
+                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
+                                th:value="${app.id}" type="checkbox">
+                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
+                                <span th:text="${app.name}"></span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="govuk-button-group">
+                <button type="submit" class="govuk-button">Continue</button>
+                <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
+            </div>
+        </form>
+    </main>
+</body>
+
+</html>
