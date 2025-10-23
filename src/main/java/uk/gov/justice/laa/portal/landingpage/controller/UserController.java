@@ -308,11 +308,30 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
-        // Check if current user can manage offices - align with actual endpoint authorization
-        boolean canManageOffices = externalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)
-                && canEditUser;
-        model.addAttribute("showOfficesTab", canManageOffices);
+        // ---- permissions
+        boolean hasViewOfficePermission =
+                accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
+
+        boolean hasEditOfficePermission =
+                accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+
+        // view requires external + VIEW
+        boolean canViewOffices =
+                externalUser && hasViewOfficePermission;
+
+        // manage requires EDIT + canEditUser
+        boolean canManageOffices =
+                hasEditOfficePermission && canEditUser;
+
+        if (log.isDebugEnabled()) {
+            log.debug("External: {}, has VIEW: {}, has EDIT: {}, canEditUser: {}, -> canView: {}, canManage: {}",
+                    externalUser, hasViewOfficePermission, hasEditOfficePermission, canEditUser, canViewOffices, canManageOffices);
+        }
+
+        // ---- model attributes for the template
+        boolean showOfficesTab = canViewOffices || canManageOffices;
+        model.addAttribute("showOfficesTab",  showOfficesTab);
+        model.addAttribute("canManageOffices", canManageOffices);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
