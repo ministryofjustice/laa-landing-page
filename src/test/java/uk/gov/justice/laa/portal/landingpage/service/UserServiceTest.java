@@ -120,6 +120,8 @@ class UserServiceTest {
     private UserProfileRepository mockUserProfileRepository;
     @Mock
     private RoleChangeNotificationService mockRoleChangeNotificationService;
+    @Mock
+    private FirmService firmService;
 
     @BeforeEach
     void setUp() {
@@ -133,7 +135,8 @@ class UserServiceTest {
                 laaApplicationsList,
                 techServicesClient,
                 mockUserProfileRepository,
-                mockRoleChangeNotificationService);
+                mockRoleChangeNotificationService,
+                firmService);
     }
 
     @Test
@@ -381,7 +384,6 @@ class UserServiceTest {
     @Test
     void createUser() {
         // assign role
-        UUID userId = UUID.randomUUID();
         RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
@@ -390,8 +392,6 @@ class UserServiceTest {
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
         when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
 
-        List<String> roles = new ArrayList<>();
-        roles.add(UUID.randomUUID().toString());
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setFirstName("Test");
         entraUserDto.setLastName("User");
@@ -420,8 +420,6 @@ class UserServiceTest {
                 .success(RegisterUserResponse.builder().createdUser(createdUser).build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
-        List<String> roles = new ArrayList<>();
-        roles.add(UUID.randomUUID().toString());
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setFirstName("Test");
         entraUserDto.setLastName("User");
@@ -990,7 +988,6 @@ class UserServiceTest {
     @Test
     public void testGetUserAppsByUserIdReturnsAppsWhenUserHasAppsAssigned() {
         // Given
-        UUID entraUserId = UUID.randomUUID();
         UUID userProfileId = UUID.randomUUID();
         UUID appId = UUID.randomUUID();
         UUID appRoleId = UUID.randomUUID();
@@ -1008,13 +1005,6 @@ class UserServiceTest {
                 .activeProfile(true)
                 .appRoles(Set.of(appRole))
                 .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
-        EntraUser user = EntraUser.builder()
-                .id(entraUserId)
-                .firstName("Test")
-                .lastName("User")
-                .email("test@test.com")
-                .userProfiles(Set.of(userProfile))
                 .build();
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
         // When
@@ -1647,7 +1637,6 @@ class UserServiceTest {
         @Test
         void getUserOfficesByUserId_returnsOffices_whenUserExists() {
             // Arrange
-            UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
@@ -2333,7 +2322,6 @@ class UserServiceTest {
         @Test
         void createUser_withFirm_ForMultiFirmUser_withUserProfile() {
             // assign role
-            UUID userId = UUID.randomUUID();
             RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
             createdUser.setId("id");
             createdUser.setMail("test.user@email.com");
@@ -2342,8 +2330,6 @@ class UserServiceTest {
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
 
-            List<String> roles = new ArrayList<>();
-            roles.add(UUID.randomUUID().toString());
             EntraUserDto entraUserDto = new EntraUserDto();
             entraUserDto.setMultiFirmUser(true);
             entraUserDto.setFirstName("Test");
@@ -2368,8 +2354,6 @@ class UserServiceTest {
                     .success(RegisterUserResponse.builder().createdUser(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
-            List<String> roles = new ArrayList<>();
-            roles.add(UUID.randomUUID().toString());
             EntraUserDto entraUserDto = new EntraUserDto();
             entraUserDto.setFirstName("Test");
             entraUserDto.setLastName("User");
@@ -2858,7 +2842,7 @@ class UserServiceTest {
     }
 
     @Test
-    void setDefaultActiveProfile_no_firm() throws IOException {
+    void setDefaultActiveProfile_no_firm() {
         UUID firm1Id = UUID.randomUUID();
         UUID firm2Id = UUID.randomUUID();
         UUID firm3Id = UUID.randomUUID();
@@ -3045,7 +3029,7 @@ class UserServiceTest {
 
         // Then - Should only appear once due to distinct()
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("Shared App");
+        assertThat(result.getFirst().getName()).isEqualTo("Shared App");
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.INTERNAL.name());
     }
 
@@ -3285,12 +3269,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -3329,12 +3314,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userTypes = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins, showMultiFirmUsers);
 
         Page<UserProfile> userProfilePage = new PageImpl<>(
                 List.of(),
@@ -3395,12 +3381,13 @@ class UserServiceTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
         UserType userType = UserType.EXTERNAL;
         boolean showFirmAdmins = false;
+        boolean showMultiFirmUsers = false;
         int page = 1;
         int pageSize = 10;
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
@@ -3430,8 +3417,8 @@ class UserServiceTest {
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
-        assertThat(result.getUsers().get(0).getEntraUser().getFirstName()).isEqualTo("Test");
-        assertThat(result.getUsers().get(0).getEntraUser().getLastName()).isEqualTo("Name");
+        assertThat(result.getUsers().getFirst().getEntraUser().getFirstName()).isEqualTo("Test");
+        assertThat(result.getUsers().getFirst().getEntraUser().getLastName()).isEqualTo("Name");
 
         // Verify the repository was called with the search criteria
         verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
@@ -3469,7 +3456,7 @@ class UserServiceTest {
                     .build();
 
             final AppRole newRole = AppRole.builder()
-                    .id(UUID.fromString(selectedRoles.get(0)))
+                    .id(UUID.fromString(selectedRoles.getFirst()))
                     .name("NEW_ROLE")
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
@@ -3930,6 +3917,18 @@ class UserServiceTest {
         private EntraUserRepository entraUserRepository;
 
         @Mock
+        private AppRoleRepository appRoleRepository;
+
+        @Mock
+        private TechServicesClient techServicesClient;
+
+        @Mock
+        private FirmService firmService;
+
+        @Mock
+        private OfficeRepository officeRepository;
+
+        @Mock
         private ModelMapper mapper;
 
         @InjectMocks
@@ -3940,9 +3939,12 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().build();
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, new FirmDto(), "admin"));
+                    userService.addMultiFirmUserProfile(user, new FirmDto(), null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("is not a multi-firm user");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3953,9 +3955,12 @@ class UserServiceTest {
             firmDto.setSkipFirmSelection(false); // invalid
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3963,9 +3968,12 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().multiFirmUser(true).build();
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, null, "admin"));
+                    userService.addMultiFirmUserProfile(user, null, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -3988,9 +3996,12 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
 
             assertThat(ex.getMessage()).contains("User profile already exists");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4005,9 +4016,12 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.empty());
 
             RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, "admin"));
+                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("User not found for the given user user id");
+            verify(userProfileRepository, never()).save(any());
+            verify(entraUserRepository, never()).save(any());
+            verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4024,13 +4038,13 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
-            when(mapper.map(firmDto, Firm.class)).thenReturn(firm);
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, "admin");
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
             assertThat(result.isActiveProfile()).isTrue();
             verify(userProfileRepository).save(result);
             verify(entraUserRepository).save(entraUser);
+            verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
         @Test
@@ -4039,25 +4053,29 @@ class UserServiceTest {
             Firm existingFirm = Firm.builder().id(firmId).build();
 
             UUID entraUserId = UUID.randomUUID();
-            UUID newFirmId = UUID.randomUUID();
-            Firm newFirm = Firm.builder().id(newFirmId).build();
-            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).build();
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
             UserProfile existingProfile = UserProfile.builder().firm(existingFirm).build();
             entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
 
-            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            Office office = Office.builder().id(UUID.randomUUID()).build();
+            OfficeDto officeDto = new OfficeDto();
+            AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("role").build();
+            AppRoleDto appRoleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).build();
+            FirmDto newFirmDto = FirmDto.builder().id(UUID.randomUUID()).build();
 
-            when(mapper.map(newFirmDto, Firm.class)).thenReturn(newFirm);
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
+            when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
 
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
 
-            UserProfile result = userService.addMultiFirmUserProfile(user,
-                    FirmDto.builder().id(newFirmId).build(), "admin");
+            UserProfile result = userService.addMultiFirmUserProfile(user, newFirmDto, List.of(officeDto),
+                    List.of(appRoleDto), "admin");
 
             assertThat(result.isActiveProfile()).isFalse();
             verify(userProfileRepository).save(result);
             verify(entraUserRepository).save(entraUser);
+            verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
     }
@@ -4072,12 +4090,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4107,12 +4126,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firmName";
             String direction = "DESC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4142,12 +4162,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 12;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(6); // Only 6 users on last page
             
@@ -4181,12 +4202,13 @@ class UserServiceTest {
                     .build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
@@ -4216,12 +4238,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(5); // Search returns 5 results
             
@@ -4251,12 +4274,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = UserType.EXTERNAL;
             boolean showFirmAdmins = true;
+            boolean showMultiFirmUsers = true;
             int page = 1;
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(8); // 8 firm admins
             
@@ -4286,6 +4310,7 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int pageSize = 10;
             int totalElements = 50;
 
@@ -4305,7 +4330,7 @@ class UserServiceTest {
                 String sort = config[0];
                 String direction = config[1];
                 
-                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
                 Page<UserProfile> userProfilePage = new PageImpl<>(
                         users,
@@ -4332,12 +4357,13 @@ class UserServiceTest {
             FirmSearchForm firmSearch = FirmSearchForm.builder().build();
             UserType userType = null;
             boolean showFirmAdmins = false;
+            boolean showMultiFirmUsers = false;
             int page = 0; // Invalid page number
             int pageSize = 10;
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
             List<UserProfile> users = createUserProfiles(10);
             
