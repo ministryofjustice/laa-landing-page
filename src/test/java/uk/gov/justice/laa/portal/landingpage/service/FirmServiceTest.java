@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -616,6 +617,21 @@ class FirmServiceTest {
                 .hasSize(2)
                 .extracting(FirmDto::getName)
                 .containsExactly("Alpha", "AlphaTech"); // dto1 should be ranked higher
+    }
+
+    @Test
+    void testGetById_shouldReturnFirm() {
+        // Arrange
+        UUID firmId = UUID.randomUUID();
+        Firm expectedFirm = Firm.builder().id(firmId).build();
+        when(firmRepository.getReferenceById(firmId)).thenReturn(expectedFirm);
+
+        // Act
+        Firm result = firmService.getById(firmId);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedFirm);
+        verify(firmRepository, times(1)).getReferenceById(firmId);
     }
 
     @Nested
