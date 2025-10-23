@@ -323,11 +323,6 @@ public class UserController {
         boolean canManageOffices =
                 hasEditOfficePermission && canEditUser;
 
-        if (log.isDebugEnabled()) {
-            log.debug("External: {}, has VIEW: {}, has EDIT: {}, canEditUser: {}, -> canView: {}, canManage: {}",
-                    externalUser, hasViewOfficePermission, hasEditOfficePermission, canEditUser, canViewOffices, canManageOffices);
-        }
-
         // ---- model attributes for the template
         boolean showOfficesTab = canViewOffices || canManageOffices;
         model.addAttribute("showOfficesTab",  showOfficesTab);
