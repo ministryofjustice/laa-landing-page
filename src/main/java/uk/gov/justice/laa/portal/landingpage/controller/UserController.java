@@ -308,22 +308,22 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
-        // ---- permissions
+
         boolean hasViewOfficePermission =
                 accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
 
         boolean hasEditOfficePermission =
                 accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
 
-        // view requires external + VIEW
+
         boolean canViewOffices =
                 externalUser && hasViewOfficePermission;
 
-        // manage requires EDIT + canEditUser
+
         boolean canManageOffices =
                 hasEditOfficePermission && canEditUser;
 
-        // ---- model attributes for the template
+
         boolean showOfficesTab = canViewOffices || canManageOffices;
         model.addAttribute("showOfficesTab",  showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
