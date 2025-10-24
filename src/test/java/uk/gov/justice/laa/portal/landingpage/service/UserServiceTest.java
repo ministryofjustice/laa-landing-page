@@ -4726,7 +4726,7 @@ class UserServiceTest {
             // Given
             UUID userProfileId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
-            UUID actorId = UUID.randomUUID();
+            final UUID actorId = UUID.randomUUID();
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)

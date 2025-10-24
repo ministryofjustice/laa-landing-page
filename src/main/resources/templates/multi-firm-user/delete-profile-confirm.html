@@ -5,7 +5,7 @@
       pageCategory=${'delete-firm-profile'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title th:text="${'Confirm you want to remove ' + userProfile.firm.name}">Confirm you want to remove</title>
+    <title th:text="${'Are you sure you want to revoke access for ' + user.fullName + '?'}">Are you sure you want to revoke access?</title>
 </head>
 <body>
 <main class="govuk-main-wrapper" id="main-content">
@@ -25,11 +25,11 @@
 
     <a class="govuk-back-link" href="javascript:history.back()">Back</a>
 
-    <h1 class="govuk-heading-l" th:text="'Confirm you want to remove ' + ${userProfile.firm.name} + '.....'">
-        Confirm you want to remove.....
+    <h1 class="govuk-heading-l" th:text="'Are you sure you want to revoke access for ' + ${user.fullName} + '?'">
+        Are you sure you want to revoke access for Emily Smith?
     </h1>
 
-    <p class="govuk-body govuk-hint" th:text="'From ' + ${user.fullName}">Hint hint</p>
+    <p class="govuk-body">This will remove the user's access to your firm in SiLAS right away but will not delete their account.</p>
 
     <form th:action="@{'/admin/multi-firm/user/delete-profile/' + ${userProfile.id}}" method="post" novalidate>
         <div class="govuk-form-group">
@@ -38,25 +38,23 @@
                     <div class="govuk-radios__item">
                         <input class="govuk-radios__input" id="confirm-yes" name="confirm" type="radio" value="yes" required>
                         <label class="govuk-label govuk-radios__label" for="confirm-yes">
-                            Yes, I want to delete
+                            Yes, I want to revoke access
                         </label>
                     </div>
                     <div class="govuk-radios__item">
                         <input class="govuk-radios__input" id="confirm-no" name="confirm" type="radio" value="no">
                         <label class="govuk-label govuk-radios__label" for="confirm-no">
-                            No, I do not want to delete
+                            No, I do not want to revoke access
                         </label>
                     </div>
                 </div>
             </fieldset>
         </div>
 
-        <div class="moj-button-group">
-            <button type="submit" class="govuk-button" data-module="govuk-button">
-                Confirm and continue
-            </button>
-            <a class="govuk-link" href="javascript:history.back()">Cancel</a>
-        </div>
+        <button type="submit" class="govuk-button" data-module="govuk-button">
+            Confirm
+        </button>
+        <a class="govuk-link" href="javascript:history.back()">Cancel</a>
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     </form>
 </main>

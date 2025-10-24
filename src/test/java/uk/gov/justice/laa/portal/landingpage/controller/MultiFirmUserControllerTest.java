@@ -1,15 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.http.HttpSession;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.slf4j.LoggerFactory;
@@ -23,6 +26,12 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -30,15 +39,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -420,7 +420,7 @@ public class MultiFirmUserControllerTest {
     public void deleteFirmProfileExecute_withYes_shouldDeleteAndRedirect() {
         // Arrange
         String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
-        String confirm = "yes";
+        final String confirm = "yes";
         java.util.UUID actorId = java.util.UUID.randomUUID();
         
         uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto.builder()
@@ -440,7 +440,7 @@ public class MultiFirmUserControllerTest {
                 .firm(firmDto)
                 .build();
 
-        uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent auditEvent = 
+        final uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent auditEvent = 
                 new uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent(
                         actorId,
                         java.util.UUID.fromString(userProfileId),
@@ -453,7 +453,6 @@ public class MultiFirmUserControllerTest {
 
         uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto currentUserDto = new uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto();
         currentUserDto.setUserId(actorId);
-
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(userService.deleteFirmProfile(Mockito.eq(userProfileId), Mockito.eq(actorId))).thenReturn(auditEvent);
@@ -521,7 +520,6 @@ public class MultiFirmUserControllerTest {
                 .build();
 
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
-        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build(), UserProfile.builder().build()));
 
         org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = 
                 Mockito.mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);

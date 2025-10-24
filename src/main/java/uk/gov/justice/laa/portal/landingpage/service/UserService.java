@@ -411,10 +411,10 @@ public class UserService {
             throw new RuntimeException("Cannot delete the last firm profile. User must have at least one profile.");
         }
 
-        String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
-        String firmCode = userProfile.getFirm() != null ? userProfile.getFirm().getCode() : null;
-        int removedRolesCount = userProfile.getAppRoles() != null ? userProfile.getAppRoles().size() : 0;
-        int detachedOfficesCount = userProfile.getOffices() != null ? userProfile.getOffices().size() : 0;
+        final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
+        final String firmCode = userProfile.getFirm() != null ? userProfile.getFirm().getCode() : null;
+        final int removedRolesCount = userProfile.getAppRoles() != null ? userProfile.getAppRoles().size() : 0;
+        final int detachedOfficesCount = userProfile.getOffices() != null ? userProfile.getOffices().size() : 0;
 
         logger.info("Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={}, email={}, firm={}",
                 actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), firmName);

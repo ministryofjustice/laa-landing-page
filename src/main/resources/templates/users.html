@@ -16,23 +16,17 @@
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
-        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
-            aria-label="success: User added successfully" data-module="moj-alert">
-            <div>
-                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 30 30" height="30" width="30">
-                    <path
-                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
-                        fill="currentColor" />
-                </svg>
-            </div>
-            <div class="moj-alert__content">
-                <h2 class="moj-alert__heading">
-                    <span th:text="${successMessage}">Success</span>
+        <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+             aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                    Success
                 </h2>
-                <p class="moj-alert__message" th:if="${deletedUserEmail and deletedUserName}">
-                    For <span th:text="${deletedUserName}"></span> (<span th:text="${deletedUserEmail}"></span>).
-                    <a href="/admin/users" class="govuk-link">Dismiss</a>
+            </div>
+            <div class="govuk-notification-banner__content">
+                <p class="govuk-notification-banner__heading" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span th:text="${successMessage}">Emily Smith no longer has access to Clash Law Ltd</span>
+                    <a href="/admin/users" class="govuk-link" style="white-space: nowrap;">Dismiss</a>
                 </p>
             </div>
         </div>

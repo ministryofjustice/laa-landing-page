@@ -240,9 +240,7 @@ public class MultiFirmUserController {
 
             // Add success message - redirect to user list with success banner
             redirectAttributes.addFlashAttribute("successMessage", 
-                    "You have removed " + firmName + ".....");
-            redirectAttributes.addFlashAttribute("deletedUserEmail", entraUser.getEmail());
-            redirectAttributes.addFlashAttribute("deletedUserName", entraUser.getFullName());
+                    entraUser.getFullName() + " no longer has access to " + firmName);
 
             return "redirect:/admin/users";
             

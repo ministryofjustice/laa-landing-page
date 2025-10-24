@@ -102,7 +102,7 @@ public class AccessControlService {
      */
     public boolean canDeleteFirmProfile(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
         Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
