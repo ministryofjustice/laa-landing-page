@@ -184,7 +184,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canManageOffices}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
