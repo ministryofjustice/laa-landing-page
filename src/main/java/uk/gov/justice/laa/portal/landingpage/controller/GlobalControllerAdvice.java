@@ -48,7 +48,9 @@ public class GlobalControllerAdvice {
                 //have active profile
                 if (Objects.nonNull(up)) {
                     String firmName = up.getFirm().getName();
+                    String firmCode = up.getFirm().getCode();
                     firm.setName(firmName);
+                    firm.setCode(firmCode);
                     //have more than 1 firms
                     if (entraUser.getUserProfiles().size() > 1) {
                         firm.setCanChange(true);
@@ -63,7 +65,9 @@ public class GlobalControllerAdvice {
                 UserProfile up = entraUser.getUserProfiles().stream().findFirst().get();
                 if (up.getUserType().equals(UserType.EXTERNAL)) {
                     String firmName = up.getFirm().getName();
+                    String firmCode = up.getFirm().getCode();
                     firm.setName(firmName);
+                    firm.setCode(firmCode);
                     firm.setCanChange(false);
                 } else {
                     //internal

@@ -28,7 +28,7 @@
             <div class="govuk-grid-row">
                 <div class="govuk-grid-column-two-thirds">
                     <p class="govuk-body-m govuk-!-margin-bottom-0">
-                        <strong th:text="${activeFirm.getName()}"></strong>
+                        <strong th:text="${activeFirm.getName() + (activeFirm.getCode() != null ? ' - ' + activeFirm.getCode() : '')}"></strong>
                     </p>
                 </div>
                 <div class="govuk-grid-column-one-third" style="text-align: right;">
