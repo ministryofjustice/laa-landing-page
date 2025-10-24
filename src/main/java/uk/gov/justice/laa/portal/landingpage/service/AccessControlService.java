@@ -101,42 +101,56 @@ public class AccessControlService {
      * @return true if user has permission to delete this firm profile
      */
     public boolean canDeleteFirmProfile(String userProfileId) {
+        log.debug("=== canDeleteFirmProfile START ===");
+        log.debug("userProfileId: {}", userProfileId);
+        
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        log.debug("authenticatedUser: {}", authenticatedUser != null ? authenticatedUser.getEmail() : "null");
 
         Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
+            log.debug("Profile not found, returning false");
             return false;
         }
 
         UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
+        log.debug("accessedUserProfile: {} ({})", accessedUserProfile.getFullName(), accessedUserProfile.getUserType());
         
         // Only external user profiles can be deleted
         if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
+            log.debug("User is INTERNAL, returning false");
             return false;
         }
 
         // Must be a multi-firm user
         if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+            log.debug("Not a multi-firm user, returning false");
             return false;
         }
 
         // Check if user has DELEGATE_EXTERNAL_USER_ACCESS permission (firm admin)
         // or DELETE_EXTERNAL_USER permission (external user admin)
-        boolean hasPermission = userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)
-                || userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+        boolean hasDelegatePermission = userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+        boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+        log.debug("hasDelegatePermission: {}, hasDeletePermission: {}", hasDelegatePermission, hasDeletePermission);
+        
+        boolean hasPermission = hasDelegatePermission || hasDeletePermission;
 
         if (!hasPermission) {
+            log.debug("No required permission, returning false");
             return false;
         }
 
         // If user has DELEGATE_EXTERNAL_USER_ACCESS, they can only delete profiles from their own firm
-        if (userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)
-                && !userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER)) {
-            return usersAreInSameFirm(authenticatedUser, userProfileId);
+        if (hasDelegatePermission && !hasDeletePermission) {
+            boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+            log.debug("Checking same firm: {}", sameFirm);
+            return sameFirm;
         }
 
         // Users with DELETE_EXTERNAL_USER can delete any firm profile
+        log.debug("Has DELETE_EXTERNAL_USER permission, returning true");
         return true;
     }
 
