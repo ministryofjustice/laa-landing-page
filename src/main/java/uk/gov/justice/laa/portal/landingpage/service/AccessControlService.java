@@ -1,10 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -14,13 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class AccessControlService {
@@ -90,6 +91,67 @@ public class AccessControlService {
         }
 
         return userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+    }
+
+    /**
+     * Check if the authenticated user can delete a specific firm profile.
+     * Used for multi-firm users where we delete individual firm access.
+     * 
+     * @param userProfileId the ID of the user profile to delete
+     * @return true if user has permission to delete this firm profile
+     */
+    public boolean canDeleteFirmProfile(String userProfileId) {
+        log.debug("=== canDeleteFirmProfile START ===");
+        log.debug("userProfileId: {}", userProfileId);
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        log.debug("authenticatedUser: {}", authenticatedUser != null ? authenticatedUser.getEmail() : "null");
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            log.debug("Profile not found, returning false");
+            return false;
+        }
+
+        UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
+        log.debug("accessedUserProfile: {} ({})", accessedUserProfile.getFullName(), accessedUserProfile.getUserType());
+        
+        // Only external user profiles can be deleted
+        if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
+            log.debug("User is INTERNAL, returning false");
+            return false;
+        }
+
+        // Must be a multi-firm user
+        if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+            log.debug("Not a multi-firm user, returning false");
+            return false;
+        }
+
+        // Check if user has DELEGATE_EXTERNAL_USER_ACCESS permission (firm admin)
+        // or DELETE_EXTERNAL_USER permission (external user admin)
+        boolean hasDelegatePermission = userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+        boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+        log.debug("hasDelegatePermission: {}, hasDeletePermission: {}", hasDelegatePermission, hasDeletePermission);
+        
+        boolean hasPermission = hasDelegatePermission || hasDeletePermission;
+
+        if (!hasPermission) {
+            log.debug("No required permission, returning false");
+            return false;
+        }
+
+        // If user has DELEGATE_EXTERNAL_USER_ACCESS, they can only delete profiles from their own firm
+        if (hasDelegatePermission && !hasDeletePermission) {
+            boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+            log.debug("Checking same firm: {}", sameFirm);
+            return sameFirm;
+        }
+
+        // Users with DELETE_EXTERNAL_USER can delete any firm profile
+        log.debug("Has DELETE_EXTERNAL_USER permission, returning true");
+        return true;
     }
 
     public boolean canEditUser(String userProfileId) {

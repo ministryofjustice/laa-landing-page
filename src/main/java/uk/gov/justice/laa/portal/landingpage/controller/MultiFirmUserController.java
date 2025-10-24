@@ -1,10 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,15 +25,24 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AddUserProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteFirmProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
@@ -47,21 +66,6 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * Multi-firm User Controller
@@ -155,6 +159,99 @@ public class MultiFirmUserController {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
             return "multi-firm-user/select-user";
+        }
+    }
+
+    /**
+     * Show confirmation page for deleting a firm profile from a multi-firm user
+     */
+    @GetMapping("/user/delete-profile/{userProfileId}")
+    @PreAuthorize("@accessControlService.canDeleteFirmProfile(#userProfileId)")
+    public String deleteFirmProfileConfirm(@PathVariable String userProfileId, Model model) {
+        Optional<UserProfileDto> optionalUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalUserProfile.isEmpty()) {
+            throw new RuntimeException("User profile not found.");
+        }
+
+        UserProfileDto userProfile = optionalUserProfile.get();
+        EntraUserDto entraUser = userProfile.getEntraUser();
+
+        // Verify this is a multi-firm user
+        if (entraUser == null || !entraUser.isMultiFirmUser()) {
+            throw new RuntimeException("This operation is only available for multi-firm users.");
+        }
+
+        // Count the number of profiles to prevent deletion of last profile
+        List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
+        if (allProfiles.size() <= 1) {
+            model.addAttribute("errorMessage", "Cannot delete the last firm profile. User must have at least one profile.");
+            return "redirect:/admin/users/manage/" + userProfileId;
+        }
+
+        model.addAttribute("userProfile", userProfile);
+        model.addAttribute("user", entraUser);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());
+        
+        return "multi-firm-user/delete-profile-confirm";
+    }
+
+    /**
+     * Execute deletion of a firm profile from a multi-firm user
+     */
+    @PostMapping("/user/delete-profile/{userProfileId}")
+    @PreAuthorize("@accessControlService.canDeleteFirmProfile(#userProfileId)")
+    public String deleteFirmProfileExecute(@PathVariable String userProfileId,
+                                          @RequestParam(name = "confirm", required = false) String confirm,
+                                          Authentication authentication,
+                                          RedirectAttributes redirectAttributes,
+                                          Model model) {
+        // Get user profile before deletion
+        Optional<UserProfileDto> optionalUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalUserProfile.isEmpty()) {
+            throw new RuntimeException("User profile not found.");
+        }
+
+        UserProfileDto userProfile = optionalUserProfile.get();
+        EntraUserDto entraUser = userProfile.getEntraUser();
+        final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
+
+        // If user selected "No", redirect back to manage user page
+        if ("no".equals(confirm)) {
+            return "redirect:/admin/users/manage/" + userProfileId;
+        }
+
+        // Validate that "Yes" was selected
+        if (!"yes".equals(confirm)) {
+            model.addAttribute("errorMessage", "Please select an option to continue");
+            model.addAttribute("userProfile", userProfile);
+            model.addAttribute("user", entraUser);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Confirm you want to remove " + firmName);
+            return "multi-firm-user/delete-profile-confirm";
+        }
+
+        try {
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            final UUID actorId = currentUser.getUserId();
+
+            // Delete the firm profile and get audit event
+            final DeleteFirmProfileAuditEvent auditEvent = userService.deleteFirmProfile(userProfileId, actorId);
+
+            // Log the audit event
+            log.info("Firm profile deleted: {}", auditEvent.getDescription());
+
+            // Add success message - redirect to user list with success banner
+            redirectAttributes.addFlashAttribute("successMessage", 
+                    entraUser.getFullName() + " no longer has access to " + firmName);
+
+            return "redirect:/admin/users";
+            
+        } catch (RuntimeException e) {
+            log.error("Error deleting firm profile: {}", userProfileId, e);
+            model.addAttribute("errorMessage", "Failed to delete firm access: " + e.getMessage());
+            model.addAttribute("userProfile", userProfile);
+            model.addAttribute("user", entraUser);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Confirm you want to remove " + firmName);
+            return "multi-firm-user/delete-profile-confirm";
         }
     }
 
