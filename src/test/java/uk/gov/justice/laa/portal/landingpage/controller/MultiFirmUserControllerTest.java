@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import java.util.HashMap;
@@ -62,6 +64,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -432,14 +435,12 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
 
-        AppDto appDto = new AppDto();
-        appDto.setId("app-id-1");
-
         EntraUserDto userDto = new EntraUserDto();
         userDto.setFullName("Test User");
         session.setAttribute("entraUser", userDto);
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
+        AppDto appDto = AppDto.builder().id("app-id-1").name("App One").build();
 
         when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL)).thenReturn(List.of(roleDto));
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
@@ -470,8 +471,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(roleId);
 
-        AppDto appDto = new AppDto();
-        appDto.setId(appId);
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -500,8 +500,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(roleId);
 
-        AppDto appDto = new AppDto();
-        appDto.setId(appId);
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -527,8 +526,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
 
-        AppDto appDto = new AppDto();
-        appDto.setId("app-id-1");
+        AppDto appDto = AppDto.builder().id("app-id-1").name("App One").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -553,8 +551,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
 
-        AppDto appDto = new AppDto();
-        appDto.setId("app-id-2");
+        AppDto appDto = AppDto.builder().id("app-id-2").name("App Two").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -586,8 +583,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto validRole = new AppRoleDto();
         validRole.setId(UUID.randomUUID().toString());
 
-        AppDto appDto = new AppDto();
-        appDto.setId(appId);
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -623,8 +619,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto2 = new AppRoleDto();
         roleDto2.setId(roleId2);
 
-        AppDto appDto = new AppDto();
-        appDto.setId(appId);
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -812,6 +807,76 @@ public class MultiFirmUserControllerTest {
 
         Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
         assertThat(storedRoles).containsEntry(0, List.of("role1", "role2"));
+    }
+
+    @Test
+    void testIsCcmsApp_true_dueToAppName() {
+        // Setup
+        String appId = "app-id";
+        List<String> selectedAppIds = List.of(appId);
+        session.setAttribute("addProfileSelectedApps", selectedAppIds);
+
+        AppDto appDto = AppDto.builder().id(appId).name("CCMS Application").build();
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of());
+
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
+
+        session.setAttribute("addUserProfileAllSelectedRoles", null);
+        session.setAttribute("entraUser", new EntraUserDto());
+
+        // Act
+        String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
+
+        // Assert
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
+    }
+
+    @Test
+    void testIsCcmsApp_true_dueToRole() {
+        // Setup
+        String appId = "app-id";
+        List<String> selectedAppIds = List.of(appId);
+        session.setAttribute("addProfileSelectedApps", selectedAppIds);
+
+        AppDto appDto = new AppDto();
+        appDto.setName("Non-CCMS App");
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+
+        AppRoleDto ccmsRole = new AppRoleDto();
+        ccmsRole.setId(UUID.randomUUID().toString());
+        ccmsRole.setCcmsCode("CCMS_CODE");
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of(ccmsRole));
+
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(ccmsRole));
+
+        session.setAttribute("addUserProfileAllSelectedRoles", null);
+        session.setAttribute("entraUser", new EntraUserDto());
+
+        // Mock CCMS role check
+        try (MockedStatic<CcmsRoleGroupsUtil> mockedStatic = mockStatic(CcmsRoleGroupsUtil.class)) {
+
+            mockedStatic.when(() -> CcmsRoleGroupsUtil.isCcmsRole("CCMS_CODE")).thenReturn(true);
+            mockedStatic.when(() -> CcmsRoleGroupsUtil.organizeCcmsRolesBySection(any())).thenReturn(Map.of());
+
+            // Act
+            String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
+
+            // Assert
+            assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+            assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
+        }
+
     }
 
     @Test
