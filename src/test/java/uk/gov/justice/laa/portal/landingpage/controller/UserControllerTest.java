@@ -2566,6 +2566,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
         // No office permission
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
 
         // When
         String view = userController.manageUser("external-user-id", model, session);
@@ -2573,6 +2574,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
+        assertThat(model.getAttribute("canManageOffices")).isEqualTo(false);
     }
 
     @Test
@@ -2596,6 +2598,7 @@ class UserControllerTest {
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
 
         // When
         String view = userController.manageUser("external-user-id", model, session);
@@ -2603,6 +2606,8 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(true);
+        assertThat(model.getAttribute("canManageOffices")).isEqualTo(true);
+
     }
 
     @Test
