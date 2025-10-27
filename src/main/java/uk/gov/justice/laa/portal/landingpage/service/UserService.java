@@ -462,7 +462,7 @@ public class UserService {
             case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
             case "EMAIL" -> Sort.by(order, "entraUser.email");
             case "USERSTATUS" -> Sort.by(order, "userProfileStatus");
-            case "USERTYPE" -> Sort.by(order, "userType");
+            case "USERTYPE" -> Sort.by(order, "userType", "entraUser.multiFirmUser");
             case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
