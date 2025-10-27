@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -644,6 +643,12 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("isAccessGranted")).isNotNull();
+        assertThat(model.getAttribute("externalUser")).isNotNull();
+        assertThat(model.getAttribute("showOfficesTab")).isNotNull();
+        assertThat(model.getAttribute("canManageOffices")).isNotNull();
+        assertThat(model.getAttribute("canEditUser")).isNotNull();
+        assertThat(model.getAttribute("showResendVerificationLink")).isNotNull();
         verify(userService).getUserProfileById(mockUser.getId().toString());
     }
 
