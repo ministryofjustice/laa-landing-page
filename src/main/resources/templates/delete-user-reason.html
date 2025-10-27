@@ -33,12 +33,12 @@
 
     <form th:action="@{'/admin/users/manage/' + ${user.id} + '/delete'}" method="post" novalidate>
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
-            <label class="govuk-label" for="reason">Please enter a reason (minimum 10 characters).</label>
+            <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">>Please enter a reason (minimum 10 characters).</label>
             <span class="govuk-error-message" th:if="${fieldErrorMessage}">
                 <span class="govuk-visually-hidden">Error:</span>
                 <span th:text="${fieldErrorMessage}"></span>
             </span>
-            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
+            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:classappend="${fieldErrorMessage} ? 'govuk-textarea--error' : ''" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
         </div>
 
         <div class="moj-button-group">
