@@ -51,10 +51,14 @@
             </fieldset>
         </div>
 
-        <button type="submit" class="govuk-button" data-module="govuk-button">
-            Confirm
-        </button>
-        <a class="govuk-link" href="javascript:history.back()">Cancel</a>
+        <div class="govuk-button-group">
+            <button type="submit" class="govuk-button" data-module="govuk-button">
+                Confirm
+            </button>
+            <a class="govuk-button govuk-button--secondary" href="javascript:history.back()" role="button" draggable="false" data-module="govuk-button">
+                Cancel
+            </a>
+        </div>
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     </form>
 </main>
