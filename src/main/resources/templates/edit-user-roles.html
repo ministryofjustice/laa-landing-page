@@ -11,8 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}">
-            Back </a>
+        <a class="govuk-back-link" th:href="${backUrl}">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div th:if="${#authentication.isAuthenticated()}">

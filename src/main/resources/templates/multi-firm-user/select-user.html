@@ -31,7 +31,7 @@
                                     </li>
                                     <li th:if="${userProfileExistsOnFirm}">
                                         The existing profile can be accessed by clicking on <a
-                                            th:href="@{'/admin/users/grant-access/' + ${existingUserProfileId}}"
+                                            th:href="@{'/admin/users/manage/' + ${existingUserProfileId}}"
                                             class="govuk-link">this link</a></li>
                                 </ul>
                             </div>
@@ -63,7 +63,7 @@
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Continue
                         </button>
-                        <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                        <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
                     </div>
                 </form>
             </div>
