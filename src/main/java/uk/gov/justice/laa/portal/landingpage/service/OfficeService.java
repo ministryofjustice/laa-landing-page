@@ -35,6 +35,21 @@ public class OfficeService {
         return officeRepository.findById(id).orElse(null);
     }
 
+    public List<OfficeDto> getOfficesByIds(List<String> officeIds) {
+        if (officeIds == null || officeIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> ids = officeIds.stream().map(UUID::fromString).toList();
+        List<Office> offices = officeRepository.findOfficeByIdIn(ids);
+
+        if (officeIds.size() != offices.size()) {
+            throw new RuntimeException("Failed to load all offices from request: " + officeIds);
+        }
+
+        return offices.stream().map((element) -> mapper.map(element, OfficeDto.class)).toList();
+    }
+
     public List<OfficeDto> getUserOffices(EntraUser entraUser) {
         List<UUID> firms = entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)

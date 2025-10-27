@@ -67,6 +67,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
+                        ))
                         """,
             countQuery = """
                         SELECT COUNT(ups) FROM UserProfile ups
@@ -86,6 +90,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             SELECT 1 FROM ups.appRoles ar
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
                         ))
                         """)
     Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
@@ -116,4 +124,18 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
 
     List<UserProfile> findAllByEntraUser(EntraUser entraUser);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser u
+                        JOIN FETCH ups.firm f
+            WHERE ups.entraUser.id = :entraUserId
+            AND (
+                :search IS NULL OR :search = '' OR
+                LOWER(f.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                LOWER(f.code) LIKE LOWER(CONCAT('%', :search, '%'))
+            )
+            """)
+    List<UserProfile> findByEntraUserIdAndFirmSearch(@Param("entraUserId") UUID entraUserId, 
+                                                       @Param("search") String search);
 }
