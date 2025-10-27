@@ -128,8 +128,10 @@ public class SecurityConfig {
         http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-                .requestMatchers("/admin/user/**", "/admin/multi-firm/user/**")
+                .requestMatchers("/admin/user/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
+                .requestMatchers("/admin/multi-firm/user/**")
+                .hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
                 .requestMatchers("/", "/login", "/logout-success", "/cookies", "/css/**", "/js/**", "/assets/**"
                 ).permitAll()
                 .requestMatchers("/actuator/**")

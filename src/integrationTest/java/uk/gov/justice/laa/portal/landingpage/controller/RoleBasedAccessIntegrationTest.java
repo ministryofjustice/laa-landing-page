@@ -61,6 +61,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> externalUserViewers = new ArrayList<>();
     protected List<EntraUser> multiFirmUsers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
+    protected List<EntraUser> firmUserManagers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
     @BeforeAll
@@ -257,6 +258,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         externalUserViewers.add(entraUserRepository.saveAndFlush(user));
 
+        // Set up Firm User Manager
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneUserManager");
+        profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+        AppRole firmUserManagerRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Firm User Manager"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(firmUserManagerRole));
+        profile.setFirm(testFirm2);
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        firmUserManagers.add(entraUserRepository.saveAndFlush(user));
+
+
         // Set up Multi-firm User
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
         user.setMultiFirmUser(true);
@@ -273,6 +289,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(internalAndExternalUserManagers);
         allUsers.addAll(internalWithExternalOnlyUserManagers);
         allUsers.addAll(externalOnlyUserManagers);
+        allUsers.addAll(firmUserManagers);
         allUsers.addAll(externalUsersNoRoles);
         allUsers.addAll(externalUserAdmins);
         allUsers.addAll(globalAdmins);

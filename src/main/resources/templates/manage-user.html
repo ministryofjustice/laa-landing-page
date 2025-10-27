@@ -18,8 +18,7 @@
                     th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
-                        th:text="${user.fullName}"></span></a>
+                <span class="govuk-breadcrumbs__link" aria-label="${user.fullName}" aria-current="page" th:text="${user.fullName}"></span>
             </li>
         </ol>
     </nav>
@@ -64,7 +63,7 @@
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
-                        <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
+                        <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
                         <strong th:if="${!isAccessGranted}"
                             class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
                         <strong th:if="${isAccessGranted}"
@@ -208,7 +207,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canManageOffices}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>
