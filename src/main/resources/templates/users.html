@@ -180,6 +180,7 @@
 
                                 <div class="govuk-form-group">
                                     <fieldset class="govuk-fieldset">
+                                        <legend class="govuk-visually-hidden">Show firm admins</legend>
                                         <div class="govuk-grid-row">
                                             <div class="govuk-grid-column-one-quarter">
                                                 <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
@@ -723,15 +724,15 @@
                     <thead class="govuk-table__head">
                         <tr class="govuk-table__row">
                             <th scope="col" class="govuk-table__header"
-                                th:aria-sort="${sort == 'firstName' ? direction : 'none'}"
+                                th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firstName"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Name
                                     <img th:if="${sort == 'firstName' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'firstName' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'firstName'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -743,9 +744,9 @@
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Firm
                                     <img th:if="${sort == 'firmName' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'firmName' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -757,9 +758,9 @@
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Email
                                     <img th:if="${sort == 'email' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'email' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'email'}" th:src="@{/assets/images/sort-none.svg}" width="22"
                                         height="22" alt="">
                                 </button>
@@ -771,9 +772,9 @@
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     User Type
                                     <img th:if="${sort == 'userType' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userType' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -785,9 +786,9 @@
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userStatus' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'userStatus'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
