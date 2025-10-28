@@ -56,12 +56,14 @@ public class AccessControlService {
 
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
 
-        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
+        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER)
+                && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        //internal user with external user manager permission
-        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        // internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)
+                && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
@@ -72,7 +74,8 @@ public class AccessControlService {
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userProfileId);
+            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(),
+                    userProfileId);
         }
         return canAccess;
     }
@@ -103,10 +106,15 @@ public class AccessControlService {
     public boolean canDeleteFirmProfile(String userProfileId) {
         log.debug("=== canDeleteFirmProfile START ===");
         log.debug("userProfileId: {}", userProfileId);
-        
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
         log.debug("authenticatedUser: {}", authenticatedUser != null ? authenticatedUser.getEmail() : "null");
+
+        if (authenticatedUser == null) {
+            log.debug("Authenticated user is null, returning false");
+            return false;
+        }
 
         Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
@@ -116,7 +124,7 @@ public class AccessControlService {
 
         UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
         log.debug("accessedUserProfile: {} ({})", accessedUserProfile.getFullName(), accessedUserProfile.getUserType());
-        
+
         // Only external user profiles can be deleted
         if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
             log.debug("User is INTERNAL, returning false");
@@ -129,29 +137,31 @@ public class AccessControlService {
             return false;
         }
 
-        // Check if user has DELEGATE_EXTERNAL_USER_ACCESS permission (firm admin)
-        // or DELETE_EXTERNAL_USER permission (external user admin)
-        boolean hasDelegatePermission = userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
-        boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
-        log.debug("hasDelegatePermission: {}, hasDeletePermission: {}", hasDelegatePermission, hasDeletePermission);
-        
-        boolean hasPermission = hasDelegatePermission || hasDeletePermission;
+        // Check if authenticated user is internal (LAA staff)
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+        log.debug("isInternalUser: {}", isInternalUser);
 
-        if (!hasPermission) {
-            log.debug("No required permission, returning false");
-            return false;
+        // Check if users are in the same firm
+        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+        log.debug("sameFirm: {}", sameFirm);
+
+        // Internal users with DELETE_EXTERNAL_USER permission can delete any firm
+        // profile
+        if (isInternalUser && userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER)) {
+            log.debug("Internal user with DELETE_EXTERNAL_USER permission, returning true");
+            return true;
         }
 
-        // If user has DELEGATE_EXTERNAL_USER_ACCESS, they can only delete profiles from their own firm
-        if (hasDelegatePermission && !hasDeletePermission) {
-            boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
-            log.debug("Checking same firm: {}", sameFirm);
-            return sameFirm;
+        // External users (firm admins) with DELEGATE_EXTERNAL_USER_ACCESS can only
+        // delete profiles from their own firm
+        if (!isInternalUser && sameFirm
+                && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
+            log.debug("External user with DELEGATE_EXTERNAL_USER_ACCESS in same firm, returning true");
+            return true;
         }
 
-        // Users with DELETE_EXTERNAL_USER can delete any firm profile
-        log.debug("Has DELETE_EXTERNAL_USER permission, returning true");
-        return true;
+        log.debug("No permission to delete firm profile, returning false");
+        return false;
     }
 
     public boolean canEditUser(String userProfileId) {
@@ -171,12 +181,14 @@ public class AccessControlService {
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
 
         // Internal User Manager editing internal user.
-        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
+        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER)
+                && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        //internal user with external user manager permission accessing external user
-        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        // internal user with external user manager permission accessing external user
+        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)
+                && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
@@ -187,18 +199,21 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
-            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userProfileId);
+            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(),
+                    userProfileId);
         }
         return canAccess;
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
+        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId)
+                .toList();
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
         return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }
 
-    // IDEs may make this appear unused, but it's actually used in the @PreAuthorize annotation in UserController.
+    // IDEs may make this appear unused, but it's actually used in the @PreAuthorize
+    // annotation in UserController.
     public boolean authenticatedUserHasPermission(Permission permission) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
@@ -219,7 +234,8 @@ public class AccessControlService {
         return user.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null && appRole.getName().equalsIgnoreCase(authzRoleName));
+                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null
+                        && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser, Permission... permissions) {
@@ -246,7 +262,7 @@ public class AccessControlService {
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser,
-                Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
+                        Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
     }
 
 }

@@ -100,8 +100,8 @@ public class MultiFirmUserController {
 
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session) {
-        MultiFirmUserForm multiFirmUserForm =
-                getObjectFromHttpSession(session, "multiFirmUserForm", MultiFirmUserForm.class).orElse(new MultiFirmUserForm());
+        MultiFirmUserForm multiFirmUserForm = getObjectFromHttpSession(session, "multiFirmUserForm",
+                MultiFirmUserForm.class).orElse(new MultiFirmUserForm());
         model.addAttribute("multiFirmUserForm", multiFirmUserForm);
         model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
@@ -110,7 +110,7 @@ public class MultiFirmUserController {
 
     @PostMapping("/user/add/profile")
     public String addUserProfilePost(@Valid MultiFirmUserForm multiFirmUserForm, BindingResult result,
-                                     Model model, HttpSession session, Authentication authentication) {
+            Model model, HttpSession session, Authentication authentication) {
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for user: {}", result.getAllErrors());
@@ -129,18 +129,22 @@ public class MultiFirmUserController {
 
             if (!entraUser.isMultiFirmUser()) {
                 log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
-                result.rejectValue("email", "error.email", "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+                result.rejectValue("email", "error.email",
+                        "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
                 return "multi-firm-user/select-user";
             }
 
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 UserProfile authenticatedUserProfile = loginService.getCurrentProfile(authentication);
 
-                Optional<UserProfile> sameFirmProfile = entraUser.getUserProfiles().stream().filter(up -> up.getFirm().equals(authenticatedUserProfile.getFirm())).findFirst();
+                Optional<UserProfile> sameFirmProfile = entraUser.getUserProfiles().stream()
+                        .filter(up -> up.getFirm().equals(authenticatedUserProfile.getFirm())).findFirst();
 
                 if (sameFirmProfile.isPresent()) {
-                    log.debug("This user already has access for your firm. Manage them from the Manage Your Users screen.");
-                    result.rejectValue("email", "error.email", "This user already has access for your firm. Manage them from the Manage Your Users screen.");
+                    log.debug(
+                            "This user already has access for your firm. Manage them from the Manage Your Users screen.");
+                    result.rejectValue("email", "error.email",
+                            "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     model.addAttribute("userProfileExistsOnFirm", true);
                     model.addAttribute("existingUserProfileId", sameFirmProfile.get().getId());
                     return "multi-firm-user/select-user";
@@ -184,14 +188,15 @@ public class MultiFirmUserController {
         // Count the number of profiles to prevent deletion of last profile
         List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
         if (allProfiles.size() <= 1) {
-            model.addAttribute("errorMessage", "Cannot delete the last firm profile. User must have at least one profile.");
+            model.addAttribute("errorMessage",
+                    "Cannot delete the last firm profile. User must have at least one profile.");
             return "redirect:/admin/users/manage/" + userProfileId;
         }
 
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());
-        
+
         return "multi-firm-user/delete-profile-confirm";
     }
 
@@ -201,10 +206,10 @@ public class MultiFirmUserController {
     @PostMapping("/user/delete-profile/{userProfileId}")
     @PreAuthorize("@accessControlService.canDeleteFirmProfile(#userProfileId)")
     public String deleteFirmProfileExecute(@PathVariable String userProfileId,
-                                          @RequestParam(name = "confirm", required = false) String confirm,
-                                          Authentication authentication,
-                                          RedirectAttributes redirectAttributes,
-                                          Model model) {
+            @RequestParam(name = "confirm", required = false) String confirm,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes,
+            Model model) {
         // Get user profile before deletion
         Optional<UserProfileDto> optionalUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalUserProfile.isEmpty()) {
@@ -215,13 +220,8 @@ public class MultiFirmUserController {
         EntraUserDto entraUser = userProfile.getEntraUser();
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
-        // If user selected "No", redirect back to manage user page
-        if ("no".equals(confirm)) {
-            return "redirect:/admin/users/manage/" + userProfileId;
-        }
-
-        // Validate that "Yes" was selected
-        if (!"yes".equals(confirm)) {
+        // Validate that an option was selected
+        if (confirm == null || confirm.isEmpty()) {
             model.addAttribute("errorMessage", "Please select an option to continue");
             model.addAttribute("userProfile", userProfile);
             model.addAttribute("user", entraUser);
@@ -229,22 +229,44 @@ public class MultiFirmUserController {
             return "multi-firm-user/delete-profile-confirm";
         }
 
+        // If user selected "No", redirect back to manage user page
+        if ("no".equals(confirm)) {
+            return "redirect:/admin/users/manage/" + userProfileId;
+        }
+
         try {
             CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
             final UUID actorId = currentUser.getUserId();
 
-            // Delete the firm profile and get audit event
-            final DeleteFirmProfileAuditEvent auditEvent = userService.deleteFirmProfile(userProfileId, actorId);
+            // Capture audit data before deletion
+            final int removedRolesCount = userProfile.getAppRoles() != null ? userProfile.getAppRoles().size() : 0;
+            final int detachedOfficesCount = userProfile.getOffices() != null ? userProfile.getOffices().size() : 0;
+            final String firmCode = userProfile.getFirm() != null ? userProfile.getFirm().getCode() : null;
 
-            // Log the audit event
-            log.info("Firm profile deleted: {}", auditEvent.getDescription());
+            // Delete the firm profile
+            boolean deleted = userService.deleteFirmProfile(userProfileId, actorId);
 
-            // Add success message - redirect to user list with success banner
-            redirectAttributes.addFlashAttribute("successMessage", 
-                    entraUser.getFullName() + " no longer has access to " + firmName);
+            if (deleted) {
+                // Create and log audit event
+                DeleteFirmProfileAuditEvent auditEvent = new DeleteFirmProfileAuditEvent(
+                        actorId,
+                        UUID.fromString(userProfileId),
+                        entraUser.getEmail(),
+                        firmName,
+                        firmCode,
+                        removedRolesCount,
+                        detachedOfficesCount);
+                eventService.logEvent(auditEvent);
 
-            return "redirect:/admin/users";
-            
+                // Add success message - redirect to user list with success banner
+                redirectAttributes.addFlashAttribute("successMessage",
+                        entraUser.getFullName() + " no longer has access to " + firmName);
+
+                return "redirect:/admin/users";
+            } else {
+                throw new RuntimeException("Failed to delete firm profile");
+            }
+
         } catch (RuntimeException e) {
             log.error("Error deleting firm profile: {}", userProfileId, e);
             model.addAttribute("errorMessage", "Failed to delete firm access: " + e.getMessage());
@@ -258,10 +280,9 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile/select/apps")
     public String selectUserApps(Model model, HttpSession session, Authentication authentication) {
 
-        ApplicationsForm applicationsForm =
-                getObjectFromHttpSession(session, "applicationsForm", ApplicationsForm.class).orElse(new ApplicationsForm());
+        ApplicationsForm applicationsForm = getObjectFromHttpSession(session, "applicationsForm",
+                ApplicationsForm.class).orElse(new ApplicationsForm());
         model.addAttribute("applicationsForm", applicationsForm);
-
 
         List<AppDto> availableApps = userService.getAppsByUserType(UserType.EXTERNAL);
 
@@ -285,7 +306,7 @@ public class MultiFirmUserController {
 
     @PostMapping("/user/add/profile/select/apps")
     public String selectUserAppsPost(@Valid ApplicationsForm applicationsForm, BindingResult result,
-                                     Model model, HttpSession session) {
+            Model model, HttpSession session) {
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting apps: {}", result.getAllErrors());
@@ -302,7 +323,8 @@ public class MultiFirmUserController {
 
         session.setAttribute("applicationsForm", applicationsForm);
 
-        List<String> selectedAppIds = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
+        List<String> selectedAppIds = applicationsForm.getApps() != null ? applicationsForm.getApps()
+                : new ArrayList<>();
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
         session.removeAttribute("addProfileUserAppsModel");
@@ -313,11 +335,12 @@ public class MultiFirmUserController {
 
     @GetMapping("/user/add/profile/select/roles")
     public String selectUserAppRoles(@RequestParam(defaultValue = "0") Integer selectedAppIndex,
-                                     RolesForm rolesForm,
-                                     Authentication authentication,
-                                     Model model, HttpSession session) {
+            RolesForm rolesForm,
+            Authentication authentication,
+            Model model, HttpSession session) {
 
-        List<String> selectedAppIds = getListFromHttpSession(session, "addProfileSelectedApps", String.class).orElse(List.of());
+        List<String> selectedAppIds = getListFromHttpSession(session, "addProfileSelectedApps", String.class)
+                .orElse(List.of());
 
         if (selectedAppIds.isEmpty()) {
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
@@ -329,14 +352,17 @@ public class MultiFirmUserController {
             currentSelectedAppIndex = 0;
         }
 
-        List<AppRoleDto> availableRoles = userService.getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL);
+        List<AppRoleDto> availableRoles = userService
+                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(), availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
+                availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
 
         final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
 
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         if (Objects.isNull(editUserAllSelectedRoles)) {
             editUserAllSelectedRoles = new HashMap<>();
         }
@@ -396,9 +422,9 @@ public class MultiFirmUserController {
 
     @PostMapping("/user/add/profile/select/roles")
     public String selectUserAppRolesPost(@Valid RolesForm rolesForm, BindingResult result,
-                                         @RequestParam int selectedAppIndex,
-                                         Authentication authentication,
-                                         Model model, HttpSession session) {
+            @RequestParam int selectedAppIndex,
+            Authentication authentication,
+            Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("addProfileUserRolesModel");
         if (modelFromSession == null) {
             return "redirect:/admin/multi-firm/user/add/profile/select/roles";
@@ -455,7 +481,8 @@ public class MultiFirmUserController {
             modelFromSession.addAttribute("addProfileSelectedAppIndex", selectedAppIndex + 1);
             session.setAttribute("addUserProfileAllSelectedRoles", allSelectedRolesByPage);
             session.setAttribute("addProfileUserRolesModel", modelFromSession);
-            return "redirect:/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + (selectedAppIndex + 1);
+            return "redirect:/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex="
+                    + (selectedAppIndex + 1);
         }
     }
 
@@ -497,7 +524,7 @@ public class MultiFirmUserController {
 
     @PostMapping("/user/add/profile/select/offices")
     public String addProfileSelectOfficesPost(@Valid OfficesForm officesForm, BindingResult result,
-                                              Model model, HttpSession session) {
+            Model model, HttpSession session) {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting user offices: {}", result.getAllErrors());
             // If there are validation errors, return to the edit user offices page with
@@ -534,7 +561,8 @@ public class MultiFirmUserController {
 
     @GetMapping("/user/add/profile/check-answers")
     public String checkAnswerAndAddProfile(Model model, Authentication authentication, HttpSession session) {
-        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         if (appRolesByPage == null) {
             appRolesByPage = new HashMap<>();
         }
@@ -542,7 +570,8 @@ public class MultiFirmUserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
-        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of() : officeService.getOfficesByIds(userOfficeIds);
+        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
+                : officeService.getOfficesByIds(userOfficeIds);
         FirmDto firmDto = currentUserProfileDto.getFirm();
 
         session.setAttribute("userProfile", currentUserProfileDto);
@@ -570,17 +599,21 @@ public class MultiFirmUserController {
     public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session, Model model) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
-        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         if (appRolesByPage == null) {
             appRolesByPage = new HashMap<>();
         }
 
-        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
+        List<AppRoleDto> appRoleDtoList = appRoleService
+                .getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
 
         // Validate if app role assignment is fully permitted
         UserProfile userProfile = loginService.getCurrentProfile(authentication);
-        if (!roleAssignmentService.canAssignRole(userProfile.getAppRoles(), appRoleDtoList.stream().map(AppRoleDto::getId).toList())) {
-            log.error("User does not have sufficient permissions to assign the selected roles: userId={}, attemptedRoleIds={}",
+        if (!roleAssignmentService.canAssignRole(userProfile.getAppRoles(),
+                appRoleDtoList.stream().map(AppRoleDto::getId).toList())) {
+            log.error(
+                    "User does not have sufficient permissions to assign the selected roles: userId={}, attemptedRoleIds={}",
                     userProfile.getId(),
                     appRoleDtoList.stream().map(AppRoleDto::getId).toList());
             throw new RuntimeException("User does not have sufficient permissions to assign the selected roles");
@@ -588,12 +621,14 @@ public class MultiFirmUserController {
 
         // Validate if the office assignment is fully permitted
         List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
-        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of() : officeService.getOfficesByIds(userOfficeIds);
+        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
+                : officeService.getOfficesByIds(userOfficeIds);
         if (!userOfficeDtos.isEmpty()) {
             if (userProfile.getFirm() == null || userProfile.getFirm().getOffices() == null
-                    || !userOfficeDtos.stream().map(OfficeDto::getCode).allMatch(code ->
-                    userProfile.getFirm().getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
-                log.error("User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
+                    || !userOfficeDtos.stream().map(OfficeDto::getCode).allMatch(code -> userProfile.getFirm()
+                            .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
+                log.error(
+                        "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
                         userProfile.getId(),
                         userOfficeDtos.stream().map(OfficeDto::getId).toList());
                 throw new RuntimeException("Office assignment is not permitted");
@@ -629,7 +664,8 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile/confirmation")
     public String addProfileConfirmation(Model model, HttpSession session) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class)
-                .orElse(EntraUserDto.builder().firstName("Unknown").lastName("Unknown").fullName("Unknown Unknown").build());
+                .orElse(EntraUserDto.builder().firstName("Unknown").lastName("Unknown").fullName("Unknown Unknown")
+                        .build());
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User profile created - " + user.getFullName());
         clearSessionAttributes(session);
@@ -661,14 +697,15 @@ public class MultiFirmUserController {
      * Handle authorization exceptions when user lacks permissions to access
      * specific users
      */
-    @ExceptionHandler({AuthorizationDeniedException.class, AccessDeniedException.class})
+    @ExceptionHandler({ AuthorizationDeniedException.class, AccessDeniedException.class })
     public RedirectView handleAuthorizationException(Exception ex, HttpSession session,
-                                                     HttpServletRequest request) {
+            HttpServletRequest request) {
         Object requestedPath = session != null ? session.getAttribute("SPRING_SECURITY_SAVED_REQUEST") : null;
         String uri = request != null ? request.getRequestURI() : "unknown";
         String method = request != null ? request.getMethod() : "unknown";
         String referer = request != null ? request.getHeader("Referer") : null;
-        log.warn("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
+        log.warn(
+                "Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
                 ex.getMessage(), method, uri, referer, requestedPath);
         return new RedirectView("/not-authorised");
     }
