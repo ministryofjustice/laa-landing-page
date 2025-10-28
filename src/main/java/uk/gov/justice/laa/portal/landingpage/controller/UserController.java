@@ -113,7 +113,6 @@ public class UserController {
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
 
-
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
@@ -1483,7 +1482,7 @@ public class UserController {
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         
-        // Check if user is external
+        // Check if user is not external
         if (user.getUserType() != UserType.EXTERNAL) {
             log.warn("Attempt to convert internal user {} to multi-firm", id);
             throw new RuntimeException("Only external users can be converted to multi-firm users");
