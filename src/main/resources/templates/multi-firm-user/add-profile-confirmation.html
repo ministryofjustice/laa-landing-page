@@ -16,11 +16,16 @@
     <main class="govuk-main-wrapper govuk-width-container" id="main-content">
         <div class="govuk-!-width-two-thirds">
             <div class="govuk-panel govuk-panel--confirmation">
-                <h1 class="govuk-panel__title">User created</h1>
+                <h1 class="govuk-panel__title">Setup complete</h1>
                 <div class="govuk-panel__body">
-                    A new profile has been added to <span th:text="${user.firstName}"></span> <span th:text="${user.lastName}"></span>
+                    <span th:text="${user.firstName}"></span> <span th:text="${user.lastName}"></span>'s access and permissions have been added
                 </div>
             </div>
+
+            <h2 class="govuk-heading-m">Next steps</h2>
+
+            <p class="govuk-body">Contact the user to let them know that their access and permissions have been added to their account.</p>
+
             <form class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
                 <button class="govuk-button govuk-button--primary" type="submit">Go back to manage your users</button>
             </form>
