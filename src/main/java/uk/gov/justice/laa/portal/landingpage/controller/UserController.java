@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -1473,7 +1474,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/convert-to-multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
     public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm, 
-                                      Model model, HttpSession session) {
+                                      Model model, HttpSession session, RedirectAttributes redirectAttributes) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
             throw new RuntimeException("The multi-firm feature is not available. "
@@ -1491,7 +1492,7 @@ public class UserController {
         // Check if already multi-firm
         if (user.getEntraUser().isMultiFirmUser()) {
             log.warn("Attempt to convert user {} who is already multi-firm", id);
-            model.addAttribute("errorMessage", "This user is already a multi-firm user");
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
             return "redirect:/admin/users/manage/" + id;
         }
 
@@ -1514,6 +1515,7 @@ public class UserController {
                                          BindingResult result,
                                          HttpSession session,
                                          Authentication authentication,
+                                         RedirectAttributes redirectAttributes,
                                          Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
@@ -1548,6 +1550,10 @@ public class UserController {
             eventService.logEvent(auditEvent);
             
             log.info("Successfully converted user {} to multi-firm status", id);
+            
+            // Add success message
+            redirectAttributes.addFlashAttribute("successMessage", 
+                "User has been successfully converted to a multi-firm user");
             
             // Redirect to manage user page
             return "redirect:/admin/users/manage/" + id;
