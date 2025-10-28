@@ -1525,6 +1525,19 @@ public class UserController {
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
+        // Check if user is not external
+        if (user.getUserType() != UserType.EXTERNAL) {
+            log.warn("Attempt to convert internal user {} to multi-firm", id);
+            throw new RuntimeException("Only external users can be converted to multi-firm users");
+        }
+
+        // Check if already multi-firm
+        if (user.getEntraUser().isMultiFirmUser()) {
+            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while converting user to multi-firm: {}", result.getAllErrors());
             model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);

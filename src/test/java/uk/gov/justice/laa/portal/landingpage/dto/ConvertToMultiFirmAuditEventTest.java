@@ -36,8 +36,8 @@ class ConvertToMultiFirmAuditEventTest {
         assertThat(event.getConvertedUserEmail()).isEqualTo(convertedUserEmail);
         assertThat(event.getConvertedUserName()).isEqualTo(convertedUserName);
         assertThat(event.getEventType()).isEqualTo(EventType.UPDATE_USER);
-        assertThat(event.getDescription()).contains("User converted to multi-firm");
-        assertThat(event.getDescription()).contains(convertedUserId.toString());
+        assertThat(event.getDescription()).contains("User converted to multi-firm by Admin User");
+        assertThat(event.getDescription()).contains("converted user id " + convertedUserId.toString());
         assertThat(event.getDescription()).contains(convertedUserEmail);
         assertThat(event.getDescription()).contains(convertedUserName);
         assertThat(event.getCreatedDate()).isNotNull();

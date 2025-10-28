@@ -28,7 +28,7 @@ public class ConvertToMultiFirmAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User converted to multi-firm, user id %s, email %s, name %s",
-                convertedUserId, convertedUserEmail, convertedUserName);
+        return String.format("User converted to multi-firm by %s, converted user id %s, email %s, name %s",
+                userName, convertedUserId, convertedUserEmail, convertedUserName);
     }
 }

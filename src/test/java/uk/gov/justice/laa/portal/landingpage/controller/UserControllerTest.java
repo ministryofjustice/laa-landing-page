@@ -5568,5 +5568,84 @@ class UserControllerTest {
             assertThat(errorMessage.toString()).contains("Failed to convert user to multi-firm");
             assertThat(model.getAttribute("user")).isEqualTo(user);
         }
+        
+        @Test
+        void convertToMultiFirmPost_withInternalUser_throwsException() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.INTERNAL) // Internal user should not be convertible
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
+                    new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                    userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model));
+            assertThat(exception.getMessage()).contains("Only external users can be converted to multi-firm users");
+            
+            // Verify conversion was never attempted
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
+        }
+        
+        @Test
+        void convertToMultiFirmPost_withAlreadyMultiFirmUser_redirectsWithError() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(true) // Already a multi-firm user
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
+                    new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+            assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                    .isEqualTo("This user is already a multi-firm user");
+            
+            // Verify conversion was never attempted
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
+        }
     }
 }
