@@ -1499,7 +1499,7 @@ public class UserController {
         // Pre-populate form from session if it exists
         ConvertToMultiFirmForm sessionForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
         if (sessionForm != null) {
-            convertToMultiFirmForm.setConvertToMultiFirm(sessionForm.getConvertToMultiFirm());
+            convertToMultiFirmForm.setConvertToMultiFirm(sessionForm.isConvertToMultiFirm());
         }
 
         model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);

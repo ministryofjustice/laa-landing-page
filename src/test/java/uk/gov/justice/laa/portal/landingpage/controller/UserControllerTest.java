@@ -49,6 +49,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
 import ch.qos.logback.classic.Level;
@@ -5316,9 +5317,10 @@ class UserControllerTest {
 
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
                     new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirm(userId, form, model, session);
+            String result = userController.convertToMultiFirm(userId, form, model, session, redirectAttributes);
 
             // Then
             assertThat(result).isEqualTo("convert-to-multi-firm/index");
@@ -5332,13 +5334,14 @@ class UserControllerTest {
             ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
             String userId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
                     new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
 
             // When & Then
             assertThrows(RuntimeException.class, () ->
-                    userController.convertToMultiFirm(userId, form, model, session));
+                    userController.convertToMultiFirm(userId, form, model, session, redirectAttributes));
         }
 
         @Test
@@ -5368,15 +5371,16 @@ class UserControllerTest {
 
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
                     new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirm(userId, form, model, session);
+            String result = userController.convertToMultiFirm(userId, form, model, session, redirectAttributes);
 
             // Then
             assertThat(result).isEqualTo("convert-to-multi-firm/index");
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm formInModel =
                     (uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm) model.getAttribute("convertToMultiFirmForm");
-            assertThat(formInModel.getConvertToMultiFirm()).isTrue();
+            assertThat(formInModel.isConvertToMultiFirm()).isTrue();
         }
 
         @Test
@@ -5410,9 +5414,11 @@ class UserControllerTest {
             currentUser.setUserId(UUID.randomUUID());
             currentUser.setName("Admin User");
             when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model);
 
             // Then
             assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -5446,9 +5452,11 @@ class UserControllerTest {
             BindingResult bindingResult = Mockito.mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(false);
             when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model);
 
             // Then
             assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -5478,14 +5486,16 @@ class UserControllerTest {
 
             uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form =
                     new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
-            form.setConvertToMultiFirm(null);
+            // Note: not setting convertToMultiFirm to test validation error handling
 
             BindingResult bindingResult = Mockito.mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(true);
             when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model);
 
             // Then
             assertThat(result).isEqualTo("convert-to-multi-firm/index");
@@ -5507,10 +5517,11 @@ class UserControllerTest {
             form.setConvertToMultiFirm(true);
 
             BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When & Then
             RuntimeException exception = assertThrows(RuntimeException.class, () ->
-                    userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model));
+                    userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model));
             assertThat(exception.getMessage()).contains("multi-firm feature is not available");
         }
         
@@ -5544,14 +5555,17 @@ class UserControllerTest {
             
             // Simulate conversion failure
             Mockito.doThrow(new RuntimeException("Database error")).when(userService).convertToMultiFirmUser(userId);
+            
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
             // When
-            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, model);
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication, redirectAttributes, model);
 
             // Then
             assertThat(result).isEqualTo("convert-to-multi-firm/index");
-            assertThat(model.getAttribute("errorMessage")).isNotNull();
-            assertThat(model.getAttribute("errorMessage").toString()).contains("Failed to convert user to multi-firm");
+            Object errorMessage = model.getAttribute("errorMessage");
+            assertThat(errorMessage).isNotNull();
+            assertThat(errorMessage.toString()).contains("Failed to convert user to multi-firm");
             assertThat(model.getAttribute("user")).isEqualTo(user);
         }
     }
