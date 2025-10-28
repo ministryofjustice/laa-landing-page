@@ -137,8 +137,8 @@ public class UserController {
         usertype = (String) processedFilters.get("usertype");
         search = (String) processedFilters.get("search");
         firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
-        showFirmAdmins = (Boolean) processedFilters.get("showFirmAdmins");
-        showMultiFirmUsers = (Boolean) processedFilters.get("showMultiFirmUsers");
+        showFirmAdmins = Boolean.parseBoolean(String.valueOf(processedFilters.get("showFirmAdmins")));
+        showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showMultiFirmUsers")));
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -241,8 +241,8 @@ public class UserController {
         String usertype = (String) filters.get("usertype");
         String sort = (String) filters.get("sort");
         String direction = (String) filters.get("direction");
-        Boolean showFirmAdmins = (Boolean) filters.get("showFirmAdmins");
-        Boolean showMultiFirmUsers = (Boolean) filters.get("showMultiFirmUsers");
+        boolean showFirmAdmins = Boolean.parseBoolean(String.valueOf(filters.get("showFirmAdmins")));
+        boolean showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(filters.get("showMultiFirmUsers")));
         Integer size = (Integer) filters.get("size");
         Integer page = (Integer) filters.get("page");
         FirmSearchForm firmSearchForm = (FirmSearchForm) filters.get("firmSearchForm");
@@ -251,8 +251,8 @@ public class UserController {
                 || (usertype != null && !usertype.isEmpty())
                 || (sort != null && !sort.isEmpty())
                 || (direction != null && !direction.isEmpty())
-                || (showFirmAdmins != null && showFirmAdmins)
-                || (showMultiFirmUsers != null && showMultiFirmUsers)
+                || showFirmAdmins
+                || showMultiFirmUsers
                 || (size != null && size != 10)
                 || (page != null && page != 1)
                 || (firmSearchForm != null
@@ -300,8 +300,8 @@ public class UserController {
                         .collect(Collectors.toList())
                 : Collections.emptyList();
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final Boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
-        final Boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
+        final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -323,7 +323,7 @@ public class UserController {
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
-        final Boolean canDeleteUser = accessControlService.canDeleteUser(id);
+        final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
@@ -428,8 +428,8 @@ public class UserController {
                         .collect(Collectors.toList())
                 : Collections.emptyList();
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final Boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
-        final Boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
+        final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -439,6 +439,9 @@ public class UserController {
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
+        boolean hasEditOfficePermission = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+        boolean canManageOffices = hasEditOfficePermission && canEditUser;
+        model.addAttribute("canManageOffices", canManageOffices);
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         boolean showResendVerificationLink = enableResendVerificationCode

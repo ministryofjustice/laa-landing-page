@@ -12,7 +12,7 @@ repos:
     -   id: gitleaks
   # GitGuardian Shield secret scanner
 -   repo: https://github.com/gitguardian/ggshield
-    rev: v1.43.0
+    rev: v1.44.0
     hooks:
     -   id: ggshield
         language_version: python3

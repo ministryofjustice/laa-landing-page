@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" href="/admin/multi-firm/user/add/profile/before-start">Back</a>
+        <a class="govuk-back-link" href="/admin/users">Back</a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
@@ -29,10 +29,6 @@
                                     <li th:each="error : ${#fields.errors()}">
                                         <a href="#email" th:text="${error}"></a>
                                     </li>
-                                    <li th:if="${userProfileExistsOnFirm}">
-                                        The existing profile can be accessed by clicking on <a
-                                            th:href="@{'/admin/users/manage/' + ${existingUserProfileId}}"
-                                            class="govuk-link">this link</a></li>
                                 </ul>
                             </div>
                         </div>

@@ -91,13 +91,6 @@ public class MultiFirmUserController {
 
     private final ModelMapper mapper;
 
-    @GetMapping("/user/add/profile/before-start")
-    public String addUserProfileStart(HttpSession session) {
-        clearSessionAttributes(session);
-
-        return "multi-firm-user/add-profile-start";
-    }
-
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session) {
         MultiFirmUserForm multiFirmUserForm = getObjectFromHttpSession(session, "multiFirmUserForm",
@@ -130,7 +123,7 @@ public class MultiFirmUserController {
             if (!entraUser.isMultiFirmUser()) {
                 log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
                 result.rejectValue("email", "error.email",
-                        "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+                        "This user cannot be added at this time. Contact your Contract Manager to check their access permissions.");
                 return "multi-firm-user/select-user";
             }
 
@@ -144,9 +137,7 @@ public class MultiFirmUserController {
                     log.debug(
                             "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     result.rejectValue("email", "error.email",
-                            "This user already has access for your firm. Manage them from the Manage Your Users screen.");
-                    model.addAttribute("userProfileExistsOnFirm", true);
-                    model.addAttribute("existingUserProfileId", sameFirmProfile.get().getId());
+                            "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
                     return "multi-firm-user/select-user";
                 }
             }
@@ -161,7 +152,8 @@ public class MultiFirmUserController {
 
         } else {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
-            result.rejectValue("email", "error.email", "We could not find this user. Ask LAA to create the account.");
+            result.rejectValue("email", "error.email",
+                    "We could not find this user. Try again or ask the Legal Aid Agency to create a new account for them.");
             return "multi-firm-user/select-user";
         }
     }

@@ -123,12 +123,6 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
-    public void addUserProfileStart_shouldReturnViewName() {
-        String result = controller.addUserProfileStart(session);
-        assertThat(result).isEqualTo("multi-firm-user/add-profile-start");
-    }
-
-    @Test
     public void addUserProfile() {
         String result = controller.addUserProfile(model, session);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
@@ -167,7 +161,7 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email",
-                "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+                "This user cannot be added at this time. Contact your Contract Manager to check their access permissions.");
     }
 
     @Test
@@ -188,7 +182,7 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email",
-                "This user already has access for your firm. Manage them from the Manage Your Users screen.");
+                "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
     }
 
     @Test
@@ -224,7 +218,7 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email",
-                "This user cannot be linked to another firm. Ask LAA to enable multi-firm for this user.");
+                "This user cannot be added at this time. Contact your Contract Manager to check their access permissions.");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNull();
         assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
@@ -242,7 +236,7 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         verify(bindingResult).rejectValue("email", "error.email",
-                "We could not find this user. Ask LAA to create the account.");
+                "We could not find this user. Try again or ask the Legal Aid Agency to create a new account for them.");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNull();
         assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
