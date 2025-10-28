@@ -15,5 +15,5 @@ import lombok.NoArgsConstructor;
 public class ConvertToMultiFirmForm implements Serializable {
 
     @NotNull(message = "You must select whether to convert this user to multi-firm access")
-    private Boolean convertToMultiFirm;
+    private boolean convertToMultiFirm;
 }

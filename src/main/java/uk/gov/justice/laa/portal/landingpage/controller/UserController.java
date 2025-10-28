@@ -1534,7 +1534,7 @@ public class UserController {
         }
 
         // If user chose not to convert, redirect back to manage user page
-        if (Boolean.FALSE.equals(convertToMultiFirmForm.getConvertToMultiFirm())) {
+        if (Boolean.FALSE.equals(convertToMultiFirmForm.isConvertToMultiFirm())) {
             return "redirect:/admin/users/manage/" + id;
         }
 
