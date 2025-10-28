@@ -39,7 +39,7 @@ jobs:
           mv fs-trivy-results.sarif trivy_sarif_files/
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy_sarif_files
 
