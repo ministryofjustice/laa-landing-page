@@ -2709,13 +2709,23 @@ class UserControllerTest {
                 .appRoles(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2738,13 +2748,23 @@ class UserControllerTest {
                 .appRoles(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
