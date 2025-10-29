@@ -333,7 +333,7 @@ public class UserController {
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-        
+
         // Add multi-firm feature flag
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
@@ -343,14 +343,6 @@ public class UserController {
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         if (isMultiFirmUser && enableMultiFirmUser) {
-            // Get all profiles for this multi-firm user
-            List<UserProfile> allProfiles = userService
-                    .getUserProfilesByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
-            List<UserProfileDto> allProfileDtos = allProfiles.stream()
-                    .map(up -> mapper.map(up, UserProfileDto.class))
-                    .collect(Collectors.toList());
-            model.addAttribute("userProfiles", allProfileDtos);
-
             // Check if user can delete the currently viewed profile (not all profiles)
             boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
@@ -447,7 +439,8 @@ public class UserController {
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
-        boolean hasEditOfficePermission = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+        boolean hasEditOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
         model.addAttribute("canManageOffices", canManageOffices);
         model.addAttribute("canEditUser", canEditUser);
@@ -846,7 +839,7 @@ public class UserController {
 
     /**
      * Get User Details for editing
-     * 
+     *
      * @param id    User ID
      * @param model Model to hold user details form and user data
      * @return View name for editing user details
@@ -876,7 +869,7 @@ public class UserController {
 
     /**
      * Update user details
-     * 
+     *
      * @param id                  User ID
      * @param editUserDetailsForm User details form
      * @param result              Binding result for validation errors
@@ -1008,7 +1001,7 @@ public class UserController {
 
     /**
      * Retrieves available roles for user and their currently assigned roles.
-     * 
+     *
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
      * @param model            Model to hold user and role data
@@ -1120,7 +1113,7 @@ public class UserController {
 
     /**
      * Update user roles for a specific app.
-     * 
+     *
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
      * @param session          HttpSession to store selected apps and roles
@@ -1280,7 +1273,7 @@ public class UserController {
 
     /**
      * Get user offices for editing
-     * 
+     *
      * @param id    User ID
      * @param model Model to hold user and office data
      * @return View name for editing user offices
@@ -1350,7 +1343,7 @@ public class UserController {
 
     /**
      * Update user offices
-     * 
+     *
      * @param id          User ID
      * @param officesForm Offices form with selected office IDs
      * @param result      Binding result for validation errors
@@ -1497,8 +1490,8 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/convert-to-multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
-    public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm, 
-                                      Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+    public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
+            Model model, HttpSession session, RedirectAttributes redirectAttributes) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
             throw new RuntimeException("The multi-firm feature is not available. "
@@ -1506,7 +1499,7 @@ public class UserController {
         }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        
+
         // Check if user is not external
         if (user.getUserType() != UserType.EXTERNAL) {
             log.warn("Attempt to convert internal user {} to multi-firm", id);
@@ -1534,13 +1527,13 @@ public class UserController {
 
     @PostMapping("/users/edit/{id}/convert-to-multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
-    public String convertToMultiFirmPost(@PathVariable String id, 
-                                         @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
-                                         BindingResult result,
-                                         HttpSession session,
-                                         Authentication authentication,
-                                         RedirectAttributes redirectAttributes,
-                                         Model model) {
+    public String convertToMultiFirmPost(@PathVariable String id,
+            @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
+            BindingResult result,
+            HttpSession session,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes,
+            Model model) {
         // Check if multi-firm feature is enabled
         if (!enableMultiFirmUser) {
             throw new RuntimeException("The multi-firm feature is not available. "
@@ -1585,13 +1578,13 @@ public class UserController {
             EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
             ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
             eventService.logEvent(auditEvent);
-            
+
             log.info("Successfully converted user {} to multi-firm status", id);
-            
+
             // Add success message
-            redirectAttributes.addFlashAttribute("successMessage", 
-                "User has been successfully converted to a multi-firm user");
-            
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "User has been successfully converted to a multi-firm user");
+
             // Redirect to manage user page
             return "redirect:/admin/users/manage/" + id;
 

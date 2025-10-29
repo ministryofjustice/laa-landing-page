@@ -1,8 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -65,6 +62,8 @@ import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
@@ -180,9 +179,8 @@ public class MultiFirmUserController {
         // Count the number of profiles to prevent deletion of last profile
         List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
         if (allProfiles.size() <= 1) {
-            model.addAttribute("errorMessage",
+            throw new RuntimeException(
                     "Cannot delete the last firm profile. User must have at least one profile.");
-            return "redirect:/admin/users/manage/" + userProfileId;
         }
 
         model.addAttribute("userProfile", userProfile);
@@ -198,7 +196,7 @@ public class MultiFirmUserController {
     @PostMapping("/user/delete-profile/{userProfileId}")
     @PreAuthorize("@accessControlService.canDeleteFirmProfile(#userProfileId)")
     public String deleteFirmProfileExecute(@PathVariable String userProfileId,
-            @RequestParam(name = "confirm", required = false) String confirm,
+            @RequestParam(name = "confirm", required = true) String confirm,
             Authentication authentication,
             RedirectAttributes redirectAttributes,
             Model model) {
@@ -212,13 +210,9 @@ public class MultiFirmUserController {
         EntraUserDto entraUser = userProfile.getEntraUser();
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
-        // Validate that an option was selected
-        if (confirm == null || confirm.isEmpty()) {
-            model.addAttribute("errorMessage", "Please select an option to continue");
-            model.addAttribute("userProfile", userProfile);
-            model.addAttribute("user", entraUser);
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Confirm you want to remove " + firmName);
-            return "multi-firm-user/delete-profile-confirm";
+        // Validate firm association exists for multi-firm users
+        if (userProfile.getFirm() == null) {
+            throw new RuntimeException("Multi-firm users must have a firm association.");
         }
 
         // If user selected "No", redirect back to manage user page

@@ -1458,12 +1458,10 @@ public class MultiFirmUserControllerTest {
         // Only one profile
         when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build()));
 
-        // Act
-        String result = controller.deleteFirmProfileConfirm(userProfileId, model);
-
-        // Assert
-        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
-        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        // Act & Assert - Should throw exception for last profile deletion
+        assertThatThrownBy(() -> controller.deleteFirmProfileConfirm(userProfileId, model))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot delete the last firm profile");
     }
 
     @Test
@@ -1518,47 +1516,15 @@ public class MultiFirmUserControllerTest {
         String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
         String confirm = "no";
 
-        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
-                .builder()
-                .id(java.util.UUID.randomUUID().toString())
-                .build();
-
-        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
-                .builder()
-                .entraUser(entraUserDto)
-                .build();
-
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
-
-        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = Mockito
-                .mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
-
-        // Act
-        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes,
-                model);
-
-        // Assert
-        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
-        verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
-    }
-
-    @Test
-    public void deleteFirmProfileExecute_withNoSelection_shouldShowError() {
-        // Arrange
-        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
-        String confirm = null; // No selection
-        java.util.UUID entraUserId = java.util.UUID.randomUUID();
-
         uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto
                 .builder()
                 .name("Test Law Firm")
+                .code("ABC123")
                 .build();
 
         uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
                 .builder()
-                .id(entraUserId.toString())
-                .firstName("John")
-                .lastName("Doe")
+                .id(java.util.UUID.randomUUID().toString())
                 .multiFirmUser(true)
                 .build();
 
@@ -1578,10 +1544,12 @@ public class MultiFirmUserControllerTest {
                 model);
 
         // Assert
-        assertThat(result).isEqualTo("multi-firm-user/delete-profile-confirm");
-        assertThat(model.getAttribute("errorMessage")).isNotNull();
-        assertThat(model.getAttribute("errorMessage")).asString().contains("Please select an option");
+        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
         verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
     }
+
+    // Note: The test for null confirm parameter has been removed because the parameter 
+    // is now required=true, so Spring will handle missing parameter validation at the 
+    // framework level before the controller method is invoked.
 
 }
