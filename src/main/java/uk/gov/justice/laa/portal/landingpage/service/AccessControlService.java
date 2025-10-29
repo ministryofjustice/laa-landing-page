@@ -99,17 +99,13 @@ public class AccessControlService {
     /**
      * Check if the authenticated user can delete a specific firm profile.
      * Used for multi-firm users where we delete individual firm access.
-     * 
+     *
      * @param userProfileId the ID of the user profile to delete
      * @return true if user has permission to delete this firm profile
      */
     public boolean canDeleteFirmProfile(String userProfileId) {
-        log.debug("=== canDeleteFirmProfile START ===");
-        log.debug("userProfileId: {}", userProfileId);
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-        log.debug("authenticatedUser: {}", authenticatedUser != null ? authenticatedUser.getEmail() : "null");
 
         if (authenticatedUser == null) {
             log.debug("Authenticated user is null, returning false");
@@ -118,37 +114,29 @@ public class AccessControlService {
 
         Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
-            log.debug("Profile not found, returning false");
             return false;
         }
 
         UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
-        log.debug("accessedUserProfile: {} ({})", accessedUserProfile.getFullName(), accessedUserProfile.getUserType());
-
         // Only external user profiles can be deleted
         if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
-            log.debug("User is INTERNAL, returning false");
             return false;
         }
 
         // Must be a multi-firm user
         if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
-            log.debug("Not a multi-firm user, returning false");
             return false;
         }
 
         // Check if authenticated user is internal (LAA staff)
         boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
-        log.debug("isInternalUser: {}", isInternalUser);
 
         // Check if users are in the same firm
         boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
-        log.debug("sameFirm: {}", sameFirm);
 
         // Internal users with DELETE_EXTERNAL_USER permission can delete any firm
         // profile
         if (isInternalUser && userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER)) {
-            log.debug("Internal user with DELETE_EXTERNAL_USER permission, returning true");
             return true;
         }
 
@@ -156,11 +144,9 @@ public class AccessControlService {
         // delete profiles from their own firm
         if (!isInternalUser && sameFirm
                 && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
-            log.debug("External user with DELEGATE_EXTERNAL_USER_ACCESS in same firm, returning true");
             return true;
         }
 
-        log.debug("No permission to delete firm profile, returning false");
         return false;
     }
 
