@@ -119,10 +119,10 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title">User details</h2>
-                                <ul class="govuk-summary-card__actions" th:if="${canDeleteUser}">
+                                <ul class="govuk-summary-card__actions" th:if="${canDeleteFirmProfile}">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                            th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}">Delete user</a>
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;" 
+                                           th:href="@{/admin/multi-firm/user/delete-profile/{id}(id=${user.id})}">Revoke access</a>
                                     </li>
                                 </ul>
                             </div>
