@@ -1450,7 +1450,6 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void shouldErrorWhenSelectedFirmAlreadyAssigned() {
-        MultiFirmUserForm form = MultiFirmUserForm.builder().email("user@example.com").build();
         BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
@@ -1458,7 +1457,7 @@ public class MultiFirmUserControllerTest {
         Firm selectedFirm = Firm.builder().id(firmId).name("Selected Firm").build();
         session.setAttribute("delegateTargetFirmId", firmId.toString());
         when(firmService.getById(firmId)).thenReturn(selectedFirm);
-
+        MultiFirmUserForm form = MultiFirmUserForm.builder().email("user@example.com").build();
         EntraUser entraUser = EntraUser.builder().email(form.getEmail()).multiFirmUser(true)
                 .userProfiles(Set.of(UserProfile.builder().firm(selectedFirm).activeProfile(true).build()))
                 .build();
