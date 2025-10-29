@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1761063088677-1
+      author: yusuf-moj
+      comment: "Assign VIEW_USER_OFFICE permission to EXTERNAL USERS"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_USER_OFFICE')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_USER_OFFICE')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_USER_OFFICE')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_USER_OFFICE')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_USER_OFFICE')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_USER_OFFICE' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_USER_OFFICE' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_USER_OFFICE' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Viewer')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_USER_OFFICE' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_USER_OFFICE' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"

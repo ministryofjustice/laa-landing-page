@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -99,6 +100,28 @@ class FirmServiceTest {
         EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).build();
         List<FirmDto> firms = firmService.getUserAllFirms(entraUser);
         assertThat(firms).hasSize(2);
+    }
+
+    @Test
+    void getUserActiveAllFirms_hasChildrenFirm() {
+        Firm firm1 = Firm.builder().name("F1").childFirms(Set.of(Firm.builder().name("FC1").build())).build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).multiFirmUser(true).build();
+        List<FirmDto> firms = firmService.getUserActiveAllFirms(entraUser);
+        assertThat(firms).hasSize(2);
+    }
+
+    @Test
+    void getUserActiveAllFirms_has_no_ChildrenFirm() {
+        Firm firm1 = Firm.builder().name("F1").build();
+        UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(firm1).build();
+        UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
+        Set<UserProfile> userProfiles = Set.of(up1, up2);
+        EntraUser entraUser = EntraUser.builder().userProfiles(userProfiles).multiFirmUser(true).build();
+        List<FirmDto> firms = firmService.getUserActiveAllFirms(entraUser);
+        assertThat(firms).hasSize(1);
     }
 
     @Test
@@ -219,9 +242,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", false),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", false),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", false)
+                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", false, false),
+                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", false, false),
+                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", false, false)
             );
 
             // Setup cache mock
@@ -594,6 +617,21 @@ class FirmServiceTest {
                 .hasSize(2)
                 .extracting(FirmDto::getName)
                 .containsExactly("Alpha", "AlphaTech"); // dto1 should be ranked higher
+    }
+
+    @Test
+    void testGetById_shouldReturnFirm() {
+        // Arrange
+        UUID firmId = UUID.randomUUID();
+        Firm expectedFirm = Firm.builder().id(firmId).build();
+        when(firmRepository.getReferenceById(firmId)).thenReturn(expectedFirm);
+
+        // Act
+        Firm result = firmService.getById(firmId);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedFirm);
+        verify(firmRepository, times(1)).getReferenceById(firmId);
     }
 
     @Nested

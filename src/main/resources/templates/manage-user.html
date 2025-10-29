@@ -18,8 +18,7 @@
                     th:text="${hasFilters} ? 'Back to search results' : 'Home'"></a>
             </li>
             <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" aria-label="${user.fullName}"><span
-                        th:text="${user.fullName}"></span></a>
+                <span class="govuk-breadcrumbs__link" aria-label="${user.fullName}" aria-current="page" th:text="${user.fullName}"></span>
             </li>
         </ol>
     </nav>
@@ -64,7 +63,7 @@
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
-                        <p class="govuk-heading-xl" th:text="${user.fullName}"></p>
+                        <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
                         <strong th:if="${!isAccessGranted}"
                             class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
                         <strong th:if="${isAccessGranted}"
@@ -109,21 +108,24 @@
                     <div class="govuk-tabs__panel" id="user-details">
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
-                                <h2 class="govuk-summary-card__title" th:text="${user.entraUser.email}">
-                                </h2>
-                                <div th:if="${showResendVerificationLink}">
-                                    <a class="govuk-link"
-                                       th:href="@{/admin/user/{id}/verify(id=${user.id})}"
-                                       th:text="'Resend Activation Code'"></a>
-                                </div>
-                                <!-- <ul class="govuk-summary-card__actions">
+                                <h2 class="govuk-summary-card__title">User details</h2>
+                                <ul class="govuk-summary-card__actions" th:if="${canDeleteUser}">
                                     <li class="govuk-summary-card__action">
-                                        <a class="govuk-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/details'}">Edit</a>
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;" th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}">Delete user</a>
                                     </li>
-                                </ul> -->
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                            <span th:text="${user.entraUser.email}"></span>
+                                            <a th:if="${showResendVerificationLink}"
+                                               class="govuk-link" style="white-space: nowrap;"
+                                               th:href="@{/admin/user/{id}/verify(id=${user.id})}">Resend Activation Code</a>
+                                        </dd>
+                                    </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             First name
@@ -184,7 +186,7 @@
                                 <h2 class="govuk-summary-card__title">
                                     Offices
                                 </h2>
-                                <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
+                                <ul th:if="${isAccessGranted and canManageOffices}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
                                             th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">Change</a>

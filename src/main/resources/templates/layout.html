@@ -15,14 +15,26 @@
         <div class="govuk-phase-banner" id="feedback">
             <p class="govuk-phase-banner__content">
                 <strong class="govuk-tag govuk-phase-banner__content__tag">
-                    Alpha
+                    Beta
                 </strong>
                 <span class="govuk-phase-banner__text">
-                    This is a new service. Help us improve it and <a class="govuk-link" href="#">give your feedback
-                        by
-                        email</a>.
+                    This is a new service. Help us improve it by <a class="govuk-link"
+                        href="https://www.smartsurvey.co.uk/s/LAASiLAS/">completing our short survey.</a>
                 </span>
             </p>
+        </div>
+        <div class="govuk-!-padding-top-2 govuk-!-padding-bottom-2" style="border-bottom: 1px solid #b1b4b6;"
+            th:if="${activeFirm != null and pageCategory == 'home'}">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <p class="govuk-body-m govuk-!-margin-bottom-0">
+                        <strong th:text="${activeFirm.getName() + (activeFirm.getCode() != null ? ' - ' + activeFirm.getCode() : '')}"></strong>
+                    </p>
+                </div>
+                <div class="govuk-grid-column-one-third" style="text-align: right;">
+                    <a href="/switch-firm" class="govuk-link govuk-body-m" th:if="${activeFirm.isCanChange()}">Switch firm</a>
+                </div>
+            </div>
         </div>
         <nav th:if="${navigation != null}">
             <div th:replace="${navigation}"></div>

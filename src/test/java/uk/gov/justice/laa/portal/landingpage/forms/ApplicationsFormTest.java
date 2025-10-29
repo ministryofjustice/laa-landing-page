@@ -8,6 +8,8 @@ import jakarta.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -19,8 +21,9 @@ class ApplicationsFormTest {
     private final Validator validator;
 
     public ApplicationsFormTest() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            validator = factory.getValidator();
+        }
     }
 
     @Test
@@ -36,7 +39,6 @@ class ApplicationsFormTest {
     @Test
     void whenAppsIsEmpty_thenValidationFails() {
         ApplicationsForm form = new ApplicationsForm();
-        form.setApps(List.of());
 
         Set<ConstraintViolation<ApplicationsForm>> violations = validator.validate(form);
         assertFalse(violations.isEmpty());
@@ -95,7 +97,7 @@ class ApplicationsFormTest {
     @Test
     void defaultConstructor_shouldCreateFormWithNullApps() {
         ApplicationsForm form = new ApplicationsForm();
-        assertEquals(null, form.getApps());
+        assertNull(form.getApps());
     }
 
     @Test
@@ -116,7 +118,7 @@ class ApplicationsFormTest {
         
         // Test with different apps
         form2.setApps(List.of("App3"));
-        assertFalse(form1.equals(form2));
+        assertNotEquals(form1, form2);
     }
 
     @Test

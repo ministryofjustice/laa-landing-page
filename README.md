@@ -123,7 +123,13 @@ Be sure to fill out all values as they are required for pulling dependencies for
 
 Ensure that all environment variables from `.env` set
 
-`export $(grep -v '^#' .env | xargs)`
+```sh
+set -o allexport
+source <(grep -v '^#' .env | grep -v '^\s*$') 2>/dev/null
+set +o allexport
+```
+
+> You may see errors from this command - it should still work, verify the variables are being exported with `env`
 
 Once the environment variables are set, you can run must first start the database:
 

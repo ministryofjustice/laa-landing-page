@@ -1,25 +1,26 @@
 repos:
   # Updates to latest versions instead of going by rev tags for all pre-commit hooks
-  - repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
+-   repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
     rev: v0.8.0
     hooks:
-      - id: pre-commit-update
+    -   id: pre-commit-update
         args: ["--verbose"]
   # GitLeaks secret scanner
-  - repo: https://github.com/gitleaks/gitleaks
+-   repo: https://github.com/gitleaks/gitleaks
     rev: v8.28.0
     hooks:
-      - id: gitleaks
+    -   id: gitleaks
   # GitGuardian Shield secret scanner
-  - repo: https://github.com/gitguardian/ggshield
-    rev: v1.43.0
+-   repo: https://github.com/gitguardian/ggshield
+    rev: v1.44.0
     hooks:
-      - id: ggshield
+    -   id: ggshield
         language_version: python3
-        stages: ["pre-commit"] 
+        stages: ["pre-commit"]
   # TruffleHog secret scanner
-  - repo: https://github.com/trufflesecurity/trufflehog
-    rev: v3.90.8
-    hooks:
-      - id: trufflehog
-        stages: ["pre-commit"] 
+  # Disabling due to https://github.com/trufflesecurity/trufflehog/issues/4513
+# -   repo: https://github.com/trufflesecurity/trufflehog
+#     rev: v3.90.11
+#     hooks:
+#     -   id: trufflehog
+#         stages: ["pre-commit"]

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'register'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Login Page</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/multi-firm/user/add/profile/select/offices">
+                    < Back</a>
+            </li>
+        </ol>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds-from-desktop">
+                <h1 class="govuk-heading-l">
+                    Check your answers and confirm
+                </h1>
+                <form th:action="@{/admin/multi-firm/user/add/profile/check-answers}" th:method="post">
+                    <div th:if="${errorMessage}">
+                        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                            aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                                There is a problem
+                            </h2>
+                            <div class="govuk-error-summary__body" id="error-summary-description">
+                                <span th:text="${errorMessage}"></span>
+                                <ul class="govuk-list govuk-error-summary__list">
+                                    <li th:each="error : ${errors}">
+                                        <span th:text="${error}"></span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User details
+                            </h2>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Email</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.email}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">First name</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.firstName}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Last name</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${user.lastName}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">User type</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${isUserManager} ? 'Provider Admin' : 'Provider User'"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                                    <dt class="govuk-summary-list__key">Multi-firm access</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Firm</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firm.code != null ? firm.name + ' (Firm code: ' + firm.code + ')' : firm.name}"></span>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User Roles
+                            </h2>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list" th:if="${selectedAppRole != null and !selectedAppRole.isEmpty()}">
+                                <div th:each="appRole : ${selectedAppRole}" class="govuk-summary-list__row">
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${appRole.getRoleName()}"></span>
+                                        (<span th:text="${appRole.getAppName()}"></span>)
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a th:href="${appRole.getUrl()}" class="govuk-link">Change</a>
+                                    </dd>
+                                </div>
+                            </dl>
+                            <div class="govuk-summary-list" th:if="${(selectedAppRole == null or selectedAppRole.isEmpty())}">
+                                <div class="govuk-summary-list__row">
+                                    <dd class="govuk-summary-list__value">
+                                        <span>No role assigned</span>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/apps'}" class="govuk-link">Change</a>
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User offices
+                            </h2>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
+                                <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${office.address.formattedAddress}"></span>
+                                        (<span th:text="${office.code}"></span>)
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/offices'}" class="govuk-link">Change</a>
+                                    </dd>
+                                </div>
+                            </dl>
+                            <div class="govuk-summary-list" th:if="${(userOffices == null or userOffices.isEmpty())}">
+                                <div class="govuk-summary-list__row">
+                                    <dd class="govuk-summary-list__value">
+                                        <span>Access to All Offices</span>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/offices'}" class="govuk-link">Change</a>
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="govuk-heading-m">Confirm access and permissions</h2>
+                    <p class="govuk-body">When you confirm, the user will get access to the chosen services and their offices will be assigned.
+                    </p>
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button"
+                            onclick="this.disabled=true; this.form.submit();">Confirm</button>
+                        <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

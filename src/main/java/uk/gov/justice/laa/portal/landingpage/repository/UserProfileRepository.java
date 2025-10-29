@@ -1,17 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.List;
-import java.util.UUID;
 
 @Repository
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
@@ -46,13 +48,11 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                     @Param("firmId") UUID firmId, @Param("userType") UserType userType,
                     @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
 
-    @Query("""
+    @Query(value = """
                         SELECT ups FROM UserProfile ups
                                     JOIN FETCH ups.entraUser u
                                     LEFT JOIN FETCH ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
-                        AND (:#{#criteria.firmSearch.firmSearch} IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT(:#{#criteria.firmSearch.firmSearch}, '%'))) 
-                                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
                             (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
@@ -62,14 +62,38 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                                 OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
                             )
                         )
+                        AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
+                            SELECT 1 FROM ups.appRoles ar
+                            WHERE ar.authzRole = true
+                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
+                        ))
+                        """,
+            countQuery = """
+                        SELECT COUNT(ups) FROM UserProfile ups
+                                    LEFT JOIN ups.firm f
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+                        AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND (
-                (:#{#criteria.firmSearch.selectedFirmId} IS NULL) OR
-                (ups.firm IS NOT NULL AND ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+                            (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
+                            EXISTS (
+                                SELECT 1 FROM ups.entraUser u
+                                WHERE u = ups.entraUser
+                                AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
+                                OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
+                            )
                         )
                         AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
                             SELECT 1 FROM ups.appRoles ar
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
+                            SELECT 1 FROM ups.entraUser u
+                            WHERE u.multiFirmUser = true
                         ))
                         """)
     Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
@@ -98,4 +122,20 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             )
             """)
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
+
+    List<UserProfile> findAllByEntraUser(EntraUser entraUser);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser u
+                        JOIN FETCH ups.firm f
+            WHERE ups.entraUser.id = :entraUserId
+            AND (
+                :search IS NULL OR :search = '' OR
+                LOWER(f.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                LOWER(f.code) LIKE LOWER(CONCAT('%', :search, '%'))
+            )
+            """)
+    List<UserProfile> findByEntraUserIdAndFirmSearch(@Param("entraUserId") UUID entraUserId, 
+                                                       @Param("search") String search);
 }

@@ -105,9 +105,14 @@ spec:
 
         - alert: 4xxErrorResponses
           annotations:
-            message: Ingress in ${ENV_NAME} is serving 4XX responses.
+            message: Ingress in ${ENV_NAME} is serving 4XX responses. (Ignoring 403s from GDS)
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
-          expr: sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"4.*"}[5m]))*270 > 10
+          expr: |-
+            (
+              sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status=~"4.*"}[5m]))
+              -
+              sum(rate(nginx_ingress_controller_requests{exported_namespace="${NAMESPACE}", status="403", remote_addr=~"52.17.9.21|52.17.98.131"}[5m]))
+            ) * 270 > 10
           for: 1m
           labels:
             severity: ${ALERT_SEVERITY}
