@@ -1,10 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,10 +34,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
@@ -42,6 +64,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
@@ -65,25 +88,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
  * User Controller
@@ -109,7 +113,6 @@ public class UserController {
 
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
-
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -329,6 +332,9 @@ public class UserController {
         model.addAttribute("canDeleteUser", canDeleteUser);
         boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        
+        // Add multi-firm feature flag
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
@@ -1453,10 +1459,125 @@ public class UserController {
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
 
+        // Convert to Multi-Firm Form
+        session.removeAttribute("convertToMultiFirmForm");
+
         // Clear any success messages
         session.removeAttribute("successMessage");
 
         return "redirect:/admin/users/manage/" + id;
+    }
+
+    /**
+     * Convert to Multi-Firm Flow - Show conversion form
+     */
+    @GetMapping("/users/edit/{id}/convert-to-multi-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm, 
+                                      Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+        // Check if multi-firm feature is enabled
+        if (!enableMultiFirmUser) {
+            throw new RuntimeException("The multi-firm feature is not available. "
+                    + "Please contact your system administrator for assistance.");
+        }
+
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        
+        // Check if user is not external
+        if (user.getUserType() != UserType.EXTERNAL) {
+            log.warn("Attempt to convert internal user {} to multi-firm", id);
+            throw new RuntimeException("Only external users can be converted to multi-firm users");
+        }
+
+        // Check if already multi-firm
+        if (user.getEntraUser().isMultiFirmUser()) {
+            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        // Pre-populate form from session if it exists
+        ConvertToMultiFirmForm sessionForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
+        if (sessionForm != null) {
+            convertToMultiFirmForm.setConvertToMultiFirm(sessionForm.isConvertToMultiFirm());
+        }
+
+        model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Convert to multi-firm user - " + user.getFullName());
+        return "convert-to-multi-firm/index";
+    }
+
+    @PostMapping("/users/edit/{id}/convert-to-multi-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    public String convertToMultiFirmPost(@PathVariable String id, 
+                                         @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
+                                         BindingResult result,
+                                         HttpSession session,
+                                         Authentication authentication,
+                                         RedirectAttributes redirectAttributes,
+                                         Model model) {
+        // Check if multi-firm feature is enabled
+        if (!enableMultiFirmUser) {
+            throw new RuntimeException("The multi-firm feature is not available. "
+                    + "Please contact your system administrator for assistance.");
+        }
+
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+
+        // Check if user is not external
+        if (user.getUserType() != UserType.EXTERNAL) {
+            log.warn("Attempt to convert internal user {} to multi-firm", id);
+            throw new RuntimeException("Only external users can be converted to multi-firm users");
+        }
+
+        // Check if already multi-firm
+        if (user.getEntraUser().isMultiFirmUser()) {
+            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while converting user to multi-firm: {}", result.getAllErrors());
+            model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+            model.addAttribute("user", user);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Convert to multi-firm user - " + user.getFullName());
+            return "convert-to-multi-firm/index";
+        }
+
+        // If user chose not to convert, redirect back to manage user page
+        if (Boolean.FALSE.equals(convertToMultiFirmForm.isConvertToMultiFirm())) {
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        // User chose "Yes" - perform the conversion
+        try {
+            // Convert the user to multi-firm
+            userService.convertToMultiFirmUser(user.getEntraUser().getId());
+
+            // Create audit event
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
+            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
+            eventService.logEvent(auditEvent);
+            
+            log.info("Successfully converted user {} to multi-firm status", id);
+            
+            // Add success message
+            redirectAttributes.addFlashAttribute("successMessage", 
+                "User has been successfully converted to a multi-firm user");
+            
+            // Redirect to manage user page
+            return "redirect:/admin/users/manage/" + id;
+
+        } catch (Exception e) {
+            log.error("Failed to convert user {} to multi-firm: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "Failed to convert user to multi-firm: " + e.getMessage());
+            model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+            model.addAttribute("user", user);
+            return "convert-to-multi-firm/index";
+        }
     }
 
     /**
