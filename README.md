@@ -244,6 +244,9 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 | APP_SUBMIT_A_BULK_CLAIM_NAME        | Name of `Submit A Bulk Claim` Application                                                                                                                            |
 | APP_SUBMIT_A_BULK_CLAIM_URL         | URL of `Submit A Bulk Claim` Application                                                                                                                             |
 | APP_DEFAULT_USER_ACC_SEC_GROUP      | Name of the default security group (provided by Tech Services)                                                                                                       |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS | Details of `Civil Claim for Payment` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id         |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_NAME    | Name OF `Civil Claim for Payment` Application                                                                                                                        |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_URL     | URL OF `Civil Claim for Payment` Application                                                                                                                         |
 | DISTRIBUTED_DB_LOCKING_PERIOD       | Number minutes to lock the distributed DB row for each key                                                                                                           |
 | ENABLE_DISTRIBUTED_DB_LOCKING       | Enable or distributed DB row locking (true/false). Setting the flag to false will let all the nodes run the process. True will let only one node to run the process  |
 | FIRM_CACHE_CLEAR_SCHEDULE           | The cron value to define how often the firms cache should be cleared.                                                                                                |

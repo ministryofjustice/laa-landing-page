@@ -866,6 +866,40 @@ public class UserService {
         }
     }
 
+    /**
+     * Convert a single-firm user to a multi-firm user
+     * This operation is irreversible
+     * 
+     * @param userId The ID of the user to convert
+     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     */
+    @Transactional
+    public void convertToMultiFirmUser(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isEmpty()) {
+            logger.error("User with id {} not found in database. Cannot convert to multi-firm user.", userId);
+            throw new RuntimeException("User not found");
+        }
+
+        EntraUser entraUser = optionalUser.get();
+        
+        if (entraUser.isMultiFirmUser()) {
+            logger.warn("User with id {} is already a multi-firm user.", userId);
+            throw new RuntimeException("User is already a multi-firm user");
+        }
+
+        // Set the multi-firm flag
+        entraUser.setMultiFirmUser(true);
+        
+        try {
+            entraUserRepository.saveAndFlush(entraUser);
+            logger.info("Successfully converted user {} to multi-firm status", userId);
+        } catch (Exception e) {
+            logger.error("Failed to convert user {} to multi-firm status", userId, e);
+            throw new RuntimeException("Failed to convert user to multi-firm status", e);
+        }
+    }
+
     private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
         Set<LaaApplicationForView> userAssignedApps = applications.stream().filter(app -> userApps.stream()
