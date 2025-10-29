@@ -139,6 +139,17 @@
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row" th:if="${user.firm != null}">
+                                        <dt class="govuk-summary-list__key">
+                                            Firm name
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.firm.name}">
+                                        </dd>
+                                        <dd th:if="${canReassignFirm}" class="govuk-summary-list__actions">
+                                            <a class="govuk-link"
+                                                th:href="@{'/admin/users/reassign-firm/' + ${user.id}}">Change</a>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -228,7 +239,6 @@
                     Go back to manage your users
                 </a>
             </div>
-        </div>
         </div>
     </main>
 </body>

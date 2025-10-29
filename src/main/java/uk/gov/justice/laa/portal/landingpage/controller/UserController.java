@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -16,10 +18,13 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -43,9 +48,11 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.ReassignmentReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -308,7 +315,6 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
-
         boolean hasViewOfficePermission =
                 accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
 
@@ -318,12 +324,18 @@ public class UserController {
         boolean canManageOffices =
                 hasEditOfficePermission && canEditUser;
 
-
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
         model.addAttribute("showOfficesTab",  showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
 
         model.addAttribute("canEditUser", canEditUser);
+
+        // Check if current user can reassign firms (External User Admin permission +
+        // target is external user)
+        boolean canReassignFirm = externalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        model.addAttribute("canReassignFirm", canReassignFirm);
+
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
@@ -498,7 +510,6 @@ public class UserController {
             }
         }
 
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
 
@@ -592,7 +603,7 @@ public class UserController {
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
-                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+            @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
 
@@ -602,7 +613,8 @@ public class UserController {
         if (existingForm != null) {
             firmSearchForm = existingForm;
         } else if (session.getAttribute("firm") != null) {
-            // Grab firm search details from session firm if coming here from the confirmation screen.
+            // Grab firm search details from session firm if coming here from the
+            // confirmation screen.
             FirmDto firm = (FirmDto) session.getAttribute("firm");
             firmSearchForm = FirmSearchForm.builder()
                     .selectedFirmId(firm.getId())
@@ -617,6 +629,32 @@ public class UserController {
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "add-user-firm";
+    }
+
+    @GetMapping("/user/create/firm/search")
+    @ResponseBody
+    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
+            @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+        // If the query is blank/whitespace-only, return an empty result and do not
+        // call the service to avoid unnecessary work.
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        int validatedCount = Math.max(10, Math.min(count, 100));
+        List<FirmDto> firms = firmService.searchFirms(query.trim());
+
+        List<Map<String, String>> result = firms.stream()
+                .limit(validatedCount) // Limit results to prevent overwhelming the UI
+                .map(firm -> {
+                    Map<String, String> firmData = new HashMap<>();
+                    firmData.put("id", firm.getId().toString());
+                    firmData.put("name", firm.getName());
+                    firmData.put("code", firm.getCode());
+                    return firmData;
+                })
+                .collect(Collectors.toList());
+        return result;
     }
 
     @PostMapping("/user/create/firm")
@@ -880,7 +918,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsCheck(@PathVariable String id, Model model,
-                                          HttpSession session) throws IOException {
+            HttpSession session) throws IOException {
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
         if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
@@ -888,15 +926,16 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - Check your answers - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE,
+                "Edit user details - Check your answers - " + user.getFullName());
         return "edit-user-details-check-answer";
     }
 
     /**
      * Update user details
      *
-     * @param id                  User ID
-     * @param session             HttpSession to store user details
+     * @param id      User ID
+     * @param session HttpSession to store user details
      * @return Redirect to user management page
      * @throws IOException              If an error occurs during user update
      * @throws IllegalArgumentException If the user ID is invalid or not found
@@ -904,15 +943,16 @@ public class UserController {
     @PostMapping("/users/edit/{id}/details-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsSubmit(@PathVariable String id,
-                                    HttpSession session) throws IOException {
+            HttpSession session) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
         if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
         }
         // Update user details
-        //TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        // TODO audit log needed
+        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(),
+                editUserDetailsForm.getLastName());
         session.removeAttribute("editUserDetailsForm");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
@@ -923,8 +963,8 @@ public class UserController {
     @GetMapping("/users/edit/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id,
-                               @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                               Model model, HttpSession session, Authentication authentication) {
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
+            Model model, HttpSession session, Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -936,7 +976,8 @@ public class UserController {
                 .toList();
 
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
         if (Objects.isNull(selectedAppRole)) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
@@ -1026,10 +1067,12 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
         if (Objects.isNull(editUserAllSelectedRoles)) {
             editUserAllSelectedRoles = new HashMap<>();
         }
@@ -1132,8 +1175,8 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswer(@PathVariable String id,
-                                           @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                                           Model model, HttpSession session, Authentication authentication) {
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
+            Model model, HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         @SuppressWarnings("unchecked")
@@ -1208,7 +1251,7 @@ public class UserController {
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
-                                                 Authentication authentication) {
+            Authentication authentication) {
         UUID uuid = UUID.fromString(id);
 
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
@@ -1367,7 +1410,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/offices-check-answer")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOfficesCheck(@PathVariable String id,
-                                    Model model, HttpSession session) {
+            Model model, HttpSession session) {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
             return "redirect:/admin/users/edit/" + id + "/offices";
@@ -1400,8 +1443,8 @@ public class UserController {
     @PostMapping("/users/edit/{id}/offices-check-answer")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOfficesSubmit(@PathVariable String id,
-                                    Authentication authentication,
-                                    HttpSession session) throws IOException {
+            Authentication authentication,
+            HttpSession session) throws IOException {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
             return "redirect:/admin/users/edit/" + id + "/offices";
@@ -1475,7 +1518,7 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
-                                          HttpSession session, Authentication authentication) {
+            HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -1538,7 +1581,8 @@ public class UserController {
                     .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
-            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles, currentUserDto.getUserId());
+            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles,
+                    currentUserDto.getUserId());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto != null ? userProfileDto.getId() : null,
@@ -1604,7 +1648,8 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
@@ -1716,7 +1761,8 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles, currentUserDto.getUserId());
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+                        currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
@@ -2016,6 +2062,458 @@ public class UserController {
     }
 
     /**
+     * Display firm reassignment page for external users
+     * Only available to users with EDIT_USER_FIRM permission (External User Admins)
+     */
+    @GetMapping("/users/reassign-firm/{id}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showFirmReassignmentPage(@PathVariable String id,
+            @RequestParam(value = "selectedFirmId", required = false) String selectedFirmId,
+            @RequestParam(value = "selectedFirmName", required = false) String selectedFirmName,
+            @RequestParam(value = "reason", required = false) String reason,
+            Model model) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            // Create form and populate if coming from "Change" link
+            FirmReassignmentForm form = new FirmReassignmentForm();
+            if (selectedFirmId != null && selectedFirmName != null) {
+                form.setSelectedFirmId(UUID.fromString(selectedFirmId));
+                form.setFirmSearch(selectedFirmName);
+            }
+
+            // Add user and form to the model
+            model.addAttribute("user", user);
+            model.addAttribute("firmReassignmentForm", form);
+
+            // Store reason in session for later use if provided
+            if (reason != null && !reason.trim().isEmpty()) {
+                model.addAttribute("preservedReason", reason);
+            }
+
+            return "reassign-firm/select-firm";
+
+        } catch (Exception e) {
+            log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Handle firm selection step of reassignment process
+     */
+    @PostMapping("/users/reassign-firm/{id}/select-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processFirmSelection(@PathVariable String id,
+            @Valid @ModelAttribute("firmReassignmentForm") FirmReassignmentForm form,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            // Check for validation errors (firm selection)
+            if (bindingResult.hasFieldErrors("firmSearch") || bindingResult.hasFieldErrors("selectedFirmId")) {
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            // Validate that a firm was actually selected
+            if (form.getSelectedFirmId() == null) {
+                model.addAttribute("errorMessage", "Please select a firm from the search results");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            // Get firm details for the reason page
+            FirmDto selectedFirm = firmService.getFirm(form.getSelectedFirmId());
+
+            if (selectedFirm == null) {
+                model.addAttribute("errorMessage", "Selected firm not found");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            // Store firm details in redirect attributes to pass to reason page
+            redirectAttributes.addAttribute("selectedFirmId", form.getSelectedFirmId());
+            redirectAttributes.addAttribute("selectedFirmName", selectedFirm.getName());
+
+            return "redirect:/admin/users/reassign-firm/" + id + "/reason";
+
+        } catch (Exception e) {
+            log.error("Error processing firm selection for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while processing your selection");
+            // Try to add user to model if available
+            userService.getUserProfileById(id).ifPresent(u -> model.addAttribute("user", u));
+            return "reassign-firm/select-firm";
+        }
+    }
+
+    /**
+     * Display reason page for firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showReassignmentReasonPage(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam(value = "reason", required = false) String existingReason,
+            Model model) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            // Create form and populate with existing reason if provided
+            ReassignmentReasonForm reasonForm = new ReassignmentReasonForm();
+            if (existingReason != null && !existingReason.trim().isEmpty()) {
+                reasonForm.setReason(existingReason);
+            }
+
+            // Add user and form to the model
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reassignmentReasonForm", reasonForm);
+
+            return "reassign-firm/reason";
+
+        } catch (Exception e) {
+            log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Process reason submission and redirect to check answers
+     */
+    @PostMapping("/users/reassign-firm/{id}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processReasonSubmission(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("firmSearch") String selectedFirmName,
+            @Valid @ModelAttribute("reassignmentReasonForm") ReassignmentReasonForm reasonForm,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            // Check for validation errors (only reason field should be validated here)
+            if (bindingResult.hasFieldErrors("reason")) {
+                return "reassign-firm/reason";
+            }
+
+            // Validate reason is not empty
+            if (reasonForm.getReason() == null || reasonForm.getReason().trim().isEmpty()) {
+                model.addAttribute("errorMessage", "Please provide a reason for the reassignment");
+                return "reassign-firm/reason";
+            }
+
+            // Redirect to check answers page with all parameters
+            redirectAttributes.addAttribute("selectedFirmId", selectedFirmId);
+            redirectAttributes.addAttribute("selectedFirmName", selectedFirmName);
+            redirectAttributes.addAttribute("reason", reasonForm.getReason().trim());
+
+            return "redirect:/admin/users/reassign-firm/" + id + "/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error processing reason for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while processing your reason");
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            return "reassign-user-firm-reason";
+        }
+    }
+
+    /**
+     * Display check answers page for firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showCheckAnswersPage(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam("reason") String reason,
+            Model model) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            // Add all data to the model
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+
+            return "reassign-firm/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Process final confirmation and perform firm reassignment
+     */
+    @PostMapping("/users/reassign-firm/{id}/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processFirmReassignment(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam("reason") String reason,
+            Model model,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        try {
+            // Get the user to be reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Verify this is an external user
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                model.addAttribute("user", user);
+                model.addAttribute("selectedFirmId", selectedFirmId);
+                model.addAttribute("selectedFirmName", selectedFirmName);
+                model.addAttribute("reason", reason);
+                return "reassign-firm/check-answers";
+            }
+
+            // Validate all required parameters are present
+            if (reason == null || reason.trim().isEmpty()) {
+                model.addAttribute("errorMessage", "Please provide a reason for the reassignment");
+                model.addAttribute("user", user);
+                model.addAttribute("selectedFirmId", selectedFirmId);
+                model.addAttribute("selectedFirmName", selectedFirmName);
+                model.addAttribute("reason", reason);
+                return "reassign-firm/check-answers";
+            }
+
+            // Get current user info for audit logging
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+
+            // Perform the reassignment
+            userService.reassignUserFirm(
+                    id,
+                    UUID.fromString(selectedFirmId),
+                    reason.trim(),
+                    currentEntraUser.getId(),
+                    currentUser.getName());
+
+            // Redirect to confirmation page
+            return "redirect:/admin/users/reassign-firm/" + id + "/confirmation";
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid reassignment request for user {}: {}", id, e.getMessage());
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+
+        } catch (IllegalStateException e) {
+            log.warn("Invalid state for reassignment of user {}: {}", id, e.getMessage());
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while reassigning the user");
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+        }
+    }
+
+    /**
+     * Display confirmation page after successful firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showConfirmationPage(@PathVariable String id, Model model) {
+        try {
+            // Get the user that was reassigned
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for confirmation page: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            // Add user to the model
+            model.addAttribute("user", user);
+
+            return "reassign-firm/confirmation";
+
+        } catch (Exception e) {
+            log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Handle firm reassignment for external users (Legacy API endpoint - kept for
+     * backward compatibility)
+     * Only available to users with EDIT_USER_FIRM permission (External User Admins)
+     */
+    @PostMapping("/users/reassign-firm/{id}/api")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public ResponseEntity<?> reassignUserFirmApi(@PathVariable String id,
+            @RequestParam("newFirmId") String newFirmId,
+            @RequestParam("reason") String reason,
+            Authentication authentication) {
+        try {
+            // Get current user info for audit logging
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+
+            // Validate inputs
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Reason for reassignment is required"));
+            }
+
+            if (newFirmId == null || newFirmId.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "New firm selection is required"));
+            }
+
+            // Perform the reassignment
+            userService.reassignUserFirm(
+                    id,
+                    UUID.fromString(newFirmId),
+                    reason.trim(),
+                    currentEntraUser.getId(),
+                    currentUser.getName());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User successfully reassigned to new firm"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid reassignment request for user {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", e.getMessage()));
+
+        } catch (IllegalStateException e) {
+            log.warn("Invalid state for reassignment of user {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
+        }
+    }
+
+    /**
      * Handle authorization exceptions when user lacks permissions to access
      * specific users
      */
@@ -2026,7 +2524,8 @@ public class UserController {
         String uri = request != null ? request.getRequestURI() : "unknown";
         String method = request != null ? request.getMethod() : "unknown";
         String referer = request != null ? request.getHeader("Referer") : null;
-        log.warn("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
+        log.warn(
+                "Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
                 ex.getMessage(), method, uri, referer, requestedPath);
         return new RedirectView("/not-authorised");
     }

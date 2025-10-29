@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
@@ -68,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -91,7 +93,9 @@ public class UserService {
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
+    private final EventService eventService;
     private final FirmService firmService;
+    private final FirmRepository firmRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -100,7 +104,8 @@ public class UserService {
             OfficeRepository officeRepository,
             LaaAppsConfig.LaaApplicationsList laaApplicationsList,
             TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
+            RoleChangeNotificationService roleChangeNotificationService,
+            EventService eventService, FirmService firmService, FirmRepository firmRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -111,7 +116,9 @@ public class UserService {
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
+        this.eventService = eventService;
         this.firmService = firmService;
+        this.firmRepository = firmRepository;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -1163,6 +1170,88 @@ public class UserService {
         } else {
             logger.warn("User profile with id {} not found. Could not remove app role.", userProfileId);
         }
+    }
+
+    /**
+     * Reassign a user to a different firm
+     * This method handles the complete reassignment process including role cleanup and audit logging
+     * 
+     * @param userProfileId The ID of the user profile to reassign
+     * @param newFirmId The ID of the firm to reassign the user to
+     * @param reason The reason for the reassignment
+     * @param modifierUserId The ID of the user performing the reassignment
+     * @param modifierUserName The name of the user performing the reassignment
+     * @throws IllegalArgumentException if the user profile or firm is not found
+     * @throws IllegalStateException if the user is internal or already assigned to the firm
+     */
+    @Transactional
+    public void reassignUserFirm(String userProfileId, UUID newFirmId, String reason, 
+                                UUID modifierUserId, String modifierUserName) {
+        // Validate and get user profile
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalUserProfile.isEmpty()) {
+            throw new IllegalArgumentException("User profile with id " + userProfileId + " not found");
+        }
+        
+        UserProfile userProfile = optionalUserProfile.get();
+        
+        // Validate user is external
+        if (userProfile.getUserType() == UserType.INTERNAL) {
+            throw new IllegalStateException("Cannot reassign internal users between firms");
+        }
+        
+        // Validate new firm exists
+        FirmDto newFirm;
+        try {
+            newFirm = firmService.getFirm(newFirmId);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Firm with id " + newFirmId + " not found");
+        }
+        
+        // Get current firm information for audit logging
+        final String previousFirmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "No Firm";
+        
+        // Check if user is already assigned to this firm
+        if (userProfile.getFirm() != null && userProfile.getFirm().getId().equals(newFirmId)) {
+            throw new IllegalStateException("User is already assigned to firm: " + newFirm.getName());
+        }
+        
+        // Get the new firm entity for assignment
+        Optional<Firm> optionalNewFirmEntity = firmRepository.findById(newFirmId);
+        if (optionalNewFirmEntity.isEmpty()) {
+            throw new IllegalArgumentException("Firm entity with id " + newFirmId + " not found");
+        }
+        
+        Firm newFirmEntity = optionalNewFirmEntity.get();
+        
+        // Clear all current roles and offices (as per requirement)
+        userProfile.setAppRoles(new HashSet<>());
+        userProfile.setOffices(new HashSet<>());
+        
+        // Assign to new firm
+        userProfile.setFirm(newFirmEntity);
+        
+        // Save the changes
+        userProfileRepository.saveAndFlush(userProfile);
+        
+        // Create audit event
+        String targetUserDisplayName = userProfile.getEntraUser().getFirstName() + " " + userProfile.getEntraUser().getLastName();
+        UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
+            modifierUserId, 
+            modifierUserName,
+            userProfileId,
+            targetUserDisplayName,
+            previousFirmName,
+            newFirm.getName(),
+            reason
+        );
+        
+        // Log the audit event
+        eventService.logEvent(event);
+        
+        logger.info("User '{}' (ID: {}) successfully reassigned from firm '{}' to firm '{}' by user '{}'. Reason: {}", 
+            targetUserDisplayName, userProfileId, previousFirmName, newFirm.getName(), 
+            modifierUserName, reason);
     }
 
     public Map<String, AppRoleDto> getRolesByIdIn(Collection<UUID> roleIds) {

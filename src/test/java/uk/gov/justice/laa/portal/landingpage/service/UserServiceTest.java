@@ -59,6 +59,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -121,7 +122,11 @@ class UserServiceTest {
     @Mock
     private RoleChangeNotificationService mockRoleChangeNotificationService;
     @Mock
-    private FirmService firmService;
+    private EventService mockEventService;
+    @Mock
+    private FirmService mockFirmService;
+    @Mock
+    private FirmRepository mockFirmRepository;
 
     @BeforeEach
     void setUp() {
@@ -136,7 +141,9 @@ class UserServiceTest {
                 techServicesClient,
                 mockUserProfileRepository,
                 mockRoleChangeNotificationService,
-                firmService);
+                mockEventService,
+                mockFirmService,
+                mockFirmRepository);
     }
 
     @Test
@@ -3825,6 +3832,184 @@ class UserServiceTest {
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("Attempt to remove last Global Admin, from user profile");
+        }
+    }
+
+    @Nested
+    class ReassignUserFirmTests {
+        
+        @Test
+        void reassignUserFirm_success() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID oldFirmId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            final UUID modifierUserId = UUID.randomUUID();
+            final String modifierUserName = "Test Admin";
+            final String reason = "Business restructuring";
+            
+            // Create old firm
+            Firm oldFirm = Firm.builder()
+                    .id(oldFirmId)
+                    .name("Old Firm")
+                    .build();
+            
+            // Create new firm
+            Firm newFirm = Firm.builder()
+                    .id(newFirmId)
+                    .name("New Firm") 
+                    .build();
+            
+            // Create user profile
+            EntraUser entraUser = EntraUser.builder()
+                    .firstName("John")
+                    .lastName("Doe")
+                    .build();
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(oldFirm)
+                    .entraUser(entraUser)
+                    .appRoles(new HashSet<>())
+                    .offices(new HashSet<>())
+                    .build();
+            
+            FirmDto newFirmDto = FirmDto.builder()
+                    .id(newFirmId)
+                    .name("New Firm")
+                    .build();
+                    
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(newFirmId)).thenReturn(newFirmDto);
+            when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+            when(mockUserProfileRepository.saveAndFlush(any(UserProfile.class))).thenReturn(userProfile);
+            
+            // When
+            userService.reassignUserFirm(
+                userProfileId.toString(),
+                newFirmId,
+                reason,
+                modifierUserId,
+                modifierUserName
+            );
+            
+            // Then
+            verify(mockUserProfileRepository).findById(userProfileId);
+            verify(mockFirmService).getFirm(newFirmId);
+            verify(mockFirmRepository).findById(newFirmId);
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+            verify(mockEventService).logEvent(any());
+            
+            // Verify user profile was updated
+            assertThat(userProfile.getFirm()).isEqualTo(newFirm);
+            assertThat(userProfile.getAppRoles()).isEmpty();
+            assertThat(userProfile.getOffices()).isEmpty();
+        }
+        
+        @Test
+        void reassignUserFirm_userProfileNotFound_throwsException() {
+            // Given
+            String userProfileId = UUID.randomUUID().toString();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            when(mockUserProfileRepository.findById(any())).thenReturn(Optional.empty());
+            
+            // When & Then
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.reassignUserFirm(userProfileId, newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("User profile with id " + userProfileId + " not found");
+        }
+        
+        @Test
+        void reassignUserFirm_internalUser_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.INTERNAL) // Internal user - should not be reassignable
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            
+            // When & Then
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("Cannot reassign internal users between firms");
+        }
+        
+        @Test
+        void reassignUserFirm_firmNotFound_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID newFirmId = UUID.randomUUID();
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(newFirmId)).thenThrow(new RuntimeException("Firm not found"));
+            
+            // When & Then
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), newFirmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("Firm with id " + newFirmId + " not found");
+        }
+        
+        @Test 
+        void reassignUserFirm_userAlreadyAssignedToFirm_throwsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID(); // Same firm ID
+            UUID modifierUserId = UUID.randomUUID();
+            String modifierUserName = "Test Admin";
+            String reason = "Business restructuring";
+            
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .build();
+            
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(firm) // Already assigned to this firm
+                    .build();
+                    
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .build();
+                    
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockFirmService.getFirm(firmId)).thenReturn(firmDto);
+            
+            // When & Then
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userService.reassignUserFirm(userProfileId.toString(), firmId, reason, modifierUserId, modifierUserName)
+            );
+            
+            assertThat(exception.getMessage()).contains("User is already assigned to firm: Test Firm");
         }
     }
 
