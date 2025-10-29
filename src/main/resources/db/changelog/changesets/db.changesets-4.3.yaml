@@ -1,15 +1,2 @@
 databaseChangeLog:
-  - changeSet:
-      id: 1761735456038-1
-      author: majid.elmi
-      comment: "INSERT new application Civil Claim for Payment with roles"
-      changes:
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO app (id, entra_app_id, name, security_group_name, security_group_oid) VALUES (gen_random_uuid()::uuid, 'a958531d-9833-45b6-ab2d-14152a6ba4d3', 'Civil Claim for Payment', 'APPREG-User-Access-LAAD-Claim-for-Payment', '129bb71f-8901-4c32-b730-b184f6d94607');"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, description, name, user_type_restriction, ccms_code) VALUES ((SELECT id from app WHERE name = 'Civil Claim for Payment'), gen_random_uuid()::uuid, 'Civil Claim for Payment - External User Role', 'Civil Claim for Payment - External', '{EXTERNAL}', null);"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO app_role (app_id, id, description, name, user_type_restriction, ccms_code) VALUES ((SELECT id from app WHERE name = 'Civil Claim for Payment'), gen_random_uuid()::uuid, 'Civil Claim for Payment - Internal User Role', 'Civil Claim for Payment - Internal', '{INTERNAL}', null);"
+  - 

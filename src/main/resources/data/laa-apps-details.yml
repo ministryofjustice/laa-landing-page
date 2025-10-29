@@ -62,3 +62,10 @@ laa-apps:
       url: ${app.civil.decide.url}
       laaApplicationDetails: ${app.civil.decide.details}
       ordinal: 7
+    - name: ${app.civil.claim.for.payment.name}
+      title: Civil Claim for Payment
+      description: >-
+        Civil Claim for Payment
+      url: ${app.civil.claim.for.payment.url}
+      laaApplicationDetails: ${app.civil.apply.details}
+      ordinal: 8
