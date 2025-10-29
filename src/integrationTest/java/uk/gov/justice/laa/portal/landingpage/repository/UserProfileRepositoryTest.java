@@ -15,12 +15,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 
 @DataJpaTest
 public class UserProfileRepositoryTest extends BaseRepositoryTest {
@@ -232,6 +236,68 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         List<UUID> result = repository.findByUserTypes(UserType.INTERNAL);
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    public void testFindBySearchParams_SelectedParentFirmReturnsParentAndChildren() {
+        Firm parent = buildFirm("Parent Firm", "PARENT");
+        Firm child = buildFirm("Child Firm", "CHILD");
+        child.setParentFirm(parent);
+        parent.setChildFirms(Set.of(child));
+        firmRepository.saveAllAndFlush(List.of(parent, child));
+
+        EntraUser parentUser = buildEntraUser(generateEntraId(), "parent.user@example.com", "Parent", "User");
+        entraUserRepository.saveAndFlush(parentUser);
+        UserProfile parentProfile = buildLaaUserProfile(parentUser, UserType.EXTERNAL);
+        parentProfile.setFirm(parent);
+        parentUser.getUserProfiles().add(parentProfile);
+
+        EntraUser childUser = buildEntraUser(generateEntraId(), "child.user@example.com", "Child", "User");
+        entraUserRepository.saveAndFlush(childUser);
+        UserProfile childProfile = buildLaaUserProfile(childUser, UserType.EXTERNAL);
+        childProfile.setFirm(child);
+        childUser.getUserProfiles().add(childProfile);
+
+        repository.saveAllAndFlush(List.of(parentProfile, childProfile));
+
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
+        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
+
+        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).extracting(UserProfile::getId)
+                .containsExactlyInAnyOrder(parentProfile.getId(), childProfile.getId());
+    }
+
+    @Test
+    public void testFindBySearchParams_SelectedChildFirmReturnsOnlyChild() {
+        Firm parent = buildFirm("Parent F2", "P2");
+        Firm child = buildFirm("Child F2", "C2");
+        child.setParentFirm(parent);
+        parent.setChildFirms(Set.of(child));
+        firmRepository.saveAllAndFlush(List.of(parent, child));
+
+        EntraUser parentUser = buildEntraUser(generateEntraId(), "pu2@example.com", "P2", "U");
+        entraUserRepository.saveAndFlush(parentUser);
+        UserProfile parentProfile = buildLaaUserProfile(parentUser, UserType.EXTERNAL);
+        parentProfile.setFirm(parent);
+        parentUser.getUserProfiles().add(parentProfile);
+
+        EntraUser childUser = buildEntraUser(generateEntraId(), "cu2@example.com", "C2", "U");
+        entraUserRepository.saveAndFlush(childUser);
+        UserProfile childProfile = buildLaaUserProfile(childUser, UserType.EXTERNAL);
+        childProfile.setFirm(child);
+        childUser.getUserProfiles().add(childProfile);
+
+        repository.saveAllAndFlush(List.of(parentProfile, childProfile));
+
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(child.getId()).build();
+        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
+
+        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).extracting(UserProfile::getId)
+                .containsExactlyInAnyOrder(childProfile.getId());
     }
 
     @Test

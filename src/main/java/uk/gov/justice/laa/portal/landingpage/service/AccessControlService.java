@@ -131,9 +131,29 @@ public class AccessControlService {
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId).toList();
+        java.util.Set<UUID> accessibleFirmIds = authenticatedUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getFirm)
+                .filter(java.util.Objects::nonNull)
+                .flatMap(firm -> {
+                    java.util.stream.Stream<UUID> selfId = java.util.stream.Stream.of(firm.getId());
+                    if (firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
+                        return java.util.stream.Stream.concat(
+                                selfId,
+                                firm.getChildFirms().stream().map(uk.gov.justice.laa.portal.landingpage.entity.Firm::getId)
+                        );
+                    }
+                    return selfId;
+                })
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.List<FirmDto> authUserFirms = firmService.getUserActiveAllFirms(authenticatedUser);
+        if (authUserFirms != null) {
+            accessibleFirmIds.addAll(authUserFirms.stream().map(FirmDto::getId).collect(java.util.stream.Collectors.toSet()));
+        }
+
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
-        return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
+        return userFirms.stream().map(FirmDto::getId).anyMatch(accessibleFirmIds::contains);
     }
 
     // IDEs may make this appear unused, but it's actually used in the @PreAuthorize annotation in UserController.
