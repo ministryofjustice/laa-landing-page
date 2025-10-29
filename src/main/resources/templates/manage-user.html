@@ -139,6 +139,25 @@
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Firm name
+                                        </dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Multi-firm access
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                            <span th:text="${user.entraUser.multiFirmUser} ? 'Yes' : 'No'"></span>
+                                            <a th:if="${user.entraUser.multiFirmUser}"
+                                               class="govuk-link" style="white-space: nowrap;"
+                                               th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
