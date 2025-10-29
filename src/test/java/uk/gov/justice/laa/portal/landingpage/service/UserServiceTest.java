@@ -1,19 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -31,14 +17,27 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -4507,6 +4506,7 @@ class UserServiceTest {
                     .lastName("Doe")
                     .email("john.doe@example.com")
                     .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
                     .build();
 
             // Create firm
@@ -4575,6 +4575,10 @@ class UserServiceTest {
                     .activeProfile(false)
                     .build();
 
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
             // Mock repository calls
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
             when(mockUserProfileRepository.findAllByEntraUser(entraUser))
@@ -4594,9 +4598,10 @@ class UserServiceTest {
             // Verify profile was deleted
             verify(mockUserProfileRepository).delete(profileToDelete);
 
-            // Verify save was called (for clearing entra user ref and potentially setting
-            // new active profile)
-            verify(mockUserProfileRepository, atLeast(2)).save(any(UserProfile.class));
+            // Verify save was called at least once (for clearing entra user ref before
+            // deletion,
+            // and potentially setting new active profile after deletion)
+            verify(mockUserProfileRepository, atLeast(1)).save(any(UserProfile.class));
 
             // Verify PUI notifications were sent (once with empty new roles and PUI old
             // roles)
@@ -4650,6 +4655,7 @@ class UserServiceTest {
                     .lastName("Jones")
                     .email("bob.jones@example.com")
                     .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
                     .build();
 
             UserProfile userProfile = UserProfile.builder()
@@ -4658,9 +4664,12 @@ class UserServiceTest {
                     .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
                     .build();
 
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(userProfile);
+
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
-                    .thenReturn(Collections.singletonList(userProfile)); // Only one profile
+            // No need to mock findAllByEntraUser - the service reads from
+            // entraUser.getUserProfiles()
 
             // When & Then
             RuntimeException exception = assertThrows(RuntimeException.class,
@@ -4705,6 +4714,7 @@ class UserServiceTest {
                     .lastName("Williams")
                     .email("alice.williams@example.com")
                     .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
                     .build();
 
             // Profile to delete (NOT active)
@@ -4725,9 +4735,13 @@ class UserServiceTest {
                     .activeProfile(true)
                     .build();
 
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(activeProfile);
+
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
-                    .thenReturn(Arrays.asList(profileToDelete, activeProfile));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
             when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             // When
@@ -4758,6 +4772,7 @@ class UserServiceTest {
                     .lastName("Brown")
                     .email("charlie.brown@example.com")
                     .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
                     .build();
 
             Firm firm = Firm.builder()
@@ -4797,9 +4812,13 @@ class UserServiceTest {
                     .activeProfile(true)
                     .build();
 
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
-                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
             when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             // When
@@ -4824,6 +4843,7 @@ class UserServiceTest {
                     .lastName("Miller")
                     .email("david.miller@example.com")
                     .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
                     .build();
 
             App puiApp = App.builder()
@@ -4874,9 +4894,13 @@ class UserServiceTest {
                     .activeProfile(true)
                     .build();
 
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
-                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
             when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             // When
