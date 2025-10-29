@@ -254,6 +254,9 @@ public class MultiFirmUserControllerTest {
         MultiFirmUserForm form = MultiFirmUserForm.builder().build();
         BindingResult bindingResult = mockBindingResult(true);
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(Firm.builder().build()).build());
+
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
@@ -1362,38 +1365,9 @@ public class MultiFirmUserControllerTest {
         // Assert
         assertThat(result.getUrl()).isEqualTo("/error");
     }
-}
-
-// Additional tests appended for firm selection flow and updated back link behavior
-
-@ExtendWith(MockitoExtension.class)
-class MultiFirmUserControllerFirmSelectionTests {
-
-    private MultiFirmUserController controller;
-
-    @Mock private UserService userService;
-    @Mock private LoginService loginService;
-    @Mock private AppRoleService appRoleService;
-    @Mock private RoleAssignmentService roleAssignmentService;
-    @Mock private OfficeService officeService;
-    @Mock private EventService eventService;
-    @Mock private FirmService firmService;
-    @Mock private Authentication authentication;
-
-    private HttpSession session;
-    private Model model;
-
-    @BeforeEach
-    void init() {
-        ModelMapper mapper = new ModelMapper();
-        model = new ExtendedModelMap();
-        session = new MockHttpSession();
-        controller = new MultiFirmUserController(userService, loginService, appRoleService,
-                roleAssignmentService, officeService, eventService, mapper, firmService);
-    }
 
     @Test
-    void selectDelegateFirm_includesParentAndChildren_whenNoQuery() {
+    void shouldIncludeParentAndChildrenWhenNoQuery() {
         Firm child1 = Firm.builder().id(UUID.randomUUID()).name("Child One").code("1001").build();
         Firm child2 = Firm.builder().id(UUID.randomUUID()).name("Child Two").code("1002").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child1, child2)).build();
@@ -1409,7 +1383,7 @@ class MultiFirmUserControllerFirmSelectionTests {
     }
 
     @Test
-    void selectDelegateFirm_filtersParent_whenQueryDoesNotMatchParent() {
+    void shouldHideParentRowWhenQueryDoesNotMatchParent() {
         Firm child = Firm.builder().id(UUID.randomUUID()).name("Alpha Firm").code("A1").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
@@ -1423,7 +1397,7 @@ class MultiFirmUserControllerFirmSelectionTests {
     }
 
     @Test
-    void selectDelegateFirmChoose_storesSelection_andRedirects() {
+    void shouldStoreSelectionViaChooseAndRedirect() {
         Firm child = Firm.builder().id(UUID.randomUUID()).name("Child One").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
@@ -1435,27 +1409,23 @@ class MultiFirmUserControllerFirmSelectionTests {
     }
 
     @Test
-    void selectDelegateFirmPost_storesSelection_forParentOrChild_andRejectsInvalid() {
+    void shouldStoreSelectionForParentOrChildAndRejectInvalid() {
         Firm child = Firm.builder().id(UUID.randomUUID()).name("Child One").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
 
-        // Child selection
         String res1 = controller.selectDelegateFirmPost(child.getId().toString(), session, authentication);
         assertThat(res1).isEqualTo("redirect:/admin/multi-firm/user/add/profile");
 
-        // Parent selection
         String res2 = controller.selectDelegateFirmPost(parent.getId().toString(), session, authentication);
         assertThat(res2).isEqualTo("redirect:/admin/multi-firm/user/add/profile");
 
-        // Invalid selection
         String res3 = controller.selectDelegateFirmPost(UUID.randomUUID().toString(), session, authentication);
         assertThat(res3).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/firm");
     }
 
     @Test
-    void addUserProfile_setsBackUrl_toFirmSelect_whenParentHasChildren() {
-        // Avoid redirect by priming a selected firm
+    void shouldSetBackUrlToFirmSelectWhenParentHasChildren() {
         UUID selected = UUID.randomUUID();
         session.setAttribute("delegateTargetFirmId", selected.toString());
 
@@ -1469,7 +1439,7 @@ class MultiFirmUserControllerFirmSelectionTests {
     }
 
     @Test
-    void addUserProfile_setsBackUrl_toUsers_whenNoChildren() {
+    void shouldSetBackUrlToUsersWhenNoChildren() {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
                 .firm(Firm.builder().build()).build());
 
@@ -1479,7 +1449,7 @@ class MultiFirmUserControllerFirmSelectionTests {
     }
 
     @Test
-    void addUserProfilePost_errors_whenSelectedFirmAlreadyAssigned() {
+    void shouldErrorWhenSelectedFirmAlreadyAssigned() {
         MultiFirmUserForm form = MultiFirmUserForm.builder().email("user@example.com").build();
         BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
