@@ -12,11 +12,8 @@ public class ConvertToMultiFirmAuditEvent extends AuditEvent {
     private final String convertedUserEmail;
     private final String convertedUserName;
 
-    private static final String CONVERT_TO_MULTI_FIRM_TEMPLATE = """
-            User converted to multi-firm by %s (ID: %s). Converted user: %s (email: %s, converted user id %s)
-            """;
-
     public ConvertToMultiFirmAuditEvent(CurrentUserDto currentUserDto, EntraUserDto convertedUser) {
+        super();
         this.userId = currentUserDto.getUserId();
         this.userName = currentUserDto.getName();
         this.convertedUserId = UUID.fromString(convertedUser.getId());
@@ -31,11 +28,7 @@ public class ConvertToMultiFirmAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format(CONVERT_TO_MULTI_FIRM_TEMPLATE,
-                userName,
-                userId,
-                convertedUserName,
-                convertedUserEmail,
-                convertedUserId);
+        return String.format("User converted to multi-firm by %s, converted user id %s, email %s, name %s",
+                userName, convertedUserId, convertedUserEmail, convertedUserName);
     }
 }
