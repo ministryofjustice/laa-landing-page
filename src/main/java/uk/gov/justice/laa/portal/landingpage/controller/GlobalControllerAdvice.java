@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.Objects;
-
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -10,13 +9,14 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.view.RedirectView;
-
-import jakarta.servlet.http.HttpServletRequest;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+
+import java.util.Objects;
 
 @ControllerAdvice
 public class GlobalControllerAdvice {
@@ -77,6 +77,11 @@ public class GlobalControllerAdvice {
             return firm;
         }
         return null;
+    }
+
+    @ModelAttribute("currentUser")
+    public CurrentUserDto getCurrentUserProfile(Authentication authentication) {
+        return loginService.getCurrentUser(authentication);
     }
 
     /**
