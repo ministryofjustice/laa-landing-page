@@ -31,4 +31,17 @@ public class AppRoleService {
         return appRoles.stream().map((element) -> modelMapper.map(element, AppRoleDto.class)).toList();
     }
 
+    public List<AppRoleDto> getByAppIds(List<String> appIds, String userType) {
+
+        List<UUID> appRoleIds = appIds.stream().map(UUID::fromString).toList();
+
+        List<AppRole> appRoles = appRoleRepository.findByApp_IdInAndUserTypeRestriction(appRoleIds, userType);
+
+        if (appRoles.size() != appIds.size()) {
+            throw new RuntimeException("Failed to load all app roles by app if from request: " + appIds);
+        }
+
+        return appRoles.stream().map((element) -> modelMapper.map(element, AppRoleDto.class)).toList();
+    }
+
 }
