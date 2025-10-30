@@ -95,8 +95,8 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
+    private final ByPassScreenService byPassRolesScreen;
 
-    private final AppRoleService appRoleService;
 
     @Value("${feature.flag.enable.resend.verification.code}")
     private boolean enableResendVerificationCode;
@@ -1517,16 +1517,10 @@ public class UserController {
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
-        //User user = (User) modelFromSession.getAttribute("user")
-        //TODO code here
+        UserProfileDto user = (UserProfileDto) model.getAttribute("user");
+        //byPass roles screen
         if (!selectedApps.isEmpty()){
-                    Set<String> targetNames = Set.of("CrimeApplyAccess", "CrimeFormSubmitAccess", "CivilApplyAccess");
-
-            List<AppRoleDto> listAppsResult = appRoleService.getByAppIds(selectedApps, );
-
-            UUID uuid = UUID.fromString(id);
-            //return "redirect:/admin/users/grant-access/" + uuid + "/offices";
-
+            byPassRolesScreen.byPassRolesScreen(authentication, id, selectedApps, user.getUserType());
 
         }
 

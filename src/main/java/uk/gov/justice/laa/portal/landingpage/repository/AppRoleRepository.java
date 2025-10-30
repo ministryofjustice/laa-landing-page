@@ -33,7 +33,8 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
 
     List<AppRole> findAllByIdIn(Collection<UUID> roleIds);
 
-    List<AppRole> findByApp_IdInAndUserTypeRestriction(Collection<UUID> appIds,String userType);
+    @Query(value = "SELECT * FROM app_role ar WHERE ar.app_id in (:appIds ) and :userType = ANY(ar.user_type_restriction)", nativeQuery = true)
+    List<AppRole> findByAppIdIUserTypeRestriction(@Param("appIds")Collection<UUID> appId, @Param("userType") String userType);
 
 
 }
