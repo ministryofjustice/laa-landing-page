@@ -95,12 +95,14 @@ public class GlobalControllerAdvice {
 
     @ModelAttribute("isInternal")
     public boolean isInternal(Authentication authentication) {
-        return loginService.getCurrentProfile(authentication).getUserType() == UserType.INTERNAL;
+        UserProfile up = loginService.getCurrentProfile(authentication);
+        return up != null && up.getUserType() == UserType.INTERNAL;
     }
 
     @ModelAttribute("isExternal")
     public boolean isExternal(Authentication authentication) {
-        return loginService.getCurrentProfile(authentication).getUserType() == UserType.EXTERNAL;
+        UserProfile up = loginService.getCurrentProfile(authentication);
+        return up != null && up.getUserType() == UserType.EXTERNAL;
     }
 
     /**
