@@ -84,16 +84,16 @@
                 <!-- <div id="event-name-hint" class="govuk-hint">
                     Last logged in <span th:text="${user.lastLoggedIn}"></span>
                 </div> -->
-                
+
                 <!-- Multi-firm user notification -->
                 <div th:if="${user.entraUser.multiFirmUser}" style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
                     <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
                     <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
-                        This user is set up as a multi-firm user. 
+                        This user is set up as a multi-firm user.
                         <a class="govuk-link" href="#" th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
                     </p>
                 </div>
-                
+
                 <div class="govuk-tabs" data-module="govuk-tabs">
                     <h2 class="govuk-tabs__title">
                         Contents
@@ -169,6 +169,25 @@
                                                 th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
                                                 Convert to multi-firm
                                             </a>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Firm name
+                                        </dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Multi-firm access
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                            <span th:text="${user.entraUser.multiFirmUser} ? 'Yes' : 'No'"></span>
+                                            <a th:if="${user.entraUser.multiFirmUser}"
+                                               class="govuk-link" style="white-space: nowrap;"
+                                               th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
                                         </dd>
                                     </div>
                                 </dl>

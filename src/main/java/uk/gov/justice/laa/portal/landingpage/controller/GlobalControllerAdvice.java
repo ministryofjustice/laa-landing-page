@@ -23,6 +23,8 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 public class GlobalControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
+    @Value("${feature.flag.enable.multi.firm.user}")
+    private boolean enableMultiFirmUser;
     private final LoginService loginService;
 
     @Value("${feature.flag.enable.multi.firm.user}")
@@ -88,6 +90,11 @@ public class GlobalControllerAdvice {
             return firm;
         }
         return null;
+    }
+
+    @ModelAttribute("enableMultiFirmUser")
+    public boolean getMultiFirmEnabledFlag() {
+        return enableMultiFirmUser;
     }
 
     /**

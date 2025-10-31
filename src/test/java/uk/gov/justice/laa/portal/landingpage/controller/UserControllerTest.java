@@ -531,6 +531,15 @@ class UserControllerTest {
     @Test
     void manageUser_shouldAddUserAndLastLoggedInToModelAndReturnManageUserView() {
         // Arrange
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         String userId = "user42";
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
@@ -548,15 +557,17 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
         verify(userService).getUserProfileById(userId);
     }
 
@@ -591,6 +602,17 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
@@ -599,7 +621,7 @@ class UserControllerTest {
             userListFilters.put(filterKey, nonDefaultUserListFilters.get(filterKey));
             when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
 
-            String view = userController.manageUser(userId, model, session);
+            String view = userController.manageUser(userId, model, session, authentication);
 
             // Assert
             assertThat(view).isEqualTo("manage-user");
@@ -724,6 +746,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldReturnApprolesInOrdinalSortingOrder() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Arrange
         String userId = "user52";
         EntraUserDto entraUser = new EntraUserDto();
@@ -747,10 +778,11 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -770,7 +802,7 @@ class UserControllerTest {
 
         // Act & Assert
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser(userId, model, session));
+                () -> userController.manageUser(userId, model, session, authentication));
 
         verify(userService).getUserProfileById(userId);
     }
@@ -2499,6 +2531,16 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldAddUserAppRolesAndOfficesToModel() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("id1");
         UserProfileDto userProfile = UserProfileDto.builder()
@@ -2512,9 +2554,10 @@ class UserControllerTest {
                         .build()))
                 .userType(UserType.EXTERNAL)
                 .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
-        String view = userController.manageUser("id1", model, session);
+        String view = userController.manageUser("id1", model, session, authentication);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -2526,11 +2569,20 @@ class UserControllerTest {
 
         // Expect exception since controller calls .get() on empty Optional
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser("id2", model, session));
+                () -> userController.manageUser("id2", model, session, authentication));
     }
 
     @Test
     void manageUser_shouldHideOfficesTabForInternalUser() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given - Internal user
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("internal-user-id");
@@ -2542,11 +2594,12 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("internal-user-id", model, session);
+        String view = userController.manageUser("internal-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2555,6 +2608,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldHideOfficesTabForExternalUserWithoutPermissions() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given - External user without required permissions
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("external-user-id");
@@ -2566,25 +2628,38 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         // No edit permission
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
         // No office permission
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
         assertThat(model.getAttribute("canManageOffices")).isEqualTo(false);
     }
 
     @Test
     void manageUser_shouldShowOfficesTabForExternalUser() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
         // Given - External user
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("external-user-id");
@@ -2600,19 +2675,22 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(true);
         assertThat(model.getAttribute("canManageOffices")).isEqualTo(true);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(true);
 
     }
 
@@ -2631,13 +2709,23 @@ class UserControllerTest {
                 .appRoles(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2660,13 +2748,23 @@ class UserControllerTest {
                 .appRoles(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3189,6 +3287,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldHandleNullUserAppRoles() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given
         String userId = "user123";
         EntraUserDto user = new EntraUserDto();
@@ -3201,10 +3308,11 @@ class UserControllerTest {
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
                 .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3232,12 +3340,23 @@ class UserControllerTest {
                 .appRoles(null) // Explicitly null to test null handling
                 .offices(null) // Explicitly null to test null handling
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted(any())).thenReturn(false);
         when(accessControlService.canEditUser(any())).thenReturn(true);
 
         // When
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
