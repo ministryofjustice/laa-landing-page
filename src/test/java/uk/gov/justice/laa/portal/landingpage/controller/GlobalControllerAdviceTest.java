@@ -137,7 +137,7 @@ class GlobalControllerAdviceTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(expectedDto);
 
         // Act
-        CurrentUserDto result = controller.getCurrentUserProfile(authentication);
+        CurrentUserDto result = controller.getCurrentUserProfile(authentication, null);
 
         // Assert
         assertThat(result).isEqualTo(expectedDto);
@@ -150,7 +150,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).activeProfile(false).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
-        boolean result = controller.isInternal(authentication);
+        boolean result = controller.isInternal(authentication, null);
 
         assertThat(result).isTrue();
     }
@@ -160,7 +160,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
-        boolean result = controller.isInternal(authentication);
+        boolean result = controller.isInternal(authentication, null);
 
         assertThat(result).isFalse();
     }
@@ -170,7 +170,7 @@ class GlobalControllerAdviceTest {
         UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
-        boolean result = controller.isExternal(authentication);
+        boolean result = controller.isExternal(authentication, null);
 
         assertThat(result).isTrue();
     }
@@ -181,7 +181,7 @@ class GlobalControllerAdviceTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
 
-        boolean result = controller.isExternal(authentication);
+        boolean result = controller.isExternal(authentication, null);
 
         assertThat(result).isFalse();
     }
