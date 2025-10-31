@@ -48,8 +48,10 @@ public class HomeController {
         FirmDto firmDto = mapper.map(userFirm, FirmDto.class);
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(currentUserProfile.getId().toString());
         List<OfficeDto> offices = userOffices.stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
+        boolean multiFirmUser = user.isMultiFirmUser();
 
         model.addAttribute("user", user);
+        model.addAttribute("multiFirmUser", multiFirmUser);
         model.addAttribute("userOffices", offices);
         model.addAttribute("firm", firmDto);
         model.addAttribute("appAssignments", userAssignedApps);

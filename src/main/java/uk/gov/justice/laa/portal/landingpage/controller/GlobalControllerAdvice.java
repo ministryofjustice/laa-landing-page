@@ -84,6 +84,16 @@ public class GlobalControllerAdvice {
         return loginService.getCurrentUser(authentication);
     }
 
+    @ModelAttribute("isInternal")
+    public boolean isInternal(Authentication authentication) {
+        return loginService.getCurrentProfile(authentication).getUserType() == UserType.INTERNAL;
+    }
+
+    @ModelAttribute("isExternal")
+    public boolean isExternal(Authentication authentication) {
+        return loginService.getCurrentProfile(authentication).getUserType() == UserType.EXTERNAL;
+    }
+
     /**
      * Handles OAuth2 client authorization exceptions by redirecting to re-authenticate.
      * This typically occurs when the access token has expired or is invalid.
