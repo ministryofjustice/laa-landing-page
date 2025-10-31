@@ -23,10 +23,10 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 @ControllerAdvice
 public class GlobalControllerAdvice {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
-    @Value("${feature.flag.enable.multi.firm.user}")
-    private boolean enableMultiFirmUser;
-    private final LoginService loginService;
+  private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
+  private final LoginService loginService;
+  @Value("${feature.flag.enable.multi.firm.user}")
+  private boolean enableMultiFirmUser;
 
     public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
