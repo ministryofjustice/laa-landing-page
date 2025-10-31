@@ -1,12 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Set;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -18,9 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.List;
-import java.util.Set;
 
 @Slf4j
 @Controller
@@ -45,13 +46,17 @@ public class HomeController {
         Set<Office> userOffices = currentUserProfile.getOffices();
 
         EntraUserDto user = mapper.map(entraUser, EntraUserDto.class);
-        FirmDto firmDto = mapper.map(userFirm, FirmDto.class);
+        FirmDto firmDto = userFirm != null ? mapper.map(userFirm, FirmDto.class) : null;
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(currentUserProfile.getId().toString());
         List<OfficeDto> offices = userOffices.stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
-        boolean multiFirmUser = user.isMultiFirmUser();
+
+        boolean isMultiFirmUser = user.isMultiFirmUser();
+        boolean isUserManager = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
 
         model.addAttribute("user", user);
-        model.addAttribute("multiFirmUser", multiFirmUser);
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute("isUserManager", isUserManager);
         model.addAttribute("userOffices", offices);
         model.addAttribute("firm", firmDto);
         model.addAttribute("appAssignments", userAssignedApps);
