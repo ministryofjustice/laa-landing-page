@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.view.RedirectView;
 
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -124,6 +125,19 @@ class GlobalControllerAdviceTest {
         // Then
         assertThat(redirectView).isNotNull();
         assertThat(redirectView.getUrl()).isEqualTo("/oauth2/authorization/azure");
+    }
+
+    @Test
+    void getActiveFirmFlag_flag_off() {
+        boolean result = controller.getMultiFirmEnabledFlag();
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void getActiveFirmFlag_flag_on() {
+        ReflectionTestUtils.setField(controller, "enableMultiFirmUser", true);
+        boolean result = controller.getMultiFirmEnabledFlag();
+        assertThat(result).isTrue();
     }
 
 }

@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -22,6 +23,8 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 public class GlobalControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
+    @Value("${feature.flag.enable.multi.firm.user}")
+    private boolean enableMultiFirmUser;
     private final LoginService loginService;
 
     public GlobalControllerAdvice(LoginService loginService) {
@@ -77,6 +80,11 @@ public class GlobalControllerAdvice {
             return firm;
         }
         return null;
+    }
+
+    @ModelAttribute("enableMultiFirmUser")
+    public boolean getMultiFirmEnabledFlag() {
+        return enableMultiFirmUser;
     }
 
     /**
