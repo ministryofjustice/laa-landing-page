@@ -610,6 +610,15 @@ public class UserController {
 
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
+        // If user is multi-firm, skip the firm selection page and go directly to
+        // check-answers
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+            // Clear any previously selected firm from session
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/check-answers";
+        }
+
         return "redirect:/admin/user/create/firm";
     }
 
