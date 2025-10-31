@@ -1,12 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -16,14 +24,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 
 /**
@@ -67,21 +67,25 @@ public class FirmService {
     public List<FirmDto> getUserFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
+                .filter(userProfile -> userProfile.getFirm() != null)
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
     public List<FirmDto> getUserAllFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
+                .filter(userProfile -> userProfile.getFirm() != null)
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
     public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
         List<FirmDto> userFirms = new java.util.ArrayList<>(entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
+                .filter(userProfile -> userProfile.getFirm() != null)
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
         if (entraUser.isMultiFirmUser()) {
             List<FirmDto> child = entraUser.getUserProfiles().stream()
-                    .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
+                    .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
+                            && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
                     .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
                     .map(firm -> mapper.map(firm, FirmDto.class))
                     .toList();
@@ -92,7 +96,7 @@ public class FirmService {
 
     /**
      * Get firms associated with a user by their ID
-     * 
+     *
      * @param userId The ID of the user
      * @return List of FirmDto objects associated with the user
      */
@@ -107,7 +111,7 @@ public class FirmService {
 
     /**
      * Search for firms by name or code
-     * 
+     *
      * @param searchTerm The search term to match against firm name or code
      * @return List of FirmDto objects that match the search term
      */
@@ -117,12 +121,11 @@ public class FirmService {
         }
 
         String trimmedSearchTerm = searchTerm.trim();
-        
+
         return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
-                .sorted((s1, s2) ->
-                        Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
+                .sorted((s1, s2) -> Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
                 .collect(Collectors.toList());
     }
 
@@ -159,26 +162,28 @@ public class FirmService {
         // If there's a search term, use database query for better performance
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             String trimmedSearchTerm = searchTerm.trim();
-            
+
             switch (userType) {
                 case INTERNAL -> {
                     // Internal users can search all firms via database
                     return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                             .stream()
                             .map(firm -> mapper.map(firm, FirmDto.class))
-                            .sorted((s1, s2) ->
-                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
+                            .sorted((s1, s2) -> Integer.compare(relevance(s2, trimmedSearchTerm),
+                                    relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 case EXTERNAL -> {
-                    // External firm admins can only see their own firms, so filter their accessible firms
+                    // External firm admins can only see their own firms, so filter their accessible
+                    // firms
                     List<FirmDto> userAccessibleFirms = getUserAllFirms(entraUser);
                     return userAccessibleFirms
                             .stream()
                             .filter(firm -> (firm.getName().toLowerCase().contains(trimmedSearchTerm.toLowerCase())
-                                    || (firm.getCode() != null && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
-                            .sorted((s1, s2) ->
-                                    Integer.compare(relevance(s2, trimmedSearchTerm), relevance(s1, trimmedSearchTerm)))
+                                    || (firm.getCode() != null
+                                            && firm.getCode().toLowerCase().contains(trimmedSearchTerm.toLowerCase()))))
+                            .sorted((s1, s2) -> Integer.compare(relevance(s2, trimmedSearchTerm),
+                                    relevance(s1, trimmedSearchTerm)))
                             .collect(Collectors.toList());
                 }
                 default -> {
@@ -186,7 +191,7 @@ public class FirmService {
                 }
             }
         }
-        
+
         // No search term - return all accessible firms
         switch (userType) {
             case INTERNAL -> {
