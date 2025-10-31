@@ -141,6 +141,9 @@ public class LoginService {
 
     public UserProfile getCurrentProfile(Authentication authentication) {
         EntraUser currentUser = getCurrentEntraUser(authentication);
+        if (currentUser == null || currentUser.getUserProfiles() == null || currentUser.getUserProfiles().isEmpty()) {
+            return null;
+        }
         for (UserProfile up : currentUser.getUserProfiles()) {
             if (up.isActiveProfile()) {
                 return up;

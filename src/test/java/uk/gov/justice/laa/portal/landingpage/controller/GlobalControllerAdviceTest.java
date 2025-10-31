@@ -8,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -16,6 +18,7 @@ import org.springframework.security.oauth2.client.ClientAuthorizationRequiredExc
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.view.RedirectView;
 
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -125,6 +128,62 @@ class GlobalControllerAdviceTest {
         // Then
         assertThat(redirectView).isNotNull();
         assertThat(redirectView.getUrl()).isEqualTo("/oauth2/authorization/azure");
+    }
+
+    @Test
+    void testGetCurrentUserProfile() {
+        // Arrange
+        CurrentUserDto expectedDto = new CurrentUserDto();
+        when(loginService.getCurrentUser(authentication)).thenReturn(expectedDto);
+
+        // Act
+        CurrentUserDto result = controller.getCurrentUserProfile(authentication);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedDto);
+        verify(loginService).getCurrentUser(authentication);
+    }
+
+
+    @Test
+    public void testIsInternal_ReturnsTrue_WhenUserTypeIsInternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isInternal(authentication);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsInternal_ReturnsFalse_WhenUserTypeIsNotInternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isInternal(authentication);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testIsExternal_ReturnsTrue_WhenUserTypeIsExternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isExternal(authentication);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsExternal_ReturnsFalse_WhenUserTypeIsNotExternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+
+        boolean result = controller.isExternal(authentication);
+
+        assertThat(result).isFalse();
     }
 
     @Test
