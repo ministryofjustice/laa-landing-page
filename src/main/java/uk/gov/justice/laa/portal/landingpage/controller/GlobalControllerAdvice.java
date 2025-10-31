@@ -1,14 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -16,12 +20,12 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
-import java.util.Objects;
-
 @ControllerAdvice
 public class GlobalControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
+    @Value("${feature.flag.enable.multi.firm.user}")
+    private boolean enableMultiFirmUser;
     private final LoginService loginService;
 
     public GlobalControllerAdvice(LoginService loginService) {
@@ -77,6 +81,11 @@ public class GlobalControllerAdvice {
             return firm;
         }
         return null;
+    }
+
+    @ModelAttribute("enableMultiFirmUser")
+    public boolean getMultiFirmEnabledFlag() {
+        return enableMultiFirmUser;
     }
 
     @ModelAttribute("currentUser")

@@ -293,7 +293,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model, HttpSession session) {
+    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
@@ -311,6 +311,13 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
+
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
+        boolean canViewAllProfiles = externalUser && editorInternalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+
+        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
 
         boolean hasViewOfficePermission = accessControlService
                 .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
