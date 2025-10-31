@@ -91,18 +91,42 @@ public class GlobalControllerAdvice {
     }
 
     @ModelAttribute("currentUser")
-    public CurrentUserDto getCurrentUserProfile(Authentication authentication) {
+    public CurrentUserDto getCurrentUserProfile(Authentication authentication, HttpServletRequest request) {
+        // Skip for claim enrichment and other rest endpoints
+        if (request != null) {
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/")) {
+                return null;
+            }
+        }
+
         return loginService.getCurrentUser(authentication);
     }
 
     @ModelAttribute("isInternal")
-    public boolean isInternal(Authentication authentication) {
+    public boolean isInternal(Authentication authentication, HttpServletRequest request) {
+        // Skip for claim enrichment and other rest endpoints
+        if (request != null) {
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/")) {
+                return false;
+            }
+        }
+
         UserProfile up = loginService.getCurrentProfile(authentication);
         return up != null && up.getUserType() == UserType.INTERNAL;
     }
 
     @ModelAttribute("isExternal")
-    public boolean isExternal(Authentication authentication) {
+    public boolean isExternal(Authentication authentication, HttpServletRequest request) {
+        // Skip for claim enrichment and other rest endpoints
+        if (request != null) {
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/")) {
+                return false;
+            }
+        }
+
         UserProfile up = loginService.getCurrentProfile(authentication);
         return up != null && up.getUserType() == UserType.EXTERNAL;
     }
