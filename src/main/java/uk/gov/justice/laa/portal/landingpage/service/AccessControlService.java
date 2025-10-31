@@ -131,14 +131,14 @@ public class AccessControlService {
         // Check if authenticated user is internal (LAA staff)
         boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
 
-        // Check if users are in the same firm
-        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
-
         // Internal users with DELETE_EXTERNAL_USER permission can delete any firm
         // profile
         if (isInternalUser && userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER)) {
             return true;
         }
+
+        // Check if users are in the same firm
+        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
 
         // External users (firm admins) with DELEGATE_EXTERNAL_USER_ACCESS can only
         // delete profiles from their own firm
