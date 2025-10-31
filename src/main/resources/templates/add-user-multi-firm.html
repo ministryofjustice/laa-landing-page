@@ -40,13 +40,26 @@
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                                 <h1 class="govuk-fieldset__heading">
-                                    Allow multi-firm access
+                                    Access to multiple firms
                                 </h1>
                             </legend>
-                            <div class="govuk-hint">
-                                This would be relevant to a user who will work on behalf of different legal firms, like
-                                a cost draftsperson. You
-                                won't need to select a specific firm to associate them with.
+
+                            <p class="govuk-body">
+                                Multi-firm users are professionals who work across multiple law firms or providers.
+                                A common example is cost drafters, who may be contracted by several firms to prepare
+                                legal costs documents.
+                            </p>
+
+                            <p class="govuk-body">
+                                You will not need to provide all of the firms they work for at this time.
+                            </p>
+
+                            <div class="govuk-warning-text">
+                                <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                                <strong class="govuk-warning-text__text">
+                                    <span class="govuk-visually-hidden">Warning</span>
+                                    This action cannot be undone.
+                                </strong>
                             </div>
 
                             <span th:if="${#fields.hasErrors('multiFirmUser')}" class="govuk-error-message">

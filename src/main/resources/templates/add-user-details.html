@@ -89,25 +89,31 @@
                     th:classappend="${#fields.hasErrors('userManager')} ? 'govuk-form-group--error'">
                     <fieldset class="govuk-fieldset">
                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                            User type
+                            Does this user need provider admin access?
                         </legend>
                         <div th:if="${#fields.hasErrors('userManager')}" class="govuk-error-message">
                             <p th:each="err : ${#fields.errors('userManager')}" th:text="${err}"></p>
                         </div>
-                        <div class="govuk-radios">
-                            <div class="govuk-radios__item">
-                                <input class="govuk-radios__input" id="providerAdmin" type="radio"
-                                    th:field="*{userManager}" th:value="true">
-                                <label class="govuk-label govuk-radios__label" for="providerAdmin">
-                                    Provider Admin
-                                </label>
-                            </div>
+                        <div class="govuk-radios" data-module="govuk-radios">
                             <div class="govuk-radios__item">
                                 <input class="govuk-radios__input" id="providerUser" type="radio"
                                     th:field="*{userManager}" th:value="false">
                                 <label class="govuk-label govuk-radios__label" for="providerUser">
-                                    Provider User
+                                    No
                                 </label>
+                                <div id="providerUser-hint" class="govuk-hint govuk-radios__hint">
+                                    They will only use LAA services that are assigned to them.
+                                </div>
+                            </div>
+                            <div class="govuk-radios__item">
+                                <input class="govuk-radios__input" id="providerAdmin" type="radio"
+                                    th:field="*{userManager}" th:value="true">
+                                <label class="govuk-label govuk-radios__label" for="providerAdmin">
+                                    Yes
+                                </label>
+                                <div id="providerAdmin-hint" class="govuk-hint govuk-radios__hint">
+                                    They will need to assign services to providers.
+                                </div>
                             </div>
                         </div>
                     </fieldset>
