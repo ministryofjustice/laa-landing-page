@@ -1520,8 +1520,10 @@ public class UserController {
         UserProfileDto user = (UserProfileDto) model.getAttribute("user");
         //byPass roles screen
         if (!selectedApps.isEmpty()){
-            byPassRolesScreen.byPassRolesScreen(authentication, id, selectedApps, user.getUserType());
-
+//            byPassRolesScreen.byPassRolesScreen(authentication, id, selectedApps, user.getUserType());
+//            if(selectedApps.isEmpty()){
+//                return "redirect:/admin/users/grant-access/" + id + "/offices";
+//            }
         }
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
@@ -1591,6 +1593,7 @@ public class UserController {
 
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
         Integer currentSelectedAppIndex;
+        boolean shouldByPassTheScreen = false;
         if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
             currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
         } else {
@@ -1604,6 +1607,13 @@ public class UserController {
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
+        session.setAttribute("selectedAppRoles", roles);
+        if (roles.size() == 1){
+            //bypass screen
+            shouldByPassTheScreen = true;
+            //save in seccion
+        }
+
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
@@ -1643,13 +1653,16 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
-        model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
+        model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex + 1);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
         // Store the model in session to handle validation errors later and track
         // currently selected app.
         session.setAttribute("grantAccessUserRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select roles - " + user.getFullName());
+        if (shouldByPassTheScreen){
+            return "redirect:/admin/users/grant-access/" + id + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
+        }
         return "grant-access-user-roles";
     }
 

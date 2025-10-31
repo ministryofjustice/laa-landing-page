@@ -5,10 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.*;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -55,19 +53,19 @@ public class ByPassScreenService {
 
         UserProfileDto user = userService.getUserProfileById(id).orElse(null);
         // list of app
-        List<String> appSelectedList =
+        List<String> appRoleSelectedList =
                 appIdsFilteredByTargetNames.stream()
                         .map(AppRoleDto::getId)
                         .toList();
 
-        if (roleAssignmentService.canAssignRole(userProfile.getAppRoles(), appSelectedList)) {
-            logger.error("User does not have sufficient permissions to assign the selected roles: userId={}, attemptedRoleIds={}",
-                    userProfile.getId(),
-                    appRoles.stream().map(AppRoleDto::getId).toList());
-            throw new RuntimeException("User does not have sufficient permissions to assign the selected roles");
-        }
+//        if (roleAssignmentService.canAssignRole(userProfile.getAppRoles(), appSelectedList)) {
+//            logger.error("User does not have sufficient permissions to assign the selected roles: userId={}, attemptedRoleIds={}",
+//                    userProfile.getId(),
+//                    appRoles.stream().map(AppRoleDto::getId).toList());
+//            throw new RuntimeException("User does not have sufficient permissions to assign the selected roles");
+//        }
 
-        Map<String, String> updateResult = userService.updateUserRoles(id, appSelectedList, nonEditableRoles, currentUserDto.getUserId());
+        Map<String, String> updateResult = userService.updateUserRoles(id, appRoleSelectedList, nonEditableRoles, currentUserDto.getUserId());
         UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                 userProfile.getId(),
                 currentUserDto,
@@ -75,7 +73,16 @@ public class ByPassScreenService {
                 "role");
         eventService.logEvent(updateUserAuditEvent);
 
+
         //remove apps from the request to bypass the screen
-        selectedApps.removeIf(appIdsFilteredByTargetNames::contains);
+
+        List<String> appSelectedList =
+                appIdsFilteredByTargetNames.stream()
+                        .map(AppRoleDto::getApp)
+                        .map(AppDto::getId)
+                        .toList();
+
+        selectedApps.removeIf(appSelectedList::contains);
+
     }
 }
