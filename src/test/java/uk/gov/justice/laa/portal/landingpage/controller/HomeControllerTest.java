@@ -1,13 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -22,17 +34,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class HomeControllerTest {
@@ -57,6 +58,21 @@ class HomeControllerTest {
     void setUp() {
         model = new ExtendedModelMap();
         homeController = new HomeController(loginService, userService, appService, new MapperConfig().modelMapper());
+        ReflectionTestUtils.setField(homeController, "puiUrl", "https://test-pui-url.com");
+    }
+
+    @Test
+    void testPuiInterstitial_ReturnsCorrectViewAndModelAttributes() {
+        // Act
+        String viewName = homeController.puiInterstitial(model);
+
+        // Assert: Verify view name
+        assertEquals("pui-interstitial", viewName);
+
+        // Assert: Verify model attributes
+        assertThat(model.getAttribute("puiUrl")).isEqualTo("https://test-pui-url.com");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                .isEqualTo("Sign in again to access CCMS PUI");
     }
 
     @Test
@@ -140,7 +156,6 @@ class HomeControllerTest {
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
                 .isEqualTo("My Account - first last");
     }
-
 
     @Test
     void testMyAccountDetails_AppWithMultipleRoles_AssignsActualRoles() {
