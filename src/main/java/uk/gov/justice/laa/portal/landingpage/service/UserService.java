@@ -1172,6 +1172,12 @@ public class UserService {
                         Function.identity()));
     }
 
+    public List<AppRoleDto> getListRolesByIdIn(Collection<UUID> roleIds) {
+        return appRoleRepository.findAllByIdIn(roleIds).stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .toList();
+    }
+
     /**
      * Get user profiles by Entra user ID
      *

@@ -68,6 +68,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -1921,11 +1922,11 @@ public class UserController {
         eventService.logEvent(updateUserAuditEvent);
 
         // Clear grant access session data
-        session.removeAttribute("grantAccessUserOfficesModel");
+/*        session.removeAttribute("grantAccessUserOfficesModel");
         session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("grantAccessUserRoles");
         session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("grantAccessAllSelectedRoles");*/
 
         return "redirect:/admin/users/grant-access/" + id + "/check-answers";
     }
@@ -1935,12 +1936,25 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String grantAccessCheckAnswers(@PathVariable String id, Model model, Authentication authentication) {
+    public String grantAccessCheckAnswers(@PathVariable String id, Model model,
+                                          Authentication authentication,
+                                          HttpSession session) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current app roles
-        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        //get all the selected app roles
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
+                .getAttribute("grantAccessAllSelectedRoles");
+
+        List<UUID> roleIds = allSelectedRolesByPage.values()
+                .stream()
+                .flatMap(List::stream)
+                .map(UUID::fromString)
+                .toList();
+
+        List<AppRoleDto> userAppRoles = userService.getListRolesByIdIn(roleIds);
+
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .toList();
@@ -1987,6 +2001,8 @@ public class UserController {
             userService.removeUserAppRole(userId, appId, roleName);
 
             // Create audit event for the app role removal
+            // get information from the session and save
+
             UserProfileDto userProfileDto = userService.getUserProfileById(userId).orElseThrow();
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto.getId(),
