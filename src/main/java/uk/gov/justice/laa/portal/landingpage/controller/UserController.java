@@ -48,8 +48,6 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -69,9 +67,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
@@ -1519,11 +1518,29 @@ public class UserController {
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
         UserProfileDto user = (UserProfileDto) model.getAttribute("user");
         //byPass roles screen
+        Map<Integer, List<String>> allSelectedRoles =
+                session.getAttribute("grantAccessAllSelectedRoles") != null
+                        ? (Map<Integer, List<String>>) session.getAttribute("grantAccessAllSelectedRoles")
+                        : new HashMap<>();
+        AtomicBoolean hasOtherAppsWithMoreThanRole = new AtomicBoolean(false);
         if (!selectedApps.isEmpty()){
-//            byPassRolesScreen.byPassRolesScreen(authentication, id, selectedApps, user.getUserType());
-//            if(selectedApps.isEmpty()){
-//                return "redirect:/admin/users/grant-access/" + id + "/offices";
-//            }
+
+            // check if apps have more than one roles
+
+            IntStream.range(0, selectedApps.size())
+                    .forEach(index -> {
+                        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(index),
+                                user.getUserType());
+                        if (roles.size() == 1){
+                            allSelectedRoles.put(index, roles.stream().map(AppRoleDto::getId).toList());
+                        } else {
+                            allSelectedRoles.put(index, null);
+                            hasOtherAppsWithMoreThanRole.set(true);
+                        }
+                    });
+
+            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRoles);
+
         }
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
@@ -1556,7 +1573,21 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return "redirect:/admin/users/grant-access/" + uuid + "/roles";
+        //if there is only apps that has only one role then redirect to the office page
+
+
+        if (!hasOtherAppsWithMoreThanRole.get()) {
+            return "redirect:/admin/users/grant-access/" + uuid + "/offices";
+
+        }
+        // get fist id with
+
+        Optional<Map.Entry<Integer, List<String>>> firstNullListEntry = allSelectedRoles.entrySet().stream()
+                .filter(entry -> entry.getValue() == null)
+                .findFirst();
+        Integer index = firstNullListEntry.get().getKey();
+
+        return "redirect:/admin/users/grant-access/" + uuid + "/roles?selectedAppIndex=" + (index);
     }
 
     /**
@@ -1575,6 +1606,7 @@ public class UserController {
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(() -> {
+                    // TODO remove this section I useless
                     // If no selectedApps in session, get user's current apps
                     List<String> userApps = userService.getUserAppsByUserId(id)
                             .stream()
@@ -1594,6 +1626,8 @@ public class UserController {
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
         Integer currentSelectedAppIndex;
         boolean shouldByPassTheScreen = false;
+        // get the app id when is different of selected roles
+
         if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
             currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
         } else {
@@ -1605,13 +1639,21 @@ public class UserController {
             currentSelectedAppIndex = 0;
         }
 
+
+        Map<Integer, List<String>> allSelectedRolesByPage =
+                session.getAttribute("grantAccessAllSelectedRoles") != null
+                        ? (Map<Integer, List<String>>) session.getAttribute("grantAccessAllSelectedRoles")
+                        : new HashMap<>();
+
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
-        session.setAttribute("selectedAppRoles", roles);
         if (roles.size() == 1){
             //bypass screen
+            List<String> allSelectedRoles = roles.stream().filter(Objects::nonNull)
+                    .map(AppRoleDto::getId)
+                    .toList();
             shouldByPassTheScreen = true;
-            //save in seccion
+            allSelectedRolesByPage.put(selectedAppIndex,allSelectedRoles);
         }
 
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
@@ -1653,7 +1695,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
-        model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex + 1);
+        model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
         // Store the model in session to handle validation errors later and track
@@ -1661,7 +1703,9 @@ public class UserController {
         session.setAttribute("grantAccessUserRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select roles - " + user.getFullName());
         if (shouldByPassTheScreen){
-            return "redirect:/admin/users/grant-access/" + id + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
+            model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex + 1);
+            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
+            return "redirect:/admin/users/grant-access/" + id + "/roles?selectedAppIndex=" + (currentSelectedAppIndex + 1);
         }
         return "grant-access-user-roles";
     }
@@ -1714,13 +1758,13 @@ public class UserController {
         // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
-            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+//            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             // Clear the grantAccessUserRolesModel and page roles from session to avoid
             // stale data
             session.removeAttribute("grantAccessUserRolesModel");
-            session.removeAttribute("grantAccessAllSelectedRoles");
+            //session.removeAttribute("grantAccessAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
+/*            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
                     .toList();
             List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
@@ -1728,8 +1772,8 @@ public class UserController {
                     .map(AppRoleDto::getId)
                     .toList();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);*/
+/*            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles, currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
@@ -1737,7 +1781,8 @@ public class UserController {
                         user != null ? user.getEntraUser() : null, updateResult.get("diff"),
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
-            }
+            }*/
+            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
             modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex + 1);
