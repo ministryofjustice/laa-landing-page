@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Run ZAP Daily Homepage Baseline Scan 
         id: homepage_baseline_run
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: 'https://test.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j'
