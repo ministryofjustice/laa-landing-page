@@ -68,14 +68,14 @@ More information on GDS can be found [here](https://gds-way.digital.cabinet-offi
 
 #### Enable Pre-commit Hooks
 
-Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian Shield. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-config.yaml](./.pre-commit-config.yaml). 
+Secret scanning is run on pre-commit hooks to prevent secrets being committed to the repository, via Gitleaks, TruffleHog and GitGuardian Shield. These are enabled via the [pre-commit](https://pre-commit.com/) framework, configured via [.pre-commit-config.yaml](./.pre-commit-config.yaml).
 
 The pre-commit hooks will only be enabled for this repository, and won't affect others. The secret scanner CLI utilities themselves - `gitleaks`, `trufflehog` & `ggshield` - will be available in your shells to be ran against anything you wish.
 
 To enable the pre-commit hooks:
 1. Download and install [Homebrew](https://github.com/Homebrew/brew/releases/latest)
 2. Authorise GitGuardian with your Ministry of Justice GitHub user account [here](https://dashboard.gitguardian.com/api/v1/auth/user/github_login/authorize) (you only have to link your account, you do not need to go on to grant GitGuardian access to any personal or MoJ repository in this step as it shouldn't be necessary for running GitGuardian Shield locally)
-3. Run the setup script (will take a few minutes to complete the first time it is ran): 
+3. Run the setup script (will take a few minutes to complete the first time it is ran):
 
 ```sh
 ./setup_precommits.sh
@@ -148,7 +148,7 @@ If there are changes made to DB structure
 1. Ensure there are two DB instances running one with existing version and another with new DB changes
 2. Issue the command below to generate the changelog (it requires installing liquibase locally using brew)
 ```
-liquibase diff-changelog --changelog-file=diff-changelog.yml --url="jdbc:postgresql://localhost:5432/portal-database" --username=<<uname>> --password=<<pwd>> 
+liquibase diff-changelog --changelog-file=diff-changelog.yml --url="jdbc:postgresql://localhost:5432/portal-database" --username=<<uname>> --password=<<pwd>>
 --reference-url="jdbc:postgresql://localhost:54321/portal-database" --reference-username=<<uname>> --reference-password=<<pwd>>
 ```
 3. Copy the diff-changelog.yml file to application resources folder (*resources/db/changelog/changesets/*) and rename it to `db.changesets-<<next_version>>.yaml`
@@ -236,7 +236,7 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 | APP_CRIME_APPLY_URL                 | URL of `Criminal Legal Aid` Application                                                                                                                              |
 | APP_PUI_DETAILS                     | Details of `CCMS` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                            |
 | APP_PUI_NAME                        | Name of `CCMS` Application                                                                                                                                           |
-| APP_PUI_URL                         | URL of `CCMS` Application                                                                                                                                            |
+| APP_PUI_URL                         | Direct URL of `CCMS PUI` Application (used in the interstitial page to link to the actual PUI secure browser environment)                                            |
 | APP_SUBMIT_CRIME_FORM_DETAILS       | Details of `Submit Crime Form` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id               |
 | APP_SUBMIT_CRIME_FORM_NAME          | Name of `Submit Crime Form` Application                                                                                                                              |
 | APP_SUBMIT_CRIME_FORM_URL           | URL of `Submit Crime Form` Application                                                                                                                               |
