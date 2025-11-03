@@ -1472,7 +1472,11 @@ public class UserController {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
-        Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
+        //Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
+        //get apps from session
+        List<String> userAssignedApps = session.getAttribute("grantAccessSelectedApps") != null
+                ? (List<String>) session.getAttribute("grantAccessSelectedApps")
+                        : new ArrayList<String>();
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
@@ -1482,7 +1486,7 @@ public class UserController {
         // Add selected attribute to available apps based on user assigned apps
         editableApps.forEach(app -> {
             app.setSelected(userAssignedApps.stream()
-                    .anyMatch(userApp -> userApp.getId().equals(app.getId())));
+                    .anyMatch(userApp -> userApp.equals(app.getId())));
         });
 
         model.addAttribute("user", user);
