@@ -20,11 +20,9 @@
 
                 <p class="govuk-body">To access CCMS PUI you will be asked to sign in again using multi-factor authentication with your legal aid services account on a WorkSpaces Secure Browser.</p>
 
-                <form method="get" th:action="${puiUrl}" target="_blank">
-                    <button class="govuk-button" data-module="govuk-button" type="submit">
-                        Sign in (opens in new window)
-                    </button>
-                </form>
+                <a th:href="${puiUrl}" class="govuk-button" role="button" data-module="govuk-button" target="_blank" rel="noopener noreferrer">
+                    Sign in (opens in new window)
+                </a>
 
                 <p class="govuk-body">
                     <a href="/home" class="govuk-link">Return to your legal aid services</a>
