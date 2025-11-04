@@ -6,7 +6,6 @@ import jakarta.validation.ValidatorFactory;
 import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Set;
 
@@ -17,8 +16,9 @@ class UserDetailsFormTest {
 
     @BeforeAll
     static void setUpValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            validator = factory.getValidator();
+        }
     }
 
     @Test
@@ -205,5 +205,17 @@ class UserDetailsFormTest {
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
                 .contains("Select a user type");
+    }
+
+    @Test
+    void blankFields_shouldTriggerNotEmptyViolations() {
+        UserDetailsForm form = new UserDetailsForm();
+        form.setFirstName(" ");
+        form.setLastName("  ");
+        form.setEmail("   ");
+        form.setUserManager(true);
+        Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
+        assertThat(violations).extracting(ConstraintViolation::getMessage)
+                .contains("Last name cannot be blank", "First name cannot be blank");
     }
 }

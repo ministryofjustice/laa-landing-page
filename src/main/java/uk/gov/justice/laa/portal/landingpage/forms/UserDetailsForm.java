@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.forms;
 
 import java.io.Serializable;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class UserDetailsForm implements Serializable {
     private static final String allowedChars = "A-Za-zÀ-ÖØ-öø-įĴ-őŔ-žǍ-ǰǴ-ǵǸ-țȞ-ȟȤ-ȳɃɆ-ɏḀ-ẞƀ-ƓƗ-ƚƝ-ơƤ-ƥƫ-ưƲ-ƶẠ-ỿ";
 
     @NotEmpty(message = "Enter a first name")
+    @NotBlank(message = "First name cannot be blank")
     @ConditionalSize(min = 2, max = 99, message = "First name must be between 2-99 characters")
     @ConditionalPattern(regexp =
             "^(?:[" + allowedChars + "]+)(?:(?:[\\-']+| )[" + allowedChars + "]+)*$",
@@ -22,6 +24,7 @@ public class UserDetailsForm implements Serializable {
     private String firstName;
 
     @NotEmpty(message = "Enter a last name")
+    @NotBlank(message = "Last name cannot be blank")
     @ConditionalSize(min = 2, max = 99, message = "Last name must be between 2-99 characters")
     @ConditionalPattern(regexp =
             "^(?:[" + allowedChars + "]+)(?:(?:[\\-']+| )[" + allowedChars + "]+)*$",
