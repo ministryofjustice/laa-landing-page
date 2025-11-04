@@ -216,6 +216,6 @@ class UserDetailsFormTest {
         form.setUserManager(true);
         Set<ConstraintViolation<UserDetailsForm>> violations = validator.validate(form);
         assertThat(violations).extracting(ConstraintViolation::getMessage)
-                .contains("Last name cannot be blank", "First name cannot be blank");
+                .contains("Enter a first name", "Enter a last name");
     }
 }
