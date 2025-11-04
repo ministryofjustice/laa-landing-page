@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -2391,7 +2392,8 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
         // When - updating roles for first app (index 0)
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                0, testSession, model);
 
         // Then - should redirect to next app (index 1)
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
@@ -2421,7 +2423,8 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         // When - updating roles for last app (index 1)
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, testSession);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                1, testSession, model);
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
@@ -2430,6 +2433,52 @@ class UserControllerTest {
                 .getAttribute("editUserAllSelectedRoles");
         assertThat(allSelectedRolesByPage).hasSize(2);
         assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+    }
+
+    @Test
+    void updateUserRoles_whenValidationErrors_shouldReturnEditUserRolesView() {
+        // Arrange
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(Arrays.asList("role1", "role2"));
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
+
+
+        AppRoleViewModel role1 = new AppRoleViewModel();
+        role1.setName("role1");
+        role1.setSelected(true);
+        AppRoleViewModel role2 = new AppRoleViewModel();
+        role2.setName("role2");
+        role2.setSelected(true);
+        List<AppRoleViewModel> roles = List.of(role1, role2);
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", roles);
+        modelFromSession.addAttribute("entraUser", "entraUserMock");
+        modelFromSession.addAttribute("editUserRolesCurrentApp", "currentAppMock");
+        HttpSession mockHttpSession = new MockHttpSession();
+        mockHttpSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+
+        int selectedAppIndex = 1;
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+
+        // Act
+        String viewName = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                selectedAppIndex, mockHttpSession, model);
+
+        // Assert
+        assertThat(viewName).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfileDto);
+        assertThat(model.getAttribute("roles")).isEqualTo(roles);
+        assertThat(model.getAttribute("entraUser")).isEqualTo("entraUserMock");
+        assertThat(model.getAttribute("editUserRolesSelectedAppIndex")).isEqualTo(selectedAppIndex);
+        assertThat(model.getAttribute("editUserRolesCurrentApp")).isEqualTo("currentAppMock");
+        assertThat(model.getAttribute("backUrl"))
+                .isEqualTo("/admin/users/edit/123e4567-e89b-12d3-a456-426614174000/roles?selectedAppIndex=0");
     }
 
     @Test
