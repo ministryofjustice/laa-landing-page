@@ -347,6 +347,7 @@ public class UserController {
         boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllMultiFirmInfo(id));
 
         if (isMultiFirmUser && enableMultiFirmUser) {
             // Check if user can delete the currently viewed profile (not all profiles)
