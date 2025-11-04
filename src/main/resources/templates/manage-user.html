@@ -134,13 +134,12 @@
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
-                                        <dd class="govuk-summary-list__value"
-                                            style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                        <dd class="govuk-summary-list__value">
                                             <span th:text="${user.entraUser.email}"></span>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
                                             <a th:if="${showResendVerificationLink}" class="govuk-link"
-                                                style="white-space: nowrap;"
-                                                th:href="@{/admin/user/{id}/verify(id=${user.id})}">Resend Activation
-                                                Code</a>
+                                                th:href="@{/admin/user/{id}/verify(id=${user.id})}">Resend Activation Code</a>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -149,31 +148,14 @@
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.firstName}">
                                         </dd>
+                                        <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">
                                             Last name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                        th:if="${enableMultiFirmUser and externalUser}">
-                                        <dt class="govuk-summary-list__key">
-                                            Multi-firm access
-                                        </dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <span th:if="${user.entraUser.multiFirmUser}">
-                                                Yes
-                                            </span>
-                                            <span th:unless="${user.entraUser.multiFirmUser}">No</span>
-                                        </dd>
-                                        <dd class="govuk-summary-list__actions"
-                                            th:if="${enableMultiFirmUser != null and enableMultiFirmUser and !user.entraUser.multiFirmUser and canEditUser}">
-                                            <a class="govuk-link"
-                                                th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
-                                                Convert to multi-firm
-                                            </a>
-                                        </dd>
+                                        <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
                                         <dt class="govuk-summary-list__key">
@@ -182,16 +164,25 @@
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
                                         </dd>
+                                        <dd class="govuk-summary-list__actions"></dd>
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${enableMultiFirmUser and externalUser}">
                                         <dt class="govuk-summary-list__key">
                                             Multi-firm access
                                         </dt>
-                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                        <dd class="govuk-summary-list__value">
                                             <span th:text="${user.entraUser.multiFirmUser} ? 'Yes' : 'No'"></span>
-                                            <a th:if="${user.entraUser.multiFirmUser}"
-                                               class="govuk-link" style="white-space: nowrap;"
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${user.entraUser.multiFirmUser && canViewAllProfiles}"
+                                               class="govuk-link"
                                                th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
+                                            <a th:if="${enableMultiFirmUser != null and enableMultiFirmUser and !user.entraUser.multiFirmUser and canEditUser}"
+                                               class="govuk-link"
+                                               th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
+                                                Convert to multi-firm
+                                            </a>
                                         </dd>
                                     </div>
                                 </dl>
