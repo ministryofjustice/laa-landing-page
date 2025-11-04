@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.UserSessionUtil.getAppsByUserId;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,10 +72,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
-import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
-import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+import uk.gov.justice.laa.portal.landingpage.model.*;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -1632,18 +1630,18 @@ public class UserController {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
-        Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
+
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
+        //getList of selectedApps
+        List<String> selectedApps = getAppsByUserId(session, id);
         List<AppDto> editableApps = availableApps.stream()
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
+                .peek(app -> {
+                    boolean isSelected = !selectedApps.isEmpty() && selectedApps.contains(app.getId());
+                    app.setSelected(isSelected);
+                })
                 .toList();
-
-        // Add selected attribute to available apps based on user assigned apps
-        editableApps.forEach(app -> {
-            app.setSelected(userAssignedApps.stream()
-                    .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-        });
 
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
@@ -1676,7 +1674,11 @@ public class UserController {
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
-        session.setAttribute("grantAccessSelectedApps", selectedApps);
+        session.setAttribute("grantAccessSelectedApps", new UserSessionSelection()
+                .toBuilder()
+                        .id(id)
+                        .appsSelection(selectedApps)
+                .build());
 
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
