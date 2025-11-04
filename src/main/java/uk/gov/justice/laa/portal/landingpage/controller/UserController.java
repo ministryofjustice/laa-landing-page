@@ -1649,7 +1649,7 @@ public class UserController {
         //get apps from session
         List<String> userAssignedApps = session.getAttribute("grantAccessSelectedApps") != null
                 ? (List<String>) session.getAttribute("grantAccessSelectedApps")
-                        : new ArrayList<String>();
+                        : new ArrayList<>();
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
@@ -1784,7 +1784,7 @@ public class UserController {
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(() -> {
-                    // TODO remove this section I useless
+                    // TODO remove this section Is useless
                     // If no selectedApps in session, get user's current apps
                     List<String> userApps = userService.getUserAppsByUserId(id)
                             .stream()
