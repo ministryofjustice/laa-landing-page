@@ -23,7 +23,7 @@ laa-apps:
         appAssigned: ${app.civil.apply.name}
         description: >-
           For all remaining civil legal aid proceedings, managing applications, billing and payments
-      url: ${app.pui.url}
+      url: /home/pui-interstitial
       laaApplicationDetails: ${app.pui.details}
       ordinal: 3
     - name: ${app.submit.crime.form.name}

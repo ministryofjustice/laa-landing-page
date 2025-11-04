@@ -610,6 +610,15 @@ public class UserController {
 
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
+        // If user is multi-firm, skip the firm selection page and go directly to
+        // check-answers
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+            // Clear any previously selected firm from session
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/check-answers";
+        }
+
         return "redirect:/admin/user/create/firm";
     }
 
@@ -971,8 +980,10 @@ public class UserController {
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
             });
         } else {
+            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                    .orElse(List.of());
             editableApps.forEach(app -> {
-                app.setSelected(selectedAppRole.containsKey(app.getId()));
+                app.setSelected(selectedApps.contains(app.getId()));
             });
         }
 
@@ -1110,6 +1121,8 @@ public class UserController {
                 : "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + (currentSelectedAppIndex - 1);
         model.addAttribute("backUrl", rolesBackUrl);
 
+        session.setAttribute("editProfileUserRolesModel", model);
+
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user roles - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -1132,7 +1145,36 @@ public class UserController {
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
-            HttpSession session) {
+            HttpSession session, Model model) {
+
+        Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
+        if (result.hasErrors()) {
+            final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+            log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
+            if (roles != null) {
+                List<String> selectedRoleIds = rolesForm.getRoles() != null ? rolesForm.getRoles() : new ArrayList<>();
+                roles.forEach(role -> {
+                    if (!selectedRoleIds.contains(role.getId())) {
+                        role.setSelected(false);
+                    }
+                });
+            }
+            model.addAttribute("user", user);
+            model.addAttribute("roles", roles);
+            model.addAttribute("entraUser", modelFromSession.getAttribute("entraUser"));
+            model.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex);
+            model.addAttribute("editUserRolesCurrentApp",
+                    modelFromSession.getAttribute("editUserRolesCurrentApp"));
+
+            String rolesBackUrl = selectedAppIndex == 0
+                    ? "/admin/users/edit/" + id + "/apps"
+                    : "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + (selectedAppIndex - 1);
+            model.addAttribute("backUrl", rolesBackUrl);
+
+            return "edit-user-roles";
+        }
 
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session

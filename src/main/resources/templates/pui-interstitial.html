@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in again to access CCMS PUI - LAA Manage user access</title>
+    <link rel="stylesheet" href="/static/assets/css/govuk-frontend.css">
+    <link rel="stylesheet" href="/static/assets/css/custom.css">
+</head>
+
+<body>
+    <main class="govuk-main-wrapper govuk-width-container" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-l">Sign in again to access CCMS PUI</h1>
+
+                <p class="govuk-body">To access CCMS PUI you will be asked to sign in again using multi-factor authentication with your legal aid services account on a WorkSpaces Secure Browser.</p>
+
+                <a th:href="${puiUrl}" class="govuk-button" role="button" data-module="govuk-button">
+                    Sign in
+                </a>
+
+                <p class="govuk-body">
+                    <a href="/home" class="govuk-link">Return to your legal aid services</a>
+                </p>
+            </div>
+        </div>
+    </main>
+    <footer th:replace="~{partials/footer :: footer}"></footer>
+</body>
+
+</html>
