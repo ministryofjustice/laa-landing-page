@@ -128,6 +128,12 @@ spec:
               value: "${APP_CIVIL_DECIDE_DETAILS}"
             - name: APP_CIVIL_DECIDE_URL
               value: "${APP_CIVIL_DECIDE_URL}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_NAME
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_NAME}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_URL
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE

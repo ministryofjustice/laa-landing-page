@@ -1,10 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,10 +34,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
@@ -38,6 +60,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
@@ -104,7 +127,6 @@ public class UserController {
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
 
-
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
@@ -142,11 +164,13 @@ public class UserController {
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
 
         // Debug logging
-        log.debug("UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}, showMultiFirmUsers: {}",
+        log.debug(
+                "UserController.displayAllUsers - search: '{}', firmSearch: '{}', showFirmAdmins: {}, showMultiFirmUsers: {}",
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins,
+                    showMultiFirmUsers);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
@@ -283,14 +307,14 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model, HttpSession session) {
+    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
                 ? user.getAppRoles().stream()
-                    .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                    .sorted()
-                    .collect(Collectors.toList())
+                        .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                        .sorted()
+                        .collect(Collectors.toList())
                 : Collections.emptyList();
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
         final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
@@ -302,27 +326,46 @@ public class UserController {
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
+        boolean canViewAllProfiles = externalUser && editorInternalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
 
-        boolean hasViewOfficePermission =
-                accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
+        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
 
-        boolean hasEditOfficePermission =
-                accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+        boolean hasViewOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
 
-        boolean canManageOffices =
-                hasEditOfficePermission && canEditUser;
+        boolean hasEditOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
 
+        boolean canManageOffices = hasEditOfficePermission && canEditUser;
 
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
-        model.addAttribute("showOfficesTab",  showOfficesTab);
+        model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
-        boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = enableResendVerificationCode
+                && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        // Add multi-firm feature flag
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+
+        // Multi-firm user information
+        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+
+        if (isMultiFirmUser && enableMultiFirmUser) {
+            // Check if user can delete the currently viewed profile (not all profiles)
+            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+        }
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
@@ -336,10 +379,10 @@ public class UserController {
     @PostMapping("/users/manage/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String deleteExternalUser(@PathVariable String id,
-                                     @RequestParam("reason") String reason,
-                                     Authentication authentication,
-                                     HttpSession session,
-                                     Model model) {
+            @RequestParam("reason") String reason,
+            Authentication authentication,
+            HttpSession session,
+            Model model) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isEmpty()) {
             throw new RuntimeException("User not found.");
@@ -362,8 +405,7 @@ public class UserController {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                     optionalUser.get().getEntraUser().getId(),
-                    reason.trim(), current.getId(), ex.getMessage()
-            );
+                    reason.trim(), current.getId(), ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
@@ -400,9 +442,9 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
                 ? user.getAppRoles().stream()
-                    .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                    .sorted()
-                    .collect(Collectors.toList())
+                        .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
+                        .sorted()
+                        .collect(Collectors.toList())
                 : Collections.emptyList();
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
         final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
@@ -416,12 +458,14 @@ public class UserController {
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
-        boolean hasEditOfficePermission = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+        boolean hasEditOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
         model.addAttribute("canManageOffices", canManageOffices);
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
-        boolean showResendVerificationLink = enableResendVerificationCode && accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = enableResendVerificationCode
+                && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
         // Add filter state to model for "Back to search results" link
@@ -479,8 +523,8 @@ public class UserController {
             if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
                 // Check if the existing user is a multi-firm user
                 if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
-                    result.rejectValue("email", "error.email", 
-                        "This email address is already registered as a multi-firm user");
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user");
                 } else {
                     result.rejectValue("email", "error.email", "Email address already exists");
                 }
@@ -491,7 +535,6 @@ public class UserController {
                         "The email address domain is not valid or cannot receive emails.");
             }
         }
-
 
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while creating user: {}", result.getAllErrors());
@@ -580,13 +623,21 @@ public class UserController {
 
         session.setAttribute("isMultiFirmUser", multiFirmForm.getMultiFirmUser());
 
+        // If user is multi-firm, skip the firm selection page and go directly to
+        // check-answers
+        if (Boolean.TRUE.equals(multiFirmForm.getMultiFirmUser())) {
+            // Clear any previously selected firm from session
+            session.removeAttribute("firm");
+            session.removeAttribute("firmSearchForm");
+            return "redirect:/admin/user/create/check-answers";
+        }
 
         return "redirect:/admin/user/create/firm";
     }
 
     @GetMapping("/user/create/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
-                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+            @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
 
@@ -596,7 +647,8 @@ public class UserController {
         if (existingForm != null) {
             firmSearchForm = existingForm;
         } else if (session.getAttribute("firm") != null) {
-            // Grab firm search details from session firm if coming here from the confirmation screen.
+            // Grab firm search details from session firm if coming here from the
+            // confirmation screen.
             FirmDto firm = (FirmDto) session.getAttribute("firm");
             firmSearchForm = FirmSearchForm.builder()
                     .selectedFirmId(firm.getId())
@@ -645,8 +697,8 @@ public class UserController {
             List<FirmDto> firms = firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
                     .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
-                    .sorted((s1, s2) ->
-                            Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()), relevance(s1, firmSearchForm.getFirmSearch())))
+                    .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
+                            relevance(s1, firmSearchForm.getFirmSearch())))
                     .findFirst()
                     .orElse(null);
 
@@ -697,7 +749,7 @@ public class UserController {
                 .orElseThrow(CreateUserDetailsIncompleteException::new);
         if (userOptional.isPresent()) {
             EntraUserDto user = userOptional.get();
-            
+
             // Handle firm selection - multi-firm users can skip firm selection
             FirmDto selectedFirm = firmOptional.orElseGet(() -> {
                 // For multi-firm users who skip firm selection, create a placeholder
@@ -708,7 +760,7 @@ public class UserController {
                 }
                 throw new CreateUserDetailsIncompleteException();
             });
-            
+
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             try {
                 EntraUser entraUser = userService.createUser(user, selectedFirm,
@@ -726,8 +778,8 @@ public class UserController {
                 }
 
                 String firmDescription = Boolean.TRUE.equals(isMultiFirmUser)
-                    ? "(Multi-firm user)"
-                    : selectedFirm.getName();
+                        ? "(Multi-firm user)"
+                        : selectedFirm.getName();
                 CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                         firmDescription, userManager);
                 eventService.logEvent(createUserAuditEvent);
@@ -815,7 +867,7 @@ public class UserController {
 
     /**
      * Get User Details for editing
-     * 
+     *
      * @param id    User ID
      * @param model Model to hold user details form and user data
      * @return View name for editing user details
@@ -845,7 +897,7 @@ public class UserController {
 
     /**
      * Update user details
-     * 
+     *
      * @param id                  User ID
      * @param editUserDetailsForm User details form
      * @param result              Binding result for validation errors
@@ -874,7 +926,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsCheck(@PathVariable String id, Model model,
-                                          HttpSession session) throws IOException {
+            HttpSession session) throws IOException {
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
         if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
@@ -882,15 +934,16 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - Check your answers - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE,
+                "Edit user details - Check your answers - " + user.getFullName());
         return "edit-user-details-check-answer";
     }
 
     /**
      * Update user details
      *
-     * @param id                  User ID
-     * @param session             HttpSession to store user details
+     * @param id      User ID
+     * @param session HttpSession to store user details
      * @return Redirect to user management page
      * @throws IOException              If an error occurs during user update
      * @throws IllegalArgumentException If the user ID is invalid or not found
@@ -898,15 +951,16 @@ public class UserController {
     @PostMapping("/users/edit/{id}/details-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsSubmit(@PathVariable String id,
-                                    HttpSession session) throws IOException {
+            HttpSession session) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
         if (Objects.isNull(editUserDetailsForm)) {
             return "redirect:/admin/users/manage/" + id;
         }
         // Update user details
-        //TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(), editUserDetailsForm.getLastName());
+        // TODO audit log needed
+        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(),
+                editUserDetailsForm.getLastName());
         session.removeAttribute("editUserDetailsForm");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
@@ -917,8 +971,8 @@ public class UserController {
     @GetMapping("/users/edit/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserApps(@PathVariable String id,
-                               @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                               Model model, HttpSession session, Authentication authentication) {
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
+            Model model, HttpSession session, Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -930,7 +984,8 @@ public class UserController {
                 .toList();
 
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
         if (Objects.isNull(selectedAppRole)) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
@@ -974,7 +1029,7 @@ public class UserController {
 
     /**
      * Retrieves available roles for user and their currently assigned roles.
-     * 
+     *
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
      * @param model            Model to hold user and role data
@@ -1020,10 +1075,12 @@ public class UserController {
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
         if (Objects.isNull(editUserAllSelectedRoles)) {
             editUserAllSelectedRoles = new HashMap<>();
         }
@@ -1084,7 +1141,7 @@ public class UserController {
 
     /**
      * Update user roles for a specific app.
-     * 
+     *
      * @param id               User ID
      * @param selectedAppIndex Index of the currently selected app
      * @param session          HttpSession to store selected apps and roles
@@ -1126,8 +1183,8 @@ public class UserController {
     @GetMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswer(@PathVariable String id,
-                                           @RequestParam(value = "errorMessage", required = false) String errorMessage,
-                                           Model model, HttpSession session, Authentication authentication) {
+            @RequestParam(value = "errorMessage", required = false) String errorMessage,
+            Model model, HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         @SuppressWarnings("unchecked")
@@ -1202,7 +1259,7 @@ public class UserController {
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
-                                                 Authentication authentication) {
+            Authentication authentication) {
         UUID uuid = UUID.fromString(id);
 
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
@@ -1244,7 +1301,7 @@ public class UserController {
 
     /**
      * Get user offices for editing
-     * 
+     *
      * @param id    User ID
      * @param model Model to hold user and office data
      * @return View name for editing user offices
@@ -1314,7 +1371,7 @@ public class UserController {
 
     /**
      * Update user offices
-     * 
+     *
      * @param id          User ID
      * @param officesForm Offices form with selected office IDs
      * @param result      Binding result for validation errors
@@ -1361,7 +1418,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/offices-check-answer")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOfficesCheck(@PathVariable String id,
-                                    Model model, HttpSession session) {
+            Model model, HttpSession session) {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
             return "redirect:/admin/users/edit/" + id + "/offices";
@@ -1394,8 +1451,8 @@ public class UserController {
     @PostMapping("/users/edit/{id}/offices-check-answer")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String updateUserOfficesSubmit(@PathVariable String id,
-                                    Authentication authentication,
-                                    HttpSession session) throws IOException {
+            Authentication authentication,
+            HttpSession session) throws IOException {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
             return "redirect:/admin/users/edit/" + id + "/offices";
@@ -1447,10 +1504,125 @@ public class UserController {
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
 
+        // Convert to Multi-Firm Form
+        session.removeAttribute("convertToMultiFirmForm");
+
         // Clear any success messages
         session.removeAttribute("successMessage");
 
         return "redirect:/admin/users/manage/" + id;
+    }
+
+    /**
+     * Convert to Multi-Firm Flow - Show conversion form
+     */
+    @GetMapping("/users/edit/{id}/convert-to-multi-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
+            Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+        // Check if multi-firm feature is enabled
+        if (!enableMultiFirmUser) {
+            throw new RuntimeException("The multi-firm feature is not available. "
+                    + "Please contact your system administrator for assistance.");
+        }
+
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+
+        // Check if user is not external
+        if (user.getUserType() != UserType.EXTERNAL) {
+            log.warn("Attempt to convert internal user {} to multi-firm", id);
+            throw new RuntimeException("Only external users can be converted to multi-firm users");
+        }
+
+        // Check if already multi-firm
+        if (user.getEntraUser().isMultiFirmUser()) {
+            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        // Pre-populate form from session if it exists
+        ConvertToMultiFirmForm sessionForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
+        if (sessionForm != null) {
+            convertToMultiFirmForm.setConvertToMultiFirm(sessionForm.isConvertToMultiFirm());
+        }
+
+        model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Convert to multi-firm user - " + user.getFullName());
+        return "convert-to-multi-firm/index";
+    }
+
+    @PostMapping("/users/edit/{id}/convert-to-multi-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    public String convertToMultiFirmPost(@PathVariable String id,
+            @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
+            BindingResult result,
+            HttpSession session,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        // Check if multi-firm feature is enabled
+        if (!enableMultiFirmUser) {
+            throw new RuntimeException("The multi-firm feature is not available. "
+                    + "Please contact your system administrator for assistance.");
+        }
+
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+
+        // Check if user is not external
+        if (user.getUserType() != UserType.EXTERNAL) {
+            log.warn("Attempt to convert internal user {} to multi-firm", id);
+            throw new RuntimeException("Only external users can be converted to multi-firm users");
+        }
+
+        // Check if already multi-firm
+        if (user.getEntraUser().isMultiFirmUser()) {
+            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while converting user to multi-firm: {}", result.getAllErrors());
+            model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+            model.addAttribute("user", user);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Convert to multi-firm user - " + user.getFullName());
+            return "convert-to-multi-firm/index";
+        }
+
+        // If user chose not to convert, redirect back to manage user page
+        if (Boolean.FALSE.equals(convertToMultiFirmForm.isConvertToMultiFirm())) {
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+        // User chose "Yes" - perform the conversion
+        try {
+            // Convert the user to multi-firm
+            userService.convertToMultiFirmUser(user.getEntraUser().getId());
+
+            // Create audit event
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
+            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
+            eventService.logEvent(auditEvent);
+
+            log.info("Successfully converted user {} to multi-firm status", id);
+
+            // Add success message
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "User has been successfully converted to a multi-firm user");
+
+            // Redirect to manage user page
+            return "redirect:/admin/users/manage/" + id;
+
+        } catch (Exception e) {
+            log.error("Failed to convert user {} to multi-firm: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "Failed to convert user to multi-firm: " + e.getMessage());
+            model.addAttribute("convertToMultiFirmForm", convertToMultiFirmForm);
+            model.addAttribute("user", user);
+            return "convert-to-multi-firm/index";
+        }
     }
 
     /**
@@ -1469,7 +1641,7 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/apps")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
-                                          HttpSession session, Authentication authentication) {
+            HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -1563,7 +1735,8 @@ public class UserController {
                     .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
-            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles, currentUserDto.getUserId());
+            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles,
+                    currentUserDto.getUserId());
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
             UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto != null ? userProfileDto.getId() : null,
@@ -1662,7 +1835,8 @@ public class UserController {
         }
 
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(), roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
@@ -2105,7 +2279,8 @@ public class UserController {
         String uri = request != null ? request.getRequestURI() : "unknown";
         String method = request != null ? request.getMethod() : "unknown";
         String referer = request != null ? request.getHeader("Referer") : null;
-        log.warn("Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
+        log.warn(
+                "Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'",
                 ex.getMessage(), method, uri, referer, requestedPath);
         return new RedirectView("/not-authorised");
     }

@@ -31,7 +31,7 @@
 
         <div th:if="${errorMessage}">
             <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
-                 aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                aria-describedby="error-summary-description" data-module="govuk-error-summary">
                 <h2 class="govuk-error-summary__title" id="error-summary-title">
                     There is a problem
                 </h2>
@@ -44,13 +44,13 @@
         </div>
 
         <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
-             aria-label="success: Verification email sent successfully" data-module="moj-alert">
+            aria-label="success: Verification email sent successfully" data-module="moj-alert">
             <div>
                 <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 30 30" height="30" width="30">
+                    viewBox="0 0 30 30" height="30" width="30">
                     <path
-                            d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
-                            fill="currentColor" />
+                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                        fill="currentColor" />
                 </svg>
             </div>
             <div class="moj-alert__content">
@@ -84,6 +84,16 @@
                 <!-- <div id="event-name-hint" class="govuk-hint">
                     Last logged in <span th:text="${user.lastLoggedIn}"></span>
                 </div> -->
+
+                <!-- Multi-firm user notification -->
+                <div th:if="${user.entraUser.multiFirmUser}" style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
+                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                        This user is set up as a multi-firm user.
+                        <a class="govuk-link" href="#" th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
+                    </p>
+                </div>
+
                 <div class="govuk-tabs" data-module="govuk-tabs">
                     <h2 class="govuk-tabs__title">
                         Contents
@@ -109,9 +119,14 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title">User details</h2>
-                                <ul class="govuk-summary-card__actions" th:if="${canDeleteUser}">
-                                    <li class="govuk-summary-card__action">
-                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;" th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}">Delete user</a>
+                                <ul class="govuk-summary-card__actions">
+                                    <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}">Delete user</a>
+                                    </li>
+                                    <li th:if="${canDeleteFirmProfile}" class="govuk-summary-card__action">
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{/admin/multi-firm/user/delete-profile/{id}(id=${user.id})}">Revoke access</a>
                                     </li>
                                 </ul>
                             </div>
@@ -119,11 +134,13 @@
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
-                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                        <dd class="govuk-summary-list__value"
+                                            style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
                                             <span th:text="${user.entraUser.email}"></span>
-                                            <a th:if="${showResendVerificationLink}"
-                                               class="govuk-link" style="white-space: nowrap;"
-                                               th:href="@{/admin/user/{id}/verify(id=${user.id})}">Resend Activation Code</a>
+                                            <a th:if="${showResendVerificationLink}" class="govuk-link"
+                                                style="white-space: nowrap;"
+                                                th:href="@{/admin/user/{id}/verify(id=${user.id})}">Resend Activation
+                                                Code</a>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -138,6 +155,44 @@
                                             Last name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${enableMultiFirmUser and externalUser}">
+                                        <dt class="govuk-summary-list__key">
+                                            Multi-firm access
+                                        </dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:if="${user.entraUser.multiFirmUser}">
+                                                Yes
+                                            </span>
+                                            <span th:unless="${user.entraUser.multiFirmUser}">No</span>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions"
+                                            th:if="${enableMultiFirmUser != null and enableMultiFirmUser and !user.entraUser.multiFirmUser and canEditUser}">
+                                            <a class="govuk-link"
+                                                th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
+                                                Convert to multi-firm
+                                            </a>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Firm name
+                                        </dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                        <dt class="govuk-summary-list__key">
+                                            Multi-firm access
+                                        </dt>
+                                        <dd class="govuk-summary-list__value" style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                                            <span th:text="${user.entraUser.multiFirmUser} ? 'Yes' : 'No'"></span>
+                                            <a th:if="${user.entraUser.multiFirmUser}"
+                                               class="govuk-link" style="white-space: nowrap;"
+                                               th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
+                                        </dd>
                                     </div>
                                 </dl>
                             </div>
