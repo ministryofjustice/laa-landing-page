@@ -53,12 +53,12 @@ public class BaseRepositoryTest {
 
     protected Firm buildFirm(String name, String firmCode) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .code(firmCode).type(FirmType.INDIVIDUAL).build();
+                .code(firmCode).type(FirmType.ADVOCATE).build();
     }
 
     protected Firm buildChildFirm(String name, String firmCode, Firm parentFirm) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .code(firmCode).type(FirmType.INDIVIDUAL).parentFirm(parentFirm).build();
+                .code(firmCode).type(FirmType.ADVOCATE).parentFirm(parentFirm).build();
     }
 
     protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
