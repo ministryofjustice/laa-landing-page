@@ -2822,9 +2822,8 @@ class UserControllerTest {
     @Test
     void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUser_whenUserHasPermission() {
         // Given
-        String userId = "user42";
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
+        entraUser.setId("external-user-id");
         entraUser.setFullName("Managed User");
         entraUser.setMultiFirmUser(true);
 
@@ -2847,24 +2846,23 @@ class UserControllerTest {
                 .build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
-        when(accessControlService.canViewAllFirmsOfMultiFirmUser(userId)).thenReturn(true);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
 
         // When
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(true);
-        verify(accessControlService).canViewAllFirmsOfMultiFirmUser(userId);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser();
     }
 
     @Test
     void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUserToFalse_whenUserLacksPermission() {
         // Given
-        String userId = "user42";
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
+        entraUser.setId("external-user-id");
         entraUser.setFullName("Managed User");
         entraUser.setMultiFirmUser(true);
 
@@ -2887,16 +2885,16 @@ class UserControllerTest {
                 .build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
-        when(accessControlService.canViewAllFirmsOfMultiFirmUser(userId)).thenReturn(false);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);
 
         // When
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(false);
-        verify(accessControlService).canViewAllFirmsOfMultiFirmUser(userId);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser();
     }
 
     @Test
