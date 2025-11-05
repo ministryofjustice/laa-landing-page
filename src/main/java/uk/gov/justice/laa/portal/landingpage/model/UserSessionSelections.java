@@ -5,18 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
-import java.util.Set;
-
+import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class UserSessionSelection {
-    private Set<String> appsSelection;
-    private Set<String> rolesSelection;
+public class UserSessionSelections {
+    private Map<String, UserSessionSelection> userSelection;
+
+
 }
-
-
-

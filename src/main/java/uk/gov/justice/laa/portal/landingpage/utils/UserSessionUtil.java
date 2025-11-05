@@ -2,11 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionSelection;
+import uk.gov.justice.laa.portal.landingpage.model.UserSessionSelections;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 
@@ -28,14 +26,63 @@ public class UserSessionUtil {
     }
 
     public static List<String> getAppsByUserId(HttpSession session, String id){
-        List<UserSessionSelection> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", UserSessionSelection.class)
-                .orElse(new ArrayList<>());
-        return selectedApps.stream()
-                .filter(userSelection -> userSelection.getId().equals(id))
-                .flatMap(user -> user.getAppsSelection().stream())
-                .toList();
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
-    };
+        return Optional.ofNullable(userSessionSelections)
+                .map(map -> map.get(id))
+                .map(UserSessionSelection::getAppsSelection)
+                .map(ArrayList::new) // convert Set<String> to List<String>
+                .orElseGet(ArrayList::new); // return empty list if anything is null
+    }
+
+    public static List<String> getRolesByUserId(HttpSession session, String id){
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
+
+        return Optional.ofNullable(userSessionSelections)
+                .map(map -> map.get(id))
+                .map(UserSessionSelection::getRolesSelection)
+                .map(ArrayList::new) // convert Set<String> to List<String>
+                .orElseGet(ArrayList::new); // return empty list if anything is null
+
+    }
+
+    public static void AddAppsById(HttpSession session, String id, List<String> selectedApps){
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
+
+        if (userSessionSelections == null){
+            Map<String, UserSessionSelection> userSelectionMap = new HashMap<>();
+            userSelectionMap.put(id, new UserSessionSelection());
+            userSelectionMap.get(id).setAppsSelection(new HashSet<>(selectedApps));
+            session.setAttribute("userSelection", userSelectionMap);
+        } else {
+            Optional.of(userSessionSelections)
+                    .map(map -> map.get(id))
+                    .ifPresentOrElse(
+                            userSelection -> userSelection.setAppsSelection(new HashSet<>(selectedApps)),
+                            () -> {
+                                userSessionSelections.put(id, new UserSessionSelection());
+                                userSessionSelections.get(id).setAppsSelection(new HashSet<>(selectedApps));
+                            }
+                    );
+            session.setAttribute("userSelection", userSessionSelections);
+        }
+    }
+
+    public static void AddRolesById(HttpSession session, String id, List<String> selectedRoles) {
+
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
+        Optional.of(userSessionSelections)
+                .map(map -> map.get(id))
+                .ifPresentOrElse(
+                        userSelection -> userSelection.setAppsSelection(new HashSet<>(selectedRoles)),
+                        () -> {
+                            userSessionSelections.put(id, new UserSessionSelection());
+                            userSessionSelections.get(id).setRolesSelection(new HashSet<>(selectedRoles));
+                        }
+                );
+        session.setAttribute("userSelection", userSessionSelections);
+    }
+
 
 
 }

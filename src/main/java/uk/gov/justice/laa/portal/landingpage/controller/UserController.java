@@ -3,7 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserSessionUtil.getAppsByUserId;
+import static uk.gov.justice.laa.portal.landingpage.utils.UserSessionUtil.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -84,6 +84,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import uk.gov.justice.laa.portal.landingpage.utils.UserSessionUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -1674,12 +1675,8 @@ public class UserController {
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
-        session.setAttribute("grantAccessSelectedApps", new UserSessionSelection()
-                .toBuilder()
-                        .id(id)
-                        .appsSelection(selectedApps)
-                .build());
-
+        // Add roles to the section
+        UserSessionUtil.AddAppsById(session, id,selectedApps );
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
 
@@ -1726,7 +1723,7 @@ public class UserController {
 
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
+/*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(() -> {
                     // If no selectedApps in session, get user's current apps
                     List<String> userApps = userService.getUserAppsByUserId(id)
@@ -1736,8 +1733,8 @@ public class UserController {
                             .toList();
                     session.setAttribute("grantAccessSelectedApps", userApps);
                     return userApps;
-                });
-
+                });*/
+        List<String> selectedApps = getAppsByUserId(session, id);
         // Ensure the selectedAppIndex is within bounds
         if (selectedApps.isEmpty()) {
             // No apps assigned to user, redirect back to manage page
@@ -1766,9 +1763,9 @@ public class UserController {
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
-        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
-                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
-
+/*        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
+                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));*/
+        List<String> selectedRoles = getRolesByUserId(session, id);
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
@@ -1846,8 +1843,9 @@ public class UserController {
         }
 
         UserProfileDto user = userService.getUserProfileById(id).orElse(null);
-        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
-                .orElseGet(ArrayList::new);
+/*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
+                .orElseGet(ArrayList::new);*/
+        List<String> selectedApps = getAppsByUserId(session, id);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("grantAccessAllSelectedRoles");
@@ -1873,14 +1871,16 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+                /*Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
                         user != null ? user.getEntraUser() : null, updateResult.get("diff"),
                         "role");
-                eventService.logEvent(updateUserAuditEvent);
+                eventService.logEvent(updateUserAuditEvent);*/
+                //add
+                AddRolesById(session, id,allSelectedRoles);
             }
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
