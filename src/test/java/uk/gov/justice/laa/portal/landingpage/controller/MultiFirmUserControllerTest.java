@@ -891,8 +891,8 @@ public class MultiFirmUserControllerTest {
                 .build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -922,8 +922,8 @@ public class MultiFirmUserControllerTest {
         EntraUserDto user = EntraUserDto.builder().fullName("Test User").build();
         session.setAttribute("entraUser", user);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -951,8 +951,8 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("ALL")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -981,8 +981,8 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("invalid-office-id")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
