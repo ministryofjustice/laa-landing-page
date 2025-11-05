@@ -537,10 +537,10 @@ public class UserController {
         }
 
         // Set user details from the form
-        user.setFirstName(userDetailsForm.getFirstName());
-        user.setLastName(userDetailsForm.getLastName());
-        user.setFullName(userDetailsForm.getFirstName() + " " + userDetailsForm.getLastName());
-        user.setEmail(userDetailsForm.getEmail());
+        user.setFirstName(userDetailsForm.getFirstName().trim());
+        user.setLastName(userDetailsForm.getLastName().trim());
+        user.setFullName(userDetailsForm.getFirstName().trim() + " " + userDetailsForm.getLastName().trim());
+        user.setEmail(userDetailsForm.getEmail().trim());
         session.setAttribute("user", user);
         session.setAttribute("isUserManager", userDetailsForm.getUserManager());
 

@@ -185,7 +185,7 @@ class FirmServiceTest {
                 .id(UUID.randomUUID())
                 .name("John Smith Legal Services")
                 .code("JSMITH002")
-                .type(FirmType.PARTNERSHIP)
+                .type(FirmType.ADVOCATE)
                 .build();
         List<Firm> searchResults = List.of(firm1, firm2);
 
@@ -328,8 +328,8 @@ class FirmServiceTest {
         void whenInternalUser_withCodeSearch_filtersFirmsByCode() {
             // Given
             List<Firm> codeMatchingFirms = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.SOLE_PRACTITIONER).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.SOLE_PRACTITIONER).build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).build()
             );
             when(firmRepository.findByNameOrCodeContaining("TF")).thenReturn(codeMatchingFirms);
 
@@ -406,9 +406,9 @@ class FirmServiceTest {
         void whenSearchIsCaseInsensitive_returnsMatchingFirms() {
             // Given
             List<Firm> caseInsensitiveMatchingFirms = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.SOLE_PRACTITIONER).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.SOLE_PRACTITIONER).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 3").code("TF3").type(FirmType.SOLE_PRACTITIONER).build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 3").code("TF3").type(FirmType.ADVOCATE).build()
             );
             when(firmRepository.findByNameOrCodeContaining("fIrM")).thenReturn(caseInsensitiveMatchingFirms);
 
@@ -448,7 +448,7 @@ class FirmServiceTest {
                 .id(UUID.randomUUID())
                 .name("ABC Legal Services")
                 .code("ABC001")
-                .type(FirmType.LIMITED_COMPANY)
+                .type(FirmType.ADVOCATE)
                 .build();
         List<Firm> searchResults = List.of(firm);
 
@@ -540,7 +540,7 @@ class FirmServiceTest {
                 .id(UUID.randomUUID())
                 .name("ABC Legal Services")
                 .code("ABC001")
-                .type(FirmType.SOLE_PRACTITIONER)
+                .type(FirmType.ADVOCATE)
                 .build();
         List<Firm> searchResults = List.of(firm);
 
