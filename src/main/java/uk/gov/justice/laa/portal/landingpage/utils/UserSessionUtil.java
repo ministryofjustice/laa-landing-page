@@ -35,13 +35,23 @@ public class UserSessionUtil {
                 .orElseGet(ArrayList::new); // return empty list if anything is null
     }
 
-    public static List<String> getRolesByUserId(HttpSession session, String id){
+    public static Map<String, List<String>> getRolesByAppId(HttpSession session, String id, String appId){
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
         return Optional.ofNullable(userSessionSelections)
                 .map(map -> map.get(id))
                 .map(UserSessionSelection::getRolesSelection)
-                .map(ArrayList::new) // convert Set<String> to List<String>
+                .orElseGet(HashMap::new); // return empty list if anything is null
+
+    }
+
+    public static List<String> getListRolesByUserIdAndAppId(HttpSession session, String id, String appId){
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
+
+        return Optional.ofNullable(userSessionSelections)
+                .map(map -> map.get(id))
+                .map(UserSessionSelection::getRolesSelection)
+                .map(map -> map.get(appId))
                 .orElseGet(ArrayList::new); // return empty list if anything is null
 
     }
@@ -68,19 +78,28 @@ public class UserSessionUtil {
         }
     }
 
-    public static void AddRolesById(HttpSession session, String id, List<String> selectedRoles) {
+    public static void AddRolesById(HttpSession session, String id, String appId, List<String> selectedRoles) {
 
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
-        Optional.of(userSessionSelections)
+
+        Optional.ofNullable(userSessionSelections)
                 .map(map -> map.get(id))
+                .map(UserSessionSelection::getRolesSelection)
+                .map(map -> map.get(appId))
                 .ifPresentOrElse(
-                        userSelection -> userSelection.setAppsSelection(new HashSet<>(selectedRoles)),
-                        () -> {
-                            userSessionSelections.put(id, new UserSessionSelection());
-                            userSessionSelections.get(id).setRolesSelection(new HashSet<>(selectedRoles));
-                        }
-                );
+                userSelection -> {
+                    userSelection.clear();
+                    userSelection.addAll(selectedRoles);
+                },
+                () -> {
+
+                    Map<String, List<String>> newRolesSelection = new HashMap<>();
+                    newRolesSelection.put(appId, selectedRoles);
+                    userSessionSelections.get(id).setRolesSelection(newRolesSelection);
+                }
+        );
         session.setAttribute("userSelection", userSessionSelections);
+
     }
 
 

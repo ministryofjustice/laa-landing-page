@@ -1721,7 +1721,7 @@ public class UserController {
             Authentication authentication,
             Model model, HttpSession session) {
 
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        //UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 /*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(() -> {
@@ -1734,15 +1734,16 @@ public class UserController {
                     session.setAttribute("grantAccessSelectedApps", userApps);
                     return userApps;
                 });*/
-        List<String> selectedApps = getAppsByUserId(session, id);
+        String selectedApp = getAppsByUserId(session, id).get(selectedAppIndex);
         // Ensure the selectedAppIndex is within bounds
-        if (selectedApps.isEmpty()) {
+        if (selectedApp.isEmpty()) {
             // No apps assigned to user, redirect back to manage page
             return "redirect:/admin/users/manage/" + id;
         }
 
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
-        Integer currentSelectedAppIndex;
+        //todo unnecessary code
+/*        Integer currentSelectedAppIndex;
         if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
             currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
         } else {
@@ -1752,20 +1753,23 @@ public class UserController {
         // Ensure the index is within bounds
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
-        }
-
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+        }*/
+        //get all roles by app id and user type.
+        //Todo extract to new method
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApp,
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
-        AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
+        AppDto currentApp = userService.getAppByAppId(selectedApp).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
 /*        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
                 .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));*/
-        List<String> selectedRoles = getRolesByUserId(session, id);
+        List<String> selectedRoles = Optional.ofNullable(getListRolesByUserIdAndAppId(session, id, selectedApp))
+                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
                     AppRoleViewModel viewModel = mapper.map(appRoleDto, AppRoleViewModel.class);
@@ -1793,10 +1797,10 @@ public class UserController {
         } else {
             model.addAttribute("isCcmsApp", false);
         }
-
+        // view model
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
-        model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
+        //model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
         // Store the model in session to handle validation errors later and track
@@ -1813,7 +1817,7 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
-            @RequestParam int selectedAppIndex,
+            @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             Authentication authentication,
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
@@ -1845,16 +1849,18 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElse(null);
 /*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(ArrayList::new);*/
+        //selected app by index
         List<String> selectedApps = getAppsByUserId(session, id);
-        @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
-                .getAttribute("grantAccessAllSelectedRoles");
-        if (allSelectedRolesByPage == null) {
+        String selectedApp = selectedApps.get(selectedAppIndex);
+        //@SuppressWarnings("unchecked")
+        //Map<String, List<String>> allSelectedRolesByPage = getRolesByAppId(session,id,selectedApp);
+/*        if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
-        }
+        }*/
         // Add the roles for the currently selected app to a map for lookup.
-        allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
-        if (selectedAppIndex >= selectedApps.size() - 1) {
+        //allSelectedRolesByPage.put(selectedApp, rolesForm.getRoles());
+        AddRolesById(session, id, selectedApp, rolesForm.getRoles());
+        /*if (selectedAppIndex >= selectedApps.size() - 1) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             // Clear the grantAccessUserRolesModel and page roles from session to avoid
             // stale data
@@ -1871,14 +1877,14 @@ public class UserController {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                /*Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+                *//*Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
                         currentUserDto,
                         user != null ? user.getEntraUser() : null, updateResult.get("diff"),
                         "role");
-                eventService.logEvent(updateUserAuditEvent);*/
+                eventService.logEvent(updateUserAuditEvent);*//*
                 //add
                 AddRolesById(session, id,allSelectedRoles);
             }
@@ -1890,7 +1896,22 @@ public class UserController {
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/grant-access/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
-        }
+        }*/
+        //
+        //return "redirect:/admin/users/grant-access/" + id + "/offices";
+        //check if has more items
+
+
+        return getRedirectUrl(id, selectedAppIndex, selectedApps);
+
+    }
+
+
+    public String getRedirectUrl(String id, int selectedAppIndex, List<String> selectedApps) {
+        return Optional.of(selectedAppIndex + 1)
+                .filter(nextIndex -> nextIndex <= selectedApps.size())
+                .map(nextIndex -> "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/roles?selectedAppIndex=" + nextIndex)
+                .orElse("redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/offices");
     }
 
     /**

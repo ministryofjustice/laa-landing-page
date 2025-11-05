@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -15,7 +17,7 @@ import java.util.Set;
 @Builder(toBuilder = true)
 public class UserSessionSelection {
     private Set<String> appsSelection;
-    private Set<String> rolesSelection;
+    private Map<String, List<String>> rolesSelection;
 }
 
 
