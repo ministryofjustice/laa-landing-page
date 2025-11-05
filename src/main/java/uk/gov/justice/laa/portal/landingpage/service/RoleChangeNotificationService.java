@@ -43,7 +43,7 @@ public class RoleChangeNotificationService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 100)
     )
-    public boolean sendMessage(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) {
+    public boolean sendMessage(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) {
         // Skip until queue is ready for env
         if ("none".equalsIgnoreCase(sqsQueueUrl)) {
             log.info("Skipping CCMS update for user: {}",
@@ -62,7 +62,7 @@ public class RoleChangeNotificationService {
     }
     
 
-    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<AppRole> newPuiRoles, Set<AppRole> oldPuiRoles) throws Exception {
+    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)
                 && userProfile.getUserType() != UserType.INTERNAL) {
@@ -73,7 +73,7 @@ public class RoleChangeNotificationService {
                     .lastName(entraUser.getLastName())
                     .timestamp(LocalDateTime.now())
                     .email(entraUser.getEmail())
-                    .responsibilityKey(newPuiRoles.stream().map(AppRole::getCcmsCode).toList())
+                    .responsibilityKey(newPuiRoles.stream().toList())
                     .build();
 
             String messageBody = objectMapper.writeValueAsString(message);
@@ -99,11 +99,10 @@ public class RoleChangeNotificationService {
         return false;
     }
 
-    private String generateDeduplicationId(UserProfile userProfile, Set<AppRole> newPuiRoles) {
+    private String generateDeduplicationId(UserProfile userProfile, Set<String> newPuiRoles) {
         String content = userProfile.getEntraUser().getEntraOid() + "-"
                 + userProfile.getLegacyUserId() + "-"
                 + newPuiRoles.stream()
-                            .map(AppRole::getCcmsCode)
                             .sorted()
                             .reduce("", (a, b) -> a + b) + "-"
                 + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"));
