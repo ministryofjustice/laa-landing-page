@@ -1,2 +1,25 @@
 databaseChangeLog:
-  - 
+  - changeSet:
+      id: 1762341543895-1
+      author: majid.elmi
+      comment: "Assign VIEW_ALL_FIRMS_MULTIFIRM_USER permission to Global Admin, External User Admin and External User Manager roles"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_ALL_FIRMS_MULTIFIRM_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_ALL_FIRMS_MULTIFIRM_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_ALL_FIRMS_MULTIFIRM_USER')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_ALL_FIRMS_MULTIFIRM_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_ALL_FIRMS_MULTIFIRM_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_ALL_FIRMS_MULTIFIRM_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"
