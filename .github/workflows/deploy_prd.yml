@@ -157,7 +157,7 @@ jobs:
 
       - name: Wait for new deployment to finish
         run: |
-          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment laa-landing-page --timeout=7m
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
