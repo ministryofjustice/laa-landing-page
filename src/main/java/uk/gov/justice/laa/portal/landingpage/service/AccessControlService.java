@@ -81,14 +81,7 @@ public class AccessControlService {
     }
 
     public boolean canViewAllFirmsOfMultiFirmUser(String userProfileId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
-        if (optionalAccessedUserProfile.isEmpty()) {
-            return false;
-        }
-        return userHasPermission(authenticatedUser, Permission.VIEW_ALL_FIRMS_MULTIFIRM_USER);
+        return authenticatedUserHasPermission(Permission.VIEW_ALL_USER_MULTI_FIRM_PROFILES);
     }
 
     public boolean canDeleteUser(String userProfileId) {

@@ -74,12 +74,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -2822,6 +2817,86 @@ class UserControllerTest {
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(false);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUser_whenUserHasPermission() {
+        // Given
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Given - User has permission
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser(userId)).thenReturn(true);
+
+        // When
+        String view = userController.manageUser(userId, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(true);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser(userId);
+    }
+
+    @Test
+    void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUserToFalse_whenUserLacksPermission() {
+        // Given
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Given - User has permission
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser(userId)).thenReturn(false);
+
+        // When
+        String view = userController.manageUser(userId, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(false);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser(userId);
     }
 
     @Test
