@@ -6,6 +6,7 @@ public enum Permission {
     ACCESS_LAA_APPS, // Not used.
     VIEW_INTERNAL_USER,
     VIEW_EXTERNAL_USER,
+    VIEW_ALL_USER_MULTI_FIRM_PROFILES,
     CREATE_INTERNAL_USER,
     CREATE_EXTERNAL_USER,
     EDIT_INTERNAL_USER,
@@ -28,6 +29,7 @@ public enum Permission {
             EDIT_USER_OFFICE.name(),
             VIEW_USER_OFFICE.name(),
             EDIT_USER_DETAILS.name(),
-            DELETE_EXTERNAL_USER.name()
+            DELETE_EXTERNAL_USER.name(),
+            VIEW_ALL_USER_MULTI_FIRM_PROFILES.name()
     };
 }

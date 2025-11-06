@@ -3539,8 +3539,8 @@ class UserServiceTest {
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
-                    eq(Set.of(newRole)),
-                    eq(Set.of(oldRole)));
+                    eq(Set.of(newRole.getCcmsCode())),
+                    eq(Set.of(oldRole.getCcmsCode())));
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();

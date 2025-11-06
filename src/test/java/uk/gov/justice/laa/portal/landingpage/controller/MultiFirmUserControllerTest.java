@@ -1144,6 +1144,7 @@ public class MultiFirmUserControllerTest {
         assertThat(selectedRoles).hasSize(2);
         assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
         assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
     }
 
     @Test
