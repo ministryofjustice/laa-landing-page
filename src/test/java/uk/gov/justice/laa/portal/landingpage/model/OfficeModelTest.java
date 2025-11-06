@@ -56,7 +56,7 @@ class OfficeModelTest {
         String formatted = address.getFormattedAddress();
 
         // Then
-        assertThat(formatted).isEqualTo("123 Main Street, London, Greater London, SW1A 1AA");
+        assertThat(formatted).isEqualTo("123 Main Street, Greater London, London, SW1A 1AA");
     }
 
     @Test
