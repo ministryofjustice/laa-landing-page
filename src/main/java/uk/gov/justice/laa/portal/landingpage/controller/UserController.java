@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -1629,13 +1630,7 @@ public class UserController {
 
         //getList of selectedApps
         List<String> selectedApps = getAppsByUserId(session, id);
-        List<AppDto> editableApps = availableApps.stream()
-                .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
-                .peek(app -> {
-                    boolean isSelected = !selectedApps.isEmpty() && selectedApps.contains(app.getId());
-                    app.setSelected(isSelected);
-                })
-                .toList();
+        List<AppDto> editableApps = getAppByUserPermissions(availableApps, editorUserProfile, selectedApps, false);
 
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
@@ -1652,30 +1647,42 @@ public class UserController {
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
             Model model, HttpSession session) {
+
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while selecting apps: {}", result.getAllErrors());
             // If there are validation errors, return to the apps page with errors
-            Model modelFromSession = (Model) session.getAttribute("grantAccessUserAppsModel");
+           Model modelFromSession = (Model) session.getAttribute("grantAccessUserAppsModel");
             if (modelFromSession == null) {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
+            //get all the information
+            UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+            UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+            UserType userType = user.getUserType();
+
+            List<AppDto> availableApps = userService.getAppsByUserType(userType);
+
+            List<AppDto> apps = getAppByUserPermissions(availableApps,editorUserProfile, getAppsByUserId(session, id), true);
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
-            model.addAttribute("apps", modelFromSession.getAttribute("apps"));
+            //repopulate apps again unchecked
+            model.addAttribute("apps", apps);
+            //remove only app from session
+            removeAppsSessionById(session, id);
             return "grant-access-user-apps";
         }
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
         // Add roles to the section
-        UserSessionUtil.AddAppsById(session, id,selectedApps );
+        AddAppsById(session, id,selectedApps );
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
 
         // If no apps are selected, persist empty roles to database and redirect to
         // manage user page
-        if (selectedApps.isEmpty()) {
+       /* if (selectedApps.isEmpty()) {
             UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
             // Update user to have no roles (empty list)
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1695,7 +1702,7 @@ public class UserController {
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/manage/" + uuid;
-        }
+        }*/
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
@@ -1713,54 +1720,16 @@ public class UserController {
             RolesForm rolesForm,
             Authentication authentication,
             Model model, HttpSession session) {
-
-        //UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-/*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
-                .orElseGet(() -> {
-                    // If no selectedApps in session, get user's current apps
-                    List<String> userApps = userService.getUserAppsByUserId(id)
-                            .stream()
-                            .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
-                            .map(AppDto::getId)
-                            .toList();
-                    session.setAttribute("grantAccessSelectedApps", userApps);
-                    return userApps;
-                });*/
+
         String selectedApp = getAppsByUserId(session, id).get(selectedAppIndex);
-        // Ensure the selectedAppIndex is within bounds
-        if (selectedApp.isEmpty()) {
-            // No apps assigned to user, redirect back to manage page
-            return "redirect:/admin/users/manage/" + id;
-        }
+        //get the current app from db
+        AppDto currentApp = userService.getAppByAppId(selectedApp).orElseThrow();
 
-        Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
-        //todo unnecessary code
-/*        Integer currentSelectedAppIndex;
-        if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
-            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
-        } else {
-            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
-        }
-
-        // Ensure the index is within bounds
-        if (currentSelectedAppIndex >= selectedApps.size()) {
-            currentSelectedAppIndex = 0;
-        }*/
-        //get all roles by app id and user type.
-        //Todo extract to new method
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApp,
-                user.getUserType());
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
-                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
-
+        List<AppRoleDto> roles = getAppRoleByUserPermissions(authentication, selectedApp, user);
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
 
-        AppDto currentApp = userService.getAppByAppId(selectedApp).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
-/*        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
-                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));*/
         List<String> selectedRoles = Optional.ofNullable(getListRolesByUserIdAndAppId(session, id, selectedApp))
                 .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
@@ -1822,14 +1791,16 @@ public class UserController {
             // If there are validation errors, return to the roles page with errors
             @SuppressWarnings("unchecked")
             List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
-            if (roles != null) {
+/*            if (roles != null) {
                 List<String> selectedRoleIds = rolesForm.getRoles() != null ? rolesForm.getRoles() : new ArrayList<>();
                 roles.forEach(role -> {
                     if (!selectedRoleIds.contains(role.getId())) {
                         role.setSelected(false);
                     }
                 });
-            }
+            }*/
+            //remove
+            removeUserSessionById(session, id);
             model.addAttribute("roles", roles);
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("grantAccessSelectedAppIndex",
@@ -1842,6 +1813,7 @@ public class UserController {
         List<String> selectedApps = getAppsByUserId(session, id);
         String selectedApp = selectedApps.get(selectedAppIndex);
 
+        //add in the roles in the session
         AddRolesById(session, id, selectedApp, rolesForm.getRoles());
 
 
@@ -2257,5 +2229,30 @@ public class UserController {
         session.setAttribute("userListFilters", result);
 
         return result;
+    }
+
+    private List<AppRoleDto> getAppRoleByUserPermissions(Authentication authentication, String selectedApp, UserProfileDto user) {
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApp,
+                user.getUserType());
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        return roles;
+    }
+
+    @NotNull
+    private List<AppDto> getAppByUserPermissions(List<AppDto> availableApps, UserProfile editorUserProfile, List<String> selectedApps, boolean uncheckAll) {
+        return availableApps.stream()
+                .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
+                .peek(app -> {
+                    if (uncheckAll) {
+                        app.setSelected(false);
+                    } else {
+                        boolean isSelected = !selectedApps.isEmpty() && selectedApps.contains(app.getId());
+                        app.setSelected(isSelected);
+                    }
+
+                })
+                .toList();
     }
 }
