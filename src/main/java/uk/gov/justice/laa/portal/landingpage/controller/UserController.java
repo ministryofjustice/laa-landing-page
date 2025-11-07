@@ -1839,60 +1839,10 @@ public class UserController {
             return "grant-access-user-roles";
         }
 
-        //UserProfileDto user = userService.getUserProfileById(id).orElse(null);
-/*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
-                .orElseGet(ArrayList::new);*/
-        //selected app by index
         List<String> selectedApps = getAppsByUserId(session, id);
         String selectedApp = selectedApps.get(selectedAppIndex);
-        //@SuppressWarnings("unchecked")
-        //Map<String, List<String>> allSelectedRolesByPage = getRolesByAppId(session,id,selectedApp);
-/*        if (allSelectedRolesByPage == null) {
-            allSelectedRolesByPage = new HashMap<>();
-        }*/
-        // Add the roles for the currently selected app to a map for lookup.
-        //allSelectedRolesByPage.put(selectedApp, rolesForm.getRoles());
+
         AddRolesById(session, id, selectedApp, rolesForm.getRoles());
-        /*if (selectedAppIndex >= selectedApps.size() - 1) {
-            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-            // Clear the grantAccessUserRolesModel and page roles from session to avoid
-            // stale data
-            session.removeAttribute("grantAccessUserRolesModel");
-            session.removeAttribute("grantAccessAllSelectedRoles");
-            // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
-                    .flatMap(List::stream)
-                    .toList();
-            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
-                    .map(AppRoleDto::getId)
-                    .toList();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                *//*Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
-                        currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        editorProfile.getId(),
-                        currentUserDto,
-                        user != null ? user.getEntraUser() : null, updateResult.get("diff"),
-                        "role");
-                eventService.logEvent(updateUserAuditEvent);*//*
-                //add
-                AddRolesById(session, id,allSelectedRoles);
-            }
-            return "redirect:/admin/users/grant-access/" + id + "/offices";
-        } else {
-            modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex + 1);
-            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
-            session.setAttribute("grantAccessUserRolesModel", modelFromSession);
-            // Ensure passed in ID is a valid UUID to avoid open redirects.
-            UUID uuid = UUID.fromString(id);
-            return "redirect:/admin/users/grant-access/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
-        }*/
-        //
-        //return "redirect:/admin/users/grant-access/" + id + "/offices";
-        //check if has more items
 
 
         return getRedirectUrl(id, selectedAppIndex, selectedApps);
