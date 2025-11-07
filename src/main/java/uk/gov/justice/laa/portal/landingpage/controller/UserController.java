@@ -73,14 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.*;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -106,7 +99,7 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
-
+    private final AppRoleService appRoleService;
     @Value("${feature.flag.enable.resend.verification.code}")
     private boolean enableResendVerificationCode;
 
@@ -1800,7 +1793,7 @@ public class UserController {
         // view model
         model.addAttribute("user", user);
         model.addAttribute("roles", appRoleViewModels);
-        //model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
+        model.addAttribute("currentSelectedAppIndex", selectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
         // Store the model in session to handle validation errors later and track
@@ -1817,10 +1810,10 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessUpdateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
-            @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             Authentication authentication,
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
+        int selectedAppIndex = Integer.parseInt(Objects.requireNonNull(modelFromSession.getAttribute("currentSelectedAppIndex")).toString());
         if (modelFromSession == null) {
             return "redirect:/admin/users/grant-access/" + id + "/roles";
         }
@@ -1846,7 +1839,7 @@ public class UserController {
             return "grant-access-user-roles";
         }
 
-        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
+        //UserProfileDto user = userService.getUserProfileById(id).orElse(null);
 /*        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
                 .orElseGet(ArrayList::new);*/
         //selected app by index
@@ -1909,7 +1902,7 @@ public class UserController {
 
     public String getRedirectUrl(String id, int selectedAppIndex, List<String> selectedApps) {
         return Optional.of(selectedAppIndex + 1)
-                .filter(nextIndex -> nextIndex <= selectedApps.size())
+                .filter(nextIndex -> nextIndex < selectedApps.size())
                 .map(nextIndex -> "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/roles?selectedAppIndex=" + nextIndex)
                 .orElse("redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/offices");
     }
@@ -2037,6 +2030,7 @@ public class UserController {
         eventService.logEvent(updateUserAuditEvent);
 
         // Clear grant access session data
+        //todo remove this
         session.removeAttribute("grantAccessUserOfficesModel");
         session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("grantAccessUserRoles");
@@ -2051,12 +2045,23 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String grantAccessCheckAnswers(@PathVariable String id, Model model, Authentication authentication) {
+    public String grantAccessCheckAnswers(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current app roles
-        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        //List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        //get apps role
+        List<String> allSelectedApps = getAppsByUserId(session, id);
+        List<String> allRolesSelected = new ArrayList<>();
+
+        allSelectedApps.forEach(app ->{
+            allRolesSelected.addAll(getListRolesByUserIdAndAppId(session, id, app));
+        });
+
+
+        List<AppRoleDto> userAppRoles = appRoleService.getByIds(allRolesSelected);
+
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .toList();
@@ -2080,7 +2085,7 @@ public class UserController {
         List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", editableUserAppRoles);
+        //model.addAttribute("userAppRoles", editableUserAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
@@ -2131,7 +2136,31 @@ public class UserController {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            // TODO refactor this
+            // Flatten the map to a single list of all selected roles across all pages.
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
 
+            List<String> allSelectedApps = getAppsByUserId(session, id);
+            List<String> allRolesSelected = new ArrayList<>();
+
+            allSelectedApps.forEach(app ->{
+                allRolesSelected.addAll(getListRolesByUserIdAndAppId(session, id, app));
+            });
+            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorProfile, role.getApp()))
+                    .map(AppRoleDto::getId)
+                    .toList();
+            Map<String, String> updateResult = userService.updateUserRoles(
+                    id, allRolesSelected, nonEditableRoles,currentUserDto.getUserId());
+            // Create audit event for the final access grant
+            UserProfileDto user = userService.getUserProfileById(id).orElse(null);
+            UpdateUserAuditEvent updateRolesUserAuditEvent = new UpdateUserAuditEvent(
+                    editorProfile.getId(),
+                    currentUserDto,
+                    user != null ? user.getEntraUser() : null, updateResult.get("diff"),
+                    "role");
+            eventService.logEvent(updateRolesUserAuditEvent);
+            // save office
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
 
@@ -2155,7 +2184,7 @@ public class UserController {
         session.removeAttribute("grantAccessUserRoles");
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
-
+        removeUserSessionById(session, id);
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
 

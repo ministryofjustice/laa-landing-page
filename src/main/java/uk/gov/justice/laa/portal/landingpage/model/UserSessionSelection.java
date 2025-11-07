@@ -18,6 +18,7 @@ import java.util.Set;
 public class UserSessionSelection {
     private Set<String> appsSelection;
     private Map<String, List<String>> rolesSelection;
+    private Map<String, List<String>> officeSelection;
 }
 
 

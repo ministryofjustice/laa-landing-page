@@ -11,7 +11,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromH
 
 public class UserSessionUtil {
 
-    public static void removeAllAttribute(HttpSession session){
+    public static void removeAllAttribute(HttpSession session) {
         session.removeAttribute("user");
         session.removeAttribute("firm");
         session.removeAttribute("selectedUserType");
@@ -25,7 +25,7 @@ public class UserSessionUtil {
         session.removeAttribute("firmSearchTerm");
     }
 
-    public static List<String> getAppsByUserId(HttpSession session, String id){
+    public static List<String> getAppsByUserId(HttpSession session, String id) {
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
         return Optional.ofNullable(userSessionSelections)
@@ -35,7 +35,7 @@ public class UserSessionUtil {
                 .orElseGet(ArrayList::new); // return empty list if anything is null
     }
 
-    public static Map<String, List<String>> getRolesByAppId(HttpSession session, String id, String appId){
+    public static Map<String, List<String>> getRolesByAppId(HttpSession session, String id, String appId) {
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
         return Optional.ofNullable(userSessionSelections)
@@ -45,7 +45,7 @@ public class UserSessionUtil {
 
     }
 
-    public static List<String> getListRolesByUserIdAndAppId(HttpSession session, String id, String appId){
+    public static List<String> getListRolesByUserIdAndAppId(HttpSession session, String id, String appId) {
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
         return Optional.ofNullable(userSessionSelections)
@@ -56,10 +56,10 @@ public class UserSessionUtil {
 
     }
 
-    public static void AddAppsById(HttpSession session, String id, List<String> selectedApps){
+    public static void AddAppsById(HttpSession session, String id, List<String> selectedApps) {
         HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
 
-        if (userSessionSelections == null){
+        if (userSessionSelections == null) {
             Map<String, UserSessionSelection> userSelectionMap = new HashMap<>();
             userSelectionMap.put(id, new UserSessionSelection());
             userSelectionMap.get(id).setAppsSelection(new HashSet<>(selectedApps));
@@ -87,21 +87,41 @@ public class UserSessionUtil {
                 .map(UserSessionSelection::getRolesSelection)
                 .map(map -> map.get(appId))
                 .ifPresentOrElse(
-                userSelection -> {
-                    userSelection.clear();
-                    userSelection.addAll(selectedRoles);
-                },
-                () -> {
+                        userSelection -> {
+                            userSelection.clear();
+                            userSelection.addAll(selectedRoles);
+                        },
+                        () -> {
 
-                    Map<String, List<String>> newRolesSelection = new HashMap<>();
-                    newRolesSelection.put(appId, selectedRoles);
-                    userSessionSelections.get(id).setRolesSelection(newRolesSelection);
-                }
-        );
+
+                            //add
+                            if (userSessionSelections.get(id).getRolesSelection() != null){
+                                boolean hasroles = userSessionSelections.get(id).getRolesSelection().containsKey(appId);
+                                if (!hasroles){
+                                    userSessionSelections.get(id).getRolesSelection().put(appId, selectedRoles);
+                                }
+
+
+                            } else {
+                                Map<String, List<String>> newRolesSelection = new HashMap<>();
+                                newRolesSelection.put(appId, selectedRoles);
+                                userSessionSelections.get(id).setRolesSelection(newRolesSelection);
+                            }
+                        }
+                );
         session.setAttribute("userSelection", userSessionSelections);
 
     }
 
+    public static void removeUserSessionById(HttpSession session, String id) {
+
+        HashMap<String, UserSessionSelection> userSessionSelections = (HashMap<String, UserSessionSelection>) session.getAttribute("userSelection");
+
+        userSessionSelections.remove(id);
+
+        session.setAttribute("userSelection", userSessionSelections);
+
+    }
 
 
 }
