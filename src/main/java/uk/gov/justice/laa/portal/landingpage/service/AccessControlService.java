@@ -80,6 +80,10 @@ public class AccessControlService {
         return canAccess;
     }
 
+    public boolean canViewAllFirmsOfMultiFirmUser() {
+        return authenticatedUserHasPermission(Permission.VIEW_ALL_USER_MULTI_FIRM_PROFILES);
+    }
+
     public boolean canDeleteUser(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);

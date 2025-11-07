@@ -236,7 +236,7 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 | APP_CRIME_APPLY_URL                 | URL of `Criminal Legal Aid` Application                                                                                                                              |
 | APP_PUI_DETAILS                     | Details of `CCMS` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                            |
 | APP_PUI_NAME                        | Name of `CCMS` Application                                                                                                                                           |
-| APP_PUI_URL                         | Direct URL of `CCMS PUI` Application (used in the interstitial page to link to the actual PUI secure browser environment)                                            |
+| APP_PUI_URL                         | URL of `CCMS` Application                                            |
 | APP_SUBMIT_CRIME_FORM_DETAILS       | Details of `Submit Crime Form` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id               |
 | APP_SUBMIT_CRIME_FORM_NAME          | Name of `Submit Crime Form` Application                                                                                                                              |
 | APP_SUBMIT_CRIME_FORM_URL           | URL of `Submit Crime Form` Application                                                                                                                               |

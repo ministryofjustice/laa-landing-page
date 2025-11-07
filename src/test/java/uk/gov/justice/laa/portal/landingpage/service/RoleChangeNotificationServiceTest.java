@@ -48,9 +48,9 @@ class RoleChangeNotificationServiceTest {
     private AppRole puiRole1;
     private AppRole puiRole2;
     private AppRole nonPuiRole;
-    private Set<AppRole> oldPuiRoles;
-    private Set<AppRole> newPuiRoles;
-    private Set<AppRole> emptyRoles;
+    private Set<String> oldPuiRoles;
+    private Set<String> newPuiRoles;
+    private Set<String> emptyRoles;
 
     @BeforeEach
     void setUp() {
@@ -101,14 +101,14 @@ class RoleChangeNotificationServiceTest {
                 .appRoles(Set.of(puiRole1, puiRole2, nonPuiRole))
                 .build();
 
-        oldPuiRoles = Set.of(puiRole1);
-        newPuiRoles = Set.of(puiRole1, puiRole2);
+        oldPuiRoles = Set.of(puiRole1.getCcmsCode());
+        newPuiRoles = Set.of(puiRole1.getCcmsCode(), puiRole2.getCcmsCode());
         emptyRoles = Set.of();
     }
 
     @Test
     void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() {
-        Set<AppRole> unchangedRoles = Set.of(puiRole1);
+        Set<String> unchangedRoles = Set.of(puiRole1.getCcmsCode());
 
         boolean result = roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
 

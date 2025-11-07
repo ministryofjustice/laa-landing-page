@@ -576,6 +576,7 @@ public class MultiFirmUserController {
         model.addAttribute("user", user);
         model.addAttribute("selectedAppRole", selectedAppRole);
         model.addAttribute("externalUser", true);
+        model.addAttribute("isMultiFirmUser", true);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
         return "multi-firm-user/add-profile-check-answers";
