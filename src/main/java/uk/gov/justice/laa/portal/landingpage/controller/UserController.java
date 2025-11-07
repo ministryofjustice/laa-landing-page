@@ -1628,7 +1628,7 @@ public class UserController {
 
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
-        //getList of selectedApps
+        //get List of selectedApps
         List<String> selectedApps = getAppsByUserId(session, id);
         List<AppDto> editableApps = getAppByUserPermissions(availableApps, editorUserProfile, selectedApps, false);
 
@@ -1656,13 +1656,11 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-            //get all the information
+            //get all the information and unchecked all the appDto
             UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
             UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
             UserType userType = user.getUserType();
-
             List<AppDto> availableApps = userService.getAppsByUserType(userType);
-
             List<AppDto> apps = getAppByUserPermissions(availableApps,editorUserProfile, getAppsByUserId(session, id), true);
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
@@ -1680,33 +1678,7 @@ public class UserController {
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
 
-        // If no apps are selected, persist empty roles to database and redirect to
-        // manage user page
-       /* if (selectedApps.isEmpty()) {
-            UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
-            // Update user to have no roles (empty list)
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
-                    .map(AppRoleDto::getId)
-                    .toList();
-            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles,
-                    currentUserDto.getUserId());
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                    userProfileDto != null ? userProfileDto.getId() : null,
-                    currentUserDto,
-                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    updateResult.get("diff"), "roles");
-            eventService.logEvent(updateUserAuditEvent);
-            // Ensure passed in ID is a valid UUID to avoid open redirects.
-            UUID uuid = UUID.fromString(id);
-            return "redirect:/admin/users/manage/" + uuid;
-        }*/
-
-        // Ensure passed in ID is a valid UUID to avoid open redirects.
-        UUID uuid = UUID.fromString(id);
-        return "redirect:/admin/users/grant-access/" + uuid + "/roles";
+        return "redirect:/admin/users/grant-access/" + UUID.fromString(id) + "/roles";
     }
 
     /**
@@ -1783,6 +1755,8 @@ public class UserController {
             Model model, HttpSession session) {
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
         int selectedAppIndex = Integer.parseInt(Objects.requireNonNull(modelFromSession.getAttribute("currentSelectedAppIndex")).toString());
+        List<String> selectedApps = getAppsByUserId(session, id);
+        String selectedApp = selectedApps.get(selectedAppIndex);
         if (modelFromSession == null) {
             return "redirect:/admin/users/grant-access/" + id + "/roles";
         }
@@ -1791,16 +1765,15 @@ public class UserController {
             // If there are validation errors, return to the roles page with errors
             @SuppressWarnings("unchecked")
             List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
-/*            if (roles != null) {
+            if (roles != null) {
                 List<String> selectedRoleIds = rolesForm.getRoles() != null ? rolesForm.getRoles() : new ArrayList<>();
                 roles.forEach(role -> {
                     if (!selectedRoleIds.contains(role.getId())) {
                         role.setSelected(false);
                     }
                 });
-            }*/
-            //remove
-            removeUserSessionById(session, id);
+                removeRolesSessionByIdAndRoleId(session, id, selectedApp);
+            }
             model.addAttribute("roles", roles);
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("grantAccessSelectedAppIndex",
@@ -1809,18 +1782,10 @@ public class UserController {
 
             return "grant-access-user-roles";
         }
-
-        List<String> selectedApps = getAppsByUserId(session, id);
-        String selectedApp = selectedApps.get(selectedAppIndex);
-
         //add in the roles in the session
         AddRolesById(session, id, selectedApp, rolesForm.getRoles());
-
-
         return getRedirectUrl(id, selectedAppIndex, selectedApps);
-
     }
-
 
     public String getRedirectUrl(String id, int selectedAppIndex, List<String> selectedApps) {
         return Optional.of(selectedAppIndex + 1)
@@ -1972,15 +1937,12 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         // Get user's current app roles
-        //List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
-        //get apps role
         List<String> allSelectedApps = getAppsByUserId(session, id);
         List<String> allRolesSelected = new ArrayList<>();
 
         allSelectedApps.forEach(app ->{
             allRolesSelected.addAll(getListRolesByUserIdAndAppId(session, id, app));
         });
-
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allRolesSelected);
 
@@ -2255,4 +2217,5 @@ public class UserController {
                 })
                 .toList();
     }
+
 }

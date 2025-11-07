@@ -78,8 +78,22 @@ public class UserSessionUtil {
 
     public static void removeAppsSessionById(HttpSession session, String id) {
         HashMap<String, UserSessionSelection> userSessionSelections = getStringUserSessionSelectionHashMap(session);
-        userSessionSelections.get(id).getAppsSelection().clear();
-        session.setAttribute(USER_SELECTION, userSessionSelections);
+        if (userSessionSelections != null) {
+            userSessionSelections.get(id).getAppsSelection().clear();
+            session.setAttribute(USER_SELECTION, userSessionSelections);
+        }
+    }
+
+    public static void removeRolesSessionByIdAndRoleId(HttpSession session, String id, String appId) {
+       HashMap<String, UserSessionSelection> userSessionSelections = getStringUserSessionSelectionHashMap(session);
+        UserSessionSelection selection = userSessionSelections.get(id);
+        if (selection != null && selection.getRolesSelection() != null) {
+
+            if (userSessionSelections.get(id).getRolesSelection().get(appId) != null){
+                userSessionSelections.get(id).getRolesSelection().get(appId).clear();
+            }
+            session.setAttribute(USER_SELECTION, userSessionSelections);
+        }
     }
 
 }
