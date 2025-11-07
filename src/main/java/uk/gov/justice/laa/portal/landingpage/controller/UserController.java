@@ -78,7 +78,6 @@ import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import uk.gov.justice.laa.portal.landingpage.utils.UserSessionUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -1917,7 +1916,7 @@ public class UserController {
         eventService.logEvent(updateUserAuditEvent);
 
         // Clear grant access session data
-        //todo remove this
+
         session.removeAttribute("grantAccessUserOfficesModel");
         session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("grantAccessUserRoles");
@@ -2020,7 +2019,7 @@ public class UserController {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            // TODO refactor this
+
             // Flatten the map to a single list of all selected roles across all pages.
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
 
@@ -2032,7 +2031,7 @@ public class UserController {
             });
             // save appRoles
             saveAppRoles(id, editorProfile, allRolesSelected, currentUserDto);
-            // save office
+
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
 
