@@ -96,4 +96,15 @@ public class UserSessionUtil {
         }
     }
 
+    public static void clearUserSession(HttpSession session, String id){
+        session.removeAttribute("grantAccessUserOfficesModel");
+        session.removeAttribute("grantAccessSelectedApps");
+        session.removeAttribute("grantAccessUserRoles");
+        session.removeAttribute("grantAccessUserRolesModel");
+        session.removeAttribute("grantAccessAllSelectedRoles");
+
+        removeUserSessionById(session, id);
+    }
+
+
 }

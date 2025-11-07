@@ -2030,20 +2030,8 @@ public class UserController {
             allSelectedApps.forEach(app ->{
                 allRolesSelected.addAll(getListRolesByUserIdAndAppId(session, id, app));
             });
-            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorProfile, role.getApp()))
-                    .map(AppRoleDto::getId)
-                    .toList();
-            Map<String, String> updateResult = userService.updateUserRoles(
-                    id, allRolesSelected, nonEditableRoles,currentUserDto.getUserId());
-            // Create audit event for the final access grant
-            UserProfileDto user = userService.getUserProfileById(id).orElse(null);
-            UpdateUserAuditEvent updateRolesUserAuditEvent = new UpdateUserAuditEvent(
-                    editorProfile.getId(),
-                    currentUserDto,
-                    user != null ? user.getEntraUser() : null, updateResult.get("diff"),
-                    "role");
-            eventService.logEvent(updateRolesUserAuditEvent);
+            // save appRoles
+            saveAppRoles(id, editorProfile, allRolesSelected, currentUserDto);
             // save office
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
@@ -2063,13 +2051,25 @@ public class UserController {
         }
 
         // Clear grant access session data
-        session.removeAttribute("grantAccessUserOfficesModel");
-        session.removeAttribute("grantAccessSelectedApps");
-        session.removeAttribute("grantAccessUserRoles");
-        session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
-        removeUserSessionById(session, id);
+        clearUserSession(session, id);
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
+    }
+
+    private void saveAppRoles(String id, UserProfile editorProfile, List<String> allRolesSelected, CurrentUserDto currentUserDto) {
+        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorProfile, role.getApp()))
+                .map(AppRoleDto::getId)
+                .toList();
+        Map<String, String> updateResult = userService.updateUserRoles(
+                id, allRolesSelected, nonEditableRoles, currentUserDto.getUserId());
+        // Create audit event for the final access grant
+        UserProfileDto user = userService.getUserProfileById(id).orElse(null);
+        UpdateUserAuditEvent updateRolesUserAuditEvent = new UpdateUserAuditEvent(
+                editorProfile.getId(),
+                currentUserDto,
+                user != null ? user.getEntraUser() : null, updateResult.get("diff"),
+                "role");
+        eventService.logEvent(updateRolesUserAuditEvent);
     }
 
     /**
