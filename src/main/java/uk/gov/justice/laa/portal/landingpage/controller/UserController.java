@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.sentry.Session;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -2012,10 +2013,12 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String grantAccessCheckAnswers(@PathVariable String id, Model model, Authentication authentication) {
+    public String grantAccessCheckAnswers(@PathVariable String id,
+                                          Model model,
+                                          HttpSession session,
+                                          Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
         // Get user's current app roles
         List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
@@ -2037,12 +2040,17 @@ public class UserController {
                         (e1, e2) -> e1,
                         LinkedHashMap::new));
 
-        // Get user's current offices
-        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
+        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+        List<OfficeDto> userOffices = new ArrayList<>();
+
+        if (!selectedOffices.getFirst().equals("ALL")){
+            userOffices = officeService.getOfficesByIds(selectedOffices);
+
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
-        model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
+        model.addAttribute("groupedAppRolevs", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
@@ -2145,6 +2153,7 @@ public class UserController {
         session.removeAttribute("grantAccessUserRoles");
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("selectedOffices");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
