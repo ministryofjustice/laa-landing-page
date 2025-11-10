@@ -1770,7 +1770,7 @@ public class UserController {
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
-        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
+        List<String> selectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
                 .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
@@ -1998,10 +1998,10 @@ public class UserController {
 
         // Clear grant access session data
         session.removeAttribute("grantAccessUserOfficesModel");
-        session.removeAttribute("grantAccessSelectedApps");
-        session.removeAttribute("grantAccessUserRoles");
-        session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
+        //session.removeAttribute("grantAccessSelectedApps");
+        //session.removeAttribute("grantAccessUserRoles");
+        //session.removeAttribute("grantAccessUserRolesModel");
+        //session.removeAttribute("grantAccessAllSelectedRoles");
 
         return "redirect:/admin/users/grant-access/" + id + "/check-answers";
     }
@@ -2191,6 +2191,10 @@ public class UserController {
         session.removeAttribute("grantAccessUserOfficesModel");
         session.removeAttribute("grantAccessUserAppsModel");
         session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("selectedApps");
+        session.removeAttribute("grantAccessSelectedApps");
+        session.removeAttribute("nonEditableRoles");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
