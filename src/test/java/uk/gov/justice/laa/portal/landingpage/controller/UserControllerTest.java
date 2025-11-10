@@ -4738,6 +4738,75 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessCheckAnswers_shouldSelectAllOffice() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+
+        AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
+        AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
+        AppRoleDto a1r3 = AppRoleDto.builder().name("a1r3").app(app1).ordinal(1).build();
+        AppRoleDto a1r4 = AppRoleDto.builder().name("a1r4").app(app1).ordinal(2).build();
+        AppRoleDto a2r1 = AppRoleDto.builder().name("a2r1").app(app2).ordinal(2).build();
+        AppRoleDto a2r2 = AppRoleDto.builder().name("a2r2").app(app2).ordinal(3).build();
+        AppRoleDto a2r3 = AppRoleDto.builder().name("a2r3").app(app2).ordinal(1).build();
+        AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
+        AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
+
+        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
+
+        Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
+        List<OfficeDto> userOffices = List.of(officeDto);
+
+        List<String> selectedRoles = List.of("ALL");
+        List<String> selectedOffices = userOffices.stream()
+                .map(map -> map.getId().toString())
+                .collect(Collectors.toList());
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", selectedRoles);
+        testSession.setAttribute("selectedOffices", selectedOffices);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
+
+        when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-check-answers");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        System.out.println(userRoles);
+        assertThat(
+                userRoles.entrySet().stream()
+                        .flatMap(entry -> entry.getValue().stream()
+                                .map(role -> entry.getKey() + " : " + role.getName()))
+                        .collect(Collectors.toList()))
+                .containsExactly("app-two : a2r3",
+                        "app-two : a2r1",
+                        "app-two : a2r2",
+                        "app-one : a1r3",
+                        "app-one : a1r4",
+                        "app-one : a1r1",
+                        "app-one : a1r2",
+                        "app-three : a3r1",
+                        "app-three : a3r2");
+    }
+
+    @Test
     void grantAccessProcessCheckAnswers_shouldCompleteGrantAccessAndRedirectToConfirmation() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440012";

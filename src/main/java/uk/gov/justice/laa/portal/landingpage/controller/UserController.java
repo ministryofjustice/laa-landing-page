@@ -2004,10 +2004,6 @@ public class UserController {
 
         // Clear grant access session data
         session.removeAttribute("grantAccessUserOfficesModel");
-        //session.removeAttribute("grantAccessSelectedApps");
-        //session.removeAttribute("grantAccessUserRoles");
-        //session.removeAttribute("grantAccessUserRolesModel");
-        //session.removeAttribute("grantAccessAllSelectedRoles");
 
         return "redirect:/admin/users/grant-access/" + id + "/check-answers";
     }
@@ -2038,8 +2034,6 @@ public class UserController {
                         appRole -> appRole.getApp().getName(),
                         LinkedHashMap::new, // Preserve insertion order
                         Collectors.toList()));
-
-
 
         // get all offices from session
         List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
