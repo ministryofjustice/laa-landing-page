@@ -3970,6 +3970,61 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessEditUserOffices_shouldPopulateModelAndReturnViewWhenHaveOfficeSession() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440006";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        UUID office1Id = UUID.randomUUID();
+        UUID office2Id = UUID.randomUUID();
+        Office office1 = Office.builder().id(office1Id).code("Office 1")
+                .address(Office.Address.builder().addressLine1("Address 1").build()).build();
+        Office office2 = Office.builder().id(office2Id).code("Office 2")
+                .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
+                .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1())
+                        .build())
+                .build();
+
+        List<OfficeDto> userOffices = List.of(office1Dto); // User has access to office1 only
+        List<Office> allOffices = List.of(office1, office2);
+
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+        List<FirmDto> userFirms = List.of(firmDto);
+
+        MockHttpSession testSession = new MockHttpSession();
+        List<String> selectedOffices = userOffices.stream()
+                .map(map -> map.getId().toString())
+                .toList();
+
+        testSession.setAttribute("selectedOffices", selectedOffices);
+
+        when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
+
+        // When
+        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-offices");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+        assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
+
+        @SuppressWarnings("unchecked")
+        List<OfficeModel> officeData = (List<OfficeModel>) model.getAttribute("officeData");
+        assertThat(officeData).hasSize(2);
+        assertThat(officeData.get(0).isSelected()).isTrue(); // office1 should be selected
+        assertThat(officeData.get(1).isSelected()).isFalse(); // office2 should not be selected
+
+        OfficesForm form = (OfficesForm) model.getAttribute("officesForm");
+        assertThat(form.getOffices()).contains(office1Id.toString());
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNotNull();
+    }
+
+    @Test
     void grantAccessEditUserOffices_shouldHandleAccessToAllOffices() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440007";
