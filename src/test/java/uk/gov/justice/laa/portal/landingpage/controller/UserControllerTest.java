@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 
-import static org.assertj.core.api.InstanceOfAssertFactories.map;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -94,7 +93,15 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.*;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -3862,13 +3869,14 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        //when(loginService.getCurrentProfile(authentication))
-                //.thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        //when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
 
         // When - updating roles for last app (index 1)
-        String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 1, authentication,
+        String view = userController.grantAccessUpdateUserRoles(
+                userId,
+                rolesForm,
+                bindingResult,
+                1,
+                authentication,
                 model, testSession);
 
         // Then
@@ -4017,8 +4025,6 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-       //when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
         String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,

@@ -75,7 +75,16 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.*;
+
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -1668,7 +1677,7 @@ public class UserController {
                 .toList();
 
         Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
-        if(selectedApps.isPresent()) {
+        if (selectedApps.isPresent()) {
             editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
         } else {
             editableApps.forEach(app -> {
@@ -1892,8 +1901,6 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
         List<OfficeDto> userOffices = List.of();
 
@@ -1941,6 +1948,7 @@ public class UserController {
         }
 
         officesForm.setOffices(selectedOffices);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
@@ -2031,13 +2039,7 @@ public class UserController {
                         LinkedHashMap::new, // Preserve insertion order
                         Collectors.toList()));
 
-        // Sort the map by app name
-        Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new));
+
 
         // get all offices from session
         List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
@@ -2045,10 +2047,17 @@ public class UserController {
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
-        if (!selectedOffices.getFirst().equals("ALL")){
+        if (!selectedOffices.getFirst().equals("ALL")) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
+        // Sort the map by app name
+        Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
