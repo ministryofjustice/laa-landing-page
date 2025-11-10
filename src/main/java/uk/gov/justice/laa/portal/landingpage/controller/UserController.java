@@ -19,7 +19,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.sentry.Session;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -1736,7 +1735,6 @@ public class UserController {
             Model model, HttpSession session,
             RedirectAttributes redirectAttributes) {
 
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
 

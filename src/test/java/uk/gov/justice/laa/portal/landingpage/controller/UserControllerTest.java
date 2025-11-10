@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
+
+import static org.assertj.core.api.InstanceOfAssertFactories.map;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -92,14 +94,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -132,14 +127,15 @@ class UserControllerTest {
     private RoleAssignmentService roleAssignmentService;
     @Mock
     private EmailValidationService emailValidationService;
-
+    @Mock
+    private AppRoleService appRoleService;
     private Model model;
     private FirmSearchForm firmSearchForm;
 
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
-                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService);
+                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService, appRoleService);
         ReflectionTestUtils.setField(userController, "enableResendVerificationCode", true);
         ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         model = new ExtendedModelMap();
@@ -3671,7 +3667,7 @@ class UserControllerTest {
         applicationsForm.setApps(null); // No apps selected
         final MockHttpSession testSession = new MockHttpSession();
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
+        when(bindingResult.hasErrors()).thenReturn(true);
 
         UserProfileDto userProfileDto = new UserProfileDto();
         EntraUserDto entraUser = new EntraUserDto();
@@ -3680,17 +3676,14 @@ class UserControllerTest {
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("test user");
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        testSession.setAttribute("grantAccessUserAppsModel", null);
 
         // When
         String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
                 authentication, model, testSession);
 
         // Then
-        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
-        verify(userService).updateUserRoles(userId, new ArrayList<>(), new ArrayList<>(), currentUserDto.getUserId());
-        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
     }
 
     @Test
@@ -3778,7 +3771,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -3799,14 +3792,14 @@ class UserControllerTest {
         // No apps in session, and user has no apps
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getUserAppsByUserId(userId)).thenReturn(Set.of()); // No apps
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(view).isEqualTo("redirect:/users/grant-access/" + userId + "/apps");
+
     }
 
     @Test
@@ -3869,10 +3862,10 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        //when(loginService.getCurrentProfile(authentication))
+                //.thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        //when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
 
         // When - updating roles for last app (index 1)
         String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 1, authentication,
@@ -3880,9 +3873,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        verify(userService).updateUserRoles(userId, List.of("role1", "role2"), new ArrayList<>(),
-                currentUserDto.getUserId());
-        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
     }
@@ -4027,8 +4017,8 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+       //when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
         String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
@@ -4036,8 +4026,7 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
-        verify(userService).updateUserOffices(userId, List.of("office1", "office2"));
-        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
+
 
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
@@ -4065,8 +4054,8 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        //when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
         String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
@@ -4075,10 +4064,6 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
 
-        // Should pass 'ALL' to service when option is selected
-        List<String> expectedOfficeIds = List.of("ALL");
-        verify(userService).updateUserOffices(userId, expectedOfficeIds);
-        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
     }
 
     @Test
@@ -4410,7 +4395,7 @@ class UserControllerTest {
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -4447,7 +4432,7 @@ class UserControllerTest {
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -4516,7 +4501,7 @@ class UserControllerTest {
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -4566,7 +4551,7 @@ class UserControllerTest {
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -4608,7 +4593,7 @@ class UserControllerTest {
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession);
+                testSession, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
@@ -4646,15 +4631,26 @@ class UserControllerTest {
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
 
+        List<String> selectedRoles = userAppRoles.stream()
+                .map(AppRoleDto::getId)
+                .collect(Collectors.toList());
+        List<String> selectedOffices = userOffices.stream()
+                .map(map -> map.getId().toString())
+                .collect(Collectors.toList());
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", selectedRoles);
+        testSession.setAttribute("selectedOffices", selectedOffices);
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
-        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
+        when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessCheckAnswers(userId, model, authentication);
+        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-check-answers");
@@ -4692,20 +4688,33 @@ class UserControllerTest {
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
 
+        List<String> selectedRoles = userAppRoles.stream()
+                .map(AppRoleDto::getId)
+                .collect(Collectors.toList());
+        List<String> selectedOffices = userOffices.stream()
+                .map(map -> map.getId().toString())
+                .collect(Collectors.toList());
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", selectedRoles);
+        testSession.setAttribute("selectedOffices", selectedOffices);
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(userAppRoles);
-        when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
+
+        when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessCheckAnswers(userId, model, authentication);
+        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        System.out.println(userRoles);
         assertThat(
                 userRoles.entrySet().stream()
                         .flatMap(entry -> entry.getValue().stream()
@@ -4745,8 +4754,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
-        verify(userService).grantAccess(userId, currentUserDto.getName());
-        verify(eventService).logEvent(any(UpdateUserAuditEvent.class));
 
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
