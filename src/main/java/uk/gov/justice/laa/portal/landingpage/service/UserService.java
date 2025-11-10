@@ -1514,8 +1514,11 @@ public class UserService {
         return switch (sort.toLowerCase()) {
             case "name" -> "lastName"; // Sort by last name for name column
             case "email" -> "email";
-            case "usertype" -> "lastName"; // Can't sort by nested collection, default to lastName
-            case "firm" -> "lastName"; // Can't sort by nested collection, default to lastName
+            case "usertype" -> "lastName"; // Can't sort by calculated field, use lastName
+            case "firm" -> "lastName"; // Can't sort by nested collection, use lastName
+            case "accountstatus" -> "userStatus"; // Sort by userStatus enum
+            case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
+            case "profilecount" -> "lastName"; // Can't sort by calculated count, use lastName
             default -> "lastName"; // Default to last name
         };
     }
