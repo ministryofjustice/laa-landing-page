@@ -1701,9 +1701,13 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-
+            //unchecked all the apps
+            List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
+            if (apps != null) {
+                apps.forEach(app -> app.setSelected(false));
+            }
             model.addAttribute("user", modelFromSession.getAttribute("user"));
-            model.addAttribute("apps", modelFromSession.getAttribute("apps"));
+            model.addAttribute("apps", apps);
             return "grant-access-user-apps";
         }
 
@@ -2014,10 +2018,9 @@ public class UserController {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         // Get user's current app roles from session
-        List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class).orElseThrow();
-        //List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class).orElseThrow();
+        List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+                .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
 
-        //List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
@@ -2039,7 +2042,9 @@ public class UserController {
                         LinkedHashMap::new));
 
         // get all offices from session
-        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
+                .orElseThrow(() -> new RuntimeException("No Office selected for assignment"));
+
         List<OfficeDto> userOffices = new ArrayList<>();
 
         if (!selectedOffices.getFirst().equals("ALL")){
