@@ -4060,8 +4060,6 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        //when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        //when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
         String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
@@ -4759,7 +4757,6 @@ class UserControllerTest {
         AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
         AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
 
-        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
@@ -4773,7 +4770,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("allSelectedRoles", selectedRoles);
         testSession.setAttribute("selectedOffices", selectedOffices);
-
+        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
 
