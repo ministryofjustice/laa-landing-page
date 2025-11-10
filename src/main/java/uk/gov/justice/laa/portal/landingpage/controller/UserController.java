@@ -76,14 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.*;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -108,6 +101,7 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
+    private final AppRoleService appRoleService;
 
     @Value("${feature.flag.enable.resend.verification.code}")
     private boolean enableResendVerificationCode;
@@ -2019,8 +2013,12 @@ public class UserController {
                                           Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        // Get user's current app roles
-        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        // Get user's current app roles from session
+        List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class).orElseThrow();
+        //List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class).orElseThrow();
+
+        //List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .toList();
@@ -2040,6 +2038,7 @@ public class UserController {
                         (e1, e2) -> e1,
                         LinkedHashMap::new));
 
+        // get all offices from session
         List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
         List<OfficeDto> userOffices = new ArrayList<>();
 
@@ -2050,7 +2049,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
-        model.addAttribute("groupedAppRolevs", sortedGroupedAppRoles);
+        model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
