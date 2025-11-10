@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import java.io.Serializable;
-import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -58,19 +57,4 @@ public class AuditUserDto implements Serializable {
      * Number of firm profiles the user has
      */
     private int profileCount;
-
-    /**
-     * List of SiLAS role names (authz roles) the user has
-     */
-    private List<String> silasRoles;
-
-    /**
-     * Helper method to get comma-separated SiLAS roles
-     */
-    public String getSilasRolesString() {
-        if (silasRoles == null || silasRoles.isEmpty()) {
-            return "None";
-        }
-        return String.join(", ", silasRoles);
-    }
 }

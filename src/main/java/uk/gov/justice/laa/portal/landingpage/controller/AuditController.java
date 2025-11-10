@@ -65,7 +65,7 @@ public class AuditController {
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 search, firmId, silasRole, page, size, sort, direction);
 
-        // Get all SiLAS roles for dropdown
+        // Get all SiLAS roles for dropdown filter
         List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
 
         // Build firm search form

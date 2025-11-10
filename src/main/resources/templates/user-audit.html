@@ -705,9 +705,6 @@
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%; min-width: 100px;">
-                                    SILAS Role
-                                </th>
                             </tr>
                         </thead>
                         <tbody class="govuk-table__body">
@@ -726,8 +723,6 @@
                                 <td class="govuk-table__cell" th:text="${user.accountStatus}"></td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.silasRolesString}"></td>
                             </tr>
                         </tbody>
                     </table>

@@ -1392,16 +1392,6 @@ public class UserService {
         // Get profile count
         int profileCount = profiles.size();
 
-        // Get unique SiLAS roles across all profiles
-        List<String> silasRoles = profiles.stream()
-                .flatMap(profile -> profile.getAppRoles() != null ? profile.getAppRoles().stream()
-                        : java.util.stream.Stream.empty())
-                .filter(AppRole::isAuthzRole)
-                .map(AppRole::getName)
-                .distinct()
-                .sorted()
-                .toList();
-
         // Get first active profile ID for linking, or first profile if none active
         String userId = profiles.stream()
                 .filter(UserProfile::isActiveProfile)
@@ -1419,7 +1409,6 @@ public class UserService {
                 .accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser())
                 .profileCount(profileCount)
-                .silasRoles(silasRoles)
                 .build();
     }
 
