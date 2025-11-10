@@ -1,0 +1,76 @@
+package uk.gov.justice.laa.portal.landingpage.dto;
+
+import java.io.Serializable;
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * DTO for User Access Audit Table
+ * Contains aggregated user information across all their profiles
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuditUserDto implements Serializable {
+
+    /**
+     * Full name of the user (First Name + Last Name)
+     */
+    private String name;
+
+    /**
+     * Email address of the user
+     */
+    private String email;
+
+    /**
+     * User ID for linking to manage user page
+     */
+    private String userId;
+
+    /**
+     * User type: External, Internal, or External-3rdParty
+     */
+    private String userType;
+
+    /**
+     * Firm name(s) or "None" if no profile
+     * Multiple firms separated by comma for multi-firm users
+     */
+    private String firmAssociation;
+
+    /**
+     * Account status: Active, Inactive, Pending, or Disabled
+     */
+    private String accountStatus;
+
+    /**
+     * Flag indicating if user has multi-firm access
+     */
+    private boolean isMultiFirmUser;
+
+    /**
+     * Number of firm profiles the user has
+     */
+    private int profileCount;
+
+    /**
+     * List of SiLAS role names (authz roles) the user has
+     */
+    private List<String> silasRoles;
+
+    /**
+     * Helper method to get comma-separated SiLAS roles
+     */
+    public String getSilasRolesString() {
+        if (silasRoles == null || silasRoles.isEmpty()) {
+            return "None";
+        }
+        return String.join(", ", silasRoles);
+    }
+}

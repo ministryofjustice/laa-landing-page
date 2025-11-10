@@ -385,7 +385,7 @@ public class UserService {
 
     /**
      * Delete a specific firm profile from a multi-firm user.
-     * 
+     *
      * @param userProfileId the ID of the user profile to delete (UUID as String)
      * @param actorId       the UUID of the actor performing the deletion (for
      *                      logging)
@@ -969,9 +969,10 @@ public class UserService {
     /**
      * Convert a single-firm user to a multi-firm user
      * This operation is irreversible
-     * 
+     *
      * @param userId The ID of the user to convert
-     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     * @throws RuntimeException if the user is not found or is already a multi-firm
+     *                          user
      */
     @Transactional
     public void convertToMultiFirmUser(String userId) {
@@ -982,7 +983,7 @@ public class UserService {
         }
 
         EntraUser entraUser = optionalUser.get();
-        
+
         if (entraUser.isMultiFirmUser()) {
             logger.warn("User with id {} is already a multi-firm user.", userId);
             throw new RuntimeException("User is already a multi-firm user");
@@ -990,7 +991,7 @@ public class UserService {
 
         // Set the multi-firm flag
         entraUser.setMultiFirmUser(true);
-        
+
         try {
             entraUserRepository.saveAndFlush(entraUser);
             logger.info("Successfully converted user {} to multi-firm status", userId);
@@ -1330,5 +1331,207 @@ public class UserService {
      */
     public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
         return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
+    }
+
+    /**
+     * Get paginated audit users for the User Access Audit Table
+     * Includes all registered users, even those without firm profiles
+     *
+     * @param searchTerm Search by name or email
+     * @param firmId     Filter by firm ID
+     * @param silasRole  Filter by SiLAS role (authz role name)
+     * @param page       Page number (1-based)
+     * @param pageSize   Number of results per page
+     * @param sort       Sort field
+     * @param direction  Sort direction (asc/desc)
+     * @return Paginated audit users
+     */
+    public uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers getAuditUsers(
+            String searchTerm, UUID firmId, String silasRole,
+            int page, int pageSize, String sort, String direction) {
+
+        // Map sort field to entity field
+        String mappedSort = mapAuditSortField(sort != null ? sort : "name");
+        Sort sortObj = getAuditSort(mappedSort, direction);
+        PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+        Page<EntraUser> userPage = entraUserRepository.findAllUsersForAudit(
+                searchTerm, firmId, silasRole, pageRequest);
+
+        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = userPage.getContent().stream()
+                .map(this::mapToAuditUserDto)
+                .toList();
+
+        return uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers.builder()
+                .users(auditUsers)
+                .totalUsers(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .currentPage(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    /**
+     * Map EntraUser to AuditUserDto
+     */
+    private uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto mapToAuditUserDto(EntraUser user) {
+        // Get all user profiles
+        List<UserProfile> profiles = user.getUserProfiles() != null
+                ? new ArrayList<>(user.getUserProfiles())
+                : Collections.emptyList();
+
+        // Determine user type
+        String userType = determineUserType(user, profiles);
+
+        // Get firm associations
+        String firmAssociation = determineFirmAssociation(profiles);
+
+        // Get account status
+        String accountStatus = determineAccountStatus(user, profiles);
+
+        // Get profile count
+        int profileCount = profiles.size();
+
+        // Get unique SiLAS roles across all profiles
+        List<String> silasRoles = profiles.stream()
+                .flatMap(profile -> profile.getAppRoles() != null ? profile.getAppRoles().stream()
+                        : java.util.stream.Stream.empty())
+                .filter(AppRole::isAuthzRole)
+                .map(AppRole::getName)
+                .distinct()
+                .sorted()
+                .toList();
+
+        // Get first active profile ID for linking, or first profile if none active
+        String userId = profiles.stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .or(() -> profiles.stream().findFirst())
+                .map(profile -> profile.getId().toString())
+                .orElse(null);
+
+        return uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto.builder()
+                .name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail())
+                .userId(userId)
+                .userType(userType)
+                .firmAssociation(firmAssociation)
+                .accountStatus(accountStatus)
+                .isMultiFirmUser(user.isMultiFirmUser())
+                .profileCount(profileCount)
+                .silasRoles(silasRoles)
+                .build();
+    }
+
+    /**
+     * Determine user type for audit table
+     * Returns: "Internal", "External", or "External - 3rd Party"
+     */
+    private String determineUserType(EntraUser user, List<UserProfile> profiles) {
+        if (profiles.isEmpty()) {
+            return "Unknown";
+        }
+
+        // Check if user has internal profile
+        boolean hasInternal = profiles.stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        if (hasInternal) {
+            return "Internal";
+        }
+
+        // External user
+        if (user.isMultiFirmUser()) {
+            return "External - 3rd Party";
+        }
+
+        return "External";
+    }
+
+    /**
+     * Determine firm association for audit table
+     * Returns firm name(s) or "None" if no profiles
+     */
+    private String determineFirmAssociation(List<UserProfile> profiles) {
+        if (profiles.isEmpty()) {
+            return "None";
+        }
+
+        Set<String> firmNames = profiles.stream()
+                .map(UserProfile::getFirm)
+                .filter(Objects::nonNull)
+                .map(Firm::getName)
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        if (firmNames.isEmpty()) {
+            return "None";
+        }
+
+        return String.join(", ", firmNames);
+    }
+
+    /**
+     * Determine account status for audit table
+     * Returns: "Active", "Inactive", "Pending", or "Disabled"
+     */
+    private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+        // Check if user has any pending profiles
+        boolean hasPending = profiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        if (hasPending) {
+            return "Pending";
+        }
+
+        // Check user status
+        if (user.getUserStatus() == UserStatus.DEACTIVE) {
+            return "Disabled";
+        }
+
+        // All other cases considered active
+        return "Active";
+    }
+
+    /**
+     * Get all SiLAS roles (authz roles) for dropdown filter
+     * Returns list of role DTOs
+     */
+    public List<AppRoleDto> getAllSilasRoles() {
+        return appRoleRepository.findAllAuthzRoles().stream()
+                .map(role -> mapper.map(role, AppRoleDto.class))
+                .toList();
+    }
+
+    /**
+     * Map audit table sort field to entity field
+     * The audit table uses display names, but we need to map to entity fields
+     */
+    private String mapAuditSortField(String sort) {
+        if (sort == null) {
+            return "lastName";
+        }
+
+        return switch (sort.toLowerCase()) {
+            case "name" -> "lastName"; // Sort by last name for name column
+            case "email" -> "email";
+            case "usertype" -> "lastName"; // Can't sort by nested collection, default to lastName
+            case "firm" -> "lastName"; // Can't sort by nested collection, default to lastName
+            default -> "lastName"; // Default to last name
+        };
+    }
+
+    /**
+     * Get Sort for audit table queries
+     * This is for EntraUser entity queries, not UserProfile queries
+     */
+    private Sort getAuditSort(String field, String direction) {
+        Sort.Direction order = Sort.Direction.ASC;
+        if (direction != null && !direction.isEmpty()) {
+            order = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+
+        // For audit queries, we're querying EntraUser directly, so no "entraUser."
+        // prefix needed
+        return Sort.by(order, field);
     }
 }
