@@ -1448,6 +1448,7 @@ public class MultiFirmUserControllerTest {
                 .builder()
                 .id(entraUserId.toString())
                 .multiFirmUser(true)
+                .fullName("Test User")
                 .build();
 
         uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
@@ -1459,10 +1460,14 @@ public class MultiFirmUserControllerTest {
         // Only one profile
         when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build()));
 
-        // Act & Assert - Should throw exception for last profile deletion
-        assertThatThrownBy(() -> controller.deleteFirmProfileConfirm(userProfileId, model))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot delete the last firm profile");
+        // Act
+        String result = controller.deleteFirmProfileConfirm(userProfileId, model);
+
+        // Assert - Should show confirmation page with warning flag set
+        assertThat(result).isEqualTo("multi-firm-user/delete-profile-confirm");
+        assertThat(model.getAttribute("isLastProfile")).isEqualTo(true);
+        assertThat(model.getAttribute("userProfile")).isEqualTo(userProfileDto);
+        assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
     }
 
     @Test

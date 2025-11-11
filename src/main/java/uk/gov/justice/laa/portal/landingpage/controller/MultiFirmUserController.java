@@ -49,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.LastFirmProfileDeletionException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -176,15 +177,13 @@ public class MultiFirmUserController {
             throw new RuntimeException("This operation is only available for multi-firm users.");
         }
 
-        // Count the number of profiles to prevent deletion of last profile
+        // Count the number of profiles - show warning if this is the last profile
         List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
-        if (allProfiles.size() <= 1) {
-            throw new RuntimeException(
-                    "Cannot delete the last firm profile. User must have at least one profile.");
-        }
-
+        boolean isLastProfile = allProfiles.size() <= 1;
+        
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
+        model.addAttribute("isLastProfile", isLastProfile);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());
 
         return "multi-firm-user/delete-profile-confirm";
@@ -253,6 +252,15 @@ public class MultiFirmUserController {
                 throw new RuntimeException("Failed to delete firm profile");
             }
 
+        } catch (LastFirmProfileDeletionException e) {
+            log.error("Cannot delete last firm profile: {}", userProfileId, e);
+            model.addAttribute("errorMessage",
+                    "You cannot remove this firm access because " + entraUser.getFullName()
+                    + " must have access to at least one firm. This is their only firm profile.");
+            model.addAttribute("userProfile", userProfile);
+            model.addAttribute("user", entraUser);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Confirm you want to remove " + firmName);
+            return "multi-firm-user/delete-profile-confirm";
         } catch (RuntimeException e) {
             log.error("Error deleting firm profile: {}", userProfileId, e);
             model.addAttribute("errorMessage", "Failed to delete firm access: " + e.getMessage());

@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.HttpClientErrorException.NotFound;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -420,7 +421,7 @@ public class UserController {
 
     @GetMapping("/user/{id}/verify")
     @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
+    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         if (!enableResendVerificationCode) {
             log.error("Resend activation code is disabled");
             throw new AccessDeniedException("Resend verification is disabled.");
@@ -443,23 +444,52 @@ public class UserController {
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
-        model.addAttribute("showOfficesTab", showOfficesTab);
+
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
+        boolean canViewAllProfiles = externalUser && editorInternalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+
+        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
+
+        boolean hasViewOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
 
         boolean hasEditOfficePermission = accessControlService
                 .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
+
+        boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+        model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
+
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
+        final boolean canDeleteUser = accessControlService.canDeleteUser(id);
+        model.addAttribute("canDeleteUser", canDeleteUser);
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
+        // Add multi-firm feature flag
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+
+        // Multi-firm user information
+        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
+        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
+        model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
+
+        if (isMultiFirmUser && enableMultiFirmUser) {
+            // Check if user can delete the currently viewed profile (not all profiles)
+            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+        }
+
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = filters != null && hasActiveFilters(filters);
+        boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
 
         try {
@@ -469,9 +499,14 @@ public class UserController {
             } else {
                 model.addAttribute("errorMessage", response.getError().getMessage());
             }
+        } catch (NotFound notFoundException) {
+            log.error("User not found in Tech Services for user profile: {}", id, notFoundException);
+            model.addAttribute("errorMessage",
+                    "Unable to send activation code. This user may not exist in the identity system. Please contact support if the problem persists.");
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
-            throw runtimeException;
+            model.addAttribute("errorMessage",
+                    "An error occurred while sending the activation code. Please try again later or contact support.");
         }
 
         return "manage-user";

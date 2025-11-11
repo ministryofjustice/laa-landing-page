@@ -29,6 +29,14 @@
         Are you sure you want to revoke access for Emily Smith?
     </h1>
 
+    <div th:if="${isLastProfile}" class="govuk-warning-text">
+        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+        <strong class="govuk-warning-text__text">
+            <span class="govuk-visually-hidden">Warning</span>
+            You cannot remove this firm access because <span th:text="${user.fullName}">this user</span> must have access to at least one firm. This is their only firm profile.
+        </strong>
+    </div>
+
     <p class="govuk-body">This will remove the user's access to your firm in SiLAS right away but will not delete their account.</p>
 
     <form th:action="@{'/admin/multi-firm/user/delete-profile/' + ${userProfile.id}}" method="post" novalidate>
@@ -36,7 +44,7 @@
             <fieldset class="govuk-fieldset">
                 <div class="govuk-radios" data-module="govuk-radios">
                     <div class="govuk-radios__item">
-                        <input class="govuk-radios__input" id="confirm-yes" name="confirm" type="radio" value="yes" required>
+                        <input class="govuk-radios__input" id="confirm-yes" name="confirm" type="radio" value="yes" required th:disabled="${isLastProfile}">
                         <label class="govuk-label govuk-radios__label" for="confirm-yes">
                             Yes, I want to revoke access
                         </label>
@@ -52,7 +60,7 @@
         </div>
 
         <div class="govuk-button-group">
-            <button type="submit" class="govuk-button" data-module="govuk-button">
+            <button type="submit" class="govuk-button" data-module="govuk-button" th:disabled="${isLastProfile}">
                 Confirm
             </button>
             <a class="govuk-button govuk-button--secondary" href="javascript:history.back()" role="button" draggable="false" data-module="govuk-button">
