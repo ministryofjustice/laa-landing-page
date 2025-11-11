@@ -456,6 +456,10 @@ public class UserController {
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        model.addAttribute("canViewAllProfiles", false);
+        model.addAttribute("canViewAllFirmsOfMultiFirmUser", false);
+
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
