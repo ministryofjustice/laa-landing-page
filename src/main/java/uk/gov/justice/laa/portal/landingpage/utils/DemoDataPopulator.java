@@ -177,7 +177,7 @@ public class DemoDataPopulator {
 
     protected Firm buildFirm(String name) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .type(FirmType.INDIVIDUAL).build();
+                .type(FirmType.ADVOCATE).build();
     }
 
     protected Office buildOffice(Firm firm, String code, String addrLine1, String city, String postCode) {

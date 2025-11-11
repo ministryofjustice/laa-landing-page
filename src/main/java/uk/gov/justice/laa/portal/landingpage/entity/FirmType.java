@@ -7,16 +7,7 @@ public enum FirmType {
 
     ADVOCATE("Advocate"),
     CHAMBERS("Chambers"),
-    INDIVIDUAL("Individual"),
-    LEGAL_SERVICES_PROVIDER("Legal Services Provider"),
-    QM_PROVIDER("QM Provider"),
-    PARTNERSHIP("Partnership"),
-    LIMITED_COMPANY("Limited Company"),
-    LLP("LLP"),
-    SOLE_PRACTITIONER("Sole Practitioner"),
-    CHARITY("Charity"),
-    GOVERNMENT_FUNDED_ORGANISATION("Government Funded Organisation"),
-    NA("N/A");
+    LEGAL_SERVICES_PROVIDER("Legal Services Provider");
 
     private final String value;
 

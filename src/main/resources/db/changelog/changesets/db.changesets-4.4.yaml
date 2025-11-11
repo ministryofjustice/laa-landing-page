@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1761063088700-1
+      author: niall.mcmahon (generated)
+      changes:
+        # Update any existing firms that don't already have firm type ADVOCATE, CHAMBERS or LEGAL_SERVICES_PROVIDER to have type LEGAL_SERVICES_PROVIDER
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE firm SET type = 'LEGAL_SERVICES_PROVIDER' WHERE type != 'CHAMBERS' AND type != 'ADVOCATE' AND TYPE != 'LEGAL_SERVICES_PROVIDER'"
+        # Drop old enum constraint
+        - sql:
+            dbms: postgresql
+            sql: "alter table firm drop constraint firm_type_check"
+        # Add updated enum constraint to match the new enum values.
+        - sql:
+            dbms: postgresql
+            sql: "alter table firm
+                  add constraint firm_type_check
+                  check ((type)::text = ANY
+                  ((ARRAY ['ADVOCATE'::character varying, 'CHAMBERS'::character varying, 'LEGAL_SERVICES_PROVIDER'::character varying])::text[]))"
+

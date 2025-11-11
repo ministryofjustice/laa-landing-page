@@ -16,15 +16,23 @@
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
-        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
-            aria-label="success: User added successfully" data-module="moj-alert">
-            <div>
-                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 30 30" height="30" width="30">
-                    <path
-                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
-                        fill="currentColor" />
-                </svg>
+        <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+            aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                    Success
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content"
+                style="display: flex; justify-content: space-between; align-items: center;">
+                <p class="govuk-notification-banner__heading" style="margin: 0;">
+                    <span th:text="${successMessage}"></span>
+                </p>
+                <a href="/admin/users" class="govuk-link"
+                    style="text-decoration: underline; color: #1d70b8; font-size: 19px; line-height: 1.31579; margin-left: 20px; white-space: nowrap;"
+                    aria-label="Dismiss success message">
+                    Dismiss
+                </a>
             </div>
         </div>
         <div class="govuk-grid-row">
@@ -36,13 +44,15 @@
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider">
-                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button" class="govuk-button" data-module="govuk-button"
-                                        data-govuk-button-init="" onclick="location.href='/admin/multi-firm/user/add/profile/before-start';">
-                                    Delegate access to an external user
+                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button"
+                                    class="govuk-button" data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/multi-firm/user/add/profile'">
+                                    Delegate access
                                 </button>
 
-                                <button th:if="${allowCreateUser}" type="button" class="govuk-button" data-module="govuk-button"
-                                    data-govuk-button-init="" onclick="location.href='/admin/user/create/details';">
+                                <button th:if="${allowCreateUser}" type="button" class="govuk-button"
+                                    data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/user/create/details';">
                                     Create a new user
                                 </button>
 
@@ -151,6 +161,8 @@
                                             type="hidden" name="size" th:value="${requestedPageSize}">
                                         <input th:if="${showFirmAdmins}" type="hidden" name="showFirmAdmins"
                                             th:value="${showFirmAdmins}">
+                                        <input th:if="${showMultiFirmUsers}" type="hidden" name="showMultiFirmUsers"
+                                            th:value="${showMultiFirmUsers}">
                                     </form>
                                 </fieldset>
                             </div>
@@ -177,15 +189,35 @@
 
                                 <div class="govuk-form-group">
                                     <fieldset class="govuk-fieldset">
-                                        <div class="govuk-checkboxes govuk-checkboxes--small"
-                                            data-module="govuk-checkboxes">
-                                            <div class="govuk-checkboxes__item">
-                                                <input class="govuk-checkboxes__input" id="showFirmAdmins"
-                                                    name="showFirmAdmins" type="checkbox" value="true"
-                                                    th:checked="${showFirmAdmins}">
-                                                <label class="govuk-label govuk-checkboxes__label" for="showFirmAdmins">
-                                                    Provider admin
-                                                </label>
+                                        <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Show user by type</legend>
+                                        <div class="govuk-grid-row">
+                                            <div class="govuk-grid-column-one-quarter">
+                                                <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                    data-module="govuk-checkboxes">
+                                                    <div class="govuk-checkboxes__item">
+                                                        <input class="govuk-checkboxes__input" id="showFirmAdmins"
+                                                            name="showFirmAdmins" type="checkbox" value="true"
+                                                            th:checked="${showFirmAdmins}">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            for="showFirmAdmins">
+                                                            Provider admin
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="govuk-grid-column-one-quarter">
+                                                <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                    data-module="govuk-checkboxes">
+                                                    <div class="govuk-checkboxes__item">
+                                                        <input class="govuk-checkboxes__input" id="showMultiFirmUsers"
+                                                            name="showMultiFirmUsers" type="checkbox" value="true"
+                                                            th:checked="${showMultiFirmUsers}">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            for="showMultiFirmUsers">
+                                                            3rd Party
+                                                        </label>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </fieldset>
@@ -457,7 +489,7 @@
                                     setTimeout(() => {
                                         document.getElementById('search-form').submit();
                                     }, 100);
-                                } 
+                                }
                                 // If no item is selected but dropdown has results, select the first one
                                 else if (items.length > 0 && !firmSearchListbox.classList.contains('autocomplete__menu--hidden')) {
                                     // Check if the first item is not a "No firms found" message
@@ -636,6 +668,7 @@
                                     direction: this.dataset.direction,
                                     usertype: this.dataset.usertype,
                                     showFirmAdmins: this.dataset.showFirmAdmins,
+                                    showMultiFirmUsers: this.dataset.showMultiFirmUsers,
                                     firmSearch: this.dataset.firmSearch,
                                     selectedFirmId: this.dataset.selectedFirmId
                                 };
@@ -660,6 +693,7 @@
                                         if (key === 'size' && value == '10') continue;
                                         if (key === 'page' && value == '1') continue;
                                         if (key === 'showFirmAdmins' && value === 'false') continue;
+                                        if (key === 'showMultiFirmUsers' && value === 'false') continue;
                                         params[key] = value;
                                     }
                                 }
@@ -680,6 +714,16 @@
                                 }
                             });
                         }
+                        // Handle showMultiFirmUsers checkbox change
+                        const showMultiFirmUsersCheckbox = document.getElementById('showMultiFirmUsers');
+                        if (showMultiFirmUsersCheckbox) {
+                            showMultiFirmUsersCheckbox.addEventListener('change', function () {
+                                const form = document.getElementById('firm-admins-form');
+                                if (form) {
+                                    form.submit();
+                                }
+                            });
+                        }
                     });
                 </script>
             </div>
@@ -693,15 +737,15 @@
                     <thead class="govuk-table__head">
                         <tr class="govuk-table__row">
                             <th scope="col" class="govuk-table__header"
-                                th:aria-sort="${sort == 'firstName' ? direction : 'none'}"
+                                th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firstName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Name
                                     <img th:if="${sort == 'firstName' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'firstName' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'firstName'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -710,12 +754,12 @@
                                 th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firmName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Firm
                                     <img th:if="${sort == 'firmName' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'firmName' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -724,12 +768,12 @@
                                 th:aria-sort="${sort == 'email' ? direction : 'none'}"
                                 style="width: 30%; min-width: 200px;">
                                 <button type="button" class="sort-button" data-sort="email"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Email
                                     <img th:if="${sort == 'email' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'email' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'email'}" th:src="@{/assets/images/sort-none.svg}" width="22"
                                         height="22" alt="">
                                 </button>
@@ -738,12 +782,12 @@
                                 th:aria-sort="${sort == 'userType' ? direction : 'none'}"
                                 style="width: 15%; min-width: 110px;">
                                 <button type="button" class="sort-button" data-sort="userType"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     User Type
                                     <img th:if="${sort == 'userType' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userType' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -752,12 +796,12 @@
                                 th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
                                 style="width: 15%; min-width: 90px;">
                                 <button type="button" class="sort-button" data-sort="userStatus"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
                                     Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
-                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userStatus' and direction == 'desc'}"
-                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="">
+                                        th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
                                     <img th:if="${sort != 'userStatus'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
                                 </button>
@@ -779,7 +823,10 @@
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
                                 <span th:switch="${#strings.trim(user.userType)}">
                                     <span th:case="'INTERNAL'">Internal</span>
-                                    <span th:case="'EXTERNAL'">External</span>
+                                    <span th:case="'EXTERNAL'">
+                                        <span th:if="${user.entraUser.multiFirmUser}">External - 3rd Party</span>
+                                        <span th:unless="${user.entraUser.multiFirmUser}">External</span>
+                                    </span>
                                     <span th:case="*" th:text="${user.userType}"></span>
                                 </span>
                             </td>
@@ -797,7 +844,7 @@
         <nav class="govuk-pagination" aria-label="Pagination">
             <div class="govuk-pagination__prev" th:if="${page > 1}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                     rel="prev">
                     <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -816,10 +863,10 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 0}"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                         th:aria-label="'Page 1'">1</a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                         th:aria-label="'Page 1'" aria-current="page">1</a>
                 </li>
 
@@ -834,10 +881,10 @@
                     <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                         th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                         <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                             th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                         <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                            th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                             th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                     </li>
                 </th:block>
@@ -851,17 +898,17 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                     th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                         th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                        th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                         th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                 </li>
             </ul>
 
             <div class="govuk-pagination__next" th:if="${page < totalPages}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins})}"
+                    th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
                     rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>

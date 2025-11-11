@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -21,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -31,9 +33,12 @@ class OfficeServiceTest {
     @Mock
     private OfficeRepository officeRepository;
 
+    private ModelMapper mapper;
+
     @BeforeEach
     void setUp() {
-        officeService = new OfficeService(officeRepository, new MapperConfig().modelMapper());
+        mapper = new MapperConfig().modelMapper();
+        officeService = new OfficeService(officeRepository, mapper);
     }
 
     @Test
@@ -94,4 +99,48 @@ class OfficeServiceTest {
         assertThat(addressDto.getCity()).isEqualTo("city");
         assertThat(addressDto.getPostcode()).isEqualTo("post_code");
     }
+
+
+    @Test
+    void testGetOfficesByIds_withNullOrEmpty_shouldReturnEmptyList() {
+        assertThat(officeService.getOfficesByIds(null)).isEmpty();
+        assertThat(officeService.getOfficesByIds(List.of())).isEmpty();
+    }
+
+    @Test
+    void testGetOfficesByIds_allFound_shouldReturnMappedDtos() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        List<String> officeIds = List.of(id1.toString(), id2.toString());
+
+        Office office1 = Office.builder().id(id1).code("OFF1").build();
+        Office office2 = Office.builder().id(id2).code("OFF2").build();
+        OfficeDto dto1 = mapper.map(office1, OfficeDto.class);
+        OfficeDto dto2 = mapper.map(office2, OfficeDto.class);
+
+        when(officeRepository.findOfficeByIdIn(List.of(id1, id2))).thenReturn(List.of(office1, office2));
+
+        List<OfficeDto> result = officeService.getOfficesByIds(officeIds);
+
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result).contains(dto1);
+        assertThat(result).contains(dto2);
+    }
+
+    @Test
+    void testGetOfficesByIds_someMissing_shouldThrowException() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        List<String> officeIds = List.of(id1.toString(), id2.toString());
+
+        Office office1 = Office.builder().id(id1).code("OFF1").build();
+
+        when(officeRepository.findOfficeByIdIn(List.of(id1, id2))).thenReturn(List.of(office1));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+                officeService.getOfficesByIds(officeIds));
+
+        assertThat(exception.getMessage()).contains("Failed to load all offices");
+    }
+
 }

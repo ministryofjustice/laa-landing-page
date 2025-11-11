@@ -1,24 +1,30 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.servlet.view.RedirectView;
+
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalControllerAdviceTest {
@@ -62,7 +68,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(false).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
+        assertThat(firmDto.getName()).isEqualTo("Firm");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 
@@ -82,7 +88,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("You currently don’t have access to any Provider Firms. Please contact the provider firm’s admin to be added.");
+        assertThat(firmDto.getName()).isEqualTo("You currently don't have access to any Provider Firms. Please contact the provider firm's admin to be added.");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 
@@ -93,7 +99,7 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm (Code)");
+        assertThat(firmDto.getName()).isEqualTo("Firm");
         assertThat(firmDto.isCanChange()).isFalse();
     }
 
@@ -106,8 +112,91 @@ class GlobalControllerAdviceTest {
         EntraUser entraUser = EntraUser.builder().multiFirmUser(true).userProfiles(Set.of(userProfile1, userProfile2)).build();
         when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
         FirmDto firmDto = controller.getActiveFirm(authentication, null);
-        assertThat(firmDto.getName()).isEqualTo("Firm2 (Code2)");
+        assertThat(firmDto.getName()).isEqualTo("Firm2");
         assertThat(firmDto.isCanChange()).isTrue();
+    }
+
+    @Test
+    void handleClientAuthorizationRequired_redirectsToAuthorization() {
+        // Given
+        ClientAuthorizationRequiredException exception = 
+                new ClientAuthorizationRequiredException("azure");
+        
+        // When
+        RedirectView redirectView = controller.handleClientAuthorizationRequired(exception);
+        
+        // Then
+        assertThat(redirectView).isNotNull();
+        assertThat(redirectView.getUrl()).isEqualTo("/oauth2/authorization/azure");
+    }
+
+    @Test
+    void testGetCurrentUserProfile() {
+        // Arrange
+        CurrentUserDto expectedDto = new CurrentUserDto();
+        when(loginService.getCurrentUser(authentication)).thenReturn(expectedDto);
+
+        // Act
+        CurrentUserDto result = controller.getCurrentUserProfile(authentication, null);
+
+        // Assert
+        assertThat(result).isEqualTo(expectedDto);
+        verify(loginService).getCurrentUser(authentication);
+    }
+
+
+    @Test
+    public void testIsInternal_ReturnsTrue_WhenUserTypeIsInternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isInternal(authentication, null);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsInternal_ReturnsFalse_WhenUserTypeIsNotInternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isInternal(authentication, null);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testIsExternal_ReturnsTrue_WhenUserTypeIsExternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.EXTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+        boolean result = controller.isExternal(authentication, null);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testIsExternal_ReturnsFalse_WhenUserTypeIsNotExternal() {
+        UserProfile userProfile = UserProfile.builder().userType(UserType.INTERNAL).activeProfile(false).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+
+        boolean result = controller.isExternal(authentication, null);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void getActiveFirmFlag_flag_off() {
+        boolean result = controller.getMultiFirmEnabledFlag();
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void getActiveFirmFlag_flag_on() {
+        ReflectionTestUtils.setField(controller, "enableMultiFirmUser", true);
+        boolean result = controller.getMultiFirmEnabledFlag();
+        assertThat(result).isTrue();
     }
 
 }

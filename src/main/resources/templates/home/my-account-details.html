@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'my-account'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>My account details</title>
+</head>
+
+<body>
+
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" th:href="@{/home}">Home</a>
+        </li>
+        <li class="govuk-breadcrumbs__list-item">
+            <span class="govuk-breadcrumbs__link" aria-current="page">My account</span>
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+            <!-- Multi-firm notification banner -->
+            <div th:if="${isMultiFirmUser and firm != null}"
+                 class="govuk-notification-banner govuk-!-margin-bottom-6"
+                 role="region" aria-labelledby="multi-firm-banner-title"
+                 data-module="govuk-notification-banner">
+                <div class="govuk-notification-banner__header">
+                    <h2 class="govuk-notification-banner__title" id="multi-firm-banner-title">
+                        Important
+                    </h2>
+                </div>
+                <div class="govuk-notification-banner__content">
+                    <p class="govuk-body">
+                        You are viewing permissions for <strong th:text="${firm.name}">Firm name</strong>.
+                    </p>
+                    <p class="govuk-body">
+                        To view permissions for a different firm, please <a class="govuk-link" th:href="@{/switch-firm}">switch&nbsp;firms</a>.
+                    </p>
+                </div>
+            </div>
+
+            <h1 class="govuk-heading-l">My account</h1>
+
+                <!-- User details card -->
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">Details</h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl class="govuk-summary-list" th:if="${user != null}">
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dd class="govuk-summary-list__value" th:text="${user.email}">user@example.com</dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dd class="govuk-summary-list__value" th:text="${user.firstName}">John</dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dd class="govuk-summary-list__value" th:text="${user.lastName}">Smith</dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">User type</dt>
+                                <dd class="govuk-summary-list__value"
+                                    th:text="${isUserManager ? 'Provider Admin' : 'Provider User'}">Provider User</dd>
+                            </div>
+                            <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                                <dt class="govuk-summary-list__key">Multi-firm access</dt>
+                                <dd class="govuk-summary-list__value" th:text="${isMultiFirmUser ? 'Yes' : 'No'}">No
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row" th:if="${firm != null}">
+                                <dt class="govuk-summary-list__key">Firm</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="${firm.name}">Firm name</span>
+                                    <span th:if="${firm.code != null}"> (Firm code: <span
+                                            th:text="${firm.code}">12345</span>)</span>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <h2 class="govuk-heading-l">My access</h2>
+
+                <!-- Services card -->
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">Services</h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl th:if="${!#lists.isEmpty(appAssignments)}" class="govuk-summary-list">
+                            <div th:each="appAssignment : ${appAssignments}" class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key" th:text="${appAssignment.key}">Service name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <div th:each="appRole : ${appAssignment.value}">
+                                        <span th:text="${appRole}"></span>
+                                    </div>
+                                </dd>
+                            </div>
+                        </dl>
+                        <p th:if="${#lists.isEmpty(appAssignments)}" class="govuk-body">No services assigned</p>
+                    </div>
+                </div>
+
+                <!-- Offices card -->
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">Offices</h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <table th:if="${!#lists.isEmpty(userOffices)}" class="govuk-table">
+                            <thead class="govuk-table__head">
+                                <tr class="govuk-table__row">
+                                    <th scope="col" class="govuk-table__header">Office address</th>
+                                    <th scope="col" class="govuk-table__header">LSC account number</th>
+                                </tr>
+                            </thead>
+                            <tbody class="govuk-table__body">
+                                <tr th:each="office : ${userOffices}" class="govuk-table__row">
+                                    <td class="govuk-table__cell" th:text="${office.address?.formattedAddress}">123 Main
+                                        Street, London, SW1A 1AA</td>
+                                    <td class="govuk-table__cell" th:text="${office.code}">12345</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p th:if="${#lists.isEmpty(userOffices)}" class="govuk-body">Access to all offices</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+
+</html>

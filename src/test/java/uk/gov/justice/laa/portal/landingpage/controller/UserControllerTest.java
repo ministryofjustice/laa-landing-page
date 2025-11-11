@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -48,6 +50,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
 import ch.qos.logback.classic.Level;
@@ -60,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
@@ -143,6 +147,112 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRoles_shouldSetBackUrlToPreviousIndex() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        // Two apps in session, we are on index 1 and expect back to index 0
+        httpSession.setAttribute("selectedApps", List.of(
+                UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of(roleDto));
+        when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+
+        // Act
+        String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/roles?selectedAppIndex=0");
+    }
+
+    @Test
+    void editUserRoles_firstIndex_backUrlPointsToApps() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute("selectedApps", List.of(UUID.randomUUID().toString()));
+
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
+                .thenReturn(List.of(roleDto));
+        when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+
+        // Act
+        String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/apps");
+    }
+
+    @Test
+    void editUserRolesCheckAnswer_backUrlPointsToLastValidIndex() {
+        // Arrange
+        MockHttpSession httpSession = new MockHttpSession();
+
+        Map<Integer, List<String>> selected = new HashMap<>();
+        selected.put(0, List.of());
+        selected.put(1, List.of());
+        httpSession.setAttribute("editUserAllSelectedRoles", selected);
+        List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        httpSession.setAttribute("selectedApps", selectedApps);
+        String id = UUID.randomUUID().toString();
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+        AppDto app1 = AppDto.builder().id(selectedApps.get(0)).name("A1").build();
+        AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
+        when(roleAssignmentService.canUserAssignRolesForApp(any(UserProfile.class), any(AppDto.class)))
+                .thenReturn(true);
+
+        UserProfile editor = UserProfile.builder().build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
+
+        // Act
+        String view = userController.editUserRolesCheckAnswer(id, null, model, httpSession, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("edit-user-roles-check-answer");
+        String backUrl = (String) model.getAttribute("backUrl");
+        assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
+    }
+
+    @Test
     void displayAllUsers() {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setUsers(new ArrayList<>());
@@ -162,7 +272,8 @@ class UserControllerTest {
         when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, firmSearchForm, model,
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, false, firmSearchForm,
+                model,
                 session,
                 authentication);
 
@@ -196,7 +307,8 @@ class UserControllerTest {
         when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, firmSearchForm, model,
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, false, firmSearchForm,
+                model,
                 session,
                 authentication);
 
@@ -229,7 +341,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, null, null, null,
-                "", false, false, firmSearchForm, model, session, authentication);
+                "", false, false, false, firmSearchForm, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -278,7 +390,8 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("firmSearchForm")).thenReturn(null);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, false, firmSearchForm,
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, false, false,
+                firmSearchForm,
                 model, session,
                 authentication);
 
@@ -301,7 +414,7 @@ class UserControllerTest {
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "", false, false,
+        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "", false, false, false,
                 firmSearchForm, model,
                 session,
                 authentication);
@@ -331,7 +444,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "",
-                false, false, firmSearchForm, model, session, authentication);
+                false, false, false, firmSearchForm, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -368,7 +481,7 @@ class UserControllerTest {
 
         // backButton is true, no new filter parameters provided
         String view = userController.displayAllUsers(10, 1, null, null, null, "", false,
-                true, firmSearchForm, model, testSession, authentication);
+                true, false, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         // Verify filters were restored from session
@@ -422,6 +535,15 @@ class UserControllerTest {
     @Test
     void manageUser_shouldAddUserAndLastLoggedInToModelAndReturnManageUserView() {
         // Arrange
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         String userId = "user42";
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
@@ -439,15 +561,81 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
         verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_shouldAddActiveFiltersToModelWhenFiltersArePresent() {
+        // Arrange
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        Map<String, Object> nonDefaultUserListFilters = new HashMap<>();
+        nonDefaultUserListFilters.put("search", "test");
+        nonDefaultUserListFilters.put("usertype", UserType.INTERNAL.toString());
+        nonDefaultUserListFilters.put("sort", "userProfileStatus");
+        nonDefaultUserListFilters.put("direction", "asc");
+        nonDefaultUserListFilters.put("showFirmAdmins", true);
+        nonDefaultUserListFilters.put("showMultiFirmUsers", true);
+        nonDefaultUserListFilters.put("size", 5);
+        nonDefaultUserListFilters.put("page", 3);
+        nonDefaultUserListFilters.put("firmSearchForm",
+                FirmSearchForm.builder().firmSearch("test").selectedFirmId(UUID.randomUUID()).build());
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        for (String filterKey : nonDefaultUserListFilters.keySet()) {
+            Map<String, Object> userListFilters = new HashMap<>();
+            userListFilters.put(filterKey, nonDefaultUserListFilters.get(filterKey));
+            when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
+
+            String view = userController.manageUser(userId, model, session, authentication);
+
+            // Assert
+            assertThat(view).isEqualTo("manage-user");
+            assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+            assertThat(model.getAttribute("hasFilters")).isEqualTo(true);
+        }
+
+        verify(userService, atLeastOnce()).getUserProfileById(userId);
+
     }
 
     @Test
@@ -482,6 +670,12 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("isAccessGranted")).isNotNull();
+        assertThat(model.getAttribute("externalUser")).isNotNull();
+        assertThat(model.getAttribute("showOfficesTab")).isNotNull();
+        assertThat(model.getAttribute("canManageOffices")).isNotNull();
+        assertThat(model.getAttribute("canEditUser")).isNotNull();
+        assertThat(model.getAttribute("showResendVerificationLink")).isNotNull();
         verify(userService).getUserProfileById(mockUser.getId().toString());
     }
 
@@ -556,6 +750,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldReturnApprolesInOrdinalSortingOrder() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Arrange
         String userId = "user52";
         EntraUserDto entraUser = new EntraUserDto();
@@ -579,10 +782,11 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -602,7 +806,7 @@ class UserControllerTest {
 
         // Act & Assert
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser(userId, model, session));
+                () -> userController.manageUser(userId, model, session, authentication));
 
         verify(userService).getUserProfileById(userId);
     }
@@ -1983,7 +2187,7 @@ class UserControllerTest {
 
         // backButton is false, new filter parameters provided
         String view = userController.displayAllUsers(20, 2, "firstName", "asc", "internal",
-                "new@test.com", false, false, firmSearchForm, model, testSession, authentication);
+                "new@test.com", false, false, false, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         // Verify new filters were used - for internal user with VIEW_INTERNAL_USER
@@ -2001,6 +2205,7 @@ class UserControllerTest {
         assertThat(storedFilters.get("direction")).isEqualTo("asc");
         assertThat(storedFilters.get("usertype")).isEqualTo("internal");
         assertThat(storedFilters.get("showFirmAdmins")).isEqualTo(false);
+        assertThat(storedFilters.get("showMultiFirmUsers")).isEqualTo(false);
     }
 
     @Test
@@ -2021,7 +2226,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         // No existing filters in session
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                false, true, firmSearchForm, model, testSession, authentication);
+                false, true, false, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), anyString(),
@@ -2052,13 +2257,14 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                true, true, firmSearchForm, model, session, authentication);
+                true, true, true, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
         assertThat(model.getAttribute("internal")).isEqualTo(false);
         assertThat(model.getAttribute("showFirmAdmins")).isEqualTo(true);
         assertThat(model.getAttribute("allowCreateUser")).isEqualTo(false);
+        assertThat(model.getAttribute("showMultiFirmUsers")).isEqualTo(true);
         verify(firmService).getUserFirm(externalUser);
     }
 
@@ -2186,7 +2392,8 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
         // When - updating roles for first app (index 0)
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                0, testSession, model);
 
         // Then - should redirect to next app (index 1)
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
@@ -2216,7 +2423,8 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         // When - updating roles for last app (index 1)
-        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 1, testSession);
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                1, testSession, model);
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
@@ -2225,6 +2433,52 @@ class UserControllerTest {
                 .getAttribute("editUserAllSelectedRoles");
         assertThat(allSelectedRolesByPage).hasSize(2);
         assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+    }
+
+    @Test
+    void updateUserRoles_whenValidationErrors_shouldReturnEditUserRolesView() {
+        // Arrange
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(Arrays.asList("role1", "role2"));
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
+
+
+        AppRoleViewModel role1 = new AppRoleViewModel();
+        role1.setName("role1");
+        role1.setSelected(true);
+        AppRoleViewModel role2 = new AppRoleViewModel();
+        role2.setName("role2");
+        role2.setSelected(true);
+        List<AppRoleViewModel> roles = List.of(role1, role2);
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", roles);
+        modelFromSession.addAttribute("entraUser", "entraUserMock");
+        modelFromSession.addAttribute("editUserRolesCurrentApp", "currentAppMock");
+        HttpSession mockHttpSession = new MockHttpSession();
+        mockHttpSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+
+        int selectedAppIndex = 1;
+        String userId = "123e4567-e89b-12d3-a456-426614174000";
+        UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+
+        // Act
+        String viewName = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                selectedAppIndex, mockHttpSession, model);
+
+        // Assert
+        assertThat(viewName).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfileDto);
+        assertThat(model.getAttribute("roles")).isEqualTo(roles);
+        assertThat(model.getAttribute("entraUser")).isEqualTo("entraUserMock");
+        assertThat(model.getAttribute("editUserRolesSelectedAppIndex")).isEqualTo(selectedAppIndex);
+        assertThat(model.getAttribute("editUserRolesCurrentApp")).isEqualTo("currentAppMock");
+        assertThat(model.getAttribute("backUrl"))
+                .isEqualTo("/admin/users/edit/123e4567-e89b-12d3-a456-426614174000/roles?selectedAppIndex=0");
     }
 
     @Test
@@ -2267,7 +2521,7 @@ class UserControllerTest {
 
         // When
         String view = userController.displayAllUsers(10, 1, null, null, "internal", "",
-                false, false, firmSearchForm, model, session, authentication);
+                false, false, false, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -2294,7 +2548,7 @@ class UserControllerTest {
         when(session.getAttribute("firmSearchForm")).thenReturn(null);
         // When
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                false, false, firmSearchForm, model, session, authentication);
+                false, false, false, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -2329,6 +2583,16 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldAddUserAppRolesAndOfficesToModel() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("id1");
         UserProfileDto userProfile = UserProfileDto.builder()
@@ -2342,9 +2606,10 @@ class UserControllerTest {
                         .build()))
                 .userType(UserType.EXTERNAL)
                 .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
-        String view = userController.manageUser("id1", model, session);
+        String view = userController.manageUser("id1", model, session, authentication);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -2356,11 +2621,20 @@ class UserControllerTest {
 
         // Expect exception since controller calls .get() on empty Optional
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser("id2", model, session));
+                () -> userController.manageUser("id2", model, session, authentication));
     }
 
     @Test
     void manageUser_shouldHideOfficesTabForInternalUser() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given - Internal user
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("internal-user-id");
@@ -2372,11 +2646,12 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("internal-user-id", model, session);
+        String view = userController.manageUser("internal-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2385,6 +2660,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldHideOfficesTabForExternalUserWithoutPermissions() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given - External user without required permissions
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("external-user-id");
@@ -2396,23 +2680,38 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         // No edit permission
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
         // No office permission
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(false);
+        assertThat(model.getAttribute("canManageOffices")).isEqualTo(false);
     }
 
     @Test
     void manageUser_shouldShowOfficesTabForExternalUser() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
         // Given - External user
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("external-user-id");
@@ -2428,17 +2727,179 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("showOfficesTab")).isEqualTo(true);
+        assertThat(model.getAttribute("canManageOffices")).isEqualTo(true);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(true);
+
+    }
+
+    @Test
+    void manageUser_shouldAddEnableMultiFirmUserFlagToModel_whenFeatureEnabled() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        entraUser.setMultiFirmUser(false);
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(true);
+        assertThat(model.getAttribute("externalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void manageUser_shouldAddEnableMultiFirmUserFlagToModel_whenFeatureDisabled() {
+        // Given
+        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        entraUser.setMultiFirmUser(false);
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(false);
+        assertThat(model.getAttribute("externalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUser_whenUserHasPermission() {
+        // Given
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        entraUser.setFullName("Managed User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Given - User has permission
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(true);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser();
+    }
+
+    @Test
+    void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUserToFalse_whenUserLacksPermission() {
+        // Given
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId("external-user-id");
+        entraUser.setFullName("Managed User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Given - User has permission
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);
+
+        // When
+        String view = userController.manageUser("external-user-id", model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("canViewAllFirmsOfMultiFirmUser")).isEqualTo(false);
+        verify(accessControlService).canViewAllFirmsOfMultiFirmUser();
     }
 
     @Test
@@ -2956,6 +3417,15 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldHandleNullUserAppRoles() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
         // Given
         String userId = "user123";
         EntraUserDto user = new EntraUserDto();
@@ -2968,10 +3438,11 @@ class UserControllerTest {
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
                 .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2985,7 +3456,8 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldHandleNullAppRolesAndOffices() {
-        // Given - simulates a newly created multi-firm user without initial profile data
+        // Given - simulates a newly created multi-firm user without initial profile
+        // data
         String userId = "user123";
         EntraUserDto user = new EntraUserDto();
         user.setId(userId);
@@ -2999,12 +3471,23 @@ class UserControllerTest {
                 .appRoles(null) // Explicitly null to test null handling
                 .offices(null) // Explicitly null to test null handling
                 .build();
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted(any())).thenReturn(false);
         when(accessControlService.canEditUser(any())).thenReturn(true);
 
         // When
-        String view = userController.manageUser(userId, model, session);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -4577,7 +5060,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, null, false,
-                    false, firmSearchForm, model, session, authentication);
+                    false, false, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -4601,7 +5084,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, firmSearchForm, model, session, authentication);
+                    false, false, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -4623,7 +5106,7 @@ class UserControllerTest {
             FirmSearchForm searchForm = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
             assertThrows(RuntimeException.class, () -> userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, searchForm, model, session, authentication));
+                    false, false, searchForm, model, session, authentication));
         }
 
         @Test
@@ -4638,7 +5121,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, firmSearchForm, model, session, authentication);
+                    false, false, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -4658,7 +5141,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, firmSearchForm, model, session, authentication);
+                    false, false, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -4757,8 +5240,7 @@ class UserControllerTest {
         user.setEmail("test@example.com");
         session.setAttribute("user", user);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
 
         // When
         String result = userController.createUserMultiFirm(multiFirmForm, session, model);
@@ -4776,8 +5258,7 @@ class UserControllerTest {
         EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
 
         // When
         String result = userController.createUserMultiFirm(multiFirmForm, session, model);
@@ -4792,8 +5273,7 @@ class UserControllerTest {
         ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
 
         // When
         String result = userController.createUserMultiFirm(multiFirmForm, session, model);
@@ -4812,8 +5292,7 @@ class UserControllerTest {
         session.setAttribute("user", user);
         session.setAttribute("isMultiFirmUser", true);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
 
         // When
         String result = userController.createUserMultiFirm(multiFirmForm, session, model);
@@ -4842,8 +5321,10 @@ class UserControllerTest {
         String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
 
         // Then
-        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
+        assertThat(result).isEqualTo("redirect:/admin/user/create/check-answers");
         assertThat(session.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("firmSearchForm")).isNull();
     }
 
     @Test
@@ -4855,8 +5336,7 @@ class UserControllerTest {
         user.setEmail("test@example.com");
         session.setAttribute("user", user);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
         multiFirmForm.setMultiFirmUser(false);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
@@ -4879,8 +5359,7 @@ class UserControllerTest {
         user.setEmail("test@example.com");
         session.setAttribute("user", user);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
         multiFirmForm.setMultiFirmUser(null);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
@@ -4903,8 +5382,7 @@ class UserControllerTest {
         EntraUserDto user = new EntraUserDto();
         session.setAttribute("user", user);
 
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm =
-            new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
+        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
         multiFirmForm.setMultiFirmUser(true);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
@@ -5054,6 +5532,363 @@ class UserControllerTest {
                     "/admin/users", null, null);
         } finally {
             logger.detachAppender(listAppender);
+        }
+    }
+
+    // Convert to Multi-Firm User Tests
+    @Nested
+    class ConvertToMultiFirmTests {
+
+        @Test
+        void convertToMultiFirm_withFeatureEnabled_returnsForm() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            String userId = UUID.randomUUID().toString();
+            MockHttpSession session = new MockHttpSession();
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .fullName("John Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirm(userId, form, model, session, redirectAttributes);
+
+            // Then
+            assertThat(result).isEqualTo("convert-to-multi-firm/index");
+            assertThat(model.getAttribute("user")).isEqualTo(user);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo("Convert to multi-firm user - John Doe");
+        }
+
+        @Test
+        void convertToMultiFirm_withFeatureDisabled_throwsException() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+            String userId = UUID.randomUUID().toString();
+            MockHttpSession session = new MockHttpSession();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+
+            // When & Then
+            assertThrows(RuntimeException.class,
+                    () -> userController.convertToMultiFirm(userId, form, model, session, redirectAttributes));
+        }
+
+        @Test
+        void convertToMultiFirm_withSessionForm_prePopulatesForm() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            String userId = UUID.randomUUID().toString();
+            MockHttpSession session = new MockHttpSession();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm sessionForm = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            sessionForm.setConvertToMultiFirm(true);
+            session.setAttribute("convertToMultiFirmForm", sessionForm);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirm(userId, form, model, session, redirectAttributes);
+
+            // Then
+            assertThat(result).isEqualTo("convert-to-multi-firm/index");
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm formInModel = (uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm) model
+                    .getAttribute("convertToMultiFirmForm");
+            assertThat(formInModel.isConvertToMultiFirm()).isTrue();
+        }
+
+        @Test
+        void convertToMultiFirmPost_withValidYes_convertsUserAndRedirectsToManageUser() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(bindingResult.hasErrors()).thenReturn(false);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                    redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+            verify(userService).convertToMultiFirmUser(userId);
+            verify(eventService).logEvent(any(ConvertToMultiFirmAuditEvent.class));
+        }
+
+        @Test
+        void convertToMultiFirmPost_withValidNo_redirectsToManageUser() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(false);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(bindingResult.hasErrors()).thenReturn(false);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                    redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void convertToMultiFirmPost_withValidationErrors_returnsForm() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .fullName("John Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            // Note: not setting convertToMultiFirm to test validation error handling
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(bindingResult.hasErrors()).thenReturn(true);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                    redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("convert-to-multi-firm/index");
+            assertThat(model.getAttribute("user")).isEqualTo(user);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo("Convert to multi-firm user - John Doe");
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+        }
+
+        @Test
+        void convertToMultiFirmPost_withFeatureDisabled_throwsException() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
+            String userId = UUID.randomUUID().toString();
+            MockHttpSession session = new MockHttpSession();
+            Authentication authentication = Mockito.mock(Authentication.class);
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                            redirectAttributes, model));
+            assertThat(exception.getMessage()).contains("multi-firm feature is not available");
+        }
+
+        @Test
+        void convertToMultiFirmPost_withConversionFailure_returnsFormWithError() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .fullName("John Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(bindingResult.hasErrors()).thenReturn(false);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            // Simulate conversion failure
+            Mockito.doThrow(new RuntimeException("Database error")).when(userService).convertToMultiFirmUser(userId);
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                    redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("convert-to-multi-firm/index");
+            Object errorMessage = model.getAttribute("errorMessage");
+            assertThat(errorMessage).isNotNull();
+            assertThat(errorMessage.toString()).contains("Failed to convert user to multi-firm");
+            assertThat(model.getAttribute("user")).isEqualTo(user);
+        }
+
+        @Test
+        void convertToMultiFirmPost_withInternalUser_throwsException() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.INTERNAL) // Internal user should not be convertible
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("John")
+                            .lastName("Doe")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                            redirectAttributes, model));
+            assertThat(exception.getMessage()).contains("Only external users can be converted to multi-firm users");
+
+            // Verify conversion was never attempted
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
+        }
+
+        @Test
+        void convertToMultiFirmPost_withAlreadyMultiFirmUser_redirectsWithError() {
+            // Given
+            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
+            final String userId = UUID.randomUUID().toString();
+            final MockHttpSession session = new MockHttpSession();
+            final Authentication authentication = Mockito.mock(Authentication.class);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(true) // Already a multi-firm user
+                            .build())
+                    .build();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            form.setConvertToMultiFirm(true);
+
+            BindingResult bindingResult = Mockito.mock(BindingResult.class);
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
+                    redirectAttributes, model);
+
+            // Then
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+            assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                    .isEqualTo("This user is already a multi-firm user");
+
+            // Verify conversion was never attempted
+            verify(userService, never()).convertToMultiFirmUser(anyString());
+            verify(eventService, never()).logEvent(any());
         }
     }
 }

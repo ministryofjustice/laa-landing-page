@@ -1,12 +1,28 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
-import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -17,6 +33,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.kiota.RequestInformation;
+
+import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -49,29 +74,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 /**
  * userService
  */
@@ -89,6 +91,7 @@ public class UserService {
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
+    private final FirmService firmService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -97,7 +100,7 @@ public class UserService {
             OfficeRepository officeRepository,
             LaaAppsConfig.LaaApplicationsList laaApplicationsList,
             TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService) {
+            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -108,6 +111,7 @@ public class UserService {
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
+        this.firmService = firmService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -168,8 +172,8 @@ public class UserService {
                 return result;
             }
 
-            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+            Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            Set<String> newPuiRoles = filterByPuiRoles(newRoles);
 
             // Update roles
             userProfile.setAppRoles(newRoles);
@@ -258,11 +262,14 @@ public class UserService {
         return "";
     }
 
-    private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
-        return roles != null && !roles.isEmpty() ? roles.stream()
-                .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
-                .filter(AppRole::isLegacySync)
-                .collect(Collectors.toSet()) : new HashSet<>();
+    private Set<String> filterByPuiRoles(Set<AppRole> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        return roles.stream().filter(AppRole::isLegacySync)
+                .filter(Objects::nonNull)
+                .map(AppRole::getCcmsCode).collect(Collectors.toSet());
     }
 
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
@@ -319,7 +326,8 @@ public class UserService {
      *
      * @param userProfileId the ID of the user profile (UUID as String)
      * @param reason        the reason for deletion, used for logging/audit
-     * @param actorId       the UUID of the actor performing the deletion (for logging)
+     * @param actorId       the UUID of the actor performing the deletion (for
+     *                      logging)
      */
     @Transactional
     public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
@@ -350,9 +358,14 @@ public class UserService {
                 .deletedUserId(userProfile.getEntraUser().getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
+                Set<String> puiRoles = new HashSet<>();
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
+                    puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
+                    if (!puiRoles.isEmpty()) {
+                        roleChangeNotificationService.sendMessage(up, Collections.emptySet(), puiRoles);
+                    }
                 }
                 if (up.getOffices() != null) {
                     builder.detachedOfficesCount(up.getOffices().isEmpty() ? 0 : up.getOffices().size());
@@ -368,6 +381,96 @@ public class UserService {
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
         return builder.build();
+    }
+
+    /**
+     * Delete a specific firm profile from a multi-firm user.
+     * 
+     * @param userProfileId the ID of the user profile to delete (UUID as String)
+     * @param actorId       the UUID of the actor performing the deletion (for
+     *                      logging)
+     * @return true if deletion was successful, false otherwise
+     * @throws RuntimeException if profile not found, user not multi-firm, or
+     *                          attempting to delete last profile
+     */
+    @Transactional
+    public boolean deleteFirmProfile(String userProfileId, UUID actorId) {
+        UserProfile userProfile = userProfileRepository.findById(UUID.fromString(userProfileId))
+                .orElseThrow(() -> new RuntimeException("User profile not found: " + userProfileId));
+
+        EntraUser entraUser = userProfile.getEntraUser();
+
+        if (entraUser == null) {
+            throw new RuntimeException("Associated Entra user not found for profile: " + userProfileId);
+        }
+
+        // Verify this is a multi-firm user
+        if (!entraUser.isMultiFirmUser()) {
+            throw new RuntimeException(
+                    "User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
+        }
+
+        // Check if this is the last profile - cannot delete the last profile
+        List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
+        if (allProfiles.isEmpty() || allProfiles.size() <= 1) {
+            throw new RuntimeException("Cannot delete the last firm profile. User must have at least one profile.");
+        }
+
+        final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
+
+        logger.info(
+                "Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={}, email={}, firm={}",
+                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), firmName);
+
+        // Handle PUI role changes notification (like in deleteExternalUser)
+        Set<String> puiRoles = new HashSet<>();
+        if (userProfile.getAppRoles() != null && !userProfile.getAppRoles().isEmpty()) {
+            puiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            userProfile.getAppRoles().clear();
+            if (!puiRoles.isEmpty()) {
+                roleChangeNotificationService.sendMessage(userProfile, Collections.emptySet(), puiRoles);
+            }
+        }
+
+        // Clear offices association
+        if (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty()) {
+            userProfile.getOffices().clear();
+        }
+
+        // Remove bidirectional association: profile from entra user and entra user from
+        // profile
+        entraUser.getUserProfiles().remove(userProfile);
+        userProfile.setEntraUser(null);
+        userProfileRepository.save(userProfile);
+        userProfileRepository.flush();
+
+        // Store whether this was the active profile before deletion
+        final boolean wasActiveProfile = userProfile.isActiveProfile();
+
+        // Delete the profile
+        userProfileRepository.delete(userProfile);
+        userProfileRepository.flush();
+
+        // If the deleted profile was active, set another one as active
+        if (wasActiveProfile) {
+            // Reload profiles from database to get current state
+            List<UserProfile> remainingProfiles = userProfileRepository.findAllByEntraUser(entraUser);
+
+            // Check if any profile is already active
+            boolean hasActiveProfile = remainingProfiles.stream().anyMatch(UserProfile::isActiveProfile);
+
+            // If no active profile exists, set the first one as active
+            if (!hasActiveProfile && !remainingProfiles.isEmpty()) {
+                UserProfile newActiveProfile = remainingProfiles.get(0);
+                newActiveProfile.setActiveProfile(true);
+                userProfileRepository.save(newActiveProfile);
+                logger.info("Set new active profile for user {} to firm {}",
+                        entraUser.getEmail(),
+                        newActiveProfile.getFirm() != null ? newActiveProfile.getFirm().getName() : "Unknown");
+            }
+        }
+
+        return true;
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -453,7 +556,7 @@ public class UserService {
             case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
             case "EMAIL" -> Sort.by(order, "entraUser.email");
             case "USERSTATUS" -> Sort.by(order, "userProfileStatus");
-            case "USERTYPE" -> Sort.by(order, "userType");
+            case "USERTYPE" -> Sort.by(order, "userType", "entraUser.multiFirmUser");
             case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
         };
@@ -563,8 +666,9 @@ public class UserService {
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User {} {} is not a multi-firm user, firm selection can not be skipped",
                     entraUser.getFirstName(), entraUser.getLastName());
-            throw new RuntimeException(String.format("User %s %s is not a multi-firm user, firm selection can not be skipped",
-                    entraUser.getFirstName(), entraUser.getLastName()));
+            throw new RuntimeException(
+                    String.format("User %s %s is not a multi-firm user, firm selection can not be skipped",
+                            entraUser.getFirstName(), entraUser.getLastName()));
         }
 
         if (!isMultiFirmUser || !firmDto.isSkipFirmSelection()) {
@@ -593,7 +697,10 @@ public class UserService {
         return entraUserRepository.saveAndFlush(entraUser);
     }
 
-    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto, String createdBy) {
+    public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
+            List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
+        logger.info("Adding user profile for user: {} ({})", entraUserDto.getFullName(), entraUserDto.getId());
+
         if (!entraUserDto.isMultiFirmUser()) {
             logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
                     entraUserDto.getLastName());
@@ -601,9 +708,31 @@ public class UserService {
                     entraUserDto.getFirstName(), entraUserDto.getLastName()));
         }
 
-        if (firmDto == null || (!firmDto.isSkipFirmSelection() && firmDto.getId() == null)) {
-            logger.error("Invalid firm details provided: {}", firmDto);
-            throw new RuntimeException(String.format("Invalid firm details provided: %s", firmDto));
+        Set<Office> offices = null;
+        if (!(userOfficeDtos == null || userOfficeDtos.isEmpty())) {
+            offices = userOfficeDtos.stream()
+                    .map(userOfficeDto -> officeRepository.findById(userOfficeDto.getId())
+                            .orElseThrow(() -> new RuntimeException(
+                                    String.format("Office not found for: %s", userOfficeDto.getId()))))
+                    .collect(Collectors.toSet());
+        }
+
+        Firm firm;
+        if (!(firmDto == null || firmDto.getId() == null)) {
+            firm = firmService.getById(firmDto.getId());
+        } else {
+            logger.error("Invalid firm details provided for: {}", entraUserDto.getFullName());
+            throw new RuntimeException(
+                    String.format("Invalid firm details provided for: %s", entraUserDto.getFullName()));
+        }
+
+        Set<AppRole> appRoles = null;
+        if (!(appRoleDtos == null || appRoleDtos.isEmpty())) {
+            appRoles = appRoleDtos.stream()
+                    .map(appRoleDto -> appRoleRepository.findById(UUID.fromString(appRoleDto.getId()))
+                            .orElseThrow(() -> new RuntimeException(
+                                    String.format("App role not found for: %s", appRoleDto.getId()))))
+                    .collect(Collectors.toSet());
         }
 
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
@@ -626,16 +755,16 @@ public class UserService {
 
         boolean activeProfile = entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
 
-        Firm firm = mapper.map(firmDto, Firm.class);
-
         UserProfile userProfile = UserProfile.builder()
                 .entraUser(entraUser)
                 .activeProfile(activeProfile)
                 .userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now())
                 .createdBy(createdBy)
+                .appRoles(appRoles)
                 .firm(firm)
-                .userProfileStatus(UserProfileStatus.PENDING)
+                .offices(offices)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
 
         if (entraUser.getUserProfiles() == null) {
@@ -646,6 +775,11 @@ public class UserService {
 
         userProfileRepository.save(userProfile);
         entraUserRepository.save(entraUser);
+
+        techServicesClient.updateRoleAssignment(entraUser.getId());
+
+        logger.info("User profile added successfully for user: {} ({})", entraUserDto.getFullName(),
+                entraUserDto.getId());
 
         return userProfile;
     }
@@ -829,6 +963,40 @@ public class UserService {
             }
         } else {
             logger.warn("User with id {} not found in database. Could not update local user details.", userId);
+        }
+    }
+
+    /**
+     * Convert a single-firm user to a multi-firm user
+     * This operation is irreversible
+     * 
+     * @param userId The ID of the user to convert
+     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     */
+    @Transactional
+    public void convertToMultiFirmUser(String userId) {
+        Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
+        if (optionalUser.isEmpty()) {
+            logger.error("User with id {} not found in database. Cannot convert to multi-firm user.", userId);
+            throw new RuntimeException("User not found");
+        }
+
+        EntraUser entraUser = optionalUser.get();
+        
+        if (entraUser.isMultiFirmUser()) {
+            logger.warn("User with id {} is already a multi-firm user.", userId);
+            throw new RuntimeException("User is already a multi-firm user");
+        }
+
+        // Set the multi-firm flag
+        entraUser.setMultiFirmUser(true);
+        
+        try {
+            entraUserRepository.saveAndFlush(entraUser);
+            logger.info("Successfully converted user {} to multi-firm status", userId);
+        } catch (Exception e) {
+            logger.error("Failed to convert user {} to multi-firm status", userId, e);
+            throw new RuntimeException("Failed to convert user to multi-firm status", e);
         }
     }
 
@@ -1136,5 +1304,31 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toMap(AppRoleDto::getId,
                         Function.identity()));
+    }
+
+    /**
+     * Get user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return List of user profiles for the Entra user
+     */
+    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) {
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(entraUserId);
+        if (optionalEntraUser.isPresent()) {
+            EntraUser entraUser = optionalEntraUser.get();
+            return entraUser.getUserProfiles().stream().toList();
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Get user profiles by Entra user ID with optional search filter
+     *
+     * @param entraUserId The Entra user ID
+     * @param search      Optional search term to filter by firm name or code
+     * @return List of user profiles matching the search criteria
+     */
+    public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
+        return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
     }
 }
