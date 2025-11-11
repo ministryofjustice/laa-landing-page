@@ -462,7 +462,6 @@ public class UserController {
         boolean canViewAllProfiles = externalUser && editorInternalUser
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
         model.addAttribute("canViewAllProfiles", canViewAllProfiles);
-        model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
