@@ -421,7 +421,8 @@ public class UserController {
 
     @GetMapping("/user/{id}/verify")
     @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session,
+            Authentication authentication) {
         if (!enableResendVerificationCode) {
             log.error("Resend activation code is disabled");
             throw new AccessDeniedException("Resend verification is disabled.");
@@ -471,20 +472,6 @@ public class UserController {
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
-        // Add multi-firm feature flag
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
-
-        // Multi-firm user information
-        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
-        model.addAttribute("isMultiFirmUser", isMultiFirmUser);
-        model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
-
-        if (isMultiFirmUser && enableMultiFirmUser) {
-            // Check if user can delete the currently viewed profile (not all profiles)
-            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
-            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
-        }
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")

@@ -662,6 +662,12 @@ class UserControllerTest {
         when(editorUserProfile.getUserType()).thenReturn(UserType.INTERNAL);
 
         when(userService.getUserProfileById(mockUser.getId().toString())).thenReturn(Optional.of(mockUser));
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(new HashSet<>())
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.sendVerificationEmail(mockUser.getId().toString()))
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
