@@ -1306,6 +1306,16 @@ public class UserService {
                         Function.identity()));
     }
 
+    public List<AppRoleDto> getAppRolesByAppsId(List<String> apps, String userType) {
+        List<UUID> appsId = apps
+                .stream()
+                .map(UUID::fromString)
+                .toList();
+        return appRoleRepository.findByAppIdIUserTypeRestriction(appsId,userType ).stream()
+                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
+                .toList();
+    }
+
     /**
      * Get user profiles by Entra user ID
      *
