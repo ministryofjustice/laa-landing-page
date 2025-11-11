@@ -329,8 +329,12 @@ public class UserController {
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
 
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
+
         model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
+        model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
