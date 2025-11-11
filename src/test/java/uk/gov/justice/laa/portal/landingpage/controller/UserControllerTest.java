@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -36,6 +37,7 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -4859,7 +4861,50 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessProcessCheckAnswers_shouldCompleteGrantAccessAndRedirectToConfirmation() {
+    void grantAccessProcessCheckAnswers_shouldCompleteGrantAccessAndRedirectToConfirmationWithoutError() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        List<String> selectedRoles = List.of("Role 1");
+        List<String> selectedOffices = List.of("Office 1");
+
+        testSession.setAttribute("allSelectedRoles", selectedRoles);
+        testSession.setAttribute("selectedOffices", selectedOffices);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(roleAssignmentService.canAssignRole(any(), anyList())).thenReturn(true);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
+        // When
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+
+        // Verify session cleanup
+        assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+
+        verify(userService, times(1)).updateUserRoles(any(), anyList(), anyList(), any());
+        verify(eventService, times(3)).logEvent(any());
+        verify(userService, times(1)).grantAccess(userId, currentUserDto.getName());
+
+    }
+
+    @Test
+    void grantAccessProcessCheckAnswers_shouldThrowWhenNoRolesInSession() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440012";
         UserProfileDto userProfileDto = new UserProfileDto();
@@ -4877,10 +4922,17 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
-        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+
+        Exception exception = assertThrows(Exception.class, () -> {
+            userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+        });
+        Assertions.assertEquals("Expected error message", exception.getMessage());
+        RuntimeException runtimeException = assertThrows(RuntimeException.class,
+                () -> userController.grantAccessProcessCheckAnswers(userId, authentication, testSession),
+                "Expected Runtime Exception");
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+        assertThat(runtimeException.getMessage()).isEqualTo("Bad Request!!");
 
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
