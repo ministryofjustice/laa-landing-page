@@ -662,17 +662,11 @@ class UserControllerTest {
         when(editorUserProfile.getUserType()).thenReturn(UserType.INTERNAL);
 
         when(userService.getUserProfileById(mockUser.getId().toString())).thenReturn(Optional.of(mockUser));
-        UserProfile editorUserProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userType(UserType.EXTERNAL)
-                .appRoles(new HashSet<>())
-                .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.sendVerificationEmail(mockUser.getId().toString()))
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
                         .build()));
-        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.isAccessGranted(mockUser.getId().toString())).thenReturn(true);
         when(accessControlService.canEditUser(mockUser.getId().toString())).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
@@ -680,7 +674,6 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
         when(accessControlService.canDeleteUser(mockUser.getId().toString())).thenReturn(true);
         when(accessControlService.canSendVerificationEmail(mockUser.getId().toString())).thenReturn(true);
-        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
 
         // Act
         String view = userController.resendActivationCode(mockUser.getId().toString(), model, session, authentication);
@@ -704,7 +697,8 @@ class UserControllerTest {
 
         // Act
         AccessDeniedException accEx = Assertions.assertThrows(AccessDeniedException.class,
-                () -> userController.resendActivationCode("550e8400-e29b-41d4-a716-446655440000", model, session, authentication),
+                () -> userController.resendActivationCode("550e8400-e29b-41d4-a716-446655440000", model, session,
+                        authentication),
                 "Excpected Access Denied Exception!");
 
         // Assert
@@ -2462,7 +2456,6 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(true);
         when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
-
 
         AppRoleViewModel role1 = new AppRoleViewModel();
         role1.setName("role1");
