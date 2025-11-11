@@ -1681,7 +1681,7 @@ public class UserController {
         List<String> selectedApps = getAppsFromSession(session);
 
         if (!selectedApps.isEmpty()) {
-                editableApps.forEach(app -> app.setSelected(selectedApps.contains(app.getId())));
+            editableApps.forEach(app -> app.setSelected(selectedApps.contains(app.getId())));
         } else {
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
@@ -2054,19 +2054,20 @@ public class UserController {
         List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
                 .orElse(new ArrayList<>());
 
-        //getAllApps from session
         List<String> selectedApps = getAppsFromSession(session);
         // Create a list with only the appRolesId
         List<String> selectedAppsRoles = userService.getAppRolesByAppsId(selectedApps, userType.name()).stream()
                 .map(AppRoleDto::getId)
                 .toList();
 
-        // Combine both lists into one
         List<String> combinedRoles = Stream.of(allSelectedRoles,
                         selectedAppsRoles)
                 .flatMap(List::stream)
                 .distinct() // optional: remove duplicates
                 .toList();
+        if (combinedRoles.isEmpty()){
+            throw new RuntimeException("No roles selected for assignment");
+        }
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(combinedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
@@ -2150,15 +2151,32 @@ public class UserController {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            UserType  userType = editorProfile.getUserType();
 
             List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
-                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+                    .orElse(new ArrayList<>());
+
+            List<String> selectedApps = getAppsFromSession(session);
+            // Create a list with only the appRolesId
+            List<String> selectedAppsRoles = userService.getAppRolesByAppsId(selectedApps, userType.name()).stream()
+                    .map(AppRoleDto::getId)
+                    .toList();
+
+            List<String> combinedRoles = Stream.of(allSelectedRoles,
+                            selectedAppsRoles)
+                    .flatMap(List::stream)
+                    .distinct() // optional: remove duplicates
+                    .toList();
+
+            if (combinedRoles.isEmpty()) {
+                throw new RuntimeException("No roles selected for assignment");
+            }
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);
 
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), combinedRoles)) {
+                Map<String, String> updateResult = userService.updateUserRoles(id, combinedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),

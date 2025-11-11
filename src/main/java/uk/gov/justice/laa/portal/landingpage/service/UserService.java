@@ -1311,7 +1311,7 @@ public class UserService {
                 .stream()
                 .map(UUID::fromString)
                 .toList();
-        return appRoleRepository.findByAppIdIUserTypeRestriction(appsId,userType ).stream()
+        return appRoleRepository.findByAppIdUserTypeRestriction(appsId, userType).stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .toList();
     }

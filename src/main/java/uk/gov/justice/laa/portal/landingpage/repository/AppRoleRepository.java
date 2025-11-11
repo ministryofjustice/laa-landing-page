@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @Repository
 public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
@@ -34,7 +33,7 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
     List<AppRole> findAllByIdIn(Collection<UUID> roleIds);
 
     @Query(value = "SELECT * FROM app_role ar WHERE ar.App_id in (:appsId)  and :userType = ANY(ar.user_type_restriction)", nativeQuery = true)
-    List<AppRole> findByAppIdIUserTypeRestriction(@Param("appsId")Collection<UUID> appIds, @Param("userType") String userType);
+    List<AppRole> findByAppIdUserTypeRestriction(@Param("appsId")Collection<UUID> appIds, @Param("userType") String userType);
 
 
 }
