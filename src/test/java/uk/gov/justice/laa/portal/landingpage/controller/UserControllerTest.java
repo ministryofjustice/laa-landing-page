@@ -3977,23 +3977,16 @@ class UserControllerTest {
         final String userId = "550e8400-e29b-41d4-a716-446655440006";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-
         UUID office1Id = UUID.randomUUID();
-        UUID office2Id = UUID.randomUUID();
         Office office1 = Office.builder().id(office1Id).code("Office 1")
                 .address(Office.Address.builder().addressLine1("Address 1").build()).build();
-        Office office2 = Office.builder().id(office2Id).code("Office 2")
-                .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+
         OfficeDto office1Dto = OfficeDto.builder().id(office1.getId())
                 .address(OfficeDto.AddressDto.builder().addressLine1(office1.getAddress().getAddressLine1())
                         .build())
                 .build();
 
         List<OfficeDto> userOffices = List.of(office1Dto); // User has access to office1 only
-        List<Office> allOffices = List.of(office1, office2);
-
-        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
-        List<FirmDto> userFirms = List.of(firmDto);
 
         MockHttpSession testSession = new MockHttpSession();
         List<String> selectedOffices = userOffices.stream()
@@ -4004,7 +3997,13 @@ class UserControllerTest {
 
         when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        List<FirmDto> userFirms = List.of(FirmDto.builder().id(UUID.randomUUID()).build());
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
+        UUID office2Id = UUID.randomUUID();
+        Office office2 = Office.builder().id(office2Id).code("Office 2")
+                .address(Office.Address.builder().addressLine1("Address 2").build()).build();
+        List<Office> allOffices = List.of(office1, office2);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
 
         // When
