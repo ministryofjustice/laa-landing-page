@@ -1739,27 +1739,21 @@ public class UserController {
         }
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-
         UserType userType = user.getUserType();
+
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
 
-        //check all the appRoles with more than one
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
         //Group and count appRoles
-        Map<String, Long> appCounts = appRoleDtos.stream()
-                .collect(Collectors.groupingBy(dto -> dto.getApp().getId(), Collectors.counting()));
+        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
 
         // remove from selected apps that have only one role and add to the list appsWithOneRole
         List<String> appsWithOneRole = new ArrayList<>();
 
-        appCounts.forEach((key, value) -> {
-            if (value == 1) {
-                appsWithOneRole.add(key);
-                selectedApps.remove(key);
-            }
-        });
+        moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
+
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                 .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                 .map(AppRoleDto::getId)
@@ -1771,18 +1765,37 @@ public class UserController {
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
 
-        boolean hasRolesWithMoreThanOneRoles = appCounts.values().stream().anyMatch(count -> count > 1);
-
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        if (hasRolesWithMoreThanOneRoles) {
+        if (isRolesWithMoreThanOneRoles(appCounts)) {
             return "redirect:/admin/users/grant-access/" + uuid + "/roles";
 
         }
-        //remove allSelectedRoles to avoid in the CYA screen with unneeded information
+        //remove to avoid in the CYA screen with unneeded information
         session.removeAttribute("allSelectedRoles");
         return "redirect:/admin/users/grant-access/" + uuid + "/offices";
 
+    }
+
+    @NotNull
+    private static Map<String, Long> getAppCounts(List<AppRoleDto> appRoleDtos) {
+        return appRoleDtos.stream()
+                .collect(Collectors
+                        .groupingBy(dto -> dto.getApp().getId(),
+                                Collectors.counting()));
+    }
+
+    private static void moveAppsWithSingleRole(Map<String, Long> appCounts, List<String> appsWithOneRole, List<String> selectedApps) {
+        appCounts.forEach((key, value) -> {
+            if (value == 1) {
+                appsWithOneRole.add(key);
+                selectedApps.remove(key);
+            }
+        });
+    }
+
+    private static boolean isRolesWithMoreThanOneRoles(Map<String, Long> appCounts) {
+        return appCounts.values().stream().anyMatch(count -> count > 1);
     }
 
     /**
@@ -2087,9 +2100,10 @@ public class UserController {
         List<String> combinedRoles = Stream.of(allSelectedRoles,
                         selectedAppsRoles)
                 .flatMap(List::stream)
-                .distinct() // optional: remove duplicates
+                .distinct()
                 .toList();
-        if (combinedRoles.isEmpty()){
+
+        if (combinedRoles.isEmpty()) {
             throw new RuntimeException("No roles selected for assignment");
         }
 
