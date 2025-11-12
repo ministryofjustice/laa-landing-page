@@ -664,13 +664,19 @@ class UserControllerTest {
                 .build();
 
         when(userService.getUserProfileById(mockUser.getId().toString())).thenReturn(Optional.of(mockUser));
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(new HashSet<>())
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.sendVerificationEmail(mockUser.getId().toString()))
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
                         .build()));
 
         // Act
-        String view = userController.resendActivationCode(mockUser.getId().toString(), model, session);
+        String view = userController.resendActivationCode(mockUser.getId().toString(), model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -691,7 +697,7 @@ class UserControllerTest {
 
         // Act
         AccessDeniedException accEx = Assertions.assertThrows(AccessDeniedException.class,
-                () -> userController.resendActivationCode("550e8400-e29b-41d4-a716-446655440000", model, session),
+                () -> userController.resendActivationCode("550e8400-e29b-41d4-a716-446655440000", model, session, authentication),
                 "Excpected Access Denied Exception!");
 
         // Assert

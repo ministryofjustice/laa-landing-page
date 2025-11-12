@@ -334,8 +334,12 @@ public class UserController {
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
 
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
+
         model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
+        model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
@@ -425,7 +429,7 @@ public class UserController {
 
     @GetMapping("/user/{id}/verify")
     @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
+    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         if (!enableResendVerificationCode) {
             log.error("Resend activation code is disabled");
             throw new AccessDeniedException("Resend verification is disabled.");
@@ -442,24 +446,36 @@ public class UserController {
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
         final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
         final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        boolean hasViewOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
+
+        boolean hasEditOfficePermission = accessControlService
+                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
+        boolean canManageOffices = hasEditOfficePermission && canEditUser;
+
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
+        boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
         model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
+        model.addAttribute("isInternalUser", isInternalUser);
         model.addAttribute("showOfficesTab", showOfficesTab);
-
-        boolean hasEditOfficePermission = accessControlService
-                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
-        boolean canManageOffices = hasEditOfficePermission && canEditUser;
         model.addAttribute("canManageOffices", canManageOffices);
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
+        boolean canViewAllProfiles = externalUser && editorInternalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
