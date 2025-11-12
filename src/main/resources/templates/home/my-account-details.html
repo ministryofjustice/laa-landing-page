@@ -66,12 +66,12 @@
                                 <dt class="govuk-summary-list__key">Last name</dt>
                                 <dd class="govuk-summary-list__value" th:text="${user.lastName}">Smith</dd>
                             </div>
-                            <div class="govuk-summary-list__row">
+                            <div class="govuk-summary-list__row" th:if="${!isInternalUser}">
                                 <dt class="govuk-summary-list__key">User type</dt>
                                 <dd class="govuk-summary-list__value"
                                     th:text="${isUserManager ? 'Provider Admin' : 'Provider User'}">Provider User</dd>
                             </div>
-                            <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                            <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser and !isInternalUser}">
                                 <dt class="govuk-summary-list__key">Multi-firm access</dt>
                                 <dd class="govuk-summary-list__value" th:text="${isMultiFirmUser ? 'Yes' : 'No'}">No
                                 </dd>
@@ -111,7 +111,7 @@
                 </div>
 
                 <!-- Offices card -->
-                <div class="govuk-summary-card">
+                <div th:if="${!isInternalUser}" class="govuk-summary-card">
                     <div class="govuk-summary-card__title-wrapper">
                         <h2 class="govuk-summary-card__title">Offices</h2>
                     </div>

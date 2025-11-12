@@ -111,7 +111,7 @@
                                 Services
                             </a>
                         </li>
-                        <li th:if="${showOfficesTab}" class="govuk-tabs__list-item">
+                        <li th:if="${showOfficesTab and !isInternalUser}" class="govuk-tabs__list-item">
                             <a class="govuk-tabs__tab" href="#offices">
                                 Offices
                             </a>
