@@ -1401,11 +1401,7 @@ public class MultiFirmUserControllerTest {
                 .activeProfile(true)
                 .build();
 
-        UserProfile profile1 = UserProfile.builder().build();
-        UserProfile profile2 = UserProfile.builder().build();
-
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
-        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(profile1, profile2));
 
         // Act
         String result = controller.deleteFirmProfileConfirm(userProfileId, model);
