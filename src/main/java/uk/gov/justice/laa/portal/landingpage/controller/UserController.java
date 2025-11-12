@@ -424,7 +424,7 @@ public class UserController {
 
     @GetMapping("/user/{id}/verify")
     @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
+    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
         if (!enableResendVerificationCode) {
             log.error("Resend activation code is disabled");
             throw new AccessDeniedException("Resend verification is disabled.");
@@ -461,6 +461,13 @@ public class UserController {
         boolean showResendVerificationLink = enableResendVerificationCode
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
+        boolean canViewAllProfiles = externalUser && editorInternalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
 
         // Add filter state to model for "Back to search results" link
         @SuppressWarnings("unchecked")
