@@ -1722,6 +1722,8 @@ public class UserController {
             return "grant-access-user-apps";
         }
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+
         UserType userType = user.getUserType();
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
@@ -1735,12 +1737,18 @@ public class UserController {
 
         // remove from selected apps that have only one role and add to the list appsWithOneRole
         List<String> appsWithOneRole = new ArrayList<>();
+
         appCounts.forEach((key, value) -> {
             if (value == 1) {
                 appsWithOneRole.add(key);
                 selectedApps.remove(key);
             }
         });
+        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                .map(AppRoleDto::getId)
+                .toList();
+        session.setAttribute("nonEditableRoles", nonEditableRoles);
         session.setAttribute("appWithOnlyOneRole", appsWithOneRole);
         session.setAttribute("grantAccessSelectedApps", selectedApps);
 
