@@ -1731,7 +1731,7 @@ public class UserController {
         //check all the appRoles with more than one
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
-        //Group and count how many appsRoles by appID
+        //Group and count appRoles
         Map<String, Long> appCounts = appRoleDtos.stream()
                 .collect(Collectors.groupingBy(dto -> dto.getApp().getId(), Collectors.counting()));
 
@@ -2160,17 +2160,16 @@ public class UserController {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            UserType  userType = editorProfile.getUserType();
+            UserType  userType = userProfileDto.getUserType();
 
             List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
                     .orElse(new ArrayList<>());
 
             List<String> selectedApps = getAppsFromSession(session);
-            // Create a list with only the appRolesId
+
             List<String> selectedAppsRoles = userService.getAppRolesByAppsId(selectedApps, userType.name()).stream()
                     .map(AppRoleDto::getId)
                     .toList();
-
             List<String> combinedRoles = Stream.of(allSelectedRoles,
                             selectedAppsRoles)
                     .flatMap(List::stream)
