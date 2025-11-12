@@ -1695,7 +1695,7 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-            //unchecked all the apps
+            // unchecked all the apps
             List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
             if (apps != null) {
                 apps.forEach(app -> app.setSelected(false));
@@ -1731,7 +1731,8 @@ public class UserController {
             RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
+                String.class);
 
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
@@ -1887,7 +1888,8 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
-        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices",
+                String.class);
         List<OfficeDto> userOffices = List.of();
 
         if (selectedOfficesOptional.isEmpty()) {
@@ -2000,9 +2002,9 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id,
-                                          Model model,
-                                          HttpSession session,
-                                          Authentication authentication) {
+            Model model,
+            HttpSession session,
+            Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         // Get user's current app roles from session
@@ -2109,7 +2111,8 @@ public class UserController {
                 eventService.logEvent(updateUserAuditEvent);
             }
 
-            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
+                    .orElseThrow();
 
             String changed = userService.updateUserOffices(id, selectedOffices);
 
@@ -2119,7 +2122,6 @@ public class UserController {
                     userProfileDto.getEntraUser(),
                     changed, "office");
             eventService.logEvent(updateUserAuditEvent);
-
 
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
