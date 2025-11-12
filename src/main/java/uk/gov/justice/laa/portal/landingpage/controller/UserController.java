@@ -2173,7 +2173,7 @@ public class UserController {
             List<String> combinedRoles = Stream.of(allSelectedRoles,
                             selectedAppsRoles)
                     .flatMap(List::stream)
-                    .distinct() // optional: remove duplicates
+                    .distinct()
                     .toList();
 
             if (combinedRoles.isEmpty()) {
