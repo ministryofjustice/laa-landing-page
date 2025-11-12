@@ -441,12 +441,14 @@ public class UserController {
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
         final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
         final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
+        model.addAttribute("isInternalUser", isInternalUser);
         boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
         model.addAttribute("showOfficesTab", showOfficesTab);
 
