@@ -5035,6 +5035,7 @@ class UserControllerTest {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440012";
         UserProfileDto userProfileDto = new UserProfileDto();
+        userProfileDto.setUserType(UserType.EXTERNAL);
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
@@ -5047,9 +5048,12 @@ class UserControllerTest {
 
         List<String> selectedRoles = List.of("Role 1");
         List<String> selectedOffices = List.of("Office 1");
+        List<String> selectedApps = List.of("App 1");
 
         testSession.setAttribute("allSelectedRoles", selectedRoles);
         testSession.setAttribute("selectedOffices", selectedOffices);
+        testSession.setAttribute("grantAccessSelectedApps", selectedApps);
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
@@ -5118,7 +5122,7 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
-
+        userProfileDto.setUserType(UserType.EXTERNAL);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("admin user");
