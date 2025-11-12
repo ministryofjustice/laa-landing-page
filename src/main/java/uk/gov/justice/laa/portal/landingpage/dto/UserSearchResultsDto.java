@@ -10,9 +10,4 @@ import java.util.UUID;
 public record UserSearchResultsDto(UUID id, boolean activeProfile, UserType userType, UUID legacyUserId,
                                    UserProfileStatus userProfileStatus, boolean multiFirmUser, String firstName,
                                    String lastName, String fullName, String email, UserStatus userStatus,
-                                   String firmName) implements Serializable {
-    public UserSearchResultsDto() {
-        this(null, false, null, null, null,
-                false, null, null, null, null, null, null);
-    }
-}
+                                   String firmName) implements Serializable {}
