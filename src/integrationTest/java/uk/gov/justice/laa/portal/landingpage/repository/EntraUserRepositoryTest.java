@@ -49,6 +49,29 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    public void existsByEmailDomain_returnsTrue_forExistingDomain_caseInsensitive() {
+        String entraUserId = generateEntraId();
+        EntraUser user1 = buildEntraUser(entraUserId, "USER.ONE@Example.COM", "First", "User");
+        repository.saveAndFlush(user1);
+
+        Assertions.assertThat(repository.existsByEmailDomain("example.com"))
+                .as("lowercase domain should match")
+                .isTrue();
+        Assertions.assertThat(repository.existsByEmailDomain("EXAMPLE.COM"))
+                .as("uppercase domain should match")
+                .isTrue();
+    }
+
+    @Test
+    public void existsByEmailDomain_returnsFalse_forNonExistentDomain() {
+        String entraUserId = generateEntraId();
+        EntraUser user = buildEntraUser(entraUserId, "someone@present.com", "Some", "One");
+        repository.saveAndFlush(user);
+
+        Assertions.assertThat(repository.existsByEmailDomain("absent.com")).isFalse();
+    }
+
+    @Test
     public void testSaveAndRetrieveEntraUser() {
         String entraUserId = generateEntraId();
         EntraUser entraUser = buildEntraUser(entraUserId, "test@email.com", "FirstName", "LastName");

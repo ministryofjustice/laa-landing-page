@@ -210,6 +210,8 @@ spec:
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
+            - name: KNOWN_EMAILS_CLEAR_CACHE_INTERVAL
+              value: "${KNOWN_EMAILS_CLEAR_CACHE_INTERVAL}"
             - name: TECH_SERVICES_REQ_READ_TIMEOUT
               value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
             - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
@@ -232,5 +234,7 @@ spec:
               value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
             - name: FEATURE_FLAG_ENABLE_MULTI_FIRM_USER
               value: "${FEATURE_FLAG_ENABLE_MULTI_FIRM_USER}"
+            - name: FEATURE_FLAG_ENABLE_KNOWN_EMAILS_CACHE
+              value: "${FEATURE_FLAG_ENABLE_KNOWN_EMAILS_CACHE}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"

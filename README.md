@@ -223,53 +223,55 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 <details>
 <summary>Environment Variables</summary>
 
-| Environment Variable                | Description                                                                                                                                                          |
-|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| APP_CCMS_ACCOUNT_LINK_DETAILS       | Details of `CCMS Account Linking` Application. The value should be in the form of app_entra_oid//app_security_group_name//app_security_group_id                      |
-| APP_CCMS_ACCOUNT_LINK_NAME          | Name of `CCMS Account Linking` Application                                                                                                                           |
-| APP_CCMS_ACCOUNT_LINK_URL           | URL of `CCMS Account Linking` Application                                                                                                                            |
-| APP_CIVIL_APPLY_DETAILS             | Details of `Civil Legal Aid` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                 |
-| APP_CIVIL_APPLY_NAME                | Name of `Civil Legal Aid` Application                                                                                                                                |
-| APP_CIVIL_APPLY_URL                 | URL of `Civil Legal Aid` Application                                                                                                                                 |
-| APP_CRIME_APPLY_DETAILS             | Details of `Criminal Legal Aid` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id              |
-| APP_CRIME_APPLY_NAME                | Name of `Criminal Legal Aid` Application                                                                                                                             |
-| APP_CRIME_APPLY_URL                 | URL of `Criminal Legal Aid` Application                                                                                                                              |
-| APP_PUI_DETAILS                     | Details of `CCMS` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                            |
-| APP_PUI_NAME                        | Name of `CCMS` Application                                                                                                                                           |
-| APP_PUI_URL                         | URL of `CCMS` Application                                            |
-| APP_SUBMIT_CRIME_FORM_DETAILS       | Details of `Submit Crime Form` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id               |
-| APP_SUBMIT_CRIME_FORM_NAME          | Name of `Submit Crime Form` Application                                                                                                                              |
-| APP_SUBMIT_CRIME_FORM_URL           | URL of `Submit Crime Form` Application                                                                                                                               |
-| APP_SUBMIT_A_BULK_CLAIM_DETAILS     | Details of `Submit A Bulk Claim` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id             |
-| APP_SUBMIT_A_BULK_CLAIM_NAME        | Name of `Submit A Bulk Claim` Application                                                                                                                            |
-| APP_SUBMIT_A_BULK_CLAIM_URL         | URL of `Submit A Bulk Claim` Application                                                                                                                             |
-| APP_DEFAULT_USER_ACC_SEC_GROUP      | Name of the default security group (provided by Tech Services)                                                                                                       |
-| APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS | Details of `Civil Claim for Payment` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id         |
-| APP_CIVIL_CLAIM_FOR_PAYMENT_NAME    | Name OF `Civil Claim for Payment` Application                                                                                                                        |
-| APP_CIVIL_CLAIM_FOR_PAYMENT_URL     | URL OF `Civil Claim for Payment` Application                                                                                                                         |
-| DISTRIBUTED_DB_LOCKING_PERIOD       | Number minutes to lock the distributed DB row for each key                                                                                                           |
-| ENABLE_DISTRIBUTED_DB_LOCKING       | Enable or distributed DB row locking (true/false). Setting the flag to false will let all the nodes run the process. True will let only one node to run the process  |
-| FIRM_CACHE_CLEAR_SCHEDULE           | The cron value to define how often the firms cache should be cleared.                                                                                                |
-| POLLING_ENABLED                     | true/false. Setting the flag to true will sync the internal users. Enable ENABLE_DISTRIBUTED_DB_LOCKING to avoid duplicate run by nodes.                             |
-| POLLING_INTERVAL                    | How often the internal users should be synced. The value is set in milliseconds.                                                                                     |
-| POPULATE_DUMMY_DATA                 | true/flase to control if the test data should be populated.                                                                                                          |
-| SENTRY_ENABLED                      |                                                                                                                                                                      |
-| TECH_SERVICES_AZURE_SCOPE           | The Azure scope needed to do App Security group sync when roles assigned.                                                                                            |
-| TECH_SERVICES_CLEAR_CACHE_INTERVAL  | How often the token is kept in cache. Value specified in milliseconds.                                                                                               |                                                                                                    |
-| TECH_SERVICES_LAA_BUSINESS_UNIT     | The business unit to use for making tech services call.                                                                                                              |
-| TECH_SERVICES_REQ_CONNECT_TIMEOUT   | The connection timeout configured while doing Tech services api calls. The value is set in seconds.                                                                  |
-| TECH_SERVICES_REQ_READ_TIMEOUT      | The request timeout configured while doing Tech services api calls. The value is set in seconds.                                                                     |
-| TECH_SERVICES_VERIFICATION_METHOD   | The value to specify how the external user gets verified (by email/by post)                                                                                          |
-| POLLING_GROUP_ID                    |                                                                                                                                                                      |
-| TECH_SERVICES_AZURE_CLIENT_ID       | Azure client id required to acquire Tech Services token.                                                                                                             |
-| TECH_SERVICES_AZURE_CLIENT_SECRET   | Azure client secret required to acquire Tech Services token.                                                                                                         |
-| TECH_SERVICES_BASE_URL              | Tech Services api base url                                                                                                                                           |
-| TECH_SERVICES_TENANT_ID             | Azure Tenant Id required to acquire Tech Services token.                                                                                                             |
-| TEST_DATA_ADMIN_PRINCIPALS          | The user list to be loaded as admin users for testing using test data population (The values should be in the format of email:entra_id, comma separated)             |
-| TEST_DATA_INTERNAL_PRINCIPALS       | The user list to be loaded as internal users for testing using test data population (The values should be in the format of email:entra_id, comma separated)          |
-| TEST_DATA_NON_ADMIN_PRINCIPALS      | The user list to be loaded as standard external users for testing using test data population (The values should be in the format of email:entra_id, comma separated) |
-| FEATURE_FLAG_ENABLE_RESEND_VER_CODE | Flag to define if resend verification code is enabled or not                                                                                                         |
-| FEATURE_FLAG_ENABLE_MULTI_FIRM_USER | Flag to enable multi-firm user functionality. When enabled, allows external users to be associated with multiple firms without requiring a firm during user creation |
-| SPRING_SESSION_JDBC_ENABLED         | Enable or Disable storing of http session in db                                                                                                                      |
+| Environment Variable                   | Description                                                                                                                                                          |
+|----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| APP_CCMS_ACCOUNT_LINK_DETAILS          | Details of `CCMS Account Linking` Application. The value should be in the form of app_entra_oid//app_security_group_name//app_security_group_id                      |
+| APP_CCMS_ACCOUNT_LINK_NAME             | Name of `CCMS Account Linking` Application                                                                                                                           |
+| APP_CCMS_ACCOUNT_LINK_URL              | URL of `CCMS Account Linking` Application                                                                                                                            |
+| APP_CIVIL_APPLY_DETAILS                | Details of `Civil Legal Aid` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                 |
+| APP_CIVIL_APPLY_NAME                   | Name of `Civil Legal Aid` Application                                                                                                                                |
+| APP_CIVIL_APPLY_URL                    | URL of `Civil Legal Aid` Application                                                                                                                                 |
+| APP_CRIME_APPLY_DETAILS                | Details of `Criminal Legal Aid` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id              |
+| APP_CRIME_APPLY_NAME                   | Name of `Criminal Legal Aid` Application                                                                                                                             |
+| APP_CRIME_APPLY_URL                    | URL of `Criminal Legal Aid` Application                                                                                                                              |
+| APP_PUI_DETAILS                        | Details of `CCMS` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id                            |
+| APP_PUI_NAME                           | Name of `CCMS` Application                                                                                                                                           |
+| APP_PUI_URL                            | URL of `CCMS` Application                                                                                                                                            |
+| APP_SUBMIT_CRIME_FORM_DETAILS          | Details of `Submit Crime Form` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id               |
+| APP_SUBMIT_CRIME_FORM_NAME             | Name of `Submit Crime Form` Application                                                                                                                              |
+| APP_SUBMIT_CRIME_FORM_URL              | URL of `Submit Crime Form` Application                                                                                                                               |
+| APP_SUBMIT_A_BULK_CLAIM_DETAILS        | Details of `Submit A Bulk Claim` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id             |
+| APP_SUBMIT_A_BULK_CLAIM_NAME           | Name of `Submit A Bulk Claim` Application                                                                                                                            |
+| APP_SUBMIT_A_BULK_CLAIM_URL            | URL of `Submit A Bulk Claim` Application                                                                                                                             |
+| APP_DEFAULT_USER_ACC_SEC_GROUP         | Name of the default security group (provided by Tech Services)                                                                                                       |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS    | Details of `Civil Claim for Payment` Application. The value should be in the form of app_name//app_entra_oid//app_security_group_name//app_security_group_id         |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_NAME       | Name OF `Civil Claim for Payment` Application                                                                                                                        |
+| APP_CIVIL_CLAIM_FOR_PAYMENT_URL        | URL OF `Civil Claim for Payment` Application                                                                                                                         |
+| DISTRIBUTED_DB_LOCKING_PERIOD          | Number minutes to lock the distributed DB row for each key                                                                                                           |
+| ENABLE_DISTRIBUTED_DB_LOCKING          | Enable or distributed DB row locking (true/false). Setting the flag to false will let all the nodes run the process. True will let only one node to run the process  |
+| FIRM_CACHE_CLEAR_SCHEDULE              | The cron value to define how often the firms cache should be cleared.                                                                                                |
+| POLLING_ENABLED                        | true/false. Setting the flag to true will sync the internal users. Enable ENABLE_DISTRIBUTED_DB_LOCKING to avoid duplicate run by nodes.                             |
+| POLLING_INTERVAL                       | How often the internal users should be synced. The value is set in milliseconds.                                                                                     |
+| POPULATE_DUMMY_DATA                    | true/flase to control if the test data should be populated.                                                                                                          |
+| SENTRY_ENABLED                         |                                                                                                                                                                      |
+| TECH_SERVICES_AZURE_SCOPE              | The Azure scope needed to do App Security group sync when roles assigned.                                                                                            |
+| TECH_SERVICES_CLEAR_CACHE_INTERVAL     | How often the token is kept in cache. Value specified in milliseconds.                                                                                               |
+| KNOWN_EMAILS_CLEAR_CACHE_INTERVAL      | How often known emails are kept in cache. Value specified in milliseconds.                                                                                           |
+| TECH_SERVICES_LAA_BUSINESS_UNIT        | The business unit to use for making tech services call.                                                                                                              |
+| TECH_SERVICES_REQ_CONNECT_TIMEOUT      | The connection timeout configured while doing Tech services api calls. The value is set in seconds.                                                                  |
+| TECH_SERVICES_REQ_READ_TIMEOUT         | The request timeout configured while doing Tech services api calls. The value is set in seconds.                                                                     |
+| TECH_SERVICES_VERIFICATION_METHOD      | The value to specify how the external user gets verified (by email/by post)                                                                                          |
+| POLLING_GROUP_ID                       |                                                                                                                                                                      |
+| TECH_SERVICES_AZURE_CLIENT_ID          | Azure client id required to acquire Tech Services token.                                                                                                             |
+| TECH_SERVICES_AZURE_CLIENT_SECRET      | Azure client secret required to acquire Tech Services token.                                                                                                         |
+| TECH_SERVICES_BASE_URL                 | Tech Services api base url                                                                                                                                           |
+| TECH_SERVICES_TENANT_ID                | Azure Tenant Id required to acquire Tech Services token.                                                                                                             |
+| TEST_DATA_ADMIN_PRINCIPALS             | The user list to be loaded as admin users for testing using test data population (The values should be in the format of email:entra_id, comma separated)             |
+| TEST_DATA_INTERNAL_PRINCIPALS          | The user list to be loaded as internal users for testing using test data population (The values should be in the format of email:entra_id, comma separated)          |
+| TEST_DATA_NON_ADMIN_PRINCIPALS         | The user list to be loaded as standard external users for testing using test data population (The values should be in the format of email:entra_id, comma separated) |
+| FEATURE_FLAG_ENABLE_RESEND_VER_CODE    | Flag to define if resend verification code is enabled or not                                                                                                         |
+| FEATURE_FLAG_ENABLE_MULTI_FIRM_USER    | Flag to enable multi-firm user functionality. When enabled, allows external users to be associated with multiple firms without requiring a firm during user creation |
+| FEATURE_FLAG_ENABLE_KNOWN_EMAILS_CACHE | Flag to enable storage of known email domains in a cache                                                                                                             |
+| SPRING_SESSION_JDBC_ENABLED            | Enable or Disable storing of http session in db                                                                                                                      |
 
 </details>

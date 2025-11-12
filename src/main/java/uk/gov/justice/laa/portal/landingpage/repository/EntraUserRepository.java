@@ -26,4 +26,11 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
     Optional<EntraUser> findByEntraOid(String entraOid);
 
     Optional<EntraUser> findByEmailIgnoreCase(String email);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
+            FROM EntraUser u
+            WHERE LOWER(SUBSTRING(u.email, LOCATE('@', u.email) + 1)) = LOWER(:domain)
+            """)
+    boolean existsByEmailDomain(@Param("domain") String domain);
 }

@@ -1,8 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.validation.BlocklistedEmailDomains;
 
 import javax.naming.NamingException;
@@ -11,6 +16,7 @@ import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
+import java.net.IDN;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -22,13 +28,25 @@ import java.util.concurrent.TimeoutException;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class EmailValidationService {
 
     private static final ExecutorService executor = new ThreadPoolExecutor(10, 100, 3600,
             TimeUnit.SECONDS, new LinkedBlockingQueue<>(1000));
 
     private final BlocklistedEmailDomains blocklistedEmailDomains;
+    private final EntraUserRepository entraUserRepository;
+    private final CacheManager cacheManager;
+    @Value("${feature.flag.skip.mx.check.for.known.domains:true}")
+    private boolean skipMxForKnownDomains;
+
+    @Autowired
+    public EmailValidationService(BlocklistedEmailDomains blocklistedEmailDomains,
+                                  EntraUserRepository entraUserRepository,
+                                  CacheManager cacheManager) {
+        this.blocklistedEmailDomains = blocklistedEmailDomains;
+        this.entraUserRepository = entraUserRepository;
+        this.cacheManager = cacheManager;
+    }
 
     public boolean isValidEmailDomain(String email) {
         return isValidEmailDomain(email, 30);
@@ -45,9 +63,37 @@ public class EmailValidationService {
             return false;
         }
 
-        if (blocklistedEmailDomains.isBlocklisted(domain)) {
+        String normalizedDomain;
+        try {
+            normalizedDomain = IDN.toASCII(domain).toLowerCase(Locale.ROOT);
+        } catch (IllegalArgumentException e) {
+            // Invalid domain label
+            log.debug("Invalid domain '{}' after parsing for IDN: {}", domain, e.getMessage());
+            return false;
+        }
+
+        if (blocklistedEmailDomains.isBlocklisted(normalizedDomain)) {
             log.debug("Email domain '{}' is blocklisted", domain);
             return false;
+        }
+
+        if (skipMxForKnownDomains) {
+            Boolean known = null;
+            Cache cache = cacheManager != null ? cacheManager.getCache(CachingConfig.KNOWN_EMAIL_DOMAINS_CACHE) : null;
+            if (cache != null) {
+                known = cache.get(normalizedDomain, Boolean.class);
+            }
+            if (known == null) {
+                boolean exists = entraUserRepository.existsByEmailDomain(normalizedDomain);
+                if (cache != null) {
+                    cache.put(normalizedDomain, exists);
+                }
+                known = exists;
+            }
+            if (known) {
+                log.debug("Skipping MX validation for known domain: {}", normalizedDomain);
+                return true;
+            }
         }
 
         Future<Boolean> future = executor.submit(() -> hasMxRecords(email));

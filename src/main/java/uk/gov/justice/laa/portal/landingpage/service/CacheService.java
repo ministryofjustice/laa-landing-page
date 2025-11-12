@@ -33,4 +33,13 @@ public class CacheService {
             cache.clear();
         }
     }
+
+    @Scheduled(fixedRateString = "${app.email.known.domains.clear.cache.interval}")
+    public void clearKnownEmailDomainsCache() {
+        log.debug("Clearing Known Email Domains Cache");
+        Cache cache = cacheManager.getCache(CachingConfig.KNOWN_EMAIL_DOMAINS_CACHE);
+        if (cache != null) {
+            cache.clear();
+        }
+    }
 }

@@ -25,6 +25,9 @@ class CacheServiceTest {
     @Mock
     private Cache firmsCache;
 
+    @Mock
+    private Cache knownEmailDomainsCache;
+
     @InjectMocks
     private CacheService cacheService;
 
@@ -82,5 +85,29 @@ class CacheServiceTest {
         // Then - No exception should be thrown
         verifyNoInteractions(firmsCache);
         verifyNoInteractions(techServicesCache);
+    }
+
+    @Test
+    void clearKnownEmailDomainsCache_WhenCacheExists_ShouldClearCache() {
+        when(cacheManager.getCache(CachingConfig.KNOWN_EMAIL_DOMAINS_CACHE))
+                .thenReturn(knownEmailDomainsCache);
+
+        cacheService.clearKnownEmailDomainsCache();
+
+        verify(knownEmailDomainsCache).clear();
+        verifyNoInteractions(techServicesCache);
+        verifyNoInteractions(firmsCache);
+    }
+
+    @Test
+    void clearKnownEmailDomainsCache_WhenCacheIsNull_ShouldNotThrowException() {
+        when(cacheManager.getCache(CachingConfig.KNOWN_EMAIL_DOMAINS_CACHE))
+                .thenReturn(null);
+
+        cacheService.clearKnownEmailDomainsCache();
+
+        verifyNoInteractions(knownEmailDomainsCache);
+        verifyNoInteractions(techServicesCache);
+        verifyNoInteractions(firmsCache);
     }
 }
