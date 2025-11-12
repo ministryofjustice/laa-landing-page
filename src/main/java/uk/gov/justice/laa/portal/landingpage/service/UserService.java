@@ -386,7 +386,7 @@ public class UserService {
 
     /**
      * Delete a specific firm profile from a multi-firm user.
-     * 
+     *
      * @param userProfileId the ID of the user profile to delete (UUID as String)
      * @param actorId       the UUID of the actor performing the deletion (for
      *                      logging)
@@ -409,12 +409,6 @@ public class UserService {
         if (!entraUser.isMultiFirmUser()) {
             throw new RuntimeException(
                     "User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
-        }
-
-        // Check if this is the last profile - cannot delete the last profile
-        List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
-        if (allProfiles.isEmpty() || allProfiles.size() <= 1) {
-            throw new RuntimeException("Cannot delete the last firm profile. User must have at least one profile.");
         }
 
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
@@ -961,9 +955,10 @@ public class UserService {
     /**
      * Convert a single-firm user to a multi-firm user
      * This operation is irreversible
-     * 
+     *
      * @param userId The ID of the user to convert
-     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     * @throws RuntimeException if the user is not found or is already a multi-firm
+     *                          user
      */
     @Transactional
     public void convertToMultiFirmUser(String userId) {
@@ -974,7 +969,7 @@ public class UserService {
         }
 
         EntraUser entraUser = optionalUser.get();
-        
+
         if (entraUser.isMultiFirmUser()) {
             logger.warn("User with id {} is already a multi-firm user.", userId);
             throw new RuntimeException("User is already a multi-firm user");
@@ -982,7 +977,7 @@ public class UserService {
 
         // Set the multi-firm flag
         entraUser.setMultiFirmUser(true);
-        
+
         try {
             entraUserRepository.saveAndFlush(entraUser);
             logger.info("Successfully converted user {} to multi-firm status", userId);
@@ -1322,5 +1317,15 @@ public class UserService {
      */
     public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
         return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
+    }
+
+    /**
+     * Get count of user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return Count of user profiles for the Entra user
+     */
+    public long getProfileCountByEntraUserId(UUID entraUserId) {
+        return userProfileRepository.countByEntraUserId(entraUserId);
     }
 }

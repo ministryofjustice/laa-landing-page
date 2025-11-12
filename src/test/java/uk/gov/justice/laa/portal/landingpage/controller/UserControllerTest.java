@@ -146,7 +146,8 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
-                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService, appRoleService);
+                new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
+                appRoleService);
         ReflectionTestUtils.setField(userController, "enableResendVerificationCode", true);
         ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         model = new ExtendedModelMap();
@@ -578,7 +579,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser(userId, false, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -639,7 +640,7 @@ class UserControllerTest {
             userListFilters.put(filterKey, nonDefaultUserListFilters.get(filterKey));
             when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
 
-            String view = userController.manageUser(userId, model, session, authentication);
+            String view = userController.manageUser(userId, false, model, session, authentication);
 
             // Assert
             assertThat(view).isEqualTo("manage-user");
@@ -678,13 +679,14 @@ class UserControllerTest {
                 .appRoles(new HashSet<>())
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(accessControlService.canSendVerificationEmail(mockUser.getId().toString())).thenReturn(true);
         when(userService.sendVerificationEmail(mockUser.getId().toString()))
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
                         .build()));
 
         // Act
-        String view = userController.resendActivationCode(mockUser.getId().toString(), model, session, authentication);
+        String view = userController.manageUser(mockUser.getId().toString(), true, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -705,7 +707,8 @@ class UserControllerTest {
 
         // Act
         AccessDeniedException accEx = Assertions.assertThrows(AccessDeniedException.class,
-                () -> userController.resendActivationCode("550e8400-e29b-41d4-a716-446655440000", model, session, authentication),
+                () -> userController.manageUser("550e8400-e29b-41d4-a716-446655440000", true, model, session,
+                        authentication),
                 "Excpected Access Denied Exception!");
 
         // Assert
@@ -805,7 +808,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
 
         // Act
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser(userId, false, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -825,7 +828,7 @@ class UserControllerTest {
 
         // Act & Assert
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser(userId, model, session, authentication));
+                () -> userController.manageUser(userId, false, model, session, authentication));
 
         verify(userService).getUserProfileById(userId);
     }
@@ -2464,7 +2467,6 @@ class UserControllerTest {
         when(bindingResult.hasErrors()).thenReturn(true);
         when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
 
-
         AppRoleViewModel role1 = new AppRoleViewModel();
         role1.setName("role1");
         role1.setSelected(true);
@@ -2628,7 +2630,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
 
-        String view = userController.manageUser("id1", model, session, authentication);
+        String view = userController.manageUser("id1", false, model, session, authentication);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -2640,7 +2642,7 @@ class UserControllerTest {
 
         // Expect exception since controller calls .get() on empty Optional
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser("id2", model, session, authentication));
+                () -> userController.manageUser("id2", false, model, session, authentication));
     }
 
     @Test
@@ -2670,7 +2672,7 @@ class UserControllerTest {
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("internal-user-id", model, session, authentication);
+        String view = userController.manageUser("internal-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2710,7 +2712,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2755,7 +2757,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2796,7 +2798,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2835,7 +2837,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2869,12 +2871,20 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+        entraUser.setId(entraUserId.toString());
+
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(userService.isInternal(entraUserId.toString())).thenReturn(false);
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -2908,12 +2918,20 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002");
+        entraUser.setId(entraUserId.toString());
+
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(userService.isInternal(entraUserId.toString())).thenReturn(false);
+        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
+        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser("external-user-id", false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3461,7 +3479,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser(userId, false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3506,7 +3524,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser(any())).thenReturn(true);
 
         // When
-        String view = userController.manageUser(userId, model, session, authentication);
+        String view = userController.manageUser(userId, false, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -4102,7 +4120,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/check-answers");
-
 
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
@@ -4827,7 +4844,6 @@ class UserControllerTest {
         AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
         AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
 
-
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
@@ -4938,7 +4954,7 @@ class UserControllerTest {
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
 
-        //then
+        // then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
@@ -4976,7 +4992,7 @@ class UserControllerTest {
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
 
-        //then
+        // then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
