@@ -302,28 +302,8 @@ public class UserController {
             Model model, HttpSession session, Authentication authentication) {
 
         // Handle verification email resend if requested
-        if (resendVerification) {
-            if (!enableResendVerificationCode) {
-                log.error("Resend activation code is disabled");
-                throw new AccessDeniedException("Resend verification is disabled.");
-            }
-
-            if (!accessControlService.canSendVerificationEmail(id)) {
-                throw new AccessDeniedException("User does not have permission to send verification email.");
-            }
-
-            try {
-                TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
-                        .sendVerificationEmail(id);
-                if (response.isSuccess()) {
-                    model.addAttribute("successMessage", response.getData().getMessage());
-                } else {
-                    model.addAttribute("errorMessage", response.getError().getMessage());
-                }
-            } catch (RuntimeException runtimeException) {
-                log.error("Error sending activation code for user profile: {}", id, runtimeException);
-                throw runtimeException;
-            }
+        if (Boolean.TRUE.equals(resendVerification)) {
+            handleResendVerification(id, model);
         }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
@@ -2275,5 +2255,29 @@ public class UserController {
         session.setAttribute("userListFilters", result);
 
         return result;
+    }
+
+    private void handleResendVerification(String id, Model model) {
+        if (!Boolean.TRUE.equals(enableResendVerificationCode)) {
+            log.error("Resend activation code is disabled");
+            throw new AccessDeniedException("Resend verification is disabled.");
+        }
+
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 }
