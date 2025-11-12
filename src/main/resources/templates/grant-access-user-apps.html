@@ -18,6 +18,19 @@
         <form method="post" th:action="@{/admin/users/grant-access/{id}/apps(id=${user.id})}"
             th:object="${applicationsForm}">
 
+            <div th:if="${errorMessage}">
+                <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li><a href="#" th:text="${errorMessage}"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div th:if="${#fields.hasErrors()}">
                 <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
