@@ -1326,4 +1326,14 @@ public class UserService {
     public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
         return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
     }
+
+    /**
+     * Get count of user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return Count of user profiles for the Entra user
+     */
+    public long getProfileCountByEntraUserId(UUID entraUserId) {
+        return userProfileRepository.countByEntraUserId(entraUserId);
+    }
 }

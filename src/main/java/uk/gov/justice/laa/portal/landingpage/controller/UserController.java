@@ -389,10 +389,10 @@ public class UserController {
             boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
 
-            // Get profile count for multi-firm users
-            List<UserProfile> allProfiles = userService
-                    .getUserProfilesByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
-            model.addAttribute("profileCount", allProfiles.size());
+            // Get profile count for multi-firm users (using count query instead of fetching
+            // all profiles)
+            long profileCount = userService.getProfileCountByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
+            model.addAttribute("profileCount", profileCount);
         } else if (enableMultiFirmUser) {
             // For non-multi-firm users, still add canDeleteFirmProfile if they have the
             // permission

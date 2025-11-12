@@ -2870,8 +2870,7 @@ class UserControllerTest {
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
         when(userService.isInternal(entraUserId.toString())).thenReturn(false);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
-        when(userService.getUserProfilesByEntraUserId(entraUserId))
-                .thenReturn(List.of(UserProfile.builder().build(), UserProfile.builder().build()));
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
@@ -2918,7 +2917,7 @@ class UserControllerTest {
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
         when(userService.isInternal(entraUserId.toString())).thenReturn(false);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
-        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build()));
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);

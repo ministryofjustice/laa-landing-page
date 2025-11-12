@@ -4871,4 +4871,67 @@ class UserServiceTest {
                     eq(Collections.emptySet()), any());
         }
     }
+
+    @Nested
+    class GetProfileCountByEntraUserIdTests {
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasMultipleProfiles_returnsCorrectCount() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 3L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasSingleProfile_returnsOne() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 1L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasNoProfiles_returnsZero() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 0L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserDoesNotExist_returnsZero() {
+            // Given
+            UUID nonExistentUserId = UUID.randomUUID();
+            when(mockUserProfileRepository.countByEntraUserId(nonExistentUserId)).thenReturn(0L);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(nonExistentUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(0L);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(nonExistentUserId);
+        }
+    }
 }
