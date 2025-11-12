@@ -126,7 +126,7 @@
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{'/admin/users/manage/' + ${user.id} + '/delete'}">Delete user</a>
                                     </li>
-                                    <li th:if="${canDeleteFirmProfile and user.entraUser.multiFirmUser and profileCount != null and profileCount > 0}" class="govuk-summary-card__action">
+                                    <li th:if="${canDeleteFirmProfile and user.entraUser.multiFirmUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/multi-firm/user/delete-profile/{id}(id=${user.id})}">Revoke access</a>
                                     </li>

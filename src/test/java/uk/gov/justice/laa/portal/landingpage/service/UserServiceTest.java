@@ -4642,9 +4642,6 @@ class UserServiceTest {
             verify(mockUserProfileRepository, never()).delete(any());
         }
 
-        // Test removed: Multi-firm users can now have their last profile deleted
-        // Previous test: deleteFirmProfile_LastProfile_ThrowsException
-
         @Test
         void deleteFirmProfile_ProfileNotFound_ThrowsException() {
             // Given

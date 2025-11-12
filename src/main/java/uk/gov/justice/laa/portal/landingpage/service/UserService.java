@@ -410,9 +410,6 @@ public class UserService {
                     "User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
         }
 
-        // Multi-firm users can have all profiles deleted (including the last one)
-        // No profile count check needed for multi-firm users
-
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
         logger.info(

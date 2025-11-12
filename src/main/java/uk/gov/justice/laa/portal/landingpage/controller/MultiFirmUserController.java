@@ -176,9 +176,6 @@ public class MultiFirmUserController {
             throw new RuntimeException("This operation is only available for multi-firm users.");
         }
 
-        // Multi-firm users can have all profiles deleted (including the last one)
-        // No profile count check needed for multi-firm users
-
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());

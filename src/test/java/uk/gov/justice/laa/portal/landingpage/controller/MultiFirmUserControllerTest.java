@@ -1434,9 +1434,6 @@ public class MultiFirmUserControllerTest {
         assertThrows(RuntimeException.class, () -> controller.deleteFirmProfileConfirm(userProfileId, model));
     }
 
-    // Test removed: Multi-firm users can now have their last profile deleted
-    // Previous test: deleteFirmProfileConfirm_lastProfile_shouldReturnRedirect
-
     @Test
     public void deleteFirmProfileExecute_withYes_shouldDeleteAndRedirect() {
         // Arrange
