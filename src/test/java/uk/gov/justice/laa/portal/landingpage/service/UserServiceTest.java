@@ -4642,45 +4642,8 @@ class UserServiceTest {
             verify(mockUserProfileRepository, never()).delete(any());
         }
 
-        @Test
-        void deleteFirmProfile_LastProfile_ThrowsException() {
-            // Given
-            UUID userProfileId = UUID.randomUUID();
-            UUID entraUserId = UUID.randomUUID();
-            UUID actorId = UUID.randomUUID();
-
-            EntraUser entraUser = EntraUser.builder()
-                    .id(entraUserId)
-                    .firstName("Bob")
-                    .lastName("Jones")
-                    .email("bob.jones@example.com")
-                    .multiFirmUser(true)
-                    .userProfiles(new HashSet<>())
-                    .build();
-
-            UserProfile userProfile = UserProfile.builder()
-                    .id(userProfileId)
-                    .entraUser(entraUser)
-                    .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
-                    .build();
-
-            // Set up bidirectional relationship
-            entraUser.getUserProfiles().add(userProfile);
-
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-            // No need to mock findAllByEntraUser - the service reads from
-            // entraUser.getUserProfiles()
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class,
-                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
-
-            assertThat(exception.getMessage())
-                    .contains("Cannot delete the last firm profile");
-
-            // Verify no deletion occurred
-            verify(mockUserProfileRepository, never()).delete(any());
-        }
+        // Test removed: Multi-firm users can now have their last profile deleted
+        // Previous test: deleteFirmProfile_LastProfile_ThrowsException
 
         @Test
         void deleteFirmProfile_ProfileNotFound_ThrowsException() {
