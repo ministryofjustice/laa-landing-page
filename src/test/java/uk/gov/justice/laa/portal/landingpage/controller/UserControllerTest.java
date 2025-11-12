@@ -3656,6 +3656,96 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessEditUserApps_shouldGetInformationFromSessionWhenThereAreAppWithOneRoleAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440001";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> availableApps = List.of(app1, app2);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appWithOnlyOneRole", availableApps
+                .stream()
+                .map(AppDto::getId)
+                .toList());
+        // When
+        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
+                session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-apps");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
+        assertThat(apps.get(1).isSelected()).isTrue(); // app2 should be selected
+    }
+
+    @Test
+    void grantAccessEditUserApps_shouldGetInformationFromSessionWhenThereAreAppWithMoreThanOneRoleAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440001";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> availableApps = List.of(app1, app2);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("grantAccessSelectedApps", availableApps
+                .stream()
+                .map(AppDto::getId)
+                .toList());
+        // When
+        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
+                session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-apps");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(2);
+        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
+        assertThat(apps.get(1).isSelected()).isTrue(); // app2 should be selected
+    }
+
+    @Test
     void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
@@ -3665,6 +3755,36 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
 
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(UserProfileDto
+                .builder()
+                .userType(UserType.EXTERNAL)
+                .build()));
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile
+                .builder()
+                .userType(UserType.EXTERNAL)
+                .build());
+
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
+                        .builder()
+                        .id(UUID.randomUUID().toString())
+                        .name("Role 1")
+                        .app(AppDto
+                                .builder()
+                                .id("app1")
+                                .build())
+                        .build(),
+                AppRoleDto
+                        .builder()
+                        .id(UUID.randomUUID().toString())
+                        .name("Role 2")
+                        .app(AppDto
+                                .builder()
+                                .id("app1")
+                                .build())
+                        .build())
+        );
+
         // When
         String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
                 authentication, model, testSession);
@@ -3672,6 +3792,51 @@ class UserControllerTest {
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/roles");
         assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(List.of("app1", "app2"));
+        assertThat(testSession.getAttribute("appWithOnlyOneRole")).isEqualTo(new ArrayList<>());
+        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
+
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldRedirectToOfficeWhenAppsWithOnlyRolesSelected() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(new ArrayList<>(List.of("app1", "app2")));
+        MockHttpSession testSession = new MockHttpSession();
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(UserProfileDto
+                .builder()
+                .userType(UserType.EXTERNAL)
+                .build()));
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile
+                .builder()
+                .userType(UserType.EXTERNAL)
+                .build());
+
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
+                .builder()
+                .id(UUID.randomUUID().toString())
+                .name("Role 1")
+                .app(AppDto
+                        .builder()
+                        .id("app1")
+                        .build())
+                .build()));
+
+        // When
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
+                authentication, model, testSession);
+
+        // Then
+        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
+        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(List.of("app2"));
+        assertThat(testSession.getAttribute("appWithOnlyOneRole")).isEqualTo(List.of("app1"));
+        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
+
     }
 
     @Test
