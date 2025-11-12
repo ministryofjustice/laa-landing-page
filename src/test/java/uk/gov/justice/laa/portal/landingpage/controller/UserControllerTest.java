@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -77,11 +76,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -330,7 +332,13 @@ class UserControllerTest {
     void givenUsersExist_whenDisplayAllUsers_thenPopulatesModelAndReturnsUsersView() {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
-        mockPaginatedUsers.setUsers(List.of(new UserProfileDto(), new UserProfileDto()));
+        UserSearchResultsDto userSearchResultsDto1 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
+        UserSearchResultsDto userSearchResultsDto2 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
+        mockPaginatedUsers.setUsers(List.of(userSearchResultsDto1, userSearchResultsDto2));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
         FirmDto firmDto = new FirmDto();
