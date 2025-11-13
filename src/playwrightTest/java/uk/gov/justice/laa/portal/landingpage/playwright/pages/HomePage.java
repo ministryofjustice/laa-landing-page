@@ -72,19 +72,13 @@ public class HomePage {
         manageUsersLink.click();
     }
 
-    public void assertOnManageUsersPage() {
-        log.debug("Verifying navigation to Manage Users page");
-        // Check URL
-        assertEquals("URL should match the Manage Users page",
-                page.url(), "https://dev.your-legal-aid-services.service.justice.gov.uk/admin/users");
-
-
-    }
-
     public void assertAccessRestrictionMessageVisible() {
         log.debug("Checking that the access restriction message is visible for internal users");
         assertThat(accessRestrictionMessage).isVisible();
     }
 
+    public Page getPage() {
+        return page;
+    }
 }
 

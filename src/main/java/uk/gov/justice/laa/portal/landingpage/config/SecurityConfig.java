@@ -20,6 +20,7 @@ import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientServ
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
@@ -134,7 +135,7 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
                 .requestMatchers("/", "/login", "/logout-success", "/cookies", "/css/**", "/js/**", "/assets/**"
                 ).permitAll()
-                .requestMatchers("/actuator/**")
+                .requestMatchers("/actuator/**", "/playwright/login")
                 .access((auth, context) -> {
                     boolean allowed =
                             new IpAddressMatcher("127.0.0.1").matches(context.getRequest())
@@ -205,6 +206,11 @@ public class SecurityConfig {
     @Bean
     public PostgreSqlJdbcHttpSessionCustomizer jdbcHttpSessionCustomizer() {
         return new PostgreSqlJdbcHttpSessionCustomizer();
+    }
+
+    @Bean
+    public HttpSessionOAuth2AuthorizedClientRepository authorizedClientRepository() {
+        return new HttpSessionOAuth2AuthorizedClientRepository();
     }
 
     public class PostgreSqlJdbcHttpSessionCustomizer

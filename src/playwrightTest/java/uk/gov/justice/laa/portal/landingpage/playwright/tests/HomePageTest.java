@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,8 @@ public class HomePageTest extends BaseFrontEndTest {
     @DisplayName("Click 'Manage your users' link and verify navigation")
     void navigateToManageUsers()  {
         home.clickManageUsers();
-        home.assertOnManageUsersPage();
+        Assert.assertEquals("URL should match the Manage Users page",
+                home.getPage().url(), "http://localhost:" + port + "/admin/users");
     }
 }
 
