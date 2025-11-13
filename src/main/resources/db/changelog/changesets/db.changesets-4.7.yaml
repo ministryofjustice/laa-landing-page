@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1762344000645-1
+      author: niall.mcmahon
+      changes:
+        # Create new Information & Assurance role.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO app_role (id, app_id, name, description, user_type_restriction, authz_role, ordinal) VALUES (gen_random_uuid(), (SELECT id FROM app WHERE name = 'Manage Your Users'), 'Information & Assurance', 'A view-only role for accessing audit information', ARRAY ['INTERNAL'], true, 6)"
+        # Add the VIEW_AUDIT_TABLE permission to Global Admin and Information & Assurance roles.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_AUDIT_TABLE')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Information & Assurance'), 'VIEW_AUDIT_TABLE')"
