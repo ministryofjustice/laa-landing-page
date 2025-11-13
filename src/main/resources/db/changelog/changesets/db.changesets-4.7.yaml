@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1762358737791-1
+      author: suresh.kavali
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  name: address_line_3
+                  type: VARCHAR(255)
+            tableName: office
+      rollback:
+        - dropColumn:
+            columnName: address_line_3
+            tableName: office
+  - changeSet:
+      id: 1762358737791-2
+      author: suresh.kavali
+      changes:
+        - sql:
+            sql: ALTER TABLE office ALTER COLUMN city DROP NOT NULL
+      rollback:
+        - sql:
+            sql: ALTER TABLE office ALTER COLUMN city SET NOT NULL

@@ -482,7 +482,9 @@ public class MultiFirmUserController {
                 .map(office -> new OfficeModel(
                         office.getCode(),
                         OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
-                                .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                .addressLine2(office.getAddress().getAddressLine2())
+                                .addressLine3(office.getAddress().getAddressLine3())
+                                .city(office.getAddress().getCity())
                                 .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
