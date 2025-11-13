@@ -364,9 +364,14 @@ public class UserController {
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
+        // Check if this profile belongs to the logged-in user
+        boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
+
         if (isMultiFirmUser && enableMultiFirmUser) {
             // Check if user can delete the currently viewed profile (not all profiles)
-            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            // but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
 
             // Get profile count for multi-firm users (using count query instead of fetching
@@ -375,8 +380,9 @@ public class UserController {
             model.addAttribute("profileCount", profileCount);
         } else if (enableMultiFirmUser) {
             // For non-multi-firm users, still add canDeleteFirmProfile if they have the
-            // permission
-            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            // permission but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
 
             // Non-multi-firm users have exactly 1 profile
