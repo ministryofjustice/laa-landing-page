@@ -129,11 +129,12 @@ class OfficeDtoTest {
     }
 
     @Test
-    void testFormattedAddress_OnlyRequiredFields() {
+    void testFormattedAddress_EmptyCity() {
         // Given
         OfficeDto.AddressDto address = OfficeDto.AddressDto.builder()
                 .addressLine1("123 Main Street")
-                .city("London")
+                .addressLine2("Suite 200")
+                .city("  ")
                 .postcode("SW1A 1AA")
                 .build();
 
@@ -141,7 +142,39 @@ class OfficeDtoTest {
         String formatted = address.getFormattedAddress();
 
         // Then
-        assertThat(formatted).isEqualTo("123 Main Street, London, SW1A 1AA");
+        assertThat(formatted).isEqualTo("123 Main Street, Suite 200, SW1A 1AA");
+    }
+
+    @Test
+    void testFormattedAddress_WhitespaceOnlyCity() {
+        // Given
+        OfficeDto.AddressDto address = OfficeDto.AddressDto.builder()
+                .addressLine1("123 Main Street")
+                .addressLine2("Suite 200")
+                .city("   ")
+                .postcode("SW1A 1AA")
+                .build();
+
+        // When
+        String formatted = address.getFormattedAddress();
+
+        // Then
+        assertThat(formatted).isEqualTo("123 Main Street, Suite 200, SW1A 1AA");
+    }
+
+    @Test
+    void testFormattedAddress_OnlyRequiredFields() {
+        // Given
+        OfficeDto.AddressDto address = OfficeDto.AddressDto.builder()
+                .addressLine1("123 Main Street")
+                .postcode("SW1A 1AA")
+                .build();
+
+        // When
+        String formatted = address.getFormattedAddress();
+
+        // Then
+        assertThat(formatted).isEqualTo("123 Main Street, SW1A 1AA");
     }
 
     @Test
