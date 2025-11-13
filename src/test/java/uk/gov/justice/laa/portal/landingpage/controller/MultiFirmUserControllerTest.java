@@ -1,15 +1,29 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.http.HttpSession;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.slf4j.LoggerFactory;
@@ -22,6 +36,12 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AddUserProfileAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -51,24 +71,6 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 
 @ExtendWith(MockitoExtension.class)
 public class MultiFirmUserControllerTest {
@@ -298,7 +300,6 @@ public class MultiFirmUserControllerTest {
         assertThat(session.getAttribute("addProfileUserAppsModel")).isEqualTo(model);
     }
 
-
     @Test
     void testSelectUserApps_missingApplicationsForm_shouldUseNewForm() {
         session.setAttribute("applicationsForm", null);
@@ -425,7 +426,6 @@ public class MultiFirmUserControllerTest {
         assertThat(selectedApps).isEmpty();
         assertThat(session.getAttribute("addProfileUserAppsModel")).isNull();
     }
-
 
     @Test
     void shouldRedirectIfNoAppsSelected() {
@@ -573,7 +573,8 @@ public class MultiFirmUserControllerTest {
 
         String view = controller.selectUserAppRoles(1, new RolesForm(), authentication, model, session);
 
-        assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=0");
+        assertThat(model.getAttribute("backUrl"))
+                .isEqualTo("/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=0");
     }
 
     @Test
@@ -631,7 +632,8 @@ public class MultiFirmUserControllerTest {
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
-        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL)).thenReturn(List.of(roleDto1, roleDto2));
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL))
+                .thenReturn(List.of(roleDto1, roleDto2));
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(roleDto1, roleDto2));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
@@ -649,7 +651,6 @@ public class MultiFirmUserControllerTest {
         assertThat(roles).hasSize(2);
         assertThat(roles).allMatch(AppRoleViewModel::isSelected);
     }
-
 
     @Test
     void shouldRedirectIfSessionModelMissing() {
@@ -715,7 +716,8 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/offices");
 
-        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         assertThat(storedRoles).containsEntry(1, List.of("role1", "role2"));
         assertThat(session.getAttribute("addProfileUserRolesModel")).isNull();
     }
@@ -760,7 +762,8 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=1");
 
-        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         assertThat(storedRoles).containsEntry(0, List.of("role1"));
 
         Model updatedModel = (Model) session.getAttribute("addProfileUserRolesModel");
@@ -787,7 +790,8 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
 
-        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         assertThat(storedRoles).containsEntry(0, null);
     }
 
@@ -813,7 +817,8 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
 
-        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session.getAttribute("addUserProfileAllSelectedRoles");
+        Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("addUserProfileAllSelectedRoles");
         assertThat(storedRoles).containsEntry(0, List.of("role1", "role2"));
     }
 
@@ -892,11 +897,14 @@ public class MultiFirmUserControllerTest {
         EntraUserDto user = EntraUserDto.builder().fullName("Test User").build();
         session.setAttribute("entraUser", user);
 
-        OfficesForm officesForm = OfficesForm.builder().offices(List.of("00000000-0000-0000-0000-000000000001")).build();
+        OfficesForm officesForm = OfficesForm.builder().offices(List.of("00000000-0000-0000-0000-000000000001"))
+                .build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City").postcode("12345").build();
-        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1").address(address).build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
+        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
+                .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -913,7 +921,8 @@ public class MultiFirmUserControllerTest {
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
         assertThat(model.getAttribute("officesForm")).isEqualTo(officesForm);
         assertThat(model.getAttribute("entraUser")).isEqualTo(user);
-        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Add profile - Select offices - Test User");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                .isEqualTo("Add profile - Select offices - Test User");
 
         assertThat(session.getAttribute("addProfileUserOfficesModel")).isEqualTo(model);
     }
@@ -923,8 +932,10 @@ public class MultiFirmUserControllerTest {
         EntraUserDto user = EntraUserDto.builder().fullName("Test User").build();
         session.setAttribute("entraUser", user);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City").postcode("12345").build();
-        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1").address(address).build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
+        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
+                .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -950,8 +961,10 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("ALL")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City").postcode("12345").build();
-        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1").address(address).build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
+        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
+                .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -978,8 +991,10 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("invalid-office-id")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City").postcode("12345").build();
-        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1").address(address).build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
+        Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
+                .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -1139,6 +1154,7 @@ public class MultiFirmUserControllerTest {
         assertThat(selectedRoles).hasSize(2);
         assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
         assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
     }
 
     @Test
@@ -1165,7 +1181,8 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("userOffices", List.of("office1"));
 
         OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("Office One").build();
-        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build()).build();
+        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build())
+                .build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -1214,7 +1231,8 @@ public class MultiFirmUserControllerTest {
         AppRoleDto role1 = AppRoleDto.builder().id("role1").name("Role One").ordinal(1).build();
         AppRoleDto role2 = AppRoleDto.builder().id("role2").name("Role Two").ordinal(2).build();
 
-        Office office = Office.builder().id(UUID.randomUUID()).code("office1").address(Office.Address.builder().build()).build();
+        Office office = Office.builder().id(UUID.randomUUID()).code("office1").address(Office.Address.builder().build())
+                .build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
 
@@ -1348,8 +1366,7 @@ public class MultiFirmUserControllerTest {
 
             assertThat(log.getLevel()).isEqualTo(Level.WARN);
             assertThat(log.getMessage()).isEqualTo(
-                    "Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'"
-            );
+                    "Authorization denied while accessing user: reason='{}', method='{}', uri='{}', referer='{}', savedRequest='{}'");
             assertThat(log.getArgumentArray()).containsExactly("Test access denied", "GET", "/admin/users", null, null);
         } finally {
             logger.detachAppender(listAppender);
@@ -1365,6 +1382,157 @@ public class MultiFirmUserControllerTest {
         // Assert
         assertThat(result.getUrl()).isEqualTo("/error");
     }
+
+    @Test
+    public void deleteFirmProfileConfirm_shouldReturnConfirmationView() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        java.util.UUID entraUserId = java.util.UUID.randomUUID();
+
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto
+                .builder()
+                .name("Test Law Firm")
+                .code("12345")
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
+                .builder()
+                .id(entraUserId.toString())
+                .firstName("John")
+                .lastName("Doe")
+                .email("john.doe@example.com")
+                .multiFirmUser(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
+                .builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .activeProfile(true)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+
+        // Act
+        String result = controller.deleteFirmProfileConfirm(userProfileId, model);
+
+        // Assert
+        assertThat(result).isEqualTo("multi-firm-user/delete-profile-confirm");
+        assertThat(model.getAttribute("userProfile")).isNotNull();
+        assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+    }
+
+    @Test
+    public void deleteFirmProfileConfirm_notMultiFirmUser_shouldThrowException() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
+                .builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .multiFirmUser(false) // Not multi-firm
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
+                .builder()
+                .entraUser(entraUserDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> controller.deleteFirmProfileConfirm(userProfileId, model));
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_withYes_shouldDeleteAndRedirect() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        final String confirm = "yes";
+        java.util.UUID actorId = java.util.UUID.randomUUID();
+
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto
+                .builder()
+                .name("Test Law Firm")
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
+                .builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .firstName("John")
+                .lastName("Doe")
+                .email("john.doe@example.com")
+                .multiFirmUser(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
+                .builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto currentUserDto = new uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto();
+        currentUserDto.setUserId(actorId);
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.deleteFirmProfile(Mockito.eq(userProfileId), Mockito.eq(actorId))).thenReturn(true);
+
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = Mockito
+                .mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act
+        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes,
+                model);
+
+        // Assert
+        assertThat(result).isEqualTo("redirect:/admin/users");
+        verify(userService).deleteFirmProfile(Mockito.eq(userProfileId), Mockito.eq(actorId));
+        verify(redirectAttributes).addFlashAttribute(Mockito.eq("successMessage"), Mockito.anyString());
+    }
+
+    @Test
+    public void deleteFirmProfileExecute_withNo_shouldRedirectToManageUser() {
+        // Arrange
+        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
+        String confirm = "no";
+
+        uk.gov.justice.laa.portal.landingpage.dto.FirmDto firmDto = uk.gov.justice.laa.portal.landingpage.dto.FirmDto
+                .builder()
+                .name("Test Law Firm")
+                .code("ABC123")
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
+                .builder()
+                .id(java.util.UUID.randomUUID().toString())
+                .multiFirmUser(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
+                .builder()
+                .entraUser(entraUserDto)
+                .firm(firmDto)
+                .build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
+
+        org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes = Mockito
+                .mock(org.springframework.web.servlet.mvc.support.RedirectAttributes.class);
+
+        // Act
+        String result = controller.deleteFirmProfileExecute(userProfileId, confirm, authentication, redirectAttributes,
+                model);
+
+        // Assert
+        assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userProfileId);
+        verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
+    }
+
+    // Note: The test for null confirm parameter has been removed because the
+    // parameter
+    // is now required=true, so Spring will handle missing parameter validation at
+    // the
+    // framework level before the controller method is invoked.
 
     @Test
     void shouldIncludeParentAndChildrenWhenNoQuery() {
@@ -1469,4 +1637,5 @@ public class MultiFirmUserControllerTest {
         assertThat(view).isEqualTo("multi-firm-user/select-user");
         verify(result).rejectValue(eq("email"), eq("error.email"), eq("This user already has a profile for this firm. You can amend their access from the Manage your users table."));
     }
+
 }

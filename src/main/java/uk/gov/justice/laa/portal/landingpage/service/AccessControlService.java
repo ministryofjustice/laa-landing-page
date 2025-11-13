@@ -1,10 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -14,13 +22,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class AccessControlService {
@@ -55,12 +56,14 @@ public class AccessControlService {
 
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
 
-        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
+        if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER)
+                && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        //internal user with external user manager permission
-        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        // internal user with external user manager permission
+        if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)
+                && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
@@ -71,9 +74,14 @@ public class AccessControlService {
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(), userProfileId);
+            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(),
+                    userProfileId);
         }
         return canAccess;
+    }
+
+    public boolean canViewAllFirmsOfMultiFirmUser() {
+        return authenticatedUserHasPermission(Permission.VIEW_ALL_USER_MULTI_FIRM_PROFILES);
     }
 
     public boolean canDeleteUser(String userProfileId) {
@@ -90,6 +98,60 @@ public class AccessControlService {
         }
 
         return userHasPermission(authenticatedUser, Permission.DELETE_EXTERNAL_USER);
+    }
+
+    /**
+     * Check if the authenticated user can delete a specific firm profile.
+     * Used for multi-firm users where we delete individual firm access.
+     *
+     * @param userProfileId the ID of the user profile to delete
+     * @return true if user has permission to delete this firm profile
+     */
+    public boolean canDeleteFirmProfile(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        final EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        if (authenticatedUser == null) {
+            log.debug("Authenticated user is null, returning false");
+            return false;
+        }
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
+        // Only external user profiles can be deleted
+        if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
+            return false;
+        }
+
+        // Must be a multi-firm user
+        if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+            return false;
+        }
+
+        // Check if authenticated user is internal (LAA staff)
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+
+        // Only external users (provider admins/firm user managers) can delete firm
+        // profiles
+        // Internal users should not see the revoke link
+        if (isInternalUser) {
+            return false;
+        }
+
+        // Check if users are in the same firm
+        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+
+        // External users (firm admins) with DELEGATE_EXTERNAL_USER_ACCESS can only
+        // delete profiles from their own firm
+        if (sameFirm && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
+            return true;
+        }
+
+        return false;
     }
 
     public boolean canEditUser(String userProfileId) {
@@ -109,12 +171,14 @@ public class AccessControlService {
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
 
         // Internal User Manager editing internal user.
-        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER) && userService.isInternal(accessedUser.getId())) {
+        if (userHasPermission(authenticatedUser, Permission.EDIT_INTERNAL_USER)
+                && userService.isInternal(accessedUser.getId())) {
             return true;
         }
 
-        //internal user with external user manager permission accessing external user
-        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER) && !userService.isInternal(accessedUser.getId())
+        // internal user with external user manager permission accessing external user
+        if (userHasPermission(authenticatedUser, Permission.EDIT_EXTERNAL_USER)
+                && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
             return true;
         }
@@ -125,38 +189,21 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
-            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(), userProfileId);
+            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(),
+                    userProfileId);
         }
         return canAccess;
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        java.util.Set<UUID> accessibleFirmIds = authenticatedUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getFirm)
-                .filter(java.util.Objects::nonNull)
-                .flatMap(firm -> {
-                    java.util.stream.Stream<UUID> selfId = java.util.stream.Stream.of(firm.getId());
-                    if (firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
-                        return java.util.stream.Stream.concat(
-                                selfId,
-                                firm.getChildFirms().stream().map(uk.gov.justice.laa.portal.landingpage.entity.Firm::getId)
-                        );
-                    }
-                    return selfId;
-                })
-                .collect(java.util.stream.Collectors.toSet());
-
-        java.util.List<FirmDto> authUserFirms = firmService.getUserActiveAllFirms(authenticatedUser);
-        if (authUserFirms != null) {
-            accessibleFirmIds.addAll(authUserFirms.stream().map(FirmDto::getId).collect(java.util.stream.Collectors.toSet()));
-        }
-
+        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId)
+                .toList();
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
-        return userFirms.stream().map(FirmDto::getId).anyMatch(accessibleFirmIds::contains);
+        return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }
 
-    // IDEs may make this appear unused, but it's actually used in the @PreAuthorize annotation in UserController.
+    // IDEs may make this appear unused, but it's actually used in the @PreAuthorize
+    // annotation in UserController.
     public boolean authenticatedUserHasPermission(Permission permission) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
@@ -177,7 +224,8 @@ public class AccessControlService {
         return user.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null && appRole.getName().equalsIgnoreCase(authzRoleName));
+                .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null
+                        && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser, Permission... permissions) {
@@ -204,7 +252,7 @@ public class AccessControlService {
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser,
-                Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
+                        Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
     }
 
 }

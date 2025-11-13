@@ -62,6 +62,10 @@ jobs:
             
             # Ensure the file exists (i.e., it wasn't deleted in the PR)
             if [ -f "$file" ]; then
+            # Skip HTML files
+            if [[ "$file" == *.html ]]; then
+              continue
+            fi
               # Use -h to suppress filename and handle errors gracefully
               grep -hE '\$\{[A-Za-z0-9_]+\}' "$file" 2>/dev/null >> "$found_vars_temp_file" || true
             fi

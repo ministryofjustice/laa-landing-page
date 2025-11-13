@@ -16,15 +16,23 @@
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
-        <div th:if="${successMessage}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
-            aria-label="success: User added successfully" data-module="moj-alert">
-            <div>
-                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 30 30" height="30" width="30">
-                    <path
-                        d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
-                        fill="currentColor" />
-                </svg>
+        <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+            aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                    Success
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content"
+                style="display: flex; justify-content: space-between; align-items: center;">
+                <p class="govuk-notification-banner__heading" style="margin: 0;">
+                    <span th:text="${successMessage}"></span>
+                </p>
+                <a href="/admin/users" class="govuk-link"
+                    style="text-decoration: underline; color: #1d70b8; font-size: 19px; line-height: 1.31579; margin-left: 20px; white-space: nowrap;"
+                    aria-label="Dismiss success message">
+                    Dismiss
+                </a>
             </div>
         </div>
         <div class="govuk-grid-row">
@@ -153,7 +161,8 @@
                                             type="hidden" name="size" th:value="${requestedPageSize}">
                                         <input th:if="${showFirmAdmins}" type="hidden" name="showFirmAdmins"
                                             th:value="${showFirmAdmins}">
-                                        <input th:if="${showMultiFirmUsers}" type="hidden" name="showMultiFirmUsers" th:value="${showMultiFirmUsers}">
+                                        <input th:if="${showMultiFirmUsers}" type="hidden" name="showMultiFirmUsers"
+                                            th:value="${showMultiFirmUsers}">
                                     </form>
                                 </fieldset>
                             </div>
@@ -183,24 +192,28 @@
                                         <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Show user by type</legend>
                                         <div class="govuk-grid-row">
                                             <div class="govuk-grid-column-one-quarter">
-                                                <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                                                <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                    data-module="govuk-checkboxes">
                                                     <div class="govuk-checkboxes__item">
                                                         <input class="govuk-checkboxes__input" id="showFirmAdmins"
-                                                               name="showFirmAdmins" type="checkbox" value="true"
-                                                               th:checked="${showFirmAdmins}">
-                                                        <label class="govuk-label govuk-checkboxes__label" for="showFirmAdmins">
+                                                            name="showFirmAdmins" type="checkbox" value="true"
+                                                            th:checked="${showFirmAdmins}">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            for="showFirmAdmins">
                                                             Provider admin
                                                         </label>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="govuk-grid-column-one-quarter">
-                                                <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                                                <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                    data-module="govuk-checkboxes">
                                                     <div class="govuk-checkboxes__item">
                                                         <input class="govuk-checkboxes__input" id="showMultiFirmUsers"
-                                                               name="showMultiFirmUsers" type="checkbox" value="true"
-                                                               th:checked="${showMultiFirmUsers}">
-                                                        <label class="govuk-label govuk-checkboxes__label" for="showMultiFirmUsers">
+                                                            name="showMultiFirmUsers" type="checkbox" value="true"
+                                                            th:checked="${showMultiFirmUsers}">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            for="showMultiFirmUsers">
                                                             3rd Party
                                                         </label>
                                                     </div>
@@ -704,7 +717,7 @@
                         // Handle showMultiFirmUsers checkbox change
                         const showMultiFirmUsersCheckbox = document.getElementById('showMultiFirmUsers');
                         if (showMultiFirmUsersCheckbox) {
-                            showMultiFirmUsersCheckbox.addEventListener('change', function() {
+                            showMultiFirmUsersCheckbox.addEventListener('change', function () {
                                 const form = document.getElementById('firm-admins-form');
                                 if (form) {
                                     form.submit();

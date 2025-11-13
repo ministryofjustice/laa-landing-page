@@ -155,10 +155,10 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         // Test that multi-firm users only have entra_user entry, no user_profile
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test10@email.com", "First Name10", "Last Name10");
         entraUser.setMultiFirmUser(true); // Mark as multi-firm user
-        
+
         // Multi-firm users don't have any user profiles
         EntraUser saved = entraUserRepository.saveAndFlush(entraUser);
-        
+
         assertThat(saved.isMultiFirmUser()).isTrue();
         assertThat(saved.getUserProfiles()).isEmpty(); // No profiles for multi-firm users
     }
@@ -304,7 +304,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     @Transactional
     public void testInternalUserCanOnlyHaveOneProfile() {
         // Setup internal user
-        EntraUser internalUser = buildEntraUser(UUID.randomUUID().toString(), "internaluser@test.com", "Internal", "User");
+        EntraUser internalUser = buildEntraUser(UUID.randomUUID().toString(), "internaluser@test.com", "Internal",
+                "User");
 
         // Persist user
         internalUser = entraUserRepository.saveAndFlush(internalUser);
@@ -321,7 +322,8 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         // Try to add another profile to user and assert it throws exception
         UserProfile additionalProfile = buildLaaUserProfile(internalUser, UserType.INTERNAL, false);
-        DataIntegrityViolationException exception = assertThrows(DataIntegrityViolationException.class, () -> repository.saveAndFlush(additionalProfile));
+        DataIntegrityViolationException exception = assertThrows(DataIntegrityViolationException.class,
+                () -> repository.saveAndFlush(additionalProfile));
         assertThat(exception.getCause().getMessage()).contains("one_profile_per_internal_user");
     }
 
@@ -370,5 +372,119 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    public void testCountByEntraUserId_withMultipleProfiles_returnsCorrectCount() {
+        // Setup: Create user with multiple profiles
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "multiprofile@example.com", "Multi", "Profile");
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        Firm firm1 = buildFirm("Firm Alpha", "ALPHA");
+        Firm firm2 = buildFirm("Firm Beta", "BETA");
+        Firm firm3 = buildFirm("Firm Gamma", "GAMMA");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2, firm3));
+
+        UserProfile profile1 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile1.setFirm(firm1);
+        UserProfile profile2 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile2.setFirm(firm2);
+        UserProfile profile3 = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile3.setFirm(firm3);
+
+        entraUser.getUserProfiles().add(profile1);
+        entraUser.getUserProfiles().add(profile2);
+        entraUser.getUserProfiles().add(profile3);
+        repository.saveAllAndFlush(List.of(profile1, profile2, profile3));
+
+        // Execute: Count profiles
+        long count = repository.countByEntraUserId(entraUser.getId());
+
+        // Assert: Should return 3
+        assertThat(count).isEqualTo(3L);
+    }
+
+    @Test
+    public void testCountByEntraUserId_withSingleProfile_returnsOne() {
+        // Setup: Create user with single profile
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "single@example.com", "Single", "Profile");
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        Firm firm = buildFirm("Firm Delta", "DELTA");
+        firmRepository.saveAndFlush(firm);
+
+        UserProfile profile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        profile.setFirm(firm);
+        entraUser.getUserProfiles().add(profile);
+        repository.saveAndFlush(profile);
+
+        // Execute: Count profiles
+        long count = repository.countByEntraUserId(entraUser.getId());
+
+        // Assert: Should return 1
+        assertThat(count).isEqualTo(1L);
+    }
+
+    @Test
+    public void testCountByEntraUserId_withNoProfiles_returnsZero() {
+        // Setup: Create user without any profiles
+        EntraUser entraUser = buildEntraUser(generateEntraId(), "noprofiles@example.com", "No", "Profiles");
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        // Execute: Count profiles
+        long count = repository.countByEntraUserId(entraUser.getId());
+
+        // Assert: Should return 0
+        assertThat(count).isEqualTo(0L);
+    }
+
+    @Test
+    public void testCountByEntraUserId_withNonExistentUser_returnsZero() {
+        // Setup: Use a random UUID that doesn't exist
+        UUID nonExistentUserId = UUID.randomUUID();
+
+        // Execute: Count profiles for non-existent user
+        long count = repository.countByEntraUserId(nonExistentUserId);
+
+        // Assert: Should return 0
+        assertThat(count).isEqualTo(0L);
+    }
+
+    @Test
+    public void testCountByEntraUserId_onlyCountsProfilesForSpecificUser() {
+        // Setup: Create two users with different numbers of profiles
+        EntraUser user1 = buildEntraUser(generateEntraId(), "user1@example.com", "User", "One");
+        user1 = entraUserRepository.saveAndFlush(user1);
+
+        EntraUser user2 = buildEntraUser(generateEntraId(), "user2@example.com", "User", "Two");
+        user2 = entraUserRepository.saveAndFlush(user2);
+
+        Firm firm1 = buildFirm("Firm Epsilon", "EPSILON");
+        Firm firm2 = buildFirm("Firm Zeta", "ZETA");
+        Firm firm3 = buildFirm("Firm Eta", "ETA");
+        firmRepository.saveAllAndFlush(List.of(firm1, firm2, firm3));
+
+        // User 1: 2 profiles
+        UserProfile user1Profile1 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1Profile1.setFirm(firm1);
+        UserProfile user1Profile2 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1Profile2.setFirm(firm2);
+        user1.getUserProfiles().add(user1Profile1);
+        user1.getUserProfiles().add(user1Profile2);
+        repository.saveAllAndFlush(List.of(user1Profile1, user1Profile2));
+
+        // User 2: 1 profile
+        UserProfile user2Profile1 = buildLaaUserProfile(user2, UserType.EXTERNAL);
+        user2Profile1.setFirm(firm3);
+        user2.getUserProfiles().add(user2Profile1);
+        repository.saveAndFlush(user2Profile1);
+
+        // Execute: Count profiles for each user
+        long count1 = repository.countByEntraUserId(user1.getId());
+        long count2 = repository.countByEntraUserId(user2.getId());
+
+        // Assert: Each count should be independent
+        assertThat(count1).isEqualTo(2L);
+        assertThat(count2).isEqualTo(1L);
     }
 }

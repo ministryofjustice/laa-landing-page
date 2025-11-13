@@ -54,6 +54,18 @@
 
                                 <!-- CCMS App: Display roles organized by sections -->
                                 <div th:if="${isCcmsApp}">
+                                    <details class="govuk-details">
+                                        <summary class="govuk-details__summary">
+                                            <span class="govuk-details__summary-text">
+                                              Help with assigning CCMS roles
+                                            </span>
+                                        </summary>
+                                        <div class="govuk-details__text">
+                                            If you're not sure which role to assign, visit the
+                                            <a class="govuk-link" target="_blank" href="https://www.gov.uk/guidance/laa-silas-help-and-information">SILAS Help & Information page (opens in a new window)</a>
+                                            for guidance and links to relevant documents.
+                                        </div>
+                                    </details>
                                     <!-- Provider Section -->
                                     <div th:if="${ccmsRolesBySection.containsKey('Provider') and !ccmsRolesBySection['Provider'].isEmpty()}"
                                         class="govuk-!-margin-bottom-6">

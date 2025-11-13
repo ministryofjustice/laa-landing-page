@@ -67,7 +67,7 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(firm.getId()).isEqualTo(firm2.getId());
         Assertions.assertThat(firm.getName()).isEqualTo("Firm2");
         Assertions.assertThat(firm.getCode()).isEqualTo("Firm Code 2");
-        Assertions.assertThat(firm.getType()).isEqualTo(FirmType.INDIVIDUAL);
+        Assertions.assertThat(firm.getType()).isEqualTo(FirmType.ADVOCATE);
         Assertions.assertThat(firm.getOffices()).containsExactlyInAnyOrder(office2, office3);
 
     }
