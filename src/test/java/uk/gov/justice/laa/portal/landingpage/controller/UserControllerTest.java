@@ -5028,6 +5028,26 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessCheckAnswers_shouldTrowNoOfficeSelected() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
+                .builder()
+                        .name("Role 1")
+                .build()));
+        assertThrows(RuntimeException.class, () -> {
+            userController.grantAccessCheckAnswers(userId, model, new MockHttpSession(), authentication);
+        });
+
+
+    }
+
+    @Test
     void grantAccessCheckAnswers_shouldSelectAllOffice() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440011";
