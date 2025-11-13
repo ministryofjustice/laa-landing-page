@@ -4913,7 +4913,7 @@ class UserControllerTest {
         AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
         AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
 
-        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
+        List<AppRoleDto> userAppRoles = new ArrayList<>(List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2));
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
@@ -4926,18 +4926,23 @@ class UserControllerTest {
                 .map(map -> map.getId().toString())
                 .collect(Collectors.toList());
 
+        List<String> selectedApps = userAppRoles.stream()
+                .map(role -> role.getApp().getId())
+                .collect(Collectors.toList());
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("allSelectedRoles", selectedRoles);
         testSession.setAttribute("selectedOffices", selectedOffices);
+        testSession.setAttribute("grantAccessSelectedApps", selectedApps);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
+        when(appRoleService.getByIds(anyList())).thenReturn(userAppRoles);
 
         when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
-
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(userAppRoles);
         // When
         String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
 

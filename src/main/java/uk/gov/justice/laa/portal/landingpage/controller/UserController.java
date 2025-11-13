@@ -2190,7 +2190,7 @@ public class UserController {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            UserType  userType = userProfileDto.getUserType();
+            UserType userType = userProfileDto.getUserType();
 
             List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
                     .orElse(new ArrayList<>());
