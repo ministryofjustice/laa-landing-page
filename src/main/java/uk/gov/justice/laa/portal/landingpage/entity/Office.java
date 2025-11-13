@@ -77,7 +77,7 @@ public class Office extends BaseEntity {
         @Size(min = 1, max = 255, message = "Office address line 3 must be between 1 and 255 characters")
         private String addressLine3;
 
-        @Column(name = "city", nullable = false, length = 255)
+        @Column(name = "city", nullable = true, length = 255)
         @ColumnDefault(value = "'CITY'")
         @Size(min = 1, max = 255, message = "Office city must be between 1 and 255 characters")
         private String city;
