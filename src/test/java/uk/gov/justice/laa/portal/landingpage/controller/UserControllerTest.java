@@ -2932,6 +2932,106 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldHideRevokeLink_whenViewingOwnProfile() {
+        // Given - Logged-in user viewing their own profile
+        UUID profileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(entraUserId.toString());
+        entraUser.setFullName("Current User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(profileId)
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        EntraUser editorEntraUser = EntraUser.builder().id(entraUserId).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(profileId) // Same profile ID as the user being viewed
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(profileId.toString())).thenReturn(Optional.of(mockUser));
+        when(userService.isInternal(entraUserId.toString())).thenReturn(false);
+        when(userService.isAccessGranted(profileId.toString())).thenReturn(true);
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
+        when(accessControlService.canEditUser(profileId.toString())).thenReturn(true);
+        // Use lenient() since this won't be called when viewing own profile
+        lenient().when(accessControlService.canDeleteFirmProfile(profileId.toString())).thenReturn(true);
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+
+        // When
+        String view = userController.manageUser(profileId.toString(), false, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        // canDeleteFirmProfile should be false because it's the user's own profile
+        assertThat(model.getAttribute("canDeleteFirmProfile")).isEqualTo(false);
+        // Verify the access control service was NOT called because we short-circuit for
+        // own profile
+        verify(accessControlService, never()).canDeleteFirmProfile(profileId.toString());
+    }
+
+    @Test
+    void manageUser_shouldShowRevokeLink_whenViewingDifferentUserProfile() {
+        // Given - Logged-in user viewing another user's profile
+        UUID viewedProfileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        UUID editorProfileId = UUID.fromString("550e8400-e29b-41d4-a716-446655440099");
+        UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
+
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(entraUserId.toString());
+        entraUser.setFullName("Other User");
+        entraUser.setMultiFirmUser(true);
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(viewedProfileId)
+                .entraUser(entraUser)
+                .appRoles(List.of(new AppRoleDto()))
+                .offices(List.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        // Editor is an external user (provider admin) viewing another user's profile
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(editorProfileId) // Different profile ID from the user being viewed
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.EXTERNAL) // Changed to EXTERNAL (provider admin)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(viewedProfileId.toString())).thenReturn(Optional.of(mockUser));
+        when(userService.isInternal(entraUserId.toString())).thenReturn(false);
+        when(userService.isAccessGranted(viewedProfileId.toString())).thenReturn(true);
+        when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
+        when(accessControlService.canEditUser(viewedProfileId.toString())).thenReturn(true);
+        when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
+        when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+
+        // When
+        String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("manage-user");
+        // canDeleteFirmProfile should be true because it's a different user's profile
+        // and the editor is an external user (provider admin)
+        assertThat(model.getAttribute("canDeleteFirmProfile")).isEqualTo(true);
+        verify(accessControlService).canDeleteFirmProfile(viewedProfileId.toString());
+    }
+
+    @Test
     void createUser_shouldPopulateModelWithFirmsAndSelectedFirm() {
         when(session.getAttribute("user")).thenReturn(null);
         when(session.getAttribute("selectedUserType")).thenReturn(null);
