@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -4253,6 +4252,34 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessUpdateUserOffices_shouldRedirectToOffice() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440008";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(List.of("office1", "office2"));
+
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        userProfileDto.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessUserOfficesModel", null);
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
+                model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
+
+    }
+
+    @Test
     void grantAccessUpdateUserOffices_shouldUpdateOfficesAndRedirectToCheckAnswers() throws IOException {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440008";
@@ -4967,7 +4994,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
-        System.out.println(userRoles);
         assertThat(
                 userRoles.entrySet().stream()
                         .flatMap(entry -> entry.getValue().stream()
@@ -4982,6 +5008,23 @@ class UserControllerTest {
                         "app-one : a1r2",
                         "app-three : a3r1",
                         "app-three : a3r2");
+    }
+
+    @Test
+    void grantAccessCheckAnswers_shouldTrowNoRolesSelected() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440011";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        assertThrows(RuntimeException.class, () -> {
+            userController.grantAccessCheckAnswers(userId, model, new MockHttpSession(), authentication);
+        });
+
+
     }
 
     @Test
@@ -5034,7 +5077,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
-        System.out.println(userRoles);
         assertThat(
                 userRoles.entrySet().stream()
                         .flatMap(entry -> entry.getValue().stream()
@@ -5107,7 +5149,7 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
-
+        userProfileDto.setUserType(UserType.EXTERNAL);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("admin user");
@@ -5116,12 +5158,15 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(new ArrayList<>());
 
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
 
-        // then
+        // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+
+        // then
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
