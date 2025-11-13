@@ -138,7 +138,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         repository.saveAllAndFlush(roles);
 
         List<UUID> ids = apps.stream().map(BaseEntity::getId).toList();
-        List<AppRole> appRoles = repository.findByAppIdUserTypeRestriction(ids,UserType.INTERNAL.name());
+        List<AppRole> appRoles = repository.findByAppIdUserTypeRestriction(ids, UserType.INTERNAL.name());
         Assertions.assertThat(appRoles).hasSize(3);
         Assertions.assertThat(appRoles).isEqualTo(roles);
 
