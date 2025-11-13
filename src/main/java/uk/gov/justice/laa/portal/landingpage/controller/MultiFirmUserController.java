@@ -176,13 +176,6 @@ public class MultiFirmUserController {
             throw new RuntimeException("This operation is only available for multi-firm users.");
         }
 
-        // Count the number of profiles to prevent deletion of last profile
-        List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
-        if (allProfiles.size() <= 1) {
-            throw new RuntimeException(
-                    "Cannot delete the last firm profile. User must have at least one profile.");
-        }
-
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());

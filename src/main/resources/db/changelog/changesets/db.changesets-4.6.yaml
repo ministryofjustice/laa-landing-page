@@ -1,11 +1,16 @@
 databaseChangeLog:
   - changeSet:
-      id: 1762358737791-1
-      author: suresh.kavali
+      id: 1762344000000-1
+      author: system
       changes:
-        - addColumn:
-            columns:
-              - column:
-                  name: address_line_3
-                  type: VARCHAR(255)
-            tableName: office
+        - dropUniqueConstraint:
+            constraintName: app_role_ccms_code_key
+            tableName: app_role
+  - changeSet:
+      id: 1762344000000-2
+      author: system
+      changes:
+        - addUniqueConstraint:
+            columnNames: app_id, ccms_code
+            constraintName: app_role_app_id_ccms_code_key
+            tableName: app_role

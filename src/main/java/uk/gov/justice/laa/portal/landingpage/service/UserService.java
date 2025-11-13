@@ -172,8 +172,8 @@ public class UserService {
                 return result;
             }
 
-            Set<AppRole> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-            Set<AppRole> newPuiRoles = filterByPuiRoles(newRoles);
+            Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+            Set<String> newPuiRoles = filterByPuiRoles(newRoles);
 
             // Update roles
             userProfile.setAppRoles(newRoles);
@@ -262,11 +262,14 @@ public class UserService {
         return "";
     }
 
-    private Set<AppRole> filterByPuiRoles(Set<AppRole> roles) {
-        return roles != null && !roles.isEmpty() ? roles.stream()
-                .filter(role -> role.getCcmsCode() != null && role.getCcmsCode().contains("CCMS"))
-                .filter(AppRole::isLegacySync)
-                .collect(Collectors.toSet()) : new HashSet<>();
+    private Set<String> filterByPuiRoles(Set<AppRole> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        return roles.stream().filter(AppRole::isLegacySync)
+                .filter(Objects::nonNull)
+                .map(AppRole::getCcmsCode).collect(Collectors.toSet());
     }
 
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(String userProfileId) {
@@ -355,7 +358,7 @@ public class UserService {
                 .deletedUserId(userProfile.getEntraUser().getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
-                Set<AppRole> puiRoles = new HashSet<>();
+                Set<String> puiRoles = new HashSet<>();
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
                     puiRoles = filterByPuiRoles(up.getAppRoles());
@@ -382,7 +385,7 @@ public class UserService {
 
     /**
      * Delete a specific firm profile from a multi-firm user.
-     * 
+     *
      * @param userProfileId the ID of the user profile to delete (UUID as String)
      * @param actorId       the UUID of the actor performing the deletion (for
      *                      logging)
@@ -407,12 +410,6 @@ public class UserService {
                     "User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
         }
 
-        // Check if this is the last profile - cannot delete the last profile
-        List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
-        if (allProfiles.isEmpty() || allProfiles.size() <= 1) {
-            throw new RuntimeException("Cannot delete the last firm profile. User must have at least one profile.");
-        }
-
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
         logger.info(
@@ -420,7 +417,7 @@ public class UserService {
                 actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), firmName);
 
         // Handle PUI role changes notification (like in deleteExternalUser)
-        Set<AppRole> puiRoles = new HashSet<>();
+        Set<String> puiRoles = new HashSet<>();
         if (userProfile.getAppRoles() != null && !userProfile.getAppRoles().isEmpty()) {
             puiRoles = filterByPuiRoles(userProfile.getAppRoles());
             userProfile.getAppRoles().clear();
@@ -966,9 +963,10 @@ public class UserService {
     /**
      * Convert a single-firm user to a multi-firm user
      * This operation is irreversible
-     * 
+     *
      * @param userId The ID of the user to convert
-     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     * @throws RuntimeException if the user is not found or is already a multi-firm
+     *                          user
      */
     @Transactional
     public void convertToMultiFirmUser(String userId) {
@@ -979,7 +977,7 @@ public class UserService {
         }
 
         EntraUser entraUser = optionalUser.get();
-        
+
         if (entraUser.isMultiFirmUser()) {
             logger.warn("User with id {} is already a multi-firm user.", userId);
             throw new RuntimeException("User is already a multi-firm user");
@@ -987,7 +985,7 @@ public class UserService {
 
         // Set the multi-firm flag
         entraUser.setMultiFirmUser(true);
-        
+
         try {
             entraUserRepository.saveAndFlush(entraUser);
             logger.info("Successfully converted user {} to multi-firm status", userId);
@@ -1327,5 +1325,15 @@ public class UserService {
      */
     public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId, String search) {
         return userProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search);
+    }
+
+    /**
+     * Get count of user profiles by Entra user ID
+     *
+     * @param entraUserId The Entra user ID
+     * @return Count of user profiles for the Entra user
+     */
+    public long getProfileCountByEntraUserId(UUID entraUserId) {
+        return userProfileRepository.countByEntraUserId(entraUserId);
     }
 }

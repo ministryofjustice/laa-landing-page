@@ -28,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -95,6 +96,7 @@ public class HomeController {
         model.addAttribute("userOffices", offices);
         model.addAttribute("firm", firmDto);
         model.addAttribute("appAssignments", appAssignments);
+        model.addAttribute("isInternalUser", currentUserProfile.getUserType().equals(UserType.INTERNAL));
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "My Account - " + user.getFullName());
 
