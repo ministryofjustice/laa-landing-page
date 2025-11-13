@@ -299,7 +299,15 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+    public String manageUser(@PathVariable String id,
+            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
+            Model model, HttpSession session, Authentication authentication) {
+
+        // Handle verification email resend if requested
+        if (Boolean.TRUE.equals(resendVerification)) {
+            handleResendVerification(id, model);
+        }
+
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
@@ -362,6 +370,19 @@ public class UserController {
             // Check if user can delete the currently viewed profile (not all profiles)
             boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Get profile count for multi-firm users (using count query instead of fetching
+            // all profiles)
+            long profileCount = userService.getProfileCountByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
+            model.addAttribute("profileCount", profileCount);
+        } else if (enableMultiFirmUser) {
+            // For non-multi-firm users, still add canDeleteFirmProfile if they have the
+            // permission
+            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Non-multi-firm users have exactly 1 profile
+            model.addAttribute("profileCount", 1);
         }
 
         // Add filter state to model for "Back to search results" link
@@ -425,77 +446,6 @@ public class UserController {
         model.addAttribute("user", optionalUser.get());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         return "delete-user-reason";
-    }
-
-    @GetMapping("/user/{id}/verify")
-    @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
-        if (!enableResendVerificationCode) {
-            log.error("Resend activation code is disabled");
-            throw new AccessDeniedException("Resend verification is disabled.");
-        }
-
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
-        List<AppRoleDto> userAppRoles = user.getAppRoles() != null
-                ? user.getAppRoles().stream()
-                        .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                        .sorted()
-                        .collect(Collectors.toList())
-                : Collections.emptyList();
-        List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
-        final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
-        boolean hasViewOfficePermission = accessControlService
-                .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
-
-        boolean hasEditOfficePermission = accessControlService
-                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
-        boolean canManageOffices = hasEditOfficePermission && canEditUser;
-
-        model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", userAppRoles);
-        model.addAttribute("userOffices", userOffices);
-        model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL == user.getUserType();
-        boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
-        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
-        model.addAttribute("externalUser", externalUser);
-        model.addAttribute("isInternalUser", isInternalUser);
-        model.addAttribute("showOfficesTab", showOfficesTab);
-        model.addAttribute("canManageOffices", canManageOffices);
-        model.addAttribute("canEditUser", canEditUser);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
-        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
-        boolean editorInternalUser = UserType.INTERNAL == editorUserProfile.getUserType();
-        boolean canViewAllProfiles = externalUser && editorInternalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-        model.addAttribute("canViewAllProfiles", canViewAllProfiles);
-
-        // Add filter state to model for "Back to search results" link
-        @SuppressWarnings("unchecked")
-        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = filters != null && hasActiveFilters(filters);
-        model.addAttribute("hasFilters", hasFilters);
-
-        try {
-            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
-            if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
-            } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
-            }
-        } catch (RuntimeException runtimeException) {
-            log.error("Error sending activation code for user profile: {}", id, runtimeException);
-            throw runtimeException;
-        }
-
-        return "manage-user";
     }
 
     @GetMapping("/user/create/details")
@@ -1728,7 +1678,7 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-            //unchecked all the apps
+            // unchecked all the apps
             List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
             if (apps != null) {
                 apps.forEach(app -> app.setSelected(false));
@@ -1812,7 +1762,8 @@ public class UserController {
             RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
+                String.class);
 
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
@@ -1968,7 +1919,8 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
-        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices",
+                String.class);
         List<OfficeDto> userOffices = List.of();
 
         if (selectedOfficesOptional.isEmpty()) {
@@ -2081,9 +2033,9 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id,
-                                          Model model,
-                                          HttpSession session,
-                                          Authentication authentication) {
+            Model model,
+            HttpSession session,
+            Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
@@ -2223,7 +2175,8 @@ public class UserController {
                 eventService.logEvent(updateUserAuditEvent);
             }
 
-            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
+                    .orElseThrow();
 
             String changed = userService.updateUserOffices(id, selectedOffices);
 
@@ -2233,7 +2186,6 @@ public class UserController {
                     userProfileDto.getEntraUser(),
                     changed, "office");
             eventService.logEvent(updateUserAuditEvent);
-
 
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
@@ -2389,6 +2341,30 @@ public class UserController {
         session.setAttribute("userListFilters", result);
 
         return result;
+    }
+
+    private void handleResendVerification(String id, Model model) {
+        if (!Boolean.TRUE.equals(enableResendVerificationCode)) {
+            log.error("Resend activation code is disabled");
+            throw new AccessDeniedException("Resend verification is disabled.");
+        }
+
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 
     @NotNull
