@@ -19,7 +19,7 @@ jobs:
           fail_action: false
 
       - name: Upload ZAP Daily Homepage Baseline Run Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: daily-zap-homepage-report
           path: |
