@@ -75,7 +75,9 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
+
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -107,6 +109,7 @@ public class UserController {
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
+    private final AppRoleService appRoleService;
 
     @Value("${feature.flag.enable.resend.verification.code}")
     private boolean enableResendVerificationCode;
@@ -294,7 +297,15 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+    public String manageUser(@PathVariable String id,
+            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
+            Model model, HttpSession session, Authentication authentication) {
+
+        // Handle verification email resend if requested
+        if (Boolean.TRUE.equals(resendVerification)) {
+            handleResendVerification(id, model);
+        }
+
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
@@ -329,8 +340,12 @@ public class UserController {
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
 
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
+
         model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
+        model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
@@ -349,10 +364,29 @@ public class UserController {
         model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
+        // Check if this profile belongs to the logged-in user
+        boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
+
         if (isMultiFirmUser && enableMultiFirmUser) {
             // Check if user can delete the currently viewed profile (not all profiles)
-            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            // but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Get profile count for multi-firm users (using count query instead of fetching
+            // all profiles)
+            long profileCount = userService.getProfileCountByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
+            model.addAttribute("profileCount", profileCount);
+        } else if (enableMultiFirmUser) {
+            // For non-multi-firm users, still add canDeleteFirmProfile if they have the
+            // permission but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
+            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Non-multi-firm users have exactly 1 profile
+            model.addAttribute("profileCount", 1);
         }
 
         // Add filter state to model for "Back to search results" link
@@ -416,65 +450,6 @@ public class UserController {
         model.addAttribute("user", optionalUser.get());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         return "delete-user-reason";
-    }
-
-    @GetMapping("/user/{id}/verify")
-    @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
-        if (!enableResendVerificationCode) {
-            log.error("Resend activation code is disabled");
-            throw new AccessDeniedException("Resend verification is disabled.");
-        }
-
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
-        List<AppRoleDto> userAppRoles = user.getAppRoles() != null
-                ? user.getAppRoles().stream()
-                        .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                        .sorted()
-                        .collect(Collectors.toList())
-                : Collections.emptyList();
-        List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
-        final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
-        model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", userAppRoles);
-        model.addAttribute("userOffices", userOffices);
-        model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL == user.getUserType();
-        model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
-        model.addAttribute("showOfficesTab", showOfficesTab);
-
-        boolean hasEditOfficePermission = accessControlService
-                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
-        boolean canManageOffices = hasEditOfficePermission && canEditUser;
-        model.addAttribute("canManageOffices", canManageOffices);
-        model.addAttribute("canEditUser", canEditUser);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
-        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
-        // Add filter state to model for "Back to search results" link
-        @SuppressWarnings("unchecked")
-        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = filters != null && hasActiveFilters(filters);
-        model.addAttribute("hasFilters", hasFilters);
-
-        try {
-            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
-            if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
-            } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
-            }
-        } catch (RuntimeException runtimeException) {
-            log.error("Error sending activation code for user profile: {}", id, runtimeException);
-            throw runtimeException;
-        }
-
-        return "manage-user";
     }
 
     @GetMapping("/user/create/details")
@@ -1673,11 +1648,15 @@ public class UserController {
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
-        // Add selected attribute to available apps based on user assigned apps
-        editableApps.forEach(app -> {
-            app.setSelected(userAssignedApps.stream()
-                    .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-        });
+        Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        if (selectedApps.isPresent()) {
+            editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
+        } else {
+            editableApps.forEach(app -> {
+                app.setSelected(userAssignedApps.stream()
+                        .anyMatch(userApp -> userApp.getId().equals(app.getId())));
+            });
+        }
 
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
@@ -1702,9 +1681,13 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-
+            // unchecked all the apps
+            List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
+            if (apps != null) {
+                apps.forEach(app -> app.setSelected(false));
+            }
             model.addAttribute("user", modelFromSession.getAttribute("user"));
-            model.addAttribute("apps", modelFromSession.getAttribute("apps"));
+            model.addAttribute("apps", apps);
             return "grant-access-user-apps";
         }
 
@@ -1714,30 +1697,6 @@ public class UserController {
 
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
-
-        // If no apps are selected, persist empty roles to database and redirect to
-        // manage user page
-        if (selectedApps.isEmpty()) {
-            UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
-            // Update user to have no roles (empty list)
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
-                    .map(AppRoleDto::getId)
-                    .toList();
-            Map<String, String> updateResult = userService.updateUserRoles(id, new ArrayList<>(), nonEditableRoles,
-                    currentUserDto.getUserId());
-            UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                    userProfileDto != null ? userProfileDto.getId() : null,
-                    currentUserDto,
-                    userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                    updateResult.get("diff"), "roles");
-            eventService.logEvent(updateUserAuditEvent);
-            // Ensure passed in ID is a valid UUID to avoid open redirects.
-            UUID uuid = UUID.fromString(id);
-            return "redirect:/admin/users/manage/" + uuid;
-        }
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
@@ -1754,27 +1713,20 @@ public class UserController {
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
             Authentication authentication,
-            Model model, HttpSession session) {
+            Model model, HttpSession session,
+            RedirectAttributes redirectAttributes) {
 
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        List<String> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class)
-                .orElseGet(() -> {
-                    // If no selectedApps in session, get user's current apps
-                    List<String> userApps = userService.getUserAppsByUserId(id)
-                            .stream()
-                            .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
-                            .map(AppDto::getId)
-                            .toList();
-                    session.setAttribute("grantAccessSelectedApps", userApps);
-                    return userApps;
-                });
+        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
+                String.class);
 
-        // Ensure the selectedAppIndex is within bounds
-        if (selectedApps.isEmpty()) {
-            // No apps assigned to user, redirect back to manage page
-            return "redirect:/admin/users/manage/" + id;
+        if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
+            log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "You must select an app for assignment.");
+            return "redirect:/users/grant-access/" + id + "/apps";
         }
+
+        List<String> selectedApps = selectedAppsOptional.get();
 
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
         Integer currentSelectedAppIndex;
@@ -1798,7 +1750,7 @@ public class UserController {
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
-        List<String> selectedRoles = getListFromHttpSession(session, "grantAccessUserRoles", String.class)
+        List<String> selectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
                 .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
@@ -1902,18 +1854,9 @@ public class UserController {
                     .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
-                        currentUserDto.getUserId());
-                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                        editorProfile.getId(),
-                        currentUserDto,
-                        user != null ? user.getEntraUser() : null, updateResult.get("diff"),
-                        "role");
-                eventService.logEvent(updateUserAuditEvent);
-            }
+            session.setAttribute("allSelectedRoles", allSelectedRoles);
+            session.setAttribute("nonEditableRoles", nonEditableRoles);
+
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
             modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex + 1);
@@ -1931,10 +1874,21 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices",
+                String.class);
+        List<OfficeDto> userOffices = List.of();
+
+        if (selectedOfficesOptional.isEmpty()) {
+            userOffices = userService.getUserOfficesByUserId(id);
+        } else {
+            List<String> selectedOffices = selectedOfficesOptional.get();
+            if (!selectedOffices.isEmpty() && !selectedOffices.contains("ALL")) {
+                userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
+            }
+        }
 
         // Get user's current offices
-        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
+
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -1968,6 +1922,7 @@ public class UserController {
         }
 
         officesForm.setOffices(selectedOffices);
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
@@ -2018,41 +1973,11 @@ public class UserController {
 
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
-        List<String> selectOfficesDisplay = new ArrayList<>();
-        // Handle "ALL" option
-        if (!selectedOffices.contains("ALL")) {
-            Model modelFromSession = (Model) session.getAttribute("grantAccessUserOfficesModel");
-            if (modelFromSession != null) {
-                @SuppressWarnings("unchecked")
-                List<OfficeModel> officeData = (List<OfficeModel>) modelFromSession.getAttribute("officeData");
-                if (officeData != null) {
-                    List<String> selectedOfficeIds = officesForm.getOffices() != null ? officesForm.getOffices()
-                            : new ArrayList<>();
-                    for (OfficeModel office : officeData) {
-                        if (selectedOfficeIds.contains(office.getId())) {
-                            selectOfficesDisplay.add(office.getCode());
-                        }
-                    }
-                }
-            }
-        }
 
-        String changed = userService.updateUserOffices(id, selectedOffices);
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        UserProfileDto userProfileDto = userService.getUserProfileById(id).orElse(null);
-        UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                userProfileDto != null ? userProfileDto.getId() : null,
-                currentUserDto,
-                userProfileDto != null ? userProfileDto.getEntraUser() : null,
-                changed, "office");
-        eventService.logEvent(updateUserAuditEvent);
+        session.setAttribute("selectedOffices", selectedOffices);
 
         // Clear grant access session data
         session.removeAttribute("grantAccessUserOfficesModel");
-        session.removeAttribute("grantAccessSelectedApps");
-        session.removeAttribute("grantAccessUserRoles");
-        session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
 
         return "redirect:/admin/users/grant-access/" + id + "/check-answers";
     }
@@ -2062,12 +1987,17 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String grantAccessCheckAnswers(@PathVariable String id, Model model, Authentication authentication) {
+    public String grantAccessCheckAnswers(@PathVariable String id,
+            Model model,
+            HttpSession session,
+            Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        // Get user's current app roles from session
+        List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+                .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
 
-        // Get user's current app roles
-        List<AppRoleDto> userAppRoles = userService.getUserAppRolesByUserId(id);
+        List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .toList();
@@ -2079,6 +2009,16 @@ public class UserController {
                         LinkedHashMap::new, // Preserve insertion order
                         Collectors.toList()));
 
+        // get all offices from session
+        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
+                .orElseThrow(() -> new RuntimeException("No Office selected for assignment"));
+
+        List<OfficeDto> userOffices = new ArrayList<>();
+
+        if (!selectedOffices.getFirst().equals("ALL")) {
+            userOffices = officeService.getOfficesByIds(selectedOffices);
+
+        }
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -2086,9 +2026,6 @@ public class UserController {
                         Map.Entry::getValue,
                         (e1, e2) -> e1,
                         LinkedHashMap::new));
-
-        // Get user's current offices
-        List<OfficeDto> userOffices = userService.getUserOfficesByUserId(id);
 
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
@@ -2143,11 +2080,40 @@ public class UserController {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
 
+            List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+            List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
+                    .orElseGet(ArrayList::new);
+
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+                        currentUserDto.getUserId());
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
+                        userProfileDto.getEntraUser(), updateResult.get("diff"),
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
+            }
+
+            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
+                    .orElseThrow();
+
+            String changed = userService.updateUserOffices(id, selectedOffices);
+
+            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                    userProfileDto.getId(),
+                    currentUserDto,
+                    userProfileDto.getEntraUser(),
+                    changed, "office");
+            eventService.logEvent(updateUserAuditEvent);
+
             // Update user profile status to COMPLETE to finalize access grant
             userService.grantAccess(id, currentUserDto.getName());
 
             // Create audit event for the final access grant
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+            updateUserAuditEvent = new UpdateUserAuditEvent(
                     userProfileDto.getId(),
                     currentUserDto,
                     userProfileDto.getEntraUser(),
@@ -2166,6 +2132,7 @@ public class UserController {
         session.removeAttribute("grantAccessUserRoles");
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("selectedOffices");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
@@ -2198,6 +2165,11 @@ public class UserController {
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("grantAccessUserOfficesModel");
         session.removeAttribute("grantAccessUserAppsModel");
+        session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("selectedApps");
+        session.removeAttribute("grantAccessSelectedApps");
+        session.removeAttribute("nonEditableRoles");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
@@ -2289,5 +2261,29 @@ public class UserController {
         session.setAttribute("userListFilters", result);
 
         return result;
+    }
+
+    private void handleResendVerification(String id, Model model) {
+        if (!Boolean.TRUE.equals(enableResendVerificationCode)) {
+            log.error("Resend activation code is disabled");
+            throw new AccessDeniedException("Resend verification is disabled.");
+        }
+
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 }

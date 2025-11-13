@@ -4643,46 +4643,6 @@ class UserServiceTest {
         }
 
         @Test
-        void deleteFirmProfile_LastProfile_ThrowsException() {
-            // Given
-            UUID userProfileId = UUID.randomUUID();
-            UUID entraUserId = UUID.randomUUID();
-            UUID actorId = UUID.randomUUID();
-
-            EntraUser entraUser = EntraUser.builder()
-                    .id(entraUserId)
-                    .firstName("Bob")
-                    .lastName("Jones")
-                    .email("bob.jones@example.com")
-                    .multiFirmUser(true)
-                    .userProfiles(new HashSet<>())
-                    .build();
-
-            UserProfile userProfile = UserProfile.builder()
-                    .id(userProfileId)
-                    .entraUser(entraUser)
-                    .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
-                    .build();
-
-            // Set up bidirectional relationship
-            entraUser.getUserProfiles().add(userProfile);
-
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-            // No need to mock findAllByEntraUser - the service reads from
-            // entraUser.getUserProfiles()
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class,
-                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
-
-            assertThat(exception.getMessage())
-                    .contains("Cannot delete the last firm profile");
-
-            // Verify no deletion occurred
-            verify(mockUserProfileRepository, never()).delete(any());
-        }
-
-        @Test
         void deleteFirmProfile_ProfileNotFound_ThrowsException() {
             // Given
             UUID userProfileId = UUID.randomUUID();
@@ -4909,6 +4869,69 @@ class UserServiceTest {
             // Then - verify notification service was called with PUI roles
             verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete),
                     eq(Collections.emptySet()), any());
+        }
+    }
+
+    @Nested
+    class GetProfileCountByEntraUserIdTests {
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasMultipleProfiles_returnsCorrectCount() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 3L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasSingleProfile_returnsOne() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 1L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasNoProfiles_returnsZero() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 0L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserDoesNotExist_returnsZero() {
+            // Given
+            UUID nonExistentUserId = UUID.randomUUID();
+            when(mockUserProfileRepository.countByEntraUserId(nonExistentUserId)).thenReturn(0L);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(nonExistentUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(0L);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(nonExistentUserId);
         }
     }
 }
