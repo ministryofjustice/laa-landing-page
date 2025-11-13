@@ -79,7 +79,6 @@ public class Office extends BaseEntity {
 
         @Column(name = "city", nullable = false, length = 255)
         @ColumnDefault(value = "'CITY'")
-        @NotBlank(message = "Office city must be provided")
         @Size(min = 1, max = 255, message = "Office city must be between 1 and 255 characters")
         private String city;
 
