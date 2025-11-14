@@ -1205,14 +1205,6 @@ public class UserController {
         if (editUserAllSelectedRoles == null) {
             return "redirect:/admin/users/manage/" + id;
         }
-        List<String> allSelectedRoles = new ArrayList<>();
-        if (editUserAllSelectedRoles != null) {
-            allSelectedRoles  = editUserAllSelectedRoles.values()
-                    .stream()
-                    .flatMap(List::stream)
-                    .toList();
-        }
-
 
         List<String> selectedApps = getAppsFromSession(session, true);
         // Create a list with only the appRolesId
