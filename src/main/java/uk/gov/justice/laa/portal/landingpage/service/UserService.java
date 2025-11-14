@@ -50,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -492,22 +493,13 @@ public class UserService {
         return dateTime.format(formatter);
     }
 
-    private PaginatedUsers getPageOfUsers(Supplier<Page<UserProfile>> pageSupplier) {
-        Page<UserProfile> userPage = pageSupplier.get();
+    private PaginatedUsers getPageOfUsers(Supplier<Page<UserSearchResultsDto>> pageSupplier) {
+        Page<UserSearchResultsDto> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
-        paginatedUsers.setUsers(userPage.stream().map(this::mapUserProfileToDto).toList());
+        paginatedUsers.setUsers(userPage.stream().toList());
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
-    }
-
-    private UserProfileDto mapUserProfileToDto(UserProfile userProfile) {
-        UserProfileDto dto = mapper.map(userProfile, UserProfileDto.class);
-        // Ensure the nested EntraUser is properly mapped
-        if (userProfile.getEntraUser() != null) {
-            dto.setEntraUser(mapper.map(userProfile.getEntraUser(), EntraUserDto.class));
-        }
-        return dto;
     }
 
     /**
@@ -530,7 +522,7 @@ public class UserService {
             String sort,
             String direction) {
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserProfile> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria,
+        Page<UserSearchResultsDto> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria,
                 pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }

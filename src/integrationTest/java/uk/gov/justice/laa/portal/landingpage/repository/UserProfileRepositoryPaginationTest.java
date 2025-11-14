@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -86,7 +87,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -101,7 +102,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(11, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -116,7 +117,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -130,7 +131,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "firm.name"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -144,7 +145,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.email"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -161,7 +162,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(58);
@@ -175,7 +176,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isGreaterThan(0);
@@ -193,7 +194,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(116);
@@ -207,7 +208,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
         // When
-        Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+        Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(0);
@@ -225,7 +226,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
             PageRequest pageRequest = PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName"));
 
             // When
-            Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+            Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
             // Then
             assertThat(result.getTotalElements()).isEqualTo(116);
@@ -252,7 +253,7 @@ class UserProfileRepositoryPaginationTest extends BaseRepositoryTest {
             PageRequest pageRequest = PageRequest.of(0, 10, sort);
 
             // When
-            Page<UserProfile> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
+            Page<UserSearchResultsDto> result = userProfileRepository.findBySearchParams(criteria, pageRequest);
 
             // Then - All sorts should return same total count
             assertThat(result.getTotalElements())

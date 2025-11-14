@@ -565,7 +565,7 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    public void testCanDeleteFirmProfile_InternalUserWithPermission_CanDelete() {
+    public void testCanDeleteFirmProfile_InternalUserWithPermission_CannotDelete() {
         // Setup authentication
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
@@ -573,6 +573,7 @@ public class AccessControlServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         // Internal user with DELETE_EXTERNAL_USER permission
+        // Internal users should NOT be able to delete firm profiles (only provider admins can)
         UUID userId = UUID.randomUUID();
         Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(deletePermission)).build();
@@ -603,7 +604,7 @@ public class AccessControlServiceTest {
         Mockito.when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
-        Assertions.assertThat(result).isTrue();
+        Assertions.assertThat(result).isFalse();
     }
 
     @Test
