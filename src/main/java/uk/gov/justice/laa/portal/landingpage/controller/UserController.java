@@ -974,8 +974,6 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        UserType userType = user.getUserType();
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
@@ -986,15 +984,16 @@ public class UserController {
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/edit/%s/roles-check-answer", uuid));
         }
-
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
         //Group and count appRoles
         Map<String, Long> appCounts = getAppCounts(appRoleDtos);
 
-        // remove from selected apps that have only one role and add to the list appsWithOneRole
         List<String> appsWithOneRole = new ArrayList<>();
 
+        // remove from selected apps that have only one role and add to the list appsWithOneRole
         moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
         session.setAttribute("editAppWithOnlyOneRole", appsWithOneRole);
         session.setAttribute("selectedApps", selectedApps);
@@ -1218,15 +1217,6 @@ public class UserController {
         List<String> selectedApps = getAppsFromSession(session, true);
         // Create a list with only the appRolesId
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
-        List<String> selectedAppsRoles = appRoleDtos.stream()
-                .map(AppRoleDto::getId)
-                .toList();
-
-        List<String> combinedRoles = Stream.of(allSelectedRoles,
-                        selectedAppsRoles)
-                .flatMap(List::stream)
-                .distinct()
-                .toList();
 
         Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))

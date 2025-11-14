@@ -1401,6 +1401,96 @@ class UserControllerTest {
     }
 
     @Test
+    public void testSetSelectedAppsEdit_shouldHandleWithOnlyOneRoles() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        HttpSession session = new MockHttpSession();
+
+        when(userService.getUserProfileById(any())).thenReturn(
+                Optional.ofNullable(UserProfileDto.builder()
+                        .id(userId)
+                        .entraUser(new EntraUserDto())
+                        .userType(UserType.EXTERNAL)
+                        .build())
+        );
+
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
+                List.of(
+                        AppRoleDto.builder()
+                                .name("Role 1")
+                                .id("RoleId 1")
+                                .app(AppDto.builder()
+                                        .id("AppId 1")
+                                        .build())
+                                .build()
+                )
+        );
+
+        // When - passing null for apps (simulates no checkboxes selected)
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), new ArrayList<>(List.of("AppId 1")), session);
+
+        // Then - should redirect to manage user page when no apps selected
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles-check-answer", userId));
+        assertThat(session.getAttribute("selectedApps")).isEqualTo(new ArrayList<>());
+        assertThat(session.getAttribute("editAppWithOnlyOneRole")).isEqualTo(new ArrayList<>(List.of("AppId 1")));
+        assertThat(session.getAttribute("editUserAllSelectedRoles")).isEqualTo(new HashMap<Integer, List<String>>());
+
+    }
+
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleWithMoreThanOneRoles() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        HttpSession session = new MockHttpSession();
+
+        when(userService.getUserProfileById(any())).thenReturn(
+                Optional.ofNullable(UserProfileDto.builder()
+                        .id(userId)
+                        .entraUser(new EntraUserDto())
+                        .userType(UserType.EXTERNAL)
+                        .build())
+        );
+
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
+                List.of(
+                        AppRoleDto.builder()
+                                .name("Role 1")
+                                .id("RoleId 1")
+                                .app(AppDto.builder()
+                                        .id("AppId 1")
+                                        .build())
+                                .build(),
+                        AppRoleDto.builder()
+                                .name("Role 2")
+                                .id("RoleId 2")
+                                .app(AppDto.builder()
+                                        .id("AppId 1")
+                                        .build())
+                                .build(),
+                        AppRoleDto.builder()
+                                .name("Role 3")
+                                .id("RoleId 3")
+                                .app(AppDto.builder()
+                                        .id("AppId 2")
+                                        .build())
+                                .build()
+                )
+        );
+
+        // When - passing null for apps (simulates no checkboxes selected)
+        RedirectView redirectView = userController.setSelectedAppsEdit(
+                userId.toString(),
+                new ArrayList<>(List.of("AppId 1", "AppId 2")),
+                session);
+
+        // Then - should redirect to manage user page when no apps selected
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
+        assertThat(session.getAttribute("selectedApps")).isEqualTo(new ArrayList<>(List.of("AppId 1")));
+        assertThat(session.getAttribute("editAppWithOnlyOneRole")).isEqualTo(new ArrayList<>(List.of("AppId 2")));
+        assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
+
+    }
+    @Test
     public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
         // Given
         UUID userId = UUID.randomUUID();
