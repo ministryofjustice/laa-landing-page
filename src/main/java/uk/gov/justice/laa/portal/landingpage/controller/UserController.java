@@ -1241,6 +1241,12 @@ public class UserController {
         if (editUserAllSelectedRoles.isEmpty()) {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
+            List<UUID> roleIds = editUserAllSelectedRoles.values()
+                    .stream()
+                    .flatMap(List::stream)
+                    .map(UUID::fromString)
+                    .toList();
+            Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
             int size = editUserAllSelectedRoles.size();
             backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + Math.max(0, size - 1);
             for (Integer key : editUserAllSelectedRoles.keySet()) {
@@ -1249,9 +1255,7 @@ public class UserController {
                         && !editUserAllSelectedRoles.get(key).isEmpty()) {
                     List<String> selectedRoles = editUserAllSelectedRoles.get(key);
                     for (String selectedRole : selectedRoles) {
-                        AppRoleDto role = appRoleDtos.stream()
-                                .filter(filter -> filter.getId().equals(selectedRole))
-                                .findFirst().get();
+                        AppRoleDto role = roles.get(selectedRole);
                         UserRole userRole = new UserRole();
                         userRole.setRoleName(role.getName());
                         userRole.setAppName(role.getApp().getName());

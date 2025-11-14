@@ -1362,25 +1362,6 @@ class UserControllerTest {
         assertThat(apps.get(0).isSelected()).isTrue(); // Should be selected because user has this app
     }
 
-/*    @Test
-    public void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
-        // Given
-        UUID userId = UUID.randomUUID();
-        UUID appId = UUID.randomUUID();
-        List<String> apps = List.of(appId.toString());
-        HttpSession session = new MockHttpSession();
-
-        // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
-
-        // Then
-        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        assertThat(session.getAttribute("selectedApps")).isNotNull();
-        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
-        assertThat(returnedApps).hasSize(1);
-        assertThat(returnedApps.getFirst()).isEqualTo(appId.toString());
-    }*/
-
     @Test
     public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
@@ -1490,6 +1471,7 @@ class UserControllerTest {
         assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
 
     }
+
     @Test
     public void testSetSelectedAppsEdit_shouldHandleEmptyAppsList() {
         // Given
@@ -1553,29 +1535,32 @@ class UserControllerTest {
     @Test
     void editUserRolesCheckAnswerWithAppWithMoreThanOneRole() {
         // Given
-        List<String> selectedApps = new ArrayList<>(List.of("app 1"));
-        Map<Integer, List<String>>editUserAllSelectedRoles = new HashMap<Integer, List<String>>();
-        editUserAllSelectedRoles.put(0, List.of("role Id 1", "role Id 2"));
-
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        UUID role1Id = UUID.randomUUID();
+        UUID role2Id = UUID.randomUUID();
+        List<String> selectedApps = new ArrayList<>(List.of("app 1"));
+        Map<Integer, List<String>> editUserAllSelectedRoles = new HashMap<>();
+        editUserAllSelectedRoles.put(0, List.of(String.valueOf(role1Id), String.valueOf(role2Id)));
+
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString(userId))
                 .userType(UserType.EXTERNAL)
                 .build();
+
         List<AppRoleDto> appRoleDtoList = new ArrayList<>(
                 List.of(
                         AppRoleDto.builder()
-                                .id("role Id 1")
+                                .id(String.valueOf(role1Id))
                                 .name("role 1")
                                 .app(AppDto.builder()
-                                        .id("app 1")
+                                        .id(String.valueOf(UUID.fromString(userId)))
                                         .build())
                                 .build(),
                         AppRoleDto.builder()
-                                .id("role Id 2")
+                                .id(String.valueOf(role2Id))
                                 .name("role 2")
                                 .app(AppDto.builder()
-                                        .id("app 1")
+                                        .id(String.valueOf(UUID.fromString(userId)))
                                         .build())
                                 .build()
                 )
@@ -1583,9 +1568,11 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", selectedApps);
         testSession.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
-
+        Map<String, AppRoleDto> app1Roles = Map.of(String.valueOf(role1Id), appRoleDtoList.get(0),
+                String.valueOf(role2Id), appRoleDtoList.get(1));
         when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(userProfile));
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(appRoleDtoList);
+        when(userService.getRolesByIdIn(anyList())).thenReturn(app1Roles);
         // When
         model = new ExtendedModelMap();
         String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
@@ -1642,7 +1629,7 @@ class UserControllerTest {
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
-             List.of(app1Role1Dto, app1Role2Dto, app1Role3Dto)
+             List.of()
         );
         // When
         model = new ExtendedModelMap();
