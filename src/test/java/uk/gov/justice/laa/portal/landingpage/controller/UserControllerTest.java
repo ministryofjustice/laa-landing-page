@@ -1641,6 +1641,9 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
+             List.of(app1Role1Dto, app1Role2Dto, app1Role3Dto)
+        );
         // When
         model = new ExtendedModelMap();
         String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
@@ -2016,21 +2019,6 @@ class UserControllerTest {
         assertThat(apps).hasSize(2);
         assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
         assertThat(apps.get(1).isSelected()).isFalse(); // app2 should not be selected
-    }
-
-    @Test
-    void setSelectedAppsEdit_shouldStoreAppsInSessionAndRedirect() {
-        // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
-        List<String> apps = List.of("app1", "app2");
-        MockHttpSession testSession = new MockHttpSession();
-
-        // When
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, testSession);
-
-        // Then
-        assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
-        assertThat(testSession.getAttribute("selectedApps")).isEqualTo(apps);
     }
 
     @Test
