@@ -817,15 +817,15 @@
                                     th:text="${user.fullName}"></a>
                             </td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                th:text="${user.firm != null ? user.firm.name : ''}"></td>
+                                th:text="${user.firmName() != null ? user.firmName() : ''}"></td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                th:text="${user.entraUser.email}"></td>
+                                th:text="${user.email}"></td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
                                 <span th:switch="${#strings.trim(user.userType)}">
                                     <span th:case="'INTERNAL'">Internal</span>
                                     <span th:case="'EXTERNAL'">
-                                        <span th:if="${user.entraUser.multiFirmUser}">External - 3rd Party</span>
-                                        <span th:unless="${user.entraUser.multiFirmUser}">External</span>
+                                        <span th:if="${user.multiFirmUser}">External - 3rd Party</span>
+                                        <span th:unless="${user.multiFirmUser}">External</span>
                                     </span>
                                     <span th:case="*" th:text="${user.userType}"></span>
                                 </span>
