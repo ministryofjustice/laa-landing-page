@@ -18,7 +18,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -949,6 +951,7 @@ public class UserController {
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
+
         if (Objects.isNull(selectedAppRole)) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
@@ -956,8 +959,8 @@ public class UserController {
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
             });
         } else {
-            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                    .orElse(List.of());
+
+            List<String> selectedApps = getAppsFromSession(session, true);
             editableApps.forEach(app -> {
                 app.setSelected(selectedApps.contains(app.getId()));
             });
@@ -977,6 +980,7 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
+
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
@@ -986,10 +990,27 @@ public class UserController {
             UUID uuid = UUID.fromString(id);
             return new RedirectView(String.format("/admin/users/edit/%s/roles-check-answer", uuid));
         }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
+        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
+        //Group and count appRoles
+        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
+
+        List<String> appsWithOneRole = new ArrayList<>();
+
+        // remove from selected apps that have only one role and add to the list appsWithOneRole
+        moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
+        session.setAttribute("editAppWithOnlyOneRole", appsWithOneRole);
+        session.setAttribute("selectedApps", selectedApps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
+        if (isRolesWithMoreThanOneRoles(appCounts)) {
+            return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
+        }
+
+        session.setAttribute("editUserAllSelectedRoles", new HashMap<Integer, List<String>>());
+        return new RedirectView(String.format("/admin/users/edit/%s/roles-check-answer", uuid));
     }
 
     /**
@@ -1183,31 +1204,55 @@ public class UserController {
             Model model, HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (editUserAllSelectedRoles == null) {
             return "redirect:/admin/users/manage/" + id;
         }
-        UserType userType = user.getUserType();
-        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                .orElseGet(ArrayList::new);
+
+        List<String> selectedApps = getAppsFromSession(session, true);
+        // Create a list with only the appRolesId
+        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
+
         Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
 
-        List<UUID> roleIds = editUserAllSelectedRoles.values()
-                .stream()
-                .flatMap(List::stream)
-                .map(UUID::fromString)
-                .toList();
-        Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
         List<UserRole> selectedAppRole = new ArrayList<>();
+        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
+
+        var listOfAppsWithOnlyOneRole = appCounts.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() == 1)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        if (!listOfAppsWithOnlyOneRole.isEmpty()) {
+            for (String appId : listOfAppsWithOnlyOneRole) {
+                AppRoleDto role = appRoleDtos.stream()
+                        .filter(filter -> filter.getApp().getId().equals(appId))
+                        .findFirst().get();
+                UserRole userRole = new UserRole();
+                userRole.setRoleName(role.getName());
+                userRole.setAppName(role.getApp().getName());
+                userRole.setUrl("apps");
+                selectedAppRole.add(userRole);
+            }
+        }
+
         if (editUserAllSelectedRoles.isEmpty()) {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
+            List<UUID> roleIds = editUserAllSelectedRoles.values()
+                    .stream()
+                    .flatMap(List::stream)
+                    .map(UUID::fromString)
+                    .toList();
+            Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
             int size = editUserAllSelectedRoles.size();
             backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + Math.max(0, size - 1);
             for (Integer key : editUserAllSelectedRoles.keySet()) {
@@ -1260,15 +1305,36 @@ public class UserController {
 
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
+        List<String> selectedRoles = new ArrayList<>();
+
+        if (allSelectedRolesByPage != null) {
+            selectedRoles = allSelectedRolesByPage.values()
+                    .stream()
+                    .flatMap(List::stream)
+                    .toList();
+        }
+
+        List<String> selectedApps = getAppsFromSession(session, true);
+        // Create a list with only the appRolesId
+        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
+        List<String> selectedAppsRoles = appRoleDtos.stream()
+                .map(AppRoleDto::getId)
+                .toList();
+
+        List<String> combinedRoles = Stream.of(selectedRoles,
+                        selectedAppsRoles)
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
         if (allSelectedRolesByPage == null) {
             return "redirect:/admin/users/manage/" + id;
         }
-        List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .toList();
+        List<String> allSelectedRoles = combinedRoles;
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                 .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .map(AppRoleDto::getId)
@@ -1292,6 +1358,7 @@ public class UserController {
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
+        session.removeAttribute("editAppWithOnlyOneRole");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
 
@@ -1494,8 +1561,7 @@ public class UserController {
         // Edit User Apps/Roles Form
         session.removeAttribute("selectedApps");
         session.removeAttribute("editUserAllSelectedRoles");
-
-        // Edit User Apps Form
+        session.removeAttribute("editAppWithOnlyOneRole");
 
         // Edit User Offices Form
         session.removeAttribute("editUserOfficesModel");
@@ -1506,7 +1572,6 @@ public class UserController {
 
         // Clear any success messages
         session.removeAttribute("successMessage");
-
         return "redirect:/admin/users/manage/" + id;
     }
 
@@ -1649,9 +1714,10 @@ public class UserController {
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
-        Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
-        if (selectedApps.isPresent()) {
-            editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
+        List<String> selectedApps = getAppsFromSession(session, false);
+
+        if (!selectedApps.isEmpty()) {
+            editableApps.forEach(app -> app.setSelected(selectedApps.contains(app.getId())));
         } else {
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
@@ -1691,9 +1757,29 @@ public class UserController {
             model.addAttribute("apps", apps);
             return "grant-access-user-apps";
         }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        UserType userType = user.getUserType();
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
+
+        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
+
+        //Group and count appRoles
+        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
+
+        // remove from selected apps that have only one role and add to the list appsWithOneRole
+        List<String> appsWithOneRole = new ArrayList<>();
+
+        moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
+
+        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                .map(AppRoleDto::getId)
+                .toList();
+        session.setAttribute("nonEditableRoles", nonEditableRoles);
+        session.setAttribute("appWithOnlyOneRole", appsWithOneRole);
         session.setAttribute("grantAccessSelectedApps", selectedApps);
 
         // Clear the grantAccessUserAppsModel from session to avoid stale data
@@ -1701,7 +1787,35 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        return "redirect:/admin/users/grant-access/" + uuid + "/roles";
+        if (isRolesWithMoreThanOneRoles(appCounts)) {
+            return "redirect:/admin/users/grant-access/" + uuid + "/roles";
+
+        }
+        //remove to avoid in the CYA screen with unneeded information
+        session.removeAttribute("allSelectedRoles");
+        return "redirect:/admin/users/grant-access/" + uuid + "/offices";
+
+    }
+
+    @NotNull
+    private static Map<String, Long> getAppCounts(List<AppRoleDto> appRoleDtos) {
+        return appRoleDtos.stream()
+                .collect(Collectors
+                        .groupingBy(dto -> dto.getApp().getId(),
+                                Collectors.counting()));
+    }
+
+    private static void moveAppsWithSingleRole(Map<String, Long> appCounts, List<String> appsWithOneRole, List<String> selectedApps) {
+        appCounts.forEach((key, value) -> {
+            if (value == 1) {
+                appsWithOneRole.add(key);
+                selectedApps.remove(key);
+            }
+        });
+    }
+
+    private static boolean isRolesWithMoreThanOneRoles(Map<String, Long> appCounts) {
+        return appCounts.values().stream().anyMatch(count -> count > 1);
     }
 
     /**
@@ -1996,11 +2110,28 @@ public class UserController {
             Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        UserType userType = user.getUserType();
         // Get user's current app roles from session
         List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
-                .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+                .orElse(new ArrayList<>());
 
-        List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
+        List<String> selectedApps = getAppsFromSession(session, false);
+        // Create a list with only the appRolesId
+        List<String> selectedAppsRoles = userService.getAppRolesByAppsId(selectedApps, userType.name()).stream()
+                .map(AppRoleDto::getId)
+                .toList();
+
+        List<String> combinedRoles = Stream.of(allSelectedRoles,
+                        selectedAppsRoles)
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+
+        if (combinedRoles.isEmpty()) {
+            throw new RuntimeException("No roles selected for assignment");
+        }
+
+        List<AppRoleDto> userAppRoles = appRoleService.getByIds(combinedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
                 .toList();
@@ -2082,15 +2213,31 @@ public class UserController {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            UserType userType = userProfileDto.getUserType();
 
             List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
-                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+                    .orElse(new ArrayList<>());
+
+            List<String> selectedApps = getAppsFromSession(session, false);
+
+            List<String> selectedAppsRoles = userService.getAppRolesByAppsId(selectedApps, userType.name()).stream()
+                    .map(AppRoleDto::getId)
+                    .toList();
+            List<String> combinedRoles = Stream.of(allSelectedRoles,
+                            selectedAppsRoles)
+                    .flatMap(List::stream)
+                    .distinct()
+                    .toList();
+
+            if (combinedRoles.isEmpty()) {
+                throw new RuntimeException("No roles selected for assignment");
+            }
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);
 
-            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
+            if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), combinedRoles)) {
+                Map<String, String> updateResult = userService.updateUserRoles(id, combinedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
                 UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
                         editorProfile.getId(),
@@ -2136,6 +2283,7 @@ public class UserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("selectedOffices");
+        session.removeAttribute("appWithOnlyOneRole");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
@@ -2173,6 +2321,7 @@ public class UserController {
         session.removeAttribute("selectedApps");
         session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("nonEditableRoles");
+        session.removeAttribute("appWithOnlyOneRole");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
@@ -2288,5 +2437,22 @@ public class UserController {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
             throw runtimeException;
         }
+    }
+
+    @NotNull
+    private static List<String> getAppsFromSession(HttpSession session, boolean isEdit) {
+        Optional<List<String>> selectedApps = isEdit
+                ? getListFromHttpSession(session, "selectedApps", String.class)
+                : getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        Optional<List<String>> appsWithOnlyOneRole = isEdit
+                ? getListFromHttpSession(session, "editAppWithOnlyOneRole", String.class)
+                : getListFromHttpSession(session, "appWithOnlyOneRole", String.class);
+
+        // Combine both lists into one
+        return Stream.of(selectedApps.orElse(Collections.emptyList()),
+                        appsWithOnlyOneRole.orElse(Collections.emptyList()))
+                .flatMap(List::stream)
+                .distinct() // optional: remove duplicates
+                .toList();
     }
 }
