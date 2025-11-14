@@ -1,24 +1,38 @@
 databaseChangeLog:
   - changeSet:
-      id: 1762358737791-1
-      author: suresh.kavali
+      id: performance-idx-entra-user-id
+      author: performance-optimization
       changes:
-        - addColumn:
+        - createIndex:
             columns:
               - column:
-                  name: address_line_3
-                  type: VARCHAR(255)
-            tableName: office
-      rollback:
-        - dropColumn:
-            columnName: address_line_3
-            tableName: office
+                  name: entra_user_id
+            indexName: idx_user_profile_entra_user_id
+            tableName: user_profile
+            using: btree
+
   - changeSet:
-      id: 1762358737791-2
-      author: suresh.kavali
+      id: performance-idx-app-role-authz
+      author: performance-optimization
       changes:
-        - sql:
-            sql: ALTER TABLE office ALTER COLUMN city DROP NOT NULL
-      rollback:
-        - sql:
-            sql: ALTER TABLE office ALTER COLUMN city SET NOT NULL
+        - createIndex:
+            columns:
+              - column:
+                  name: authz_role
+              - column:
+                  name: name
+            indexName: idx_app_role_authz_name
+            tableName: app_role
+            using: btree
+
+  - changeSet:
+      id: performance-idx-multi-firm-user
+      author: performance-optimization
+      changes:
+        - createIndex:
+            columns:
+              - column:
+                  name: multi_firm_user
+            indexName: idx_entra_user_multi_firm
+            tableName: entra_user
+            using: btree
