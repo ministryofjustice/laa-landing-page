@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 
 @DataJpaTest
 public class UserProfileRepositoryTest extends BaseRepositoryTest {
@@ -263,9 +264,9 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
         UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
 
-        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+        Page<UserSearchResultsDto> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
 
-        assertThat(page.getContent()).extracting(UserProfile::getId)
+        assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactlyInAnyOrder(parentProfile.getId(), childProfile.getId());
     }
 
@@ -294,9 +295,9 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(child.getId()).build();
         UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
 
-        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+        Page<UserSearchResultsDto> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
 
-        assertThat(page.getContent()).extracting(UserProfile::getId)
+        assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactlyInAnyOrder(childProfile.getId());
     }
 
@@ -333,18 +334,18 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
         UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
 
-        Page<UserProfile> page0 = repository.findBySearchParams(criteria, PageRequest.of(0, 2));
+        Page<UserSearchResultsDto> page0 = repository.findBySearchParams(criteria, PageRequest.of(0, 2));
         assertThat(page0.getTotalElements()).isEqualTo(3);
         assertThat(page0.getTotalPages()).isEqualTo(2);
         assertThat(page0.getContent().size()).isEqualTo(2);
-        assertThat(page0.getContent()).extracting(UserProfile::getId)
+        assertThat(page0.getContent()).extracting(UserSearchResultsDto::id)
                 .containsAnyOf(parentProfile.getId(), childProfile1.getId(), childProfile2.getId());
 
-        Page<UserProfile> page1 = repository.findBySearchParams(criteria, PageRequest.of(1, 2));
+        Page<UserSearchResultsDto> page1 = repository.findBySearchParams(criteria, PageRequest.of(1, 2));
         assertThat(page1.getTotalElements()).isEqualTo(3);
         assertThat(page1.getTotalPages()).isEqualTo(2);
         assertThat(page1.getContent().size()).isEqualTo(1);
-        assertThat(page1.getContent()).extracting(UserProfile::getId)
+        assertThat(page1.getContent()).extracting(UserSearchResultsDto::id)
                 .containsAnyOf(parentProfile.getId(), childProfile1.getId(), childProfile2.getId());
     }
 
@@ -381,9 +382,9 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
         UserSearchCriteria criteria = new UserSearchCriteria("charlie", firmSearch, UserType.EXTERNAL, false, false);
 
-        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+        Page<UserSearchResultsDto> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
         assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).extracting(UserProfile::getId)
+        assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactly(childProfile2.getId());
     }
 

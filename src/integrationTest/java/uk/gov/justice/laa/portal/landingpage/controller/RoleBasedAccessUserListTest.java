@@ -136,9 +136,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
 
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
 
-        Assertions.assertThat(users.stream().map(u -> u.getEntraUser().getEmail()).toList())
+        Assertions.assertThat(users.stream().map(UserSearchResultsDto::email).toList())
                 .contains("rbp-parent@example.com", "rbp-child@example.com");
 
     }
@@ -161,9 +161,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
 
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
 
-        Assertions.assertThat(users.stream().map(u -> u.getEntraUser().getEmail()).toList())
+        Assertions.assertThat(users.stream().map(UserSearchResultsDto::email).toList())
                 .contains("rbc-child@example.com")
                 .doesNotContain("rbc-parent@example.com");
 
