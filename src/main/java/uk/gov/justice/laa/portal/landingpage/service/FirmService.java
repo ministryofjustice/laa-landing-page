@@ -210,4 +210,33 @@ public class FirmService {
     public Firm getById(UUID id) {
         return firmRepository.getReferenceById(id);
     }
+
+    public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {
+        List<Firm> childFirms = parentFirm.getChildFirms() == null
+                ? List.of()
+                : parentFirm.getChildFirms().stream().toList();
+        if (query == null || query.trim().isEmpty()) {
+            return childFirms;
+        }
+        String q = query.trim().toLowerCase();
+        return childFirms.stream()
+                .filter(f -> firmMatchesQuery(f, q))
+                .toList();
+    }
+
+    public boolean includeParentFirm(Firm parentFirm, String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return true;
+        }
+        String q = query.trim().toLowerCase();
+        return firmMatchesQuery(parentFirm, q);
+    }
+
+    public boolean firmMatchesQuery(Firm firm, String query) {
+        if (firm == null || query == null) return false;
+        String q = query.trim().toLowerCase();
+        if (q.isEmpty()) return false;
+        return (firm.getName() != null && firm.getName().toLowerCase().contains(q))
+                || (firm.getCode() != null && firm.getCode().toLowerCase().contains(q));
+    }
 }

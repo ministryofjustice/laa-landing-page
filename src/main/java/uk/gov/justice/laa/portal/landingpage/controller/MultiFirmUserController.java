@@ -105,17 +105,8 @@ public class MultiFirmUserController {
             return "redirect:/admin/multi-firm/user/add/profile";
         }
 
-        List<Firm> childFirms = parentFirm.getChildFirms().stream().toList();
-        boolean includeParent = true;
-        if (query != null && !query.trim().isEmpty()) {
-            String q = query.trim().toLowerCase();
-            childFirms = childFirms.stream()
-                    .filter(f -> (f.getName() != null && f.getName().toLowerCase().contains(q))
-                            || (f.getCode() != null && f.getCode().toLowerCase().contains(q)))
-                    .toList();
-            includeParent = (parentFirm.getName() != null && parentFirm.getName().toLowerCase().contains(q))
-                    || (parentFirm.getCode() != null && parentFirm.getCode().toLowerCase().contains(q));
-        }
+        List<Firm> childFirms = firmService.getFilteredChildFirms(parentFirm, query);
+        boolean includeParent = firmService.includeParentFirm(parentFirm, query);
 
         model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
         model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
