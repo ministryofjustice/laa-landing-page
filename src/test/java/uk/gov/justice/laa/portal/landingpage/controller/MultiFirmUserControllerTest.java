@@ -1180,19 +1180,19 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("addUserProfileAllSelectedRoles", Map.of());
         session.setAttribute("userOffices", List.of("office1"));
 
-        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("office1").build();
         Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build()).build();
         Firm currentUsersFirm = Firm.builder().id(UUID.randomUUID()).offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(currentUsersFirm).build();
         Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
         UUID targetFirmId = UUID.randomUUID();
-        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
         session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
 
         when(appRoleService.getByIds(any())).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("office1").build();
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(officeDto));
+        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
         when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
 
         assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, session, model))
