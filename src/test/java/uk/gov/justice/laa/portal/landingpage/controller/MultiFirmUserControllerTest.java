@@ -1183,7 +1183,6 @@ public class MultiFirmUserControllerTest {
         Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build()).build();
         Firm currentUsersFirm = Firm.builder().id(UUID.randomUUID()).offices(Set.of(office)).build();
         UserProfile profile = UserProfile.builder().firm(currentUsersFirm).build();
-        Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
         UUID targetFirmId = UUID.randomUUID();
         session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
 
@@ -1192,6 +1191,7 @@ public class MultiFirmUserControllerTest {
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("office1").build();
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(officeDto));
+        Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
         Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
         when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
 

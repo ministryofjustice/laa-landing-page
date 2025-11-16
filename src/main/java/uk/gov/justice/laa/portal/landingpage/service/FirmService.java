@@ -233,9 +233,13 @@ public class FirmService {
     }
 
     public boolean firmMatchesQuery(Firm firm, String query) {
-        if (firm == null || query == null) return false;
+        if (firm == null || query == null) {
+            return false;
+        }
         String q = query.trim().toLowerCase();
-        if (q.isEmpty()) return false;
+        if (q.isEmpty()) {
+            return false;
+        }
         return (firm.getName() != null && firm.getName().toLowerCase().contains(q))
                 || (firm.getCode() != null && firm.getCode().toLowerCase().contains(q));
     }
