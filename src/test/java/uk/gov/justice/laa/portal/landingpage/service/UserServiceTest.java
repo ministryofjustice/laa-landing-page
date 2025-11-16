@@ -73,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -3326,25 +3327,17 @@ class UserServiceTest {
         UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                 showMultiFirmUsers);
 
-        UserProfile userProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL)
-                .entraUser(EntraUser.builder()
-                        .firstName("Test")
-                        .lastName("User")
-                        .email("test@example.com")
-                        .build())
-                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
-                .build();
+        UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
-                List.of(userProfile),
+        Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
+                List.of(userSearchResultsDto),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                 1);
 
         when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
-                .thenReturn(userProfilePage);
+                .thenReturn(userSearchResultsPage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
@@ -3371,13 +3364,13 @@ class UserServiceTest {
         UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins,
                 showMultiFirmUsers);
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
+        Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                 0);
 
         when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
-                .thenReturn(userProfilePage);
+                .thenReturn(userSearchResultsPage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersBySearch(
@@ -3438,20 +3431,12 @@ class UserServiceTest {
         UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                 showMultiFirmUsers);
 
-        UserProfile userProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL)
-                .entraUser(EntraUser.builder()
-                        .firstName("Test")
-                        .lastName("Name")
-                        .email("test.name@example.com")
-                        .build())
-                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
-                .build();
+        UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
-                List.of(userProfile),
+        Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
+                List.of(userSearchResultsDto),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                 1);
 
@@ -3465,8 +3450,8 @@ class UserServiceTest {
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
-        assertThat(result.getUsers().getFirst().getEntraUser().getFirstName()).isEqualTo("Test");
-        assertThat(result.getUsers().getFirst().getEntraUser().getLastName()).isEqualTo("Name");
+        assertThat(result.getUsers().getFirst().firstName()).isEqualTo("Test");
+        assertThat(result.getUsers().getFirst().lastName()).isEqualTo("Name");
 
         // Verify the repository was called with the search criteria
         verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
@@ -4172,9 +4157,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     116 // Total elements
@@ -4209,9 +4194,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "firm.name")),
                     50 // Total elements
@@ -4246,9 +4231,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(6); // Only 6 users on last page
+            List<UserSearchResultsDto> users = createUserSearchResults(6); // Only 6 users on last page
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(11, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     116 // Total elements
@@ -4287,9 +4272,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     25 // Total elements after firm filter
@@ -4324,9 +4309,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(5); // Search returns 5 results
+            List<UserSearchResultsDto> users = createUserSearchResults(5); // Search returns 5 results
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     5 // Total elements matching search
@@ -4361,9 +4346,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(8); // 8 firm admins
+            List<UserSearchResultsDto> users = createUserSearchResults(8); // 8 firm admins
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     18 // Total firm admins
@@ -4393,7 +4378,7 @@ class UserServiceTest {
             int pageSize = 10;
             int totalElements = 50;
 
-            List<UserProfile> users = createUserProfiles(10);
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
 
             // Test sorting by different fields
             String[][] sortConfigs = {
@@ -4412,7 +4397,7 @@ class UserServiceTest {
                 UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                         showMultiFirmUsers);
 
-                Page<UserProfile> userProfilePage = new PageImpl<>(
+                Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                         users,
                         PageRequest.of(0, pageSize, Sort.by(Sort.Direction.valueOf(direction), "entraUser.firstName")),
                         totalElements);
@@ -4446,9 +4431,9 @@ class UserServiceTest {
             UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
                     showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
 
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     30);
@@ -4465,26 +4450,16 @@ class UserServiceTest {
             assertThat(result.getTotalPages()).isEqualTo(3);
         }
 
-        private List<UserProfile> createUserProfiles(int count) {
-            List<UserProfile> profiles = new ArrayList<>();
+        private List<UserSearchResultsDto> createUserSearchResults(int count) {
+            List<UserSearchResultsDto> searchResults = new ArrayList<>();
             for (int i = 0; i < count; i++) {
-                UserProfile profile = UserProfile.builder()
-                        .id(UUID.randomUUID())
-                        .userProfileStatus(UserProfileStatus.COMPLETE)
-                        .userType(UserType.EXTERNAL)
-                        .entraUser(EntraUser.builder()
-                                .firstName("User" + i)
-                                .lastName("Test" + i)
-                                .email("user" + i + "@example.com")
-                                .build())
-                        .firm(Firm.builder()
-                                .id(UUID.randomUUID())
-                                .name("Firm " + i)
-                                .build())
-                        .build();
-                profiles.add(profile);
+                UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                        UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i);
+
+                searchResults.add(result);
             }
-            return profiles;
+            return searchResults;
         }
     }
 

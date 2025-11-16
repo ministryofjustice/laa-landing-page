@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.List;
 import java.util.Objects;
 
-import jakarta.servlet.http.HttpSession;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
@@ -14,21 +13,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.transaction.annotation.Transactional;
 
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest {
 
@@ -56,22 +48,20 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = (int) allUsers.stream()
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
+        List<String> expectedUserNames = allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> profile.getAppRoles().stream()
                         .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
-                .count();
+                .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
+                .toList();
 
-        Assertions.assertThat(users).hasSize(expectedSize);
+        Assertions.assertThat(users).hasSize(expectedUserNames.size());
 
-        for (UserProfileDto userProfile : users) {
-            Set<String> authzRoleNames = userProfile.getAppRoles().stream()
-                    .map(AppRoleDto::getName)
-                    .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
-        }
+        List<String> actualUserNames = users.stream().map(UserSearchResultsDto::fullName).collect(Collectors.toList());
+
+        Assertions.assertThat(actualUserNames).containsAll(expectedUserNames);
     }
 
     @Test
@@ -83,13 +73,13 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = (int) allUsers.stream()
                 .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.INTERNAL)
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.INTERNAL);
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.INTERNAL);
         }
     }
 
@@ -116,15 +106,15 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
 
         int expectedSize = (int) allUsers.stream()
                 .filter(user -> UserType.EXTERNAL == user.getUserProfiles().stream().findFirst().orElseThrow().getUserType())
                 .count();
 
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.EXTERNAL);
         }
     }
 
@@ -188,22 +178,21 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = (int) allUsers.stream()
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
+        List<String> expectedUserNames = allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> profile.getAppRoles().stream()
                         .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
-                .count();
+                .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
+                .toList();
 
-        Assertions.assertThat(users).hasSize(expectedSize);
 
-        for (UserProfileDto userProfile : users) {
-            Set<String> authzRoleNames = userProfile.getAppRoles().stream()
-                    .map(AppRoleDto::getName)
-                    .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
-        }
+        Assertions.assertThat(users).hasSize(expectedUserNames.size());
+
+        List<String> actualUserNames = users.stream().map(UserSearchResultsDto::fullName).collect(Collectors.toList());
+
+        Assertions.assertThat(actualUserNames).containsAll(expectedUserNames);
     }
 
     @Test
@@ -215,7 +204,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
                 .findFirst().get()
                 .getFirm();
@@ -226,8 +215,8 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                         .count();
 
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getFirm().getId()).isEqualTo(loggedInUserFirm.getId());
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.firmName()).isEqualTo(loggedInUserFirm.getName());
         }
     }
 
@@ -240,25 +229,27 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
                 .findFirst().get()
                 .getFirm();
-        int expectedSize = (int) allUsers.stream()
+        List<String> expectedUserNames = allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(profile -> profile.isActiveProfile() && profile.getUserType() == UserType.EXTERNAL && profile.getFirm() != null
                         && profile.getFirm().getId().equals(loggedInUserFirm.getId()))
                 .filter(profile -> profile.getAppRoles().stream()
                         .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
-                .count();
+                .map(userProfile -> userProfile.getEntraUser().getFirstName() + " " + userProfile.getEntraUser().getLastName())
+                .toList();
 
-        Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getFirm().getId()).isEqualTo(loggedInUserFirm.getId());
-            Set<String> authzRoleNames = userProfile.getAppRoles().stream()
-                    .map(AppRoleDto::getName)
-                    .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
+        Assertions.assertThat(users).hasSize(expectedUserNames.size());
+
+        List<String> actualUserNames = users.stream().map(UserSearchResultsDto::fullName).collect(Collectors.toList());
+
+        Assertions.assertThat(actualUserNames).containsAll(expectedUserNames);
+
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.firmName()).isEqualTo(loggedInUserFirm.getName());
         }
     }
 
@@ -271,13 +262,13 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = (int) allUsers.stream()
                 .filter(user -> UserType.EXTERNAL == user.getUserProfiles().stream().findFirst().orElseThrow().getUserType())
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.EXTERNAL);
         }
     }
 
@@ -290,26 +281,24 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
-        int expectedSize = (int) allUsers.stream()
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
+        List<String> expectedUserNames = allUsers.stream()
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> UserType.EXTERNAL == profile.getUserType())
                 .filter(profile -> profile.getAppRoles().stream()
                         .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
-                .count();
-        Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
-            Set<String> authzRoleNames = userProfile.getAppRoles().stream()
-                    .map(AppRoleDto::getName)
-                    .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames.contains("External User Manager") || authzRoleNames.contains("Firm User Manager")).isTrue();
-        }
+                .map(userProfile -> userProfile.getEntraUser().getFirstName() + " " + userProfile.getEntraUser().getLastName())
+                .toList();
+        Assertions.assertThat(users).hasSize(expectedUserNames.size());
+
+        List<String> actualUserNames = users.stream().map(UserSearchResultsDto::fullName).collect(Collectors.toList());
+
+        Assertions.assertThat(actualUserNames).containsAll(expectedUserNames);
     }
 
     @Test
-    public void testInternalUserManagerCanOnlySeeInternalUsersWithExternalUserManagersWhenFiltered() throws Exception {
+    public void testInternalUserManagerCanOnlySeeInternalUsers() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         MvcResult result = this.mockMvc.perform(get("/admin/users?size=100&showFirmAdmins=true")
                         .with(userOauth2Login(loggedInUser)))
@@ -317,14 +306,24 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
 
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.INTERNAL);
-            Set<String> authzRoleNames = userProfile.getAppRoles().stream()
-                    .map(AppRoleDto::getName)
-                    .collect(Collectors.toSet());
-            Assertions.assertThat(authzRoleNames).contains("External User Manager");
+        List<String> expectedUserNames = allUsers.stream()
+                .flatMap(user -> user.getUserProfiles().stream())
+                .filter(UserProfile::isActiveProfile)
+                .filter(profile -> profile.getAppRoles().stream()
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager"))))
+                .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
+                .toList();
+
+        Assertions.assertThat(users).hasSize(expectedUserNames.size());
+
+        List<String> actualUserNames = users.stream().map(UserSearchResultsDto::fullName).collect(Collectors.toList());
+
+        Assertions.assertThat(actualUserNames).containsAll(expectedUserNames);
+
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.INTERNAL);
         }
     }
 
@@ -337,13 +336,13 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = (int) allUsers.stream()
                 .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.INTERNAL)
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.INTERNAL);
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.INTERNAL);
         }
     }
 
@@ -356,13 +355,13 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = (int) allUsers.stream()
                 .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getUserType() == UserType.EXTERNAL)
                 .count();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.userType()).isEqualTo(UserType.EXTERNAL);
         }
     }
 
@@ -375,11 +374,11 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andExpect(view().name("users"))
                 .andReturn();
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = multiFirmUsers.size();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getEntraUser().isMultiFirmUser()).isTrue();
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.multiFirmUser()).isTrue();
         }
     }
 
@@ -403,11 +402,11 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .andReturn();
         // Check filter is kept when sending back button request.
         ModelAndView modelAndView = result.getModelAndView();
-        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+        List<UserSearchResultsDto> users = (List<UserSearchResultsDto>) modelAndView.getModel().get("users");
         int expectedSize = multiFirmUsers.size();
         Assertions.assertThat(users).hasSize(expectedSize);
-        for (UserProfileDto userProfile : users) {
-            Assertions.assertThat(userProfile.getEntraUser().isMultiFirmUser()).isTrue();
+        for (UserSearchResultsDto user : users) {
+            Assertions.assertThat(user.multiFirmUser()).isTrue();
         }
     }
 
