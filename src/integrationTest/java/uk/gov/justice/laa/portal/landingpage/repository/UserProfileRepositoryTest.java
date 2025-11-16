@@ -301,6 +301,93 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    public void testFindBySearchParams_SelectedParentFirmWithMultipleChildrenReturnsAllWithCorrectCountAndPagination() {
+        Firm parent = buildFirm("Parent F3", "P3");
+        Firm child1 = buildFirm("Child F3A", "C3A");
+        Firm child2 = buildFirm("Child F3B", "C3B");
+        child1.setParentFirm(parent);
+        child2.setParentFirm(parent);
+        parent.setChildFirms(Set.of(child1, child2));
+        firmRepository.saveAllAndFlush(List.of(parent, child1, child2));
+
+        EntraUser parentUser = buildEntraUser(generateEntraId(), "p3@example.com", "P3", "User");
+        entraUserRepository.saveAndFlush(parentUser);
+        UserProfile parentProfile = buildLaaUserProfile(parentUser, UserType.EXTERNAL);
+        parentProfile.setFirm(parent);
+        parentUser.getUserProfiles().add(parentProfile);
+
+        EntraUser childUser1 = buildEntraUser(generateEntraId(), "c3a@example.com", "C3A", "User");
+        entraUserRepository.saveAndFlush(childUser1);
+        UserProfile childProfile1 = buildLaaUserProfile(childUser1, UserType.EXTERNAL);
+        childProfile1.setFirm(child1);
+        childUser1.getUserProfiles().add(childProfile1);
+
+        EntraUser childUser2 = buildEntraUser(generateEntraId(), "c3b@example.com", "C3B", "User");
+        entraUserRepository.saveAndFlush(childUser2);
+        UserProfile childProfile2 = buildLaaUserProfile(childUser2, UserType.EXTERNAL);
+        childProfile2.setFirm(child2);
+        childUser2.getUserProfiles().add(childProfile2);
+
+        repository.saveAllAndFlush(List.of(parentProfile, childProfile1, childProfile2));
+
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
+        UserSearchCriteria criteria = new UserSearchCriteria("", firmSearch, UserType.EXTERNAL, false, false);
+
+        Page<UserProfile> page0 = repository.findBySearchParams(criteria, PageRequest.of(0, 2));
+        assertThat(page0.getTotalElements()).isEqualTo(3);
+        assertThat(page0.getTotalPages()).isEqualTo(2);
+        assertThat(page0.getContent().size()).isEqualTo(2);
+        assertThat(page0.getContent()).extracting(UserProfile::getId)
+                .containsAnyOf(parentProfile.getId(), childProfile1.getId(), childProfile2.getId());
+
+        Page<UserProfile> page1 = repository.findBySearchParams(criteria, PageRequest.of(1, 2));
+        assertThat(page1.getTotalElements()).isEqualTo(3);
+        assertThat(page1.getTotalPages()).isEqualTo(2);
+        assertThat(page1.getContent().size()).isEqualTo(1);
+        assertThat(page1.getContent()).extracting(UserProfile::getId)
+                .containsAnyOf(parentProfile.getId(), childProfile1.getId(), childProfile2.getId());
+    }
+
+    @Test
+    public void testFindBySearchParams_SelectedParentFirmWithSearchTermFiltersWithinHierarchy() {
+        Firm parent = buildFirm("Parent F4", "P4");
+        Firm child1 = buildFirm("Child F4A", "C4A");
+        Firm child2 = buildFirm("Child F4B", "C4B");
+        child1.setParentFirm(parent);
+        child2.setParentFirm(parent);
+        parent.setChildFirms(Set.of(child1, child2));
+        firmRepository.saveAllAndFlush(List.of(parent, child1, child2));
+
+        EntraUser parentUser = buildEntraUser(generateEntraId(), "parent4@example.com", "Pat", "Rent");
+        entraUserRepository.saveAndFlush(parentUser);
+        UserProfile parentProfile = buildLaaUserProfile(parentUser, UserType.EXTERNAL);
+        parentProfile.setFirm(parent);
+        parentUser.getUserProfiles().add(parentProfile);
+
+        EntraUser childUser1 = buildEntraUser(generateEntraId(), "alice.child@example.com", "Alice", "Child");
+        entraUserRepository.saveAndFlush(childUser1);
+        UserProfile childProfile1 = buildLaaUserProfile(childUser1, UserType.EXTERNAL);
+        childProfile1.setFirm(child1);
+        childUser1.getUserProfiles().add(childProfile1);
+
+        EntraUser childUser2 = buildEntraUser(generateEntraId(), "charlie.child@example.com", "Charlie", "Child");
+        entraUserRepository.saveAndFlush(childUser2);
+        UserProfile childProfile2 = buildLaaUserProfile(childUser2, UserType.EXTERNAL);
+        childProfile2.setFirm(child2);
+        childUser2.getUserProfiles().add(childProfile2);
+
+        repository.saveAllAndFlush(List.of(parentProfile, childProfile1, childProfile2));
+
+        FirmSearchForm firmSearch = FirmSearchForm.builder().selectedFirmId(parent.getId()).build();
+        UserSearchCriteria criteria = new UserSearchCriteria("charlie", firmSearch, UserType.EXTERNAL, false, false);
+
+        Page<UserProfile> page = repository.findBySearchParams(criteria, PageRequest.of(0, 10));
+        assertThat(page.getTotalElements()).isEqualTo(1);
+        assertThat(page.getContent()).extracting(UserProfile::getId)
+                .containsExactly(childProfile2.getId());
+    }
+
+    @Test
     @Transactional
     public void testInternalUserCanOnlyHaveOneProfile() {
         // Setup internal user

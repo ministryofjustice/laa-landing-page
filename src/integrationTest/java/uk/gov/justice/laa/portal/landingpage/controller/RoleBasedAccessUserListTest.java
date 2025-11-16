@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.transaction.annotation.Transactional;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -125,6 +126,57 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
         for (UserProfileDto userProfile : users) {
             Assertions.assertThat(userProfile.getUserType()).isEqualTo(UserType.EXTERNAL);
         }
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserWithFirmUserManagerInParentFirmCanSeeParentAndChildFirmUsers() throws Exception {
+        Firm parent = testFirm2;
+        Firm child = createChildFirm(parent, "Child Firm RB-P", "CRB-P");
+
+        EntraUser loggedInUser = firmUserManagers.getFirst();
+
+        EntraUser parentUser = createExternalUserAtFirm("rbp-parent@example.com", parent);
+        EntraUser childUser = createExternalUserAtFirm("rbp-child@example.com", child);
+
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=1000")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+
+        Assertions.assertThat(users.stream().map(u -> u.getEntraUser().getEmail()).toList())
+                .contains("rbp-parent@example.com", "rbp-child@example.com");
+
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserWithFirmUserManagerInChildFirmCanSeeChildFirmUsersOnly() throws Exception {
+        Firm parent = testFirm2;
+        Firm child = createChildFirm(parent, "Child Firm RB-C", "CRB-C");
+
+        EntraUser loggedInUser = createExternalFirmUserManagerAtFirm("rbc-fum@example.com", child);
+
+        EntraUser parentUser = createExternalUserAtFirm("rbc-parent@example.com", parent);
+        EntraUser childUser = createExternalUserAtFirm("rbc-child@example.com", child);
+
+        MvcResult result = this.mockMvc.perform(get("/admin/users?size=1000")
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("users"))
+                .andReturn();
+
+        ModelAndView modelAndView = result.getModelAndView();
+        List<UserProfileDto> users = (List<UserProfileDto>) modelAndView.getModel().get("users");
+
+        Assertions.assertThat(users.stream().map(u -> u.getEntraUser().getEmail()).toList())
+                .contains("rbc-child@example.com")
+                .doesNotContain("rbc-parent@example.com");
+
     }
 
     @Test

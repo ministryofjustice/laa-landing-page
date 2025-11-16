@@ -304,4 +304,39 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         officeRepository.deleteAll(); // Delete offices first to avoid foreign key constraint violation
         firmRepository.deleteAll();
     }
+
+    protected Firm createChildFirm(Firm parent, String name, String code) {
+        Firm child = buildChildFirm(name, code, parent);
+        child = firmRepository.saveAndFlush(child);
+        return child;
+    }
+
+    protected EntraUser createExternalUserAtFirm(String email, Firm firm) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, "Ext", "User");
+        user = entraUserRepository.saveAndFlush(user);
+        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+        profile.setFirm(firm);
+        profile.setAppRoles(Set.of());
+        user.setUserProfiles(Set.of(profile));
+        userProfileRepository.saveAndFlush(profile);
+        return user;
+    }
+
+    protected EntraUser createExternalFirmUserManagerAtFirm(String email, Firm firm) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, "Ext", "FUM");
+        user = entraUserRepository.saveAndFlush(user);
+        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+        profile.setFirm(firm);
+        profile.setAppRoles(Set.of(getFirmUserManagerRole()));
+        user.setUserProfiles(Set.of(profile));
+        userProfileRepository.saveAndFlush(profile);
+        return user;
+    }
+
+    protected AppRole getFirmUserManagerRole() {
+        return appRoleRepository.findAllWithPermissions().stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(r -> r.getName().equals("Firm User Manager"))
+                .findFirst().orElseThrow();
+    }
 }

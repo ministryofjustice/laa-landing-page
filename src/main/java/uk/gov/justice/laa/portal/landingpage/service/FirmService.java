@@ -24,6 +24,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.ArrayList;
+
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 
 /**
@@ -78,19 +81,17 @@ public class FirmService {
     }
 
     public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
-        List<FirmDto> userFirms = new java.util.ArrayList<>(entraUser.getUserProfiles().stream()
+        List<FirmDto> userFirms = new ArrayList<>(entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .filter(userProfile -> userProfile.getFirm() != null)
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
-        if (entraUser.isMultiFirmUser()) {
-            List<FirmDto> child = entraUser.getUserProfiles().stream()
-                    .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
-                            && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
-                    .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
-                    .map(firm -> mapper.map(firm, FirmDto.class))
-                    .toList();
-            userFirms.addAll(child);
-        }
+        List<FirmDto> child = entraUser.getUserProfiles().stream()
+                .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
+                        && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
+                .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .toList();
+        userFirms.addAll(child);
         return userFirms;
     }
 
