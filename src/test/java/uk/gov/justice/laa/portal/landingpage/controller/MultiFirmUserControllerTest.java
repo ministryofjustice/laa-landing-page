@@ -1180,16 +1180,20 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("addUserProfileAllSelectedRoles", Map.of());
         session.setAttribute("userOffices", List.of("office1"));
 
-        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("Office One").build();
-        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build())
-                .build();
-        Firm firm = Firm.builder().offices(Set.of(office)).build();
-        UserProfile profile = UserProfile.builder().firm(firm).build();
+        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("office1").build();
+        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build()).build();
+        Firm currentUsersFirm = Firm.builder().id(UUID.randomUUID()).offices(Set.of(office)).build();
+        UserProfile profile = UserProfile.builder().firm(currentUsersFirm).build();
+        Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
+        UUID targetFirmId = UUID.randomUUID();
+        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
+        session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
 
         when(appRoleService.getByIds(any())).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(officeDto));
+        when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
 
         assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, session, model))
                 .isInstanceOf(RuntimeException.class)
@@ -1540,6 +1544,8 @@ public class MultiFirmUserControllerTest {
         Firm child2 = Firm.builder().id(UUID.randomUUID()).name("Child Two").code("1002").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child1, child2)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+        when(firmService.getFilteredChildFirms(parent, null)).thenReturn(List.of(child1, child2));
+        when(firmService.includeParentFirm(parent, null)).thenReturn(true);
 
         String view = controller.selectDelegateFirm(null, model, session, authentication);
 
@@ -1555,6 +1561,8 @@ public class MultiFirmUserControllerTest {
         Firm child = Firm.builder().id(UUID.randomUUID()).name("Alpha Firm").code("A1").build();
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+        when(firmService.getFilteredChildFirms(parent, "alpha")).thenReturn(List.of(child));
+        when(firmService.includeParentFirm(parent, "alpha")).thenReturn(false);
 
         String view = controller.selectDelegateFirm("alpha", model, session, authentication);
 

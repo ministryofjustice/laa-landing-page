@@ -387,6 +387,10 @@ public class AccessControlServiceTest {
         UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL).entraUser(accessedEntra).build();
 
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        Mockito.when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
+                FirmDto.builder().id(parentFirmId).build(),
+                FirmDto.builder().id(childFirmId).build()
+        ));
         Mockito.when(userService.getUserProfileById(accessedProfileId.toString())).thenReturn(Optional.of(accessedProfile));
         Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
         Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);

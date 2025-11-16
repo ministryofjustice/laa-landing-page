@@ -209,7 +209,7 @@ public class MultiFirmUserController {
                         : authenticatedUserProfile.getFirm();
 
                 Optional<UserProfile> sameFirmProfile = entraUser.getUserProfiles().stream()
-                        .filter(up -> up.getFirm().equals(authenticatedUserProfile.getFirm())).findFirst();
+                        .filter(up -> up.getFirm().equals(compareFirm)).findFirst();
 
                 if (sameFirmProfile.isPresent()) {
                     log.debug(
