@@ -34,9 +34,9 @@ public class AuditController {
      * Shows all registered users including those without firm profiles
      */
     @GetMapping("/users/audit")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(" +
-            "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER, " +
-            "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(Permission).VIEW_INTERNAL_USER, "
+            + "T(Permission).VIEW_EXTERNAL_USER)")
     public String displayAuditTable(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,
@@ -65,13 +65,13 @@ public class AuditController {
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 search, firmId, silasRole, page, size, sort, direction);
 
-        // Get all SiLAS roles for dropdown filter
-        List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
-
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm();
         firmSearchForm.setFirmSearch(firmSearch);
         firmSearchForm.setSelectedFirmId(firmId);
+
+        // Get all SiLAS roles for dropdown filter
+        final List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
 
         // Add attributes to model
         model.addAttribute("users", paginatedUsers.getUsers());
