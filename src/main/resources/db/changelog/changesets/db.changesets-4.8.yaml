@@ -1,0 +1,38 @@
+databaseChangeLog:
+  - changeSet:
+      id: performance-idx-entra-user-id
+      author: performance-optimization
+      changes:
+        - createIndex:
+            columns:
+              - column:
+                  name: entra_user_id
+            indexName: idx_user_profile_entra_user_id
+            tableName: user_profile
+            using: btree
+
+  - changeSet:
+      id: performance-idx-app-role-authz
+      author: performance-optimization
+      changes:
+        - createIndex:
+            columns:
+              - column:
+                  name: authz_role
+              - column:
+                  name: name
+            indexName: idx_app_role_authz_name
+            tableName: app_role
+            using: btree
+
+  - changeSet:
+      id: performance-idx-multi-firm-user
+      author: performance-optimization
+      changes:
+        - createIndex:
+            columns:
+              - column:
+                  name: multi_firm_user
+            indexName: idx_entra_user_multi_firm
+            tableName: entra_user
+            using: btree

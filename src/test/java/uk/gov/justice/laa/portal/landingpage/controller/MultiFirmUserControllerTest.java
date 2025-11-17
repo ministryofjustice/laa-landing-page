@@ -891,8 +891,8 @@ public class MultiFirmUserControllerTest {
                 .build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -922,8 +922,8 @@ public class MultiFirmUserControllerTest {
         EntraUserDto user = EntraUserDto.builder().fullName("Test User").build();
         session.setAttribute("entraUser", user);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -951,8 +951,8 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("ALL")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -981,8 +981,8 @@ public class MultiFirmUserControllerTest {
         OfficesForm officesForm = OfficesForm.builder().offices(List.of("invalid-office-id")).build();
         session.setAttribute("officesForm", officesForm);
 
-        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2").city("City")
-                .postcode("12345").build();
+        Office.Address address = Office.Address.builder().addressLine1("Line1").addressLine2("Line2")
+                .addressLine3("Line3").city("City").postcode("12345").build();
         Office office = Office.builder().id(UUID.fromString("00000000-0000-0000-0000-000000000001")).code("office1")
                 .address(address).build();
         Firm firm = Firm.builder().offices(Set.of(office)).build();
@@ -1401,11 +1401,7 @@ public class MultiFirmUserControllerTest {
                 .activeProfile(true)
                 .build();
 
-        UserProfile profile1 = UserProfile.builder().build();
-        UserProfile profile2 = UserProfile.builder().build();
-
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
-        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(profile1, profile2));
 
         // Act
         String result = controller.deleteFirmProfileConfirm(userProfileId, model);
@@ -1436,33 +1432,6 @@ public class MultiFirmUserControllerTest {
 
         // Act & Assert
         assertThrows(RuntimeException.class, () -> controller.deleteFirmProfileConfirm(userProfileId, model));
-    }
-
-    @Test
-    public void deleteFirmProfileConfirm_lastProfile_shouldReturnRedirect() {
-        // Arrange
-        String userProfileId = "123e4567-e89b-12d3-a456-426614174000";
-        java.util.UUID entraUserId = java.util.UUID.randomUUID();
-
-        uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto entraUserDto = uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto
-                .builder()
-                .id(entraUserId.toString())
-                .multiFirmUser(true)
-                .build();
-
-        uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto userProfileDto = uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto
-                .builder()
-                .entraUser(entraUserDto)
-                .build();
-
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(userProfileDto));
-        // Only one profile
-        when(userService.getUserProfilesByEntraUserId(entraUserId)).thenReturn(List.of(UserProfile.builder().build()));
-
-        // Act & Assert - Should throw exception for last profile deletion
-        assertThatThrownBy(() -> controller.deleteFirmProfileConfirm(userProfileId, model))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot delete the last firm profile");
     }
 
     @Test
@@ -1549,8 +1518,10 @@ public class MultiFirmUserControllerTest {
         verify(userService, Mockito.never()).deleteFirmProfile(Mockito.anyString(), Mockito.any());
     }
 
-    // Note: The test for null confirm parameter has been removed because the parameter 
-    // is now required=true, so Spring will handle missing parameter validation at the 
+    // Note: The test for null confirm parameter has been removed because the
+    // parameter
+    // is now required=true, so Spring will handle missing parameter validation at
+    // the
     // framework level before the controller method is invoked.
 
 }

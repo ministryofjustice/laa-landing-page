@@ -176,13 +176,6 @@ public class MultiFirmUserController {
             throw new RuntimeException("This operation is only available for multi-firm users.");
         }
 
-        // Count the number of profiles to prevent deletion of last profile
-        List<UserProfile> allProfiles = userService.getUserProfilesByEntraUserId(UUID.fromString(entraUser.getId()));
-        if (allProfiles.size() <= 1) {
-            throw new RuntimeException(
-                    "Cannot delete the last firm profile. User must have at least one profile.");
-        }
-
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());
@@ -489,7 +482,9 @@ public class MultiFirmUserController {
                 .map(office -> new OfficeModel(
                         office.getCode(),
                         OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
-                                .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                .addressLine2(office.getAddress().getAddressLine2())
+                                .addressLine3(office.getAddress().getAddressLine3())
+                                .city(office.getAddress().getCity())
                                 .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
