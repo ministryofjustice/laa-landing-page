@@ -118,8 +118,10 @@ public class AppSelectionTest extends BaseIntegrationTest {
         assertNotNull(session.getAttribute("selectedApps"));
         @SuppressWarnings("unchecked")
         List<String> returnedSelectApps = (List<String>) session.getAttribute("selectedApps");
-        assertEquals(1, returnedSelectApps.size());
-        assertEquals(selectedApps[0], returnedSelectApps.getFirst());
+        assertEquals(0, returnedSelectApps.size());
+        List<String> returnedAppWithOnlyOneRole = (List<String>) session.getAttribute("editAppWithOnlyOneRole");
+        assertEquals(1, returnedAppWithOnlyOneRole.size());
+        assertEquals(selectedApps[0], returnedAppWithOnlyOneRole.getFirst());
     }
 
     @Test
