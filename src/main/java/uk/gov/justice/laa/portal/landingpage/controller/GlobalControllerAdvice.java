@@ -28,6 +28,9 @@ public class GlobalControllerAdvice {
     @Value("${feature.flag.enable.multi.firm.user}")
     private boolean enableMultiFirmUser;
 
+    @Value("${feature.flag.enable.user.audit.table}")
+    private boolean enableUserAuditTable;
+
     public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
     }
@@ -88,6 +91,11 @@ public class GlobalControllerAdvice {
     @ModelAttribute("enableMultiFirmUser")
     public boolean getMultiFirmEnabledFlag() {
         return enableMultiFirmUser;
+    }
+
+    @ModelAttribute("enableUserAuditTable")
+    public boolean getUserAuditTableEnabledFlag() {
+        return enableUserAuditTable;
     }
 
     @ModelAttribute("currentUser")
