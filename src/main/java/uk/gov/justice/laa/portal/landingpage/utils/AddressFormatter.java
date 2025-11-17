@@ -12,11 +12,12 @@ public final class AddressFormatter {
      * 
      * @param addressLine1 First line of the address
      * @param addressLine2 Second line of the address
+     * @param addressLine3 Third line of the address
      * @param city City name
      * @param postcode Postal code
      * @return Formatted address string with components separated by commas
      */
-    public static String formatAddress(String addressLine1, String addressLine2, String city, String postcode) {
+    public static String formatAddress(String addressLine1, String addressLine2, String addressLine3, String city, String postcode) {
         StringBuilder sb = new StringBuilder();
         
         if (addressLine1 != null && !addressLine1.trim().isEmpty()) {
@@ -28,6 +29,13 @@ public final class AddressFormatter {
                 sb.append(", ");
             }
             sb.append(addressLine2);
+        }
+
+        if (addressLine3 != null && !addressLine3.trim().isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(addressLine3);
         }
         
         if (city != null && !city.trim().isEmpty()) {

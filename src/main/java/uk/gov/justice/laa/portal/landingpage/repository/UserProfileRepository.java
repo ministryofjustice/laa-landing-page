@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -49,53 +50,41 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
 
     @Query(value = """
-                        SELECT ups FROM UserProfile ups
-                                    JOIN FETCH ups.entraUser u
-                                    LEFT JOIN FETCH ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
-                        AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
-                        AND (
-                            (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
-                            EXISTS (
-                                SELECT 1 FROM ups.entraUser u
-                                WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                            )
-                        )
-                        AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
-                            SELECT 1 FROM ups.appRoles ar
-                            WHERE ar.authzRole = true
-                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
-                        ))
-                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
-                            SELECT 1 FROM ups.entraUser u
-                            WHERE u.multiFirmUser = true
-                        ))
-                        """, countQuery = """
-                        SELECT COUNT(ups) FROM UserProfile ups
+                        SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto(ups.id, ups.activeProfile,
+                                        ups.userType, ups.legacyUserId,  ups.userProfileStatus, u.multiFirmUser, u.firstName,
+                                        u.lastName, CONCAT(u.firstName, ' ', u.lastName), u.email, u.userStatus, f.name)
+                                FROM UserProfile ups
+                                    JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
             WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
-                        AND (
-                            (:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '') OR
-                            EXISTS (
-                                SELECT 1 FROM ups.entraUser u
-                                WHERE u = ups.entraUser
-                                AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
+                        AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
+                                OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
                                 OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
-                            )
-                        )
                         AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
                             SELECT 1 FROM ups.appRoles ar
                             WHERE ar.authzRole = true
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
-                        AND (:#{#criteria.showMultiFirmUsers} = false OR EXISTS (
-                            SELECT 1 FROM ups.entraUser u
-                            WHERE u.multiFirmUser = true
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
+            """,
+            countQuery = """
+                        SELECT COUNT(ups) FROM UserProfile ups
+                                    JOIN ups.entraUser u
+                                    LEFT JOIN ups.firm f
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+                        AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
+                        AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
+                                        OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
+                                        OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
+                        AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
+                            SELECT 1 FROM ups.appRoles ar
+                            WHERE ar.authzRole = true
+                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
                         """)
-    Page<UserProfile> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
+    Page<UserSearchResultsDto> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 
     @Query("""
             SELECT ups FROM UserProfile ups
