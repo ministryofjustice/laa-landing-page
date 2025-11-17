@@ -35,8 +35,8 @@ public class AuditController {
      */
     @GetMapping("/users/audit")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(Permission).VIEW_INTERNAL_USER, "
-            + "T(Permission).VIEW_EXTERNAL_USER)")
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER, "
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
     public String displayAuditTable(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,
