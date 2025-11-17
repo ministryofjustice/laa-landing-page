@@ -1503,18 +1503,18 @@ public class UserService {
      */
     private String mapAuditSortField(String sort) {
         if (sort == null) {
-            return "lastName";
+            return "firstName";
         }
 
         return switch (sort.toLowerCase()) {
-            case "name" -> "lastName"; // Sort by last name for name column
+            case "name" -> "firstName"; // Sort by first name for name column
             case "email" -> "email";
-            case "usertype" -> "lastName"; // Can't sort by calculated field, use lastName
-            case "firm" -> "lastName"; // Can't sort by nested collection, use lastName
+            case "usertype" -> "multiFirmUser"; // Sort by multiFirmUser for user type (ex 3rd party sorts differently)
+            case "firm" -> "firstName"; // Sort by first name (firm is derived from profiles)
             case "accountstatus" -> "userStatus"; // Sort by userStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
-            case "profilecount" -> "lastName"; // Can't sort by calculated count, use lastName
-            default -> "lastName"; // Default to last name
+            case "profilecount" -> "firstName"; // Sort by first name (profile count is calculated)
+            default -> "firstName"; // Default to first name
         };
     }
 
