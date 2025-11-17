@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -1342,7 +1343,7 @@ public class UserService {
      * @param direction  Sort direction (asc/desc)
      * @return Paginated audit users
      */
-    public uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers getAuditUsers(
+    public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole,
             int page, int pageSize, String sort, String direction) {
 
@@ -1354,7 +1355,17 @@ public class UserService {
         Page<EntraUser> userPage = entraUserRepository.findAllUsersForAudit(
                 searchTerm, firmId, silasRole, pageRequest);
 
-        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = userPage.getContent().stream()
+        // Second query: Batch fetch relationships for the paginated users
+        List<EntraUser> usersWithRelations = Collections.emptyList();
+        if (!userPage.getContent().isEmpty()) {
+            Set<UUID> userIds = userPage.getContent().stream()
+                    .map(EntraUser::getId)
+                    .collect(Collectors.toSet());
+            usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
+        }
+
+        // Map to DTOs
+        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = usersWithRelations.stream()
                 .map(this::mapToAuditUserDto)
                 .toList();
 
@@ -1489,7 +1500,6 @@ public class UserService {
 
     /**
      * Map audit table sort field to entity field
-     * The audit table uses display names, but we need to map to entity fields
      */
     private String mapAuditSortField(String sort) {
         if (sort == null) {
@@ -1510,16 +1520,12 @@ public class UserService {
 
     /**
      * Get Sort for audit table queries
-     * This is for EntraUser entity queries, not UserProfile queries
      */
     private Sort getAuditSort(String field, String direction) {
         Sort.Direction order = Sort.Direction.ASC;
         if (direction != null && !direction.isEmpty()) {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
-
-        // For audit queries, we're querying EntraUser directly, so no "entraUser."
-        // prefix needed
         return Sort.by(order, field);
     }
 }

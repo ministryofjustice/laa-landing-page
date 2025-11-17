@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -31,35 +33,29 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
      */
     @Query(value = """
             SELECT DISTINCT u FROM EntraUser u
-            LEFT JOIN FETCH u.userProfiles up
-            LEFT JOIN FETCH up.firm f
-            LEFT JOIN FETCH up.appRoles ar
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                    LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                    LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
             AND (:firmId IS NULL OR EXISTS (
-                SELECT 1 FROM u.userProfiles up2 WHERE up2.firm.id = :firmId
+                SELECT 1 FROM UserProfile up2 WHERE up2.entraUser.id = u.id AND up2.firm.id = :firmId
             ))
             AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
-                SELECT 1 FROM u.userProfiles up3
+                SELECT 1 FROM UserProfile up3
                 JOIN up3.appRoles ar3
-                WHERE ar3.authzRole = true AND ar3.name = :silasRole
+                WHERE up3.entraUser.id = u.id AND ar3.authzRole = true AND ar3.name = :silasRole
             ))
             """, countQuery = """
-            SELECT COUNT(DISTINCT u) FROM EntraUser u
-            LEFT JOIN u.userProfiles up
-            LEFT JOIN up.firm f
-            LEFT JOIN up.appRoles ar
+            SELECT COUNT(DISTINCT u.id) FROM EntraUser u
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                    LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                    LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
             AND (:firmId IS NULL OR EXISTS (
-                SELECT 1 FROM u.userProfiles up2 WHERE up2.firm.id = :firmId
+                SELECT 1 FROM UserProfile up2 WHERE up2.entraUser.id = u.id AND up2.firm.id = :firmId
             ))
             AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
-                SELECT 1 FROM u.userProfiles up3
+                SELECT 1 FROM UserProfile up3
                 JOIN up3.appRoles ar3
-                WHERE ar3.authzRole = true AND ar3.name = :silasRole
+                WHERE up3.entraUser.id = u.id AND ar3.authzRole = true AND ar3.name = :silasRole
             ))
             """)
     Page<EntraUser> findAllUsersForAudit(
@@ -67,4 +63,16 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             Pageable pageable);
+
+    /**
+     * Batch fetch user profiles with firms and roles for given users
+     */
+    @Query("""
+            SELECT DISTINCT u FROM EntraUser u
+            LEFT JOIN FETCH u.userProfiles up
+            LEFT JOIN FETCH up.firm
+            LEFT JOIN FETCH up.appRoles
+            WHERE u.id IN :userIds
+            """)
+    List<EntraUser> findUsersWithProfilesAndRoles(@Param("userIds") Set<UUID> userIds);
 }

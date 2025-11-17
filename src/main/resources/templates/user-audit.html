@@ -654,7 +654,7 @@
                                     style="width: 15%; min-width: 120px;">
                                     <button type="button" class="sort-button" data-sort="firm"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}">
-                                        Firm Association
+                                        Firm
                                         <img th:if="${sort == 'firm' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                         <img th:if="${sort == 'firm' and direction == 'desc'}"
@@ -719,7 +719,7 @@
                                     th:text="${user.email}"></td>
                                 <td class="govuk-table__cell" th:text="${user.userType}"></td>
                                 <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.firmAssociation}"></td>
+                                    th:text="${user.firmAssociation != null and user.firmAssociation != 'None' ? user.firmAssociation : ''}"></td>
                                 <td class="govuk-table__cell" th:text="${user.accountStatus}"></td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>
