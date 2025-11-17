@@ -752,10 +752,12 @@
                 <!-- Pagination numbers -->
                 <li class="govuk-pagination__item"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
-                    <a class="govuk-link govuk-pagination__link"
+                    <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
                         th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
-                        th:if="${page != 1}">1</a>
-                    <a class="govuk-link govuk-pagination__link" th:if="${page == 1}" aria-current="page">1</a>
+                        th:aria-label="'Page 1'">1</a>
+                    <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
+                        th:aria-label="'Page 1'" aria-current="page">1</a>
                 </li>
 
                 <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page > 4}">
@@ -766,11 +768,12 @@
                     th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, page - 2), T(java.lang.Math).min(totalPages - 1, page + 2))}">
                     <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                         th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
-                        <a class="govuk-link govuk-pagination__link"
+                        <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
                             th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
-                            th:if="${i != page}" th:text="${i}"></a>
-                        <a class="govuk-link govuk-pagination__link" th:if="${i == page}" aria-current="page"
-                            th:text="${i}"></a>
+                            th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                        <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
+                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
+                            th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                     </li>
                 </th:block>
 
@@ -780,11 +783,12 @@
 
                 <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                     th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
-                    <a class="govuk-link govuk-pagination__link"
+                    <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
                         th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
-                        th:if="${page != totalPages}" th:text="${totalPages}"></a>
-                    <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}" aria-current="page"
-                        th:text="${totalPages}"></a>
+                        th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
+                    <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, sort=${sort}, direction=${direction})}"
+                        th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                 </li>
             </ul>
 
