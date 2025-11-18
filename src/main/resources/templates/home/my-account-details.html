@@ -71,7 +71,7 @@
                                 <dd class="govuk-summary-list__value"
                                     th:text="${isUserManager ? 'Provider Admin' : 'Provider User'}">Provider User</dd>
                             </div>
-                            <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser and !isInternalUser}">
+                            <div class="govuk-summary-list__row" th:if="${!isInternalUser}">
                                 <dt class="govuk-summary-list__key">Multi-firm access</dt>
                                 <dd class="govuk-summary-list__value" th:text="${isMultiFirmUser ? 'Yes' : 'No'}">No
                                 </dd>
