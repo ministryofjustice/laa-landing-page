@@ -840,7 +840,7 @@ class UserControllerTest {
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/multi-firm");
     }
 
-       @Test
+    @Test
     void postSessionUser() {
         EntraUserDto mockUser = new EntraUserDto();
         mockUser.setFullName("Test User");
