@@ -62,6 +62,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> multiFirmUsers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
+    protected List<EntraUser> informationAndAssuranceUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
     @BeforeAll
@@ -283,6 +284,19 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         multiFirmUsers.add(entraUserRepository.saveAndFlush(user));
 
+        // Set up Information & Assurance User
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InformationAndAssuranceUser");
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        AppRole informationAndAssuranceRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Information & Assurance"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(informationAndAssuranceRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        informationAndAssuranceUsers.add(entraUserRepository.saveAndFlush(user));
+
 
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
@@ -296,6 +310,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(internalUserViewers);
         allUsers.addAll(externalUserViewers);
         allUsers.addAll(multiFirmUsers);
+        allUsers.addAll(informationAndAssuranceUsers);
     }
 
     protected void clearRepositories() {
