@@ -25,6 +25,9 @@ public class GlobalControllerAdvice {
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
     private final LoginService loginService;
 
+    @Value("${feature.flag.enable.user.audit.table}")
+    private boolean enableUserAuditTable;
+
     public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
     }
@@ -82,6 +85,11 @@ public class GlobalControllerAdvice {
         return null;
     }
 
+
+    @ModelAttribute("enableUserAuditTable")
+    public boolean getUserAuditTableEnabledFlag() {
+        return enableUserAuditTable;
+    }
 
     @ModelAttribute("currentUser")
     public CurrentUserDto getCurrentUserProfile(Authentication authentication, HttpServletRequest request) {

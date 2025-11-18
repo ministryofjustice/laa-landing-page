@@ -54,6 +54,17 @@
                     </div>
                 </div>
 
+                <div th:if="${canViewAuditTable && enableUserAuditTable}" class="govuk-grid-row govuk-!-margin-top-4">
+                    <div class="govuk-grid-column-full">
+                        <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                            <h3 class="govuk-heading-m">
+                                <a href="/admin/users/audit" class="govuk-link govuk-link--no-visited-state">User Access Audit Table</a>
+                            </h3>
+                            <p class="govuk-body">View all registered users including account status and role assignments</p>
+                        </div>
+                    </div>
+                </div>
+
                 <h2 class="govuk-heading-l">Legal aid services</h2>
 
                 <div th:if="${userHasNoRoles}" class="govuk-grid-row">
