@@ -35,8 +35,7 @@ public class AuditController {
      */
     @GetMapping("/users/audit")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER, "
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
     public String displayAuditTable(
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "page", defaultValue = "1") int page,
@@ -70,9 +69,6 @@ public class AuditController {
         firmSearchForm.setFirmSearch(firmSearch);
         firmSearchForm.setSelectedFirmId(firmId);
 
-        // Get all SiLAS roles for dropdown filter
-        final List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
-
         // Add attributes to model
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -82,6 +78,8 @@ public class AuditController {
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", search);
         model.addAttribute("firmSearch", firmSearchForm);
+        // Get all SiLAS roles for dropdown filter
+        List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
         model.addAttribute("silasRoles", silasRoles);
         model.addAttribute("selectedSilasRole", silasRole != null ? silasRole : "");
         model.addAttribute("sort", sort);
