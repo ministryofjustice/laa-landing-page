@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -45,6 +46,7 @@ public class AuditController {
             @RequestParam(name = "firmSearch", required = false) String firmSearch,
             @RequestParam(name = "selectedFirmId", required = false) String selectedFirmId,
             @RequestParam(name = "silasRole", required = false) String silasRole,
+            @RequestParam(name = "selectedAppId", required = false) String selectedAppId,
             Model model) {
 
         log.debug("AuditController.displayAuditTable - search: '{}', firmSearch: '{}', silasRole: '{}'",
@@ -60,9 +62,19 @@ public class AuditController {
             }
         }
 
+        // Parse app ID if provided
+        UUID appId = null;
+        if (selectedAppId != null && !selectedAppId.isBlank()) {
+            try {
+                appId = UUID.fromString(selectedAppId);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid app ID format: {}", selectedAppId);
+            }
+        }
+
         // Get audit users
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
-                search, firmId, silasRole, page, size, sort, direction);
+                search, firmId, silasRole, appId, page, size, sort, direction);
 
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm();
@@ -81,7 +93,10 @@ public class AuditController {
         // Get all SiLAS roles for dropdown filter
         List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
         model.addAttribute("silasRoles", silasRoles);
+        List<AppDto> apps = userService.getApps();
+        model.addAttribute("apps", apps);
         model.addAttribute("selectedSilasRole", silasRole != null ? silasRole : "");
+        model.addAttribute("selectedAppId", selectedAppId != null ? selectedAppId : "");
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
 
