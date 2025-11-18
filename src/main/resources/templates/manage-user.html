@@ -91,7 +91,9 @@
                         <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
                         <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
                             This user is set up as a multi-firm user.
-                            <a class="govuk-link" href="#" th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
+                            <a class="govuk-link"
+                               th:href="@{/admin/users (search=${user.entraUser.email})}"
+                               th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
                         </p>
                     </div>
                 </div>
