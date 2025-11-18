@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.config.featureflag;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import uk.gov.justice.laa.portal.landingpage.controller.interceptor.MultFirmFeatureFlagInterceptor;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

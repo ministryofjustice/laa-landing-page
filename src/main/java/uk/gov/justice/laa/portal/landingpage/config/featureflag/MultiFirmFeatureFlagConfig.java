@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.config.featureflag;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import uk.gov.justice.laa.portal.landingpage.controller.interceptor.MultFirmFeatureFlagInterceptor;
 
 @Configuration
 public class MultiFirmFeatureFlagConfig implements WebMvcConfigurer {

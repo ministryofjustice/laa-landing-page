@@ -186,17 +186,4 @@ class GlobalControllerAdviceTest {
         assertThat(result).isFalse();
     }
 
-    @Test
-    void getActiveFirmFlag_flag_off() {
-        boolean result = controller.getMultiFirmEnabledFlag();
-        assertThat(result).isFalse();
-    }
-
-    @Test
-    void getActiveFirmFlag_flag_on() {
-        ReflectionTestUtils.setField(controller, "enableMultiFirmUser", true);
-        boolean result = controller.getMultiFirmEnabledFlag();
-        assertThat(result).isTrue();
-    }
-
 }

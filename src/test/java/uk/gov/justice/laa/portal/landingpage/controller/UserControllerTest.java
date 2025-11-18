@@ -149,7 +149,6 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService);
         ReflectionTestUtils.setField(userController, "enableResendVerificationCode", true);
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -291,42 +290,6 @@ class UserControllerTest {
         assertThat(model.getAttribute("page")).isEqualTo(1);
         assertThat(model.getAttribute("totalUsers")).isEqualTo(100L);
         assertThat(model.getAttribute("totalPages")).isEqualTo(10);
-        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(true);
-    }
-
-    @Test
-    void displayAllUsers_disableMultiFirmUser() {
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        PaginatedUsers paginatedUsers = new PaginatedUsers();
-        paginatedUsers.setUsers(new ArrayList<>());
-        paginatedUsers.setNextPageLink("nextPageLink");
-        paginatedUsers.setPreviousPageLink("previousPageLink");
-        paginatedUsers.setTotalUsers(100);
-        paginatedUsers.setTotalPages(10);
-        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
-        when(userService.isInternal(any(UUID.class))).thenReturn(false);
-        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
-        when(session.getAttribute("successMessage")).thenReturn(null);
-        when(session.getAttribute("firmSearchForm")).thenReturn(null);
-        FirmDto firmDto = new FirmDto();
-        firmDto.setId(UUID.randomUUID());
-        when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
-        when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
-                any())).thenReturn(paginatedUsers);
-
-        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, false, firmSearchForm,
-                model,
-                session,
-                authentication);
-
-        assertThat(view).isEqualTo("users");
-        assertThat(model.getAttribute("users")).isEqualTo(paginatedUsers.getUsers());
-        assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
-        assertThat(model.getAttribute("page")).isEqualTo(1);
-        assertThat(model.getAttribute("totalUsers")).isEqualTo(100L);
-        assertThat(model.getAttribute("totalPages")).isEqualTo(10);
-        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(false);
     }
 
     @Test
@@ -877,28 +840,7 @@ class UserControllerTest {
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/multi-firm");
     }
 
-    @Test
-    void postNewUserDisableMultiFirm() {
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("firstName");
-        userDetailsForm.setLastName("lastName");
-        userDetailsForm.setEmail("email");
-        userDetailsForm.setUserManager(true);
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        HttpSession session = new MockHttpSession();
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
-        EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
-        assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
-        assertThat(sessionUser.getLastName()).isEqualTo("lastName");
-        assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
-        assertThat(sessionUser.getEmail()).isEqualTo("email");
-        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
-        assertThat(isUserManager).isEqualTo(true);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
-    }
-
-    @Test
+       @Test
     void postSessionUser() {
         EntraUserDto mockUser = new EntraUserDto();
         mockUser.setFullName("Test User");
@@ -922,30 +864,6 @@ class UserControllerTest {
     }
 
     @Test
-    void postSessionUser_disableMultiFirm() {
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        EntraUserDto mockUser = new EntraUserDto();
-        mockUser.setFullName("Test User");
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("user", mockUser);
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("firstName");
-        userDetailsForm.setLastName("lastName");
-        userDetailsForm.setEmail("email");
-        userDetailsForm.setUserManager(true);
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
-        EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
-        assertThat(sessionUser.getFirstName()).isEqualTo("firstName");
-        assertThat(sessionUser.getLastName()).isEqualTo("lastName");
-        assertThat(sessionUser.getFullName()).isEqualTo("firstName lastName");
-        assertThat(sessionUser.getEmail()).isEqualTo("email");
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
-        boolean isUserManager = (boolean) session.getAttribute("isUserManager");
-        assertThat(isUserManager).isEqualTo(true);
-    }
-
-    @Test
     void editSessionUser() {
         EntraUserDto mockUser = new EntraUserDto();
         mockUser.setFullName("Test User");
@@ -961,25 +879,6 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/multi-firm");
-    }
-
-    @Test
-    void editSessionUser_disableMultiFirm() {
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        EntraUserDto mockUser = new EntraUserDto();
-        mockUser.setFullName("Test User");
-        FirmDto firmDto = new FirmDto();
-        HttpSession session = new MockHttpSession();
-        session.setAttribute("user", mockUser);
-        session.setAttribute("firm", firmDto);
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setFirstName("firstName");
-        userDetailsForm.setLastName("lastName");
-        userDetailsForm.setEmail("email");
-        userDetailsForm.setUserManager(true);
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        String redirectUrl = userController.postUser(userDetailsForm, bindingResult, session, model);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/firm");
     }
 
     @Test
@@ -2770,8 +2669,6 @@ class UserControllerTest {
     @Test
     void manageUser_shouldAddEnableMultiFirmUserFlagToModel_whenFeatureEnabled() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
-
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("external-user-id");
         entraUser.setMultiFirmUser(false);
@@ -2802,46 +2699,6 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(true);
-        assertThat(model.getAttribute("externalUser")).isEqualTo(true);
-    }
-
-    @Test
-    void manageUser_shouldAddEnableMultiFirmUserFlagToModel_whenFeatureDisabled() {
-        // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("external-user-id");
-        entraUser.setMultiFirmUser(false);
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .appRoles(List.of())
-                .userType(UserType.EXTERNAL)
-                .build();
-        // Given - Editor is an Internal user
-        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        UserProfile editorUserProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(editorEntraUser)
-                .appRoles(Set.of())
-                .offices(Set.of())
-                .userType(UserType.INTERNAL)
-                .build();
-
-        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
-        when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
-        when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
-
-        // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
-
-        // Then
-        assertThat(view).isEqualTo("manage-user");
-        assertThat(model.getAttribute("enableMultiFirmUser")).isEqualTo(false);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
     }
 
@@ -3089,27 +2946,6 @@ class UserControllerTest {
         String view = userController.postUser(form, result, session, model);
 
         assertThat(view).isEqualTo("redirect:/admin/user/create/multi-firm");
-        assertThat(session.getAttribute("isUserManager")).isEqualTo(false);
-        assertThat(session.getAttribute("user")).isNotNull();
-    }
-
-    @Test
-    void postUser_shouldRedirectOnNoValidationErrors_disableMultiFirm() {
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        BindingResult result = Mockito.mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(false);
-        UserDetailsForm form = new UserDetailsForm();
-        form.setFirstName("A");
-        form.setLastName("B");
-        form.setEmail("a@b.com");
-        form.setUserManager(false);
-
-        final Model model = new ExtendedModelMap();
-        HttpSession session = new MockHttpSession();
-
-        String view = userController.postUser(form, result, session, model);
-
-        assertThat(view).isEqualTo("redirect:/admin/user/create/firm");
         assertThat(session.getAttribute("isUserManager")).isEqualTo(false);
         assertThat(session.getAttribute("user")).isNotNull();
     }
@@ -3427,41 +3263,6 @@ class UserControllerTest {
         verify(emailValidationService).isValidEmailDomain("test@valid-domain.com");
         verify(bindingResult, never()).rejectValue(eq("email"), eq("email.invalidDomain"), anyString());
         assertThat(result).isEqualTo("redirect:/admin/user/create/multi-firm");
-
-        // Verify user details are set correctly
-        EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
-        assertThat(sessionUser.getFirstName()).isEqualTo("Test");
-        assertThat(sessionUser.getLastName()).isEqualTo("User");
-        assertThat(sessionUser.getFullName()).isEqualTo("Test User");
-        assertThat(sessionUser.getEmail()).isEqualTo("test@valid-domain.com");
-    }
-
-    @Test
-    void postUser_shouldAcceptEmailWithValidDomainDisableMultiFirm() {
-        // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        UserDetailsForm userDetailsForm = new UserDetailsForm();
-        userDetailsForm.setEmail("test@valid-domain.com");
-        userDetailsForm.setFirstName("Test");
-        userDetailsForm.setLastName("User");
-
-        EntraUserDto user = new EntraUserDto();
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("user", user);
-
-        when(userService.userExistsByEmail("test@valid-domain.com")).thenReturn(false);
-        when(emailValidationService.isValidEmailDomain("test@valid-domain.com")).thenReturn(true);
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
-
-        // When
-        String result = userController.postUser(userDetailsForm, bindingResult, testSession, model);
-
-        // Then
-        verify(emailValidationService).isValidEmailDomain("test@valid-domain.com");
-        verify(bindingResult, never()).rejectValue(eq("email"), eq("email.invalidDomain"), anyString());
-        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
 
         // Verify user details are set correctly
         EntraUserDto sessionUser = (EntraUserDto) testSession.getAttribute("user");
@@ -5585,7 +5386,6 @@ class UserControllerTest {
     @Test
     void createUserMultiFirm_get_withFeatureFlagEnabled_returnsMultiFirmPage() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5602,26 +5402,8 @@ class UserControllerTest {
     }
 
     @Test
-    void createUserMultiFirm_get_withFeatureFlagDisabled_redirectsToFirmSelection() {
-        // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        MockHttpSession session = new MockHttpSession();
-        EntraUserDto user = new EntraUserDto();
-        session.setAttribute("user", user);
-
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-
-        // When
-        String result = userController.createUserMultiFirm(multiFirmForm, session, model);
-
-        // Then
-        assertThat(result).isEqualTo("redirect:/admin/user/create/firm");
-    }
-
-    @Test
     void createUserMultiFirm_get_withNoUserInSession_redirectsToDetails() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
 
         uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
@@ -5636,7 +5418,6 @@ class UserControllerTest {
     @Test
     void createUserMultiFirm_get_prePopulatesFormFromSession() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5656,7 +5437,6 @@ class UserControllerTest {
     @Test
     void postUserMultiFirm_withValidYes_redirectsToFirmSelection() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5681,7 +5461,6 @@ class UserControllerTest {
     @Test
     void postUserMultiFirm_withValidNo_redirectsToFirmSelection() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5704,7 +5483,6 @@ class UserControllerTest {
     @Test
     void postUserMultiFirm_withNullValue_returnsError() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5726,29 +5504,8 @@ class UserControllerTest {
     }
 
     @Test
-    void postUserMultiFirm_withFeatureFlagDisabled_redirectsToFirmSelection() {
-        // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-        MockHttpSession session = new MockHttpSession();
-        EntraUserDto user = new EntraUserDto();
-        session.setAttribute("user", user);
-
-        uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm multiFirmForm = new uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm();
-        multiFirmForm.setMultiFirmUser(true);
-
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-
-        // When
-        String result = userController.postUserMultiFirm(multiFirmForm, bindingResult, session, model);
-
-        // Then
-        assertThat(result).isEqualTo("redirect:/admin/user/create/select-firm");
-    }
-
-    @Test
     void getUserCheckAnswers_withMultiFirmUser_hidesFirm() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         MockHttpSession session = new MockHttpSession();
         EntraUserDto user = new EntraUserDto();
         user.setEmail("test@example.com");
@@ -5768,7 +5525,6 @@ class UserControllerTest {
     @Test
     void postUserDetails_withMultiFirmFeatureEnabled_redirectsToMultiFirmPage() {
         // Given
-        ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
         userDetailsForm.setFirstName("Test");
         userDetailsForm.setLastName("User");
@@ -5893,7 +5649,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirm_withFeatureEnabled_returnsForm() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             String userId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
 
@@ -5925,24 +5680,8 @@ class UserControllerTest {
         }
 
         @Test
-        void convertToMultiFirm_withFeatureDisabled_throwsException() {
-            // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-            String userId = UUID.randomUUID().toString();
-            MockHttpSession session = new MockHttpSession();
-            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-
-            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
-
-            // When & Then
-            assertThrows(RuntimeException.class,
-                    () -> userController.convertToMultiFirm(userId, form, model, session, redirectAttributes));
-        }
-
-        @Test
         void convertToMultiFirm_withSessionForm_prePopulatesForm() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             String userId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
 
@@ -5979,7 +5718,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirmPost_withValidYes_convertsUserAndRedirectsToManageUser() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
@@ -6022,7 +5760,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirmPost_withValidNo_redirectsToManageUser() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
@@ -6060,7 +5797,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirmPost_withValidationErrors_returnsForm() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
@@ -6099,30 +5835,8 @@ class UserControllerTest {
         }
 
         @Test
-        void convertToMultiFirmPost_withFeatureDisabled_throwsException() {
-            // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", false);
-            String userId = UUID.randomUUID().toString();
-            MockHttpSession session = new MockHttpSession();
-            Authentication authentication = Mockito.mock(Authentication.class);
-
-            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
-            form.setConvertToMultiFirm(true);
-
-            BindingResult bindingResult = Mockito.mock(BindingResult.class);
-            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-
-            // When & Then
-            RuntimeException exception = assertThrows(RuntimeException.class,
-                    () -> userController.convertToMultiFirmPost(userId, form, bindingResult, session, authentication,
-                            redirectAttributes, model));
-            assertThat(exception.getMessage()).contains("multi-firm feature is not available");
-        }
-
-        @Test
         void convertToMultiFirmPost_withConversionFailure_returnsFormWithError() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
@@ -6166,7 +5880,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirmPost_withInternalUser_throwsException() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
@@ -6204,7 +5917,6 @@ class UserControllerTest {
         @Test
         void convertToMultiFirmPost_withAlreadyMultiFirmUser_redirectsWithError() {
             // Given
-            ReflectionTestUtils.setField(userController, "enableMultiFirmUser", true);
             final String userId = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
