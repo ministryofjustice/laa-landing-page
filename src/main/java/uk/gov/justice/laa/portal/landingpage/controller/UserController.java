@@ -994,21 +994,9 @@ public class UserController {
         UserType userType = user.getUserType();
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
-        //Group and count appRoles
-        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
-
-        List<String> appsWithOneRole = new ArrayList<>();
-
-        // remove from selected apps that have only one role and add to the list appsWithOneRole
-        moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
-        session.setAttribute("editAppWithOnlyOneRole", appsWithOneRole);
         session.setAttribute("selectedApps", selectedApps);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        if (isRolesWithMoreThanOneRoles(appCounts)) {
-            return new RedirectView(String.format("/admin/users/edit/%s/roles", uuid));
-        }
-
         session.setAttribute("editUserAllSelectedRoles", new HashMap<Integer, List<String>>());
         return new RedirectView(String.format("/admin/users/edit/%s/roles-check-answer", uuid));
     }
@@ -1223,13 +1211,9 @@ public class UserController {
 
         String backUrl = "";
         List<UserRole> selectedAppRole = new ArrayList<>();
-        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
+        Long appCounts = getAppCounts(appRoleDtos, userType.name());
 
-        var listOfAppsWithOnlyOneRole = appCounts.entrySet()
-                .stream()
-                .filter(entry -> entry.getValue() == 1)
-                .map(Map.Entry::getKey)
-                .toList();
+
 
         if (!listOfAppsWithOnlyOneRole.isEmpty()) {
             for (String appId : listOfAppsWithOnlyOneRole) {
@@ -1767,12 +1751,12 @@ public class UserController {
         List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, userType.name());
 
         //Group and count appRoles
-        Map<String, Long> appCounts = getAppCounts(appRoleDtos);
+        //Map<String, Long> appCounts = getAppCounts(appRoleDtos);
 
         // remove from selected apps that have only one role and add to the list appsWithOneRole
         List<String> appsWithOneRole = new ArrayList<>();
 
-        moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
+        //moveAppsWithSingleRole(appCounts, appsWithOneRole, selectedApps);
 
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                 .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
@@ -1787,35 +1771,34 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        if (isRolesWithMoreThanOneRoles(appCounts)) {
-            return "redirect:/admin/users/grant-access/" + uuid + "/roles";
-
-        }
-        //remove to avoid in the CYA screen with unneeded information
-        session.removeAttribute("allSelectedRoles");
-        return "redirect:/admin/users/grant-access/" + uuid + "/offices";
+        return "redirect:/admin/users/grant-access/" + uuid + "/roles";
 
     }
 
-    @NotNull
-    private static Map<String, Long> getAppCounts(List<AppRoleDto> appRoleDtos) {
+    private static Long getAppCounts(List<AppRoleDto> appRoleDtos, String appId) {
         return appRoleDtos.stream()
-                .collect(Collectors
-                        .groupingBy(dto -> dto.getApp().getId(),
-                                Collectors.counting()));
+                .filter( appRoleDto -> appRoleDto.getApp().getId().equals(appId))
+                .count();
     }
 
-    private static void moveAppsWithSingleRole(Map<String, Long> appCounts, List<String> appsWithOneRole, List<String> selectedApps) {
-        appCounts.forEach((key, value) -> {
-            if (value == 1) {
-                appsWithOneRole.add(key);
-                selectedApps.remove(key);
-            }
-        });
+    private static List<String> getRolesByAppId(List<AppRoleDto> appRoleDtos, String appId) {
+        return appRoleDtos.stream()
+                .filter( appRoleDto -> appRoleDto.getApp().getId().equals(appId))
+                .map(AppRoleDto::getId)
+                .collect(Collectors.toList());
+
     }
 
-    private static boolean isRolesWithMoreThanOneRoles(Map<String, Long> appCounts) {
-        return appCounts.values().stream().anyMatch(count -> count > 1);
+
+
+    private static boolean hasRolesWithMoreThanOneRoles(List<AppRoleDto> appRoleDtos) {
+        return appRoleDtos.stream()
+                    .collect(Collectors
+                            .groupingBy(dto -> dto.getApp().getId(),
+                                    Collectors.counting()))
+                .values().stream()
+                .anyMatch(count -> count > 1);
+
     }
 
     /**
@@ -1842,9 +1825,37 @@ public class UserController {
         }
 
         List<String> selectedApps = selectedAppsOptional.get();
-
+        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
         Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
+
         Integer currentSelectedAppIndex;
+        List<String> roleWithOnlyOne = new ArrayList<>();
+
+        for (int i = 0; i < selectedApps.size(); i++) {
+            String app = selectedApps.get(i);
+            Long appCounts = getAppCounts(appRoleDtos, app);
+
+            if (appCounts > 1) {
+                // Do your logic here
+                currentSelectedAppIndex = i + 1; // store index
+                break; // stops iteration
+            } else {
+                List<String> rolesSelected = getRolesByAppId(appRoleDtos, app);
+                roleWithOnlyOne.addAll(rolesSelected);
+
+            }
+        }
+        if (!roleWithOnlyOne.isEmpty()){
+            List<String> selectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+                    .orElseGet(ArrayList::new);
+            selectedRoles.addAll(roleWithOnlyOne);
+            session.setAttribute("allSelectedRoles", roleWithOnlyOne);
+            if (!hasRolesWithMoreThanOneRoles(appRoleDtos)) {
+                return "redirect:/admin/users/grant-access/" + id + "/offices";
+            }
+        }
+
+
         if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
             currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
         } else {
@@ -1856,12 +1867,15 @@ public class UserController {
             currentSelectedAppIndex = 0;
         }
 
+
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType());
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
+
+        //Group and count appRoles
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
