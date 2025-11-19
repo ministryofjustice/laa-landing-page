@@ -7,7 +7,11 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -48,6 +52,14 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     @Autowired
     protected OfficeRepository officeRepository;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected EntityManager entityManager;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected PlatformTransactionManager transactionManager;
+
     protected Firm testFirm1;
     protected Firm testFirm2;
     protected List<EntraUser> internalUsersNoRoles = new ArrayList<>();
@@ -78,22 +90,29 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     }
 
     protected void setupFirms() {
-        Firm firm1 = buildFirm("firm1", "firm1");
-        testFirm1 = firmRepository.saveAndFlush(firm1);
-        Office firm1Office1 = buildOffice(testFirm1, "Firm1Office1", "Firm 1 Office 1", "123456789", "F1Office1Code");
-        Office firm1Office2 = buildOffice(testFirm1, "Firm1Office2", "Firm 1 Office 2", "123456789", "F1Office2Code");
-        firm1Office1 = officeRepository.saveAndFlush(firm1Office1);
-        firm1Office2 = officeRepository.saveAndFlush(firm1Office2);
-        testFirm1.setOffices(Set.of(firm1Office1, firm1Office2));
-        firmRepository.save(testFirm1);
-        Firm firm2 = buildFirm("firm2", "firm2");
-        testFirm2 = firmRepository.saveAndFlush(firm2);
-        Office firm2Office1 = buildOffice(testFirm2, "Firm2Office1", "Firm 2 Office 1", "123456789", "F2Office1Code");
-        Office firm2Office2 = buildOffice(testFirm2, "Firm2Office2", "Firm 2 Office 2", "123456789", "F2Office2Code");
-        firm2Office1 = officeRepository.saveAndFlush(firm2Office1);
-        firm2Office2 = officeRepository.saveAndFlush(firm2Office2);
-        testFirm2.setOffices(Set.of(firm2Office1, firm2Office2));
-        testFirm2 = firmRepository.save(testFirm2);
+        TransactionStatus txStatus = transactionManager.getTransaction(new DefaultTransactionDefinition());
+        try {
+            // Temporarily disable constraint triggers during setup
+            entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
+            Firm firm1 = buildFirm("firm1", "firm1");
+            Office firm1Office1 = buildOffice(firm1, "Firm1Office1", "Firm 1 Office 1", "123456789", "F1Office1Code");
+            Office firm1Office2 = buildOffice(firm1, "Firm1Office2", "Firm 1 Office 2", "123456789", "F1Office2Code");
+            firm1.setOffices(new java.util.HashSet<>(Set.of(firm1Office1, firm1Office2)));
+            testFirm1 = firmRepository.save(firm1);
+
+            Firm firm2 = buildFirm("firm2", "firm2");
+            Office firm2Office1 = buildOffice(firm2, "Firm2Office1", "Firm 2 Office 1", "123456789", "F2Office1Code");
+            Office firm2Office2 = buildOffice(firm2, "Firm2Office2", "Firm 2 Office 2", "123456789", "F2Office2Code");
+            firm2.setOffices(new java.util.HashSet<>(Set.of(firm2Office1, firm2Office2)));
+            testFirm2 = firmRepository.save(firm2);
+            
+            firmRepository.flush();
+            entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
+            transactionManager.commit(txStatus);
+        } catch (Exception e) {
+            transactionManager.rollback(txStatus);
+            throw e;
+        }
     }
 
     protected void setupTestUsers() {
@@ -314,9 +333,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     }
 
     protected void clearRepositories() {
-        userProfileRepository.deleteAll();
-        entraUserRepository.deleteAll();
-        officeRepository.deleteAll(); // Delete offices first to avoid foreign key constraint violation
-        firmRepository.deleteAll();
+        TransactionStatus txStatus = transactionManager.getTransaction(new DefaultTransactionDefinition());
+        try {
+            // Temporarily disable constraint triggers during cleanup
+            entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
+            
+            userProfileRepository.deleteAllInBatch();
+            entraUserRepository.deleteAllInBatch();
+            firmRepository.deleteAllInBatch();
+            officeRepository.deleteAllInBatch();
+            
+            entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
+            transactionManager.commit(txStatus);
+        } catch (Exception e) {
+            transactionManager.rollback(txStatus);
+            throw e;
+        }
     }
 }
