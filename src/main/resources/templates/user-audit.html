@@ -303,6 +303,14 @@
                 flex-wrap: wrap;
             }
 
+            .filters-container .govuk-form-group {
+                max-width: 300px;
+            }
+
+            .filters-container .govuk-select {
+                width: 100%;
+            }
+
             .search-input-group {
                 flex: 1;
                 min-width: 250px;
@@ -354,6 +362,56 @@
 
             .sort-button:hover {
                 text-decoration: underline;
+            }
+
+            /* Table optimizations for responsive fit */
+            .govuk-table__header,
+            .govuk-table__cell {
+                padding: 10px 8px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                hyphens: auto;
+            }
+
+            /* Prevent table headers from breaking */
+            .govuk-table__header {
+                white-space: normal;
+            }
+
+            .govuk-table__header .sort-button {
+                white-space: nowrap;
+            }
+
+            /* Force name and email columns to break long addresses */
+            .govuk-table__cell:nth-child(1),
+            .govuk-table__cell:nth-child(2) {
+                word-break: break-all;
+                overflow-wrap: anywhere;
+                max-width: 250px;
+            }
+
+            /* Compact columns for "3rd Party" and "Profile Count" */
+            .govuk-table__header:nth-child(6),
+            .govuk-table__cell:nth-child(6),
+            .govuk-table__header:nth-child(7),
+            .govuk-table__cell:nth-child(7) {
+                white-space: nowrap;
+                width: 1%;
+            }
+
+            /* Allow User Type and Account Status to wrap if needed */
+            .govuk-table__header:nth-child(3),
+            .govuk-table__cell:nth-child(3),
+            .govuk-table__header:nth-child(5),
+            .govuk-table__cell:nth-child(5) {
+                white-space: normal;
+            }
+
+            @media (max-width: 1200px) {
+                .govuk-table__header,
+                .govuk-table__cell {
+                    padding: 8px 5px;
+                }
             }
         </style>
 
@@ -628,6 +686,9 @@
                 const sortButtons = document.querySelectorAll('.sort-button');
                 sortButtons.forEach(button => {
                     button.addEventListener('click', function () {
+                        // Save current scroll position
+                        sessionStorage.setItem('auditTableScrollPosition', window.scrollY);
+
                         const params = {
                             size: this.dataset.size,
                             page: this.dataset.page,
@@ -642,19 +703,37 @@
                         window.location.href = buildCleanUrl('/admin/users/audit', params);
                     });
                 });
+
+                // Restore scroll position if it was saved
+                const savedScrollPosition = sessionStorage.getItem('auditTableScrollPosition');
+                if (savedScrollPosition !== null) {
+                    window.scrollTo(0, parseInt(savedScrollPosition, 10));
+                    sessionStorage.removeItem('auditTableScrollPosition');
+                }
+
+                // Add scroll position saving to pagination links
+                const paginationLinks = document.querySelectorAll('.govuk-pagination__link');
+                paginationLinks.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Save current scroll position
+                        sessionStorage.setItem('auditTableScrollPosition', window.scrollY);
+                        const href = this.getAttribute('href');
+                        window.location.href = href;
+                    });
+                });
             });
         </script>
 
         <!-- Audit Table -->
-        <div class="govuk-grid-row govuk-!-margin-top-6">
+        <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
             <div class="govuk-grid-column-full">
                 <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                    <table class="govuk-table" style="table-layout: fixed; min-width: 1200px; width: 100%;">
+                    <table class="govuk-table" style="table-layout: auto; width: 100%;">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 15%; min-width: 120px;">
+                                    th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="name"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
                                         Name
@@ -667,11 +746,10 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 20%; min-width: 150px;">
+                                    th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="email"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
-                                        Email Address
+                                        Email
                                         <img th:if="${sort == 'email' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                         <img th:if="${sort == 'email' and direction == 'desc'}"
@@ -681,11 +759,10 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 12%; min-width: 100px;">
+                                    th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="userType"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
-                                        User Type
+                                        Type
                                         <img th:if="${sort == 'userType' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                         <img th:if="${sort == 'userType' and direction == 'desc'}"
@@ -695,8 +772,7 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'firm' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 15%; min-width: 120px;">
+                                    th:aria-sort="${sort == 'firm' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="firm"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
                                         Firm
@@ -709,11 +785,10 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'accountStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 10%; min-width: 90px;">
+                                    th:aria-sort="${sort == 'accountStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="accountStatus"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'accountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
-                                        Account Status
+                                        Status
                                         <img th:if="${sort == 'accountStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                         <img th:if="${sort == 'accountStatus' and direction == 'desc'}"
@@ -723,8 +798,7 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 8%; min-width: 70px;">
+                                    th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
                                         3rd Party
@@ -737,11 +811,10 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header"
-                                    th:aria-sort="${sort == 'profileCount' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
-                                    style="width: 10%; min-width: 90px;">
+                                    th:aria-sort="${sort == 'profileCount' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="profileCount"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'profileCount' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
-                                        Profile Count
+                                        Profiles
                                         <img th:if="${sort == 'profileCount' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                         <img th:if="${sort == 'profileCount' and direction == 'desc'}"
@@ -754,16 +827,15 @@
                         </thead>
                         <tbody class="govuk-table__body">
                             <tr class="govuk-table__row" th:each="user : ${users}">
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                <td class="govuk-table__cell">
                                     <a class="govuk-link" th:if="${user.userId != null}"
                                         th:href="@{/admin/users/manage/{id}(id=${user.userId})}"
                                         th:text="${user.name}"></a>
                                     <span th:if="${user.userId == null}" th:text="${user.name}"></span>
                                 </td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                    th:text="${user.email}"></td>
+                                <td class="govuk-table__cell" th:text="${user.email}"></td>
                                 <td class="govuk-table__cell" th:text="${user.userType}"></td>
-                                <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                                <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' ? user.firmAssociation : ''}"></td>
                                 <td class="govuk-table__cell" th:text="${user.accountStatus}"></td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>

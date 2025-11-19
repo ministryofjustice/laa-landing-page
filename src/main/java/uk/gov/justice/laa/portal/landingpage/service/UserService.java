@@ -1347,25 +1347,77 @@ public class UserService {
             String searchTerm, UUID firmId, String silasRole, UUID appId,
             int page, int pageSize, String sort, String direction) {
 
-        // Map sort field to entity field
-        String mappedSort = mapAuditSortField(sort != null ? sort : "name");
-        Sort sortObj = getAuditSort(mappedSort, direction);
-        PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+        // Check if sorting by profile count or firm (special cases - require different
+        // queries)
+        boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
+        boolean sortByFirm = sort != null &&
+                (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
 
-        Page<EntraUser> userPage = entraUserRepository.findAllUsersForAudit(
-                searchTerm, firmId, silasRole, appId, pageRequest);
+        Page<EntraUser> userPage;
 
-        // Second query: Batch fetch relationships for the paginated users
-        List<EntraUser> usersWithRelations = Collections.emptyList();
-        if (!userPage.getContent().isEmpty()) {
-            Set<UUID> userIds = userPage.getContent().stream()
-                    .map(EntraUser::getId)
-                    .collect(Collectors.toSet());
-            usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
+        if (sortByProfileCount || sortByFirm) {
+            // Use special queries for profile count or firm sorting
+            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
+            String sortField = sortByProfileCount ? "profileCount" : "firmName";
+            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
+            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+            Page<Object[]> resultPage = sortByProfileCount
+                    ? entraUserRepository.findAllUsersForAuditWithProfileCount(
+                            searchTerm, firmId, silasRole, appId, pageRequest)
+                    : entraUserRepository.findAllUsersForAuditWithFirm(
+                            searchTerm, firmId, silasRole, appId, pageRequest);
+
+            // Extract user IDs from the result
+            List<UUID> userIds = resultPage.getContent().stream()
+                    .map(row -> (UUID) row[0])
+                    .toList();
+
+            // Fetch full user details while preserving order
+            List<EntraUser> users = Collections.emptyList();
+            if (!userIds.isEmpty()) {
+                users = entraUserRepository.findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
+                // Sort users to match the order from userIds
+                Map<UUID, EntraUser> userMap = users.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
+                users = userIds.stream()
+                        .map(userMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
+            }
+
+            // Create page manually with total count from resultPage
+            userPage = new org.springframework.data.domain.PageImpl<>(
+                    users, pageRequest, resultPage.getTotalElements());
+        } else {
+            // Map sort field to entity field
+            String mappedSort = mapAuditSortField(sort != null ? sort : "name");
+            Sort sortObj = getAuditSort(mappedSort, direction);
+            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+            userPage = entraUserRepository.findAllUsersForAudit(
+                    searchTerm, firmId, silasRole, appId, pageRequest);
+
+            // Second query: Batch fetch relationships for the paginated users
+            if (!userPage.getContent().isEmpty()) {
+                Set<UUID> userIds = userPage.getContent().stream()
+                        .map(EntraUser::getId)
+                        .collect(Collectors.toSet());
+                List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
+
+                // Replace content with fully loaded entities, preserving order
+                Map<UUID, EntraUser> userMap = usersWithRelations.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
+                List<EntraUser> orderedUsers = userPage.getContent().stream()
+                        .map(u -> userMap.getOrDefault(u.getId(), u))
+                        .toList();
+                userPage = new org.springframework.data.domain.PageImpl<>(
+                        orderedUsers, userPage.getPageable(), userPage.getTotalElements());
+            }
         }
 
         // Map to DTOs
-        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = usersWithRelations.stream()
+        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = userPage.getContent().stream()
                 .map(this::mapToAuditUserDto)
                 .toList();
 
@@ -1510,10 +1562,10 @@ public class UserService {
             case "name" -> "firstName"; // Sort by first name for name column
             case "email" -> "email";
             case "usertype" -> "multiFirmUser"; // Sort by multiFirmUser for user type (ex 3rd party sorts differently)
-            case "firm" -> "firstName"; // Sort by first name (firm is derived from profiles)
+            case "firm", "firmassociation" -> "f.name"; // Sort by firm name (uses LEFT JOIN with firm)
             case "accountstatus" -> "userStatus"; // Sort by userStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
-            case "profilecount" -> "firstName"; // Sort by first name (profile count is calculated)
+            case "profilecount" -> "profilecount"; // Special case - handled separately
             default -> "firstName"; // Default to first name
         };
     }
