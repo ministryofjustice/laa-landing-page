@@ -13,8 +13,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,7 +20,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Set;
 
@@ -43,7 +40,6 @@ public class Office extends BaseEntity {
 
     @Embedded
     @Valid
-    @NotNull(message = "Office address must be provided")
     private Address address;
 
     @ManyToOne
@@ -63,9 +59,7 @@ public class Office extends BaseEntity {
     @Getter
     public static class Address {
 
-        @Column(name = "address_line_1", nullable = false, length = 255)
-        @ColumnDefault(value = "'ADDRESS LINE 1'")
-        @NotBlank(message = "Office address line 1 must be provided")
+        @Column(name = "address_line_1", nullable = true, length = 255)
         @Size(min = 1, max = 255, message = "Office address must be between 1 and 255 characters")
         private String addressLine1;
 
@@ -78,13 +72,10 @@ public class Office extends BaseEntity {
         private String addressLine3;
 
         @Column(name = "city", nullable = true, length = 255)
-        @ColumnDefault(value = "'CITY'")
         @Size(min = 1, max = 255, message = "Office city must be between 1 and 255 characters")
         private String city;
 
-        @Column(name = "post_code", nullable = false, length = 20)
-        @ColumnDefault(value = "'POSTCODE'")
-        @NotBlank(message = "Office postcode must be provided")
+        @Column(name = "post_code", nullable = true, length = 20)
         @Size(max = 20, message = "Office postcode must be between 2 and 20 characters")
         private String postcode;
 
