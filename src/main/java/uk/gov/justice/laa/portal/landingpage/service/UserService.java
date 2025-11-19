@@ -1344,7 +1344,7 @@ public class UserService {
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole,
+            String searchTerm, UUID firmId, String silasRole, UUID appId,
             int page, int pageSize, String sort, String direction) {
 
         // Map sort field to entity field
@@ -1353,7 +1353,7 @@ public class UserService {
         PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
         Page<EntraUser> userPage = entraUserRepository.findAllUsersForAudit(
-                searchTerm, firmId, silasRole, pageRequest);
+                searchTerm, firmId, silasRole, appId, pageRequest);
 
         // Second query: Batch fetch relationships for the paginated users
         List<EntraUser> usersWithRelations = Collections.emptyList();
