@@ -65,6 +65,184 @@ public class AppTest extends BaseEntityTest {
     }
 
     @Test
+    public void testLaaAppNullTitle() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setTitle(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application title must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
+    }
+
+    @Test
+    public void testLaaAppEmptyTitle() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setTitle(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application title must be provided", "Application title must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
+    }
+
+    @Test
+    public void testLaaAppTitleTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setTitle("TestLaaAppTitleThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application title must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
+
+    }
+
+    @Test
+    public void testLaaAppNullDescription() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setDescription(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application description must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
+    }
+
+    @Test
+    public void testLaaAppEmptyDescription() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setDescription(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application description must be provided", "Application description must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
+    }
+
+    @Test
+    public void testLaaAppDescriptionTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setDescription("TestLaaAppDescriptionThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application description must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
+
+    }
+
+    @Test
+    public void testLaaAppNullOidGroupName() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setOidGroupName(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application OID Group Name must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
+    }
+
+    @Test
+    public void testLaaAppEmptyOidGroupName() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setOidGroupName(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application OID Group Name must be provided", "Application OID Group Name must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
+    }
+
+    @Test
+    public void testLaaAppOidGroupNameTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setOidGroupName("TestLaaAppOIDGroupNameThatIsTooLong".repeat(15)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application OID Group Name must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
+
+    }
+
+    @Test
+    public void testLaaAppNullUrl() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setUrl(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application url must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("url");
+    }
+
+    @Test
+    public void testLaaAppEmptyUrl() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setUrl(""));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(2);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application url must be provided", "Application url must be between 1 and 255 characters"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("url");
+    }
+
+    @Test
+    public void testLaaAppUrlTooLong() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setUrl("TestLaaAppUrlThatIsTooLong".repeat(20)));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application url must be between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("url");
+
+    }
+
+    @Test
+    public void testLaaAppEmptyAppGroup() {
+        App app = buildTestLaaApp();
+        update(app, f -> f.setAppGroup(null));
+
+        Set<ConstraintViolation<App>> violations = validator.validate(app);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+        assertThat(messages).hasSameElementsAs(Set.of("Application Group must be provided"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("appGroup");
+    }
+
+    @Test
     public void testLaaAppNullEntraAppId() {
         App app = buildTestLaaApp();
         update(app, f -> f.setEntraAppId(null));

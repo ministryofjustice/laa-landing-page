@@ -1,0 +1,114 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1763564262149-1
+      author: suresh.kavali
+      changes:
+        - addColumn:
+            tableName: app
+            columns:
+              - column:
+                  name: title
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: description
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: assigned_app_id
+                  type: UUID
+                  constraints:
+                    nullable: true
+              - column:
+                  name: alternative_description
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: oid_group_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: url
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: app_group
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn: { tableName: app, columnName: title }
+        - dropColumn: { tableName: app, columnName: description }
+        - dropColumn: { tableName: app, columnName: oid_group_name }
+        - dropColumn: { tableName: app, columnName: url }
+        - dropColumn: { tableName: app, columnName: app_group }
+        - dropColumn: { tableName: app, columnName: assigned_app_id }
+        - dropColumn: { tableName: app, columnName: alternative_description }
+
+  - changeSet:
+      id: 1763564262149-2
+      author: suresh.kavali
+      changes:
+        - addColumn:
+            tableName: app_role
+            columns:
+              - column:
+                  name: app_role_group
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn: { tableName: app_role, columnName: app_role_group }
+
+  - changeSet:
+      id: 1763564262149-3
+      author: suresh.kavali
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE app
+              ADD CONSTRAINT app_app_group_check
+              CHECK ((app_group)::text = ANY ((ARRAY['AUTHZ'::character varying, 'LAA'::character varying])::text[]));
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE app_role
+              ADD CONSTRAINT app_role_app_role_group_check
+              CHECK ((app_role_group)::text = ANY ((ARRAY['NONE'::character varying, 'PROVIDER'::character varying, 'CHAMBERS'::character varying, 'ADVOCATE'::character varying])::text[]));
+
+  - changeSet:
+      id: 1763564262149-4
+      author: suresh.kavali
+      changes:
+        - sql:
+            sql: |
+              UPDATE app
+              SET title = name,
+                  description = name,
+                  oid_group_name = name,
+                  app_group = 'LAA'
+              WHERE title IS NULL AND description IS NULL AND oid_group_name IS NULL AND app_group IS NULL;
+        - sql:
+            sql: |
+              UPDATE app_role
+              SET app_role_group = 'NONE'
+              WHERE app_role_group IS NULL;
+
+  - changeSet:
+      id: 1763564262149-5
+      author: suresh.kavali
+      changes:
+        - addNotNullConstraint: { tableName: app, columnName: title }
+        - addNotNullConstraint: { tableName: app, columnName: description }
+        - addNotNullConstraint: { tableName: app, columnName: oid_group_name }
+        - addNotNullConstraint: { tableName: app_role, columnName: app_role_group }
+        - addUniqueConstraint: { tableName: app, columnNames: title, constraintName: uq_app_title }
+        - addUniqueConstraint: { tableName: app, columnNames: description, constraintName: uq_app_description }
+        - addUniqueConstraint: { tableName: app, columnNames: oid_group_name, constraintName: uq_app_oid_group_name }
+        - addUniqueConstraint: { tableName: app, columnNames: url, constraintName: uq_app_url }

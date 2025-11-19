@@ -62,6 +62,12 @@ public class AppRole extends BaseEntity {
     @NotNull(message = "Application role legacy sync flag must be provided")
     private boolean legacySync;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "app_role_group", nullable = true, length = 255, unique = false)
+    @NotNull(message = "Application Role Group must be provided")
+    @ColumnDefault("NONE")
+    private AppRoleGroup appRoleGroup;
+
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
     @ToString.Exclude

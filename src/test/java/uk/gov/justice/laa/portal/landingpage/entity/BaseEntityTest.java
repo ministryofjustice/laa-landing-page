@@ -6,7 +6,6 @@ import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -42,14 +41,15 @@ public class BaseEntityTest {
     }
 
     protected App buildTestLaaApp() {
-        return App.builder().name("Test App").entraAppId("Entra App Id")
+        return App.builder().name("Test App").entraAppId("Entra App Id").appGroup(AppGroup.LAA).url("http://test.com")
+                .title("Test App Title").description("Test App Description").oidGroupName("Oid Group Name")
                 .securityGroupOid("SecGroupId").securityGroupName("SecGroup Name")
                 .build();
     }
 
     protected AppRole buildTestLaaAppRole() {
         return AppRole.builder().name("Test App Role").ccmsCode("ccms_code").description("App Role Description")
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
+                .appRoleGroup(AppRoleGroup.NONE).userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
     }
 
     protected UserProfile buildTestLaaUserProfile() {

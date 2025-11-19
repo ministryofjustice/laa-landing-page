@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AppRoleTest extends BaseEntityTest {
 
@@ -63,6 +62,19 @@ public class AppRoleTest extends BaseEntityTest {
         assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role name must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("name");
 
+    }
+
+    @Test
+    public void testLaaAppRoleNullAppRoleGroup() {
+        AppRole appRole = buildTestLaaAppRole();
+        update(appRole, f -> f.setAppRoleGroup(null));
+
+        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
+
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).hasSize(1);
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application Role Group must be provided");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("appRoleGroup");
     }
 
     @Test
