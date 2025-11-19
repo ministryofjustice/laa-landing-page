@@ -30,9 +30,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
     /**
      * Query for audit table - fetches all users with their profiles and roles
      * Supports filtering by name, email, firm, and SiLAS role
-     * Note: Cannot sort by firm name directly due to DISTINCT + ORDER BY PostgreSQL
-     * restriction
-     * Use findAllUsersForAuditWithFirm for firm name sorting
      */
     @Query(value = """
             SELECT DISTINCT u FROM EntraUser u
@@ -95,9 +92,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
 
     /**
      * Query for audit table with profile count - returns count alongside user ID
-     * for sorting purposes. Optimized to use single LEFT JOINs instead of multiple
-     * EXISTS.
-     * Note: ORDER BY is handled by Pageable parameter.
      */
     @Query(value = """
             SELECT u.id as userId, COUNT(DISTINCT up.id) as profileCount
@@ -135,9 +129,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
 
     /**
      * Query for audit table with firm name - returns firm name alongside user ID
-     * for sorting purposes. Uses MIN to handle users with multiple firms.
-     * Optimized to use single LEFT JOINs instead of multiple EXISTS.
-     * Note: ORDER BY is handled by Pageable parameter.
      */
     @Query(value = """
             SELECT u.id as userId, MIN(f.name) as firmName
