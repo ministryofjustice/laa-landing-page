@@ -1477,6 +1477,13 @@ public class UserService {
      */
     private String determineUserType(EntraUser user, List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
+            // If multi-firm user with no profiles, show as External - 3rd Party
+            if (user.isMultiFirmUser()) {
+                return "External - 3rd Party";
+            }
+            if (!user.isMultiFirmUser()) {
+                return "External";
+            }
             return "Unknown";
         }
 
