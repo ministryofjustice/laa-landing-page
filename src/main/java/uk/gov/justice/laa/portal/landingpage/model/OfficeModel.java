@@ -29,7 +29,8 @@ public class OfficeModel implements Serializable {
         private String postcode;
 
         public String getFormattedAddress() {
-            return AddressFormatter.formatAddress(addressLine1, addressLine2, addressLine3, city, postcode);
+            String formattedAddress = AddressFormatter.formatAddress(addressLine1, addressLine2, addressLine3, city, postcode);
+            return formattedAddress.isBlank() ? "Unknown" : formattedAddress;
         }
     }
 }

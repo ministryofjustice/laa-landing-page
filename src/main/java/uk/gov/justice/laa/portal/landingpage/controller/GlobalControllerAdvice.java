@@ -25,8 +25,6 @@ public class GlobalControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
     private final LoginService loginService;
-    @Value("${feature.flag.enable.multi.firm.user}")
-    private boolean enableMultiFirmUser;
 
     @Value("${feature.flag.enable.user.audit.table}")
     private boolean enableUserAuditTable;
@@ -88,10 +86,6 @@ public class GlobalControllerAdvice {
         return null;
     }
 
-    @ModelAttribute("enableMultiFirmUser")
-    public boolean getMultiFirmEnabledFlag() {
-        return enableMultiFirmUser;
-    }
 
     @ModelAttribute("enableUserAuditTable")
     public boolean getUserAuditTableEnabledFlag() {
