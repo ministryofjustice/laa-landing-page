@@ -3,7 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'edit-user'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
     <title>Edit - Services</title>
@@ -41,8 +41,8 @@
                     </div>
                     <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
                         <div class="govuk-checkboxes__item" th:each="app : ${apps}">
-                            <label for="apps"></label><input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
-                                                             th:value="${app.id}" type="checkbox">
+                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
+                                th:value="${app.id}" type="checkbox">
                             <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
                                 <span th:text="${app.name}"></span>
                             </label>
