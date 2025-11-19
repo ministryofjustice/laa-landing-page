@@ -3,7 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'edit-user'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
     <title>Edit - Offices</title>
@@ -56,11 +56,9 @@
                             <div class="govuk-checkboxes__divider">or</div>
                             <div th:each="office : ${officeData}">
                                 <div class="govuk-checkboxes__item">
-                                    <label>
-                                        <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
-                                            type="checkbox" th:value="${office.id}"
-                                            th:checked="${hasAllOffices != true && office.selected}">
-                                    </label>
+                                    <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
+                                        type="checkbox" th:value="${office.id}"
+                                        th:checked="${hasAllOffices != true && office.selected}">
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
                                         <label class="govuk-label govuk-checkboxes__label">
                                             <span th:text="${office.address.formattedAddress}"></span>
