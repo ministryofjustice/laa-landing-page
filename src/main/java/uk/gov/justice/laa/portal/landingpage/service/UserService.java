@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
@@ -72,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1362,33 +1364,32 @@ public class UserService {
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
-            Page<Object[]> resultPage = sortByProfileCount
+            Page<? extends UserAuditProjection> resultPage = sortByProfileCount
                     ? entraUserRepository.findAllUsersForAuditWithProfileCount(
                             searchTerm, firmId, silasRole, appId, pageRequest)
                     : entraUserRepository.findAllUsersForAuditWithFirm(
                             searchTerm, firmId, silasRole, appId, pageRequest);
 
-            // Extract user IDs from the result
+            // Extract user IDs in order
             List<UUID> userIds = resultPage.getContent().stream()
-                    .map(row -> (UUID) row[0])
+                    .map(UserAuditProjection::getUserId)
                     .toList();
 
-            // Fetch full user details while preserving order
+            // Fetch full user details
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 users = entraUserRepository.findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
-                // Sort users to match the order from userIds
-                Map<UUID, EntraUser> userMap = users.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
-                users = userIds.stream()
-                        .map(userMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
+
+                // Sort users to match the order from the query result
+                Map<UUID, Integer> orderMap = new HashMap<>();
+                for (int i = 0; i < userIds.size(); i++) {
+                    orderMap.put(userIds.get(i), i);
+                }
+                users.sort(Comparator.comparingInt(u -> orderMap.getOrDefault(u.getId(), Integer.MAX_VALUE)));
             }
 
-            // Create page manually with total count from resultPage
-            userPage = new org.springframework.data.domain.PageImpl<>(
-                    users, pageRequest, resultPage.getTotalElements());
+            // Create page with sorted users
+            userPage = new PageImpl<>(users, pageRequest, resultPage.getTotalElements());
         } else {
             // Map sort field to entity field
             String mappedSort = mapAuditSortField(sort != null ? sort : "name");
@@ -1411,7 +1412,7 @@ public class UserService {
                 List<EntraUser> orderedUsers = userPage.getContent().stream()
                         .map(u -> userMap.getOrDefault(u.getId(), u))
                         .toList();
-                userPage = new org.springframework.data.domain.PageImpl<>(
+                userPage = new PageImpl<>(
                         orderedUsers, userPage.getPageable(), userPage.getTotalElements());
             }
         }

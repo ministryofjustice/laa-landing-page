@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
@@ -120,7 +122,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
             GROUP BY u.id
             """, nativeQuery = true)
-    Page<Object[]> findAllUsersForAuditWithProfileCount(
+    Page<UserAuditProfileCountProjection> findAllUsersForAuditWithProfileCount(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
@@ -158,7 +160,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
             GROUP BY u.id
             """, nativeQuery = true)
-    Page<Object[]> findAllUsersForAuditWithFirm(
+    Page<UserAuditFirmProjection> findAllUsersForAuditWithFirm(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
