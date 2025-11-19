@@ -5302,7 +5302,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Internal");
-            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("None");
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
         }
 
         @Test
@@ -5391,7 +5391,7 @@ class UserServiceTest {
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("None");
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
             assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Active");
         }
 

@@ -1350,8 +1350,8 @@ public class UserService {
         // Check if sorting by profile count or firm (special cases - require different
         // queries)
         boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
-        boolean sortByFirm = sort != null &&
-                (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
+        boolean sortByFirm = sort != null
+                && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
 
         Page<EntraUser> userPage;
 
@@ -1502,7 +1502,7 @@ public class UserService {
      */
     private String determineFirmAssociation(List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
-            return "None";
+            return "Unknown";
         }
 
         Set<String> firmNames = profiles.stream()
@@ -1512,7 +1512,7 @@ public class UserService {
                 .collect(Collectors.toCollection(TreeSet::new));
 
         if (firmNames.isEmpty()) {
-            return "None";
+            return "Unknown";
         }
 
         return String.join(", ", firmNames);
