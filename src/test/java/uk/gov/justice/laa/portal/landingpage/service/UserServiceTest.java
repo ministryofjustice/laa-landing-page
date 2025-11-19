@@ -5628,5 +5628,211 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(0);
         }
+
+        @Test
+        void getAuditUsers_whenSortingByEmailDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "email", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByStatusAscending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "accountstatus" as the sort field which maps to "userStatus"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "accountstatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userStatus")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userStatus").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByUserTypeDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Smith")
+                    .email("john.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "usertype" as sort field which maps to "multiFirmUser"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "usertype", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortDirectionIsNull_defaultsToAscending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "name", null);
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("firstName")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("firstName").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortDirectionIsEmpty_defaultsToAscending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "email", "");
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
     }
 }
