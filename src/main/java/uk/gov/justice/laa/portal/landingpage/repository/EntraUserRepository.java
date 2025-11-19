@@ -44,6 +44,12 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN up3.appRoles ar3
                 WHERE up3.entraUser.id = u.id AND ar3.authzRole = true AND ar3.name = :silasRole
             ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up4
+                JOIN up4.appRoles ar4
+                JOIN ar4.app a4
+                WHERE up4.entraUser.id = u.id AND a4.id = :appId
+            ))
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id) FROM EntraUser u
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
@@ -57,11 +63,18 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN up3.appRoles ar3
                 WHERE up3.entraUser.id = u.id AND ar3.authzRole = true AND ar3.name = :silasRole
             ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up4
+                JOIN up4.appRoles ar4
+                JOIN ar4.app a4
+                WHERE up4.entraUser.id = u.id AND a4.id = :appId
+            ))
             """)
     Page<EntraUser> findAllUsersForAudit(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
+            @Param("appId") UUID appId,
             Pageable pageable);
 
     /**
