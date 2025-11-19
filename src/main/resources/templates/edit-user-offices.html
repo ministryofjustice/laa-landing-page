@@ -3,7 +3,7 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'edit-user'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>Edit - Offices</title>
@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
+        <a class="govuk-back-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}">
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -56,9 +56,11 @@
                             <div class="govuk-checkboxes__divider">or</div>
                             <div th:each="office : ${officeData}">
                                 <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
-                                        type="checkbox" th:value="${office.id}"
-                                        th:checked="${hasAllOffices != true && office.selected}">
+                                    <label>
+                                        <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
+                                            type="checkbox" th:value="${office.id}"
+                                            th:checked="${hasAllOffices != true && office.selected}">
+                                    </label>
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
                                         <label class="govuk-label govuk-checkboxes__label">
                                             <span th:text="${office.address.formattedAddress}"></span>
