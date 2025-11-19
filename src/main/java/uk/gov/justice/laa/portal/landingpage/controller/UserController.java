@@ -116,9 +116,6 @@ public class UserController {
     @Value("${feature.flag.enable.resend.verification.code}")
     private boolean enableResendVerificationCode;
 
-    @Value("${feature.flag.enable.multi.firm.user}")
-    private boolean enableMultiFirmUser;
-
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
@@ -216,7 +213,6 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
@@ -357,19 +353,16 @@ public class UserController {
                 && accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
-        // Add multi-firm feature flag
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         // Multi-firm user information
         boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
 
-        if (isMultiFirmUser && enableMultiFirmUser) {
+        if (isMultiFirmUser) {
             // Check if user can delete the currently viewed profile (not all profiles)
             // but not their own profile
             boolean canDeleteFirmProfile = !isOwnProfile
@@ -380,7 +373,7 @@ public class UserController {
             // all profiles)
             long profileCount = userService.getProfileCountByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
             model.addAttribute("profileCount", profileCount);
-        } else if (enableMultiFirmUser) {
+        } else {
             // For non-multi-firm users, still add canDeleteFirmProfile if they have the
             // permission but not their own profile
             boolean canDeleteFirmProfile = !isOwnProfile
@@ -526,22 +519,13 @@ public class UserController {
         session.removeAttribute("createUserDetailsModel");
 
         // Check feature flag to determine next step
-        if (enableMultiFirmUser) {
-            return "redirect:/admin/user/create/multi-firm";
-        } else {
-            // Skip multi-firm screen and go directly to firm selection
-            return "redirect:/admin/user/create/firm";
-        }
+        return "redirect:/admin/user/create/multi-firm";
     }
 
     @GetMapping("/user/create/multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String createUserMultiFirm(MultiFirmForm multiFirmForm, HttpSession session, Model model) {
         // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/firm";
-        }
-
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
             return "redirect:/admin/user/create/details";
@@ -562,11 +546,6 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String postUserMultiFirm(@Valid MultiFirmForm multiFirmForm, BindingResult result,
             HttpSession session, Model model) {
-
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/select-firm";
-        }
 
         if (multiFirmForm.getMultiFirmUser() == null) {
             result.rejectValue("multiFirmUser", "error.multiFirmUser",
@@ -621,8 +600,7 @@ public class UserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
@@ -637,9 +615,8 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-            boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
+            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
             model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
-            model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
@@ -696,9 +673,6 @@ public class UserController {
 
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
-
-        // Add feature flag to control multi-firm UI display
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
@@ -803,9 +777,6 @@ public class UserController {
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
-
-        // Add feature flag to control multi-firm UI display
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
@@ -1566,11 +1537,6 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
     public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
             Model model, HttpSession session, RedirectAttributes redirectAttributes) {
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            throw new RuntimeException("The multi-firm feature is not available. "
-                    + "Please contact your system administrator for assistance.");
-        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1608,11 +1574,6 @@ public class UserController {
             Authentication authentication,
             RedirectAttributes redirectAttributes,
             Model model) {
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            throw new RuntimeException("The multi-firm feature is not available. "
-                    + "Please contact your system administrator for assistance.");
-        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 

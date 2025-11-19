@@ -44,7 +44,7 @@
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider">
-                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button"
+                                <button th:if="${allowDelegateUserAccess}" type="button"
                                     class="govuk-button" data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/multi-firm/user/add/profile'">
                                     Delegate access
