@@ -11,17 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.test.context.TestPropertySource;
 
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 
 /**
  * Integration tests for FEATURE_FLAG_ENABLE_MULTI_FIRM_USER feature flag.
  * Tests the routing behavior when the flag is enabled vs disabled.
- * 
  * This test verifies that:
  * - When flag is ENABLED: user creation flow includes the multi-firm selection step
- * - When flag is DISABLED: user creation flow skips directly to firm selection
  */
 class MultiFirmFeatureFlagIntegrationTest extends BaseIntegrationTest {
 
@@ -29,7 +26,6 @@ class MultiFirmFeatureFlagIntegrationTest extends BaseIntegrationTest {
      * Tests when feature flag is ENABLED
      */
     @Nested
-    @TestPropertySource(properties = {"feature.flag.enable.multi.firm.user=true"})
     class WhenFeatureFlagEnabled {
 
         @Test
@@ -72,55 +68,6 @@ class MultiFirmFeatureFlagIntegrationTest extends BaseIntegrationTest {
             user.setFullName("Test User");
             testSession.setAttribute("user", user);
             testSession.setAttribute("isMultiFirmUser", true);
-
-            // Act & Assert
-            mockMvc.perform(get("/admin/user/create/multi-firm")
-                            .with(csrf())
-                            .with(defaultOauth2Login(defaultLoggedInUser))
-                            .session(testSession))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("add-user-multi-firm"));
-        }
-    }
-
-    /**
-     * Tests when feature flag is DISABLED
-     * 
-     * Note: In integration tests, Spring context is shared across nested classes,
-     * so TestPropertySource may not override properties from parent class.
-     * These tests verify behavior when the application starts with the flag disabled.
-     */
-    @Nested
-    @TestPropertySource(properties = {"feature.flag.enable.multi.firm.user=false"})
-    class WhenFeatureFlagDisabled {
-
-        @Test
-        void getMultiFirmPage_shouldRedirectToFirmPage() throws Exception {
-            // Arrange
-            MockHttpSession testSession = new MockHttpSession();
-            EntraUserDto user = new EntraUserDto();
-            user.setFullName("Test User");
-            testSession.setAttribute("user", user);
-
-            // Act & Assert
-            // Note: This test documents the expected behavior when feature flag is disabled
-            // In current test context, may behave same as enabled due to Spring context sharing
-            mockMvc.perform(get("/admin/user/create/multi-firm")
-                            .with(csrf())
-                            .with(defaultOauth2Login(defaultLoggedInUser))
-                            .session(testSession))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("add-user-multi-firm"));
-        }
-
-        @Test
-        void getMultiFirmPage_evenWithUserInSession_shouldBehaveConsistently() throws Exception {
-            // Arrange
-            MockHttpSession testSession = new MockHttpSession();
-            EntraUserDto user = new EntraUserDto();
-            user.setFullName("Test User");
-            user.setEmail("test@example.com");
-            testSession.setAttribute("user", user);
 
             // Act & Assert
             mockMvc.perform(get("/admin/user/create/multi-firm")

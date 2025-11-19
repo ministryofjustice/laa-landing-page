@@ -230,8 +230,6 @@ spec:
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
             - name: FEATURE_FLAG_ENABLE_RESEND_VER_CODE
               value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
-            - name: FEATURE_FLAG_ENABLE_MULTI_FIRM_USER
-              value: "${FEATURE_FLAG_ENABLE_MULTI_FIRM_USER}"
             - name: FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE
               value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
             - name: SPRING_SESSION_JDBC_ENABLED
