@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -57,4 +58,30 @@ public class AuditUserDto implements Serializable {
      * Number of firm profiles the user has
      */
     private int profileCount;
+
+    /**
+     * Date when the user account was created
+     */
+    private LocalDateTime createdDate;
+
+    /**
+     * User who created this account
+     */
+    private String createdBy;
+
+    /**
+     * Last login date from Graph API signInActivity
+     */
+    private LocalDateTime lastLoginDate;
+
+    /**
+     * Entra status from EntraUser.userStatus enum
+     */
+    private String entraStatus;
+
+    /**
+     * Activation status from TechServices API
+     * Values: Pending, Accepted, Expired, Revoked
+     */
+    private String activationStatus;
 }

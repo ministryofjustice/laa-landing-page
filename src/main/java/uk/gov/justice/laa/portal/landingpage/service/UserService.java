@@ -46,6 +46,9 @@ import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
@@ -1418,11 +1421,11 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = userPage.getContent().stream()
+        List<AuditUserDto> auditUsers = userPage.getContent().stream()
                 .map(this::mapToAuditUserDto)
                 .toList();
 
-        return uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers.builder()
+        return PaginatedAuditUsers.builder()
                 .users(auditUsers)
                 .totalUsers(userPage.getTotalElements())
                 .totalPages(userPage.getTotalPages())
@@ -1434,7 +1437,7 @@ public class UserService {
     /**
      * Map EntraUser to AuditUserDto
      */
-    private uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto mapToAuditUserDto(EntraUser user) {
+    private AuditUserDto mapToAuditUserDto(EntraUser user) {
         // Get all user profiles
         List<UserProfile> profiles = user.getUserProfiles() != null
                 ? new ArrayList<>(user.getUserProfiles())
@@ -1460,7 +1463,7 @@ public class UserService {
                 .map(profile -> profile.getId().toString())
                 .orElse(null);
 
-        return uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto.builder()
+        return AuditUserDto.builder()
                 .name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail())
                 .userId(userId)
@@ -1469,6 +1472,13 @@ public class UserService {
                 .accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser())
                 .profileCount(profileCount)
+                .createdDate(user.getCreatedDate())
+                .createdBy(user.getCreatedBy())
+                // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
+                .lastLoginDate(null)
+                .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
+                // TODO: Fetch activationStatus from TechServices API
+                .activationStatus(null)
                 .build();
     }
 
@@ -1587,5 +1597,91 @@ public class UserService {
             order = Sort.Direction.valueOf(direction.toUpperCase());
         }
         return Sort.by(order, field);
+    }
+
+    /**
+     * Get detailed audit information for a specific user
+     * Includes all profiles, roles, offices, and audit data
+     *
+     * @param userId The user profile ID to retrieve
+     * @return Detailed audit user DTO
+     */
+    public AuditUserDetailDto getAuditUserDetail(UUID userId) {
+        // Fetch user profile with all relationships
+        UserProfile profile = userProfileRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User profile not found with id: " + userId));
+
+        EntraUser entraUser = profile.getEntraUser();
+
+        // Get all profiles for this user
+        List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
+
+        // Map profiles to DTOs
+        List<AuditProfileDto> profileDtos = allProfiles
+                .stream()
+                .map(this::mapToAuditProfileDto)
+                .toList();
+
+        // Determine user type using shared method
+        String userType = determineUserType(entraUser, allProfiles);
+
+        // Build detail DTO
+        return AuditUserDetailDto.builder()
+                .userId(entraUser.getId().toString())
+                .email(entraUser.getEmail())
+                .firstName(entraUser.getFirstName())
+                .lastName(entraUser.getLastName())
+                .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
+                .isMultiFirmUser(entraUser.isMultiFirmUser())
+                .userType(userType)
+                .createdDate(entraUser.getCreatedDate())
+                .createdBy(entraUser.getCreatedBy())
+                // TODO: Fetch lastLoginDate from Microsoft Graph API
+                .lastLoginDate(null)
+                // TODO: Fetch activationStatus from TechServices API or SILAS API
+                .activationStatus(null)
+                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                .profiles(profileDtos)
+                .build();
+    }
+
+    /**
+     * Map UserProfile to AuditProfileDto
+     */
+    private AuditProfileDto mapToAuditProfileDto(
+            UserProfile profile) {
+        // Get offices
+        List<OfficeDto> officeDtos = new ArrayList<>();
+        String officeRestrictions = "Access to All Offices";
+
+        if (profile.getOffices() != null && !profile.getOffices().isEmpty()) {
+            officeDtos = profile.getOffices().stream()
+                    .map(office -> mapper.map(office, OfficeDto.class))
+                    .toList();
+            officeRestrictions = officeDtos.size() + " office(s) selected";
+        }
+
+        // Get roles
+        List<AppRoleDto> roleDtos = new ArrayList<>();
+        if (profile.getAppRoles() != null && !profile.getAppRoles().isEmpty()) {
+            roleDtos = profile.getAppRoles().stream()
+                    .map(role -> mapper.map(role, AppRoleDto.class))
+                    .toList();
+        }
+
+        // Get firm details
+        String firmName = profile.getFirm() != null ? profile.getFirm().getName() : "";
+        String firmCode = profile.getFirm() != null ? profile.getFirm().getCode() : "";
+
+        return AuditProfileDto.builder()
+                .profileId(profile.getId().toString())
+                .firmName(firmName)
+                .firmCode(firmCode)
+                .officeRestrictions(officeRestrictions)
+                .offices(officeDtos)
+                .roles(roleDtos)
+                .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
+                .activeProfile(profile.isActiveProfile())
+                .build();
     }
 }

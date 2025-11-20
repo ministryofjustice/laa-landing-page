@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="${user.fullName}">User Audit Detail</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{/home}">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{/admin/users/audit}">Audit</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item" aria-current="page">
+                <span th:text="${user.fullName}">User Name</span>
+            </li>
+        </ol>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <style>
+            /* Match height for identity information cards */
+            .govuk-grid-row {
+                display: flex;
+                flex-wrap: wrap;
+            }
+
+            .govuk-grid-row .govuk-grid-column-one-half {
+                display: flex;
+            }
+
+            .govuk-grid-row .govuk-grid-column-one-half .govuk-summary-card {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .govuk-summary-card__content {
+                flex-grow: 1;
+            }
+        </style>
+
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <h1 class="govuk-heading-l" th:text="${user.fullName}">User Name</h1>
+
+                <!-- Multi-firm user notification -->
+                <div th:if="${user.isMultiFirmUser}"
+                     style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
+                    <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
+                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                        This user is set up as a multi-firm user.
+                        <a class="govuk-link"
+                           th:href="@{/admin/users/audit(search=${user.email})}">
+                            <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for user.</span>
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Identity Information Section -->
+                <h2 class="govuk-heading-m">Identity information</h2>
+
+                <div class="govuk-grid-row">
+                    <!-- User Details Card -->
+                    <div class="govuk-grid-column-one-half">
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">User details</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">First name</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last name</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Data Card -->
+                    <div class="govuk-grid-column-one-half">
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Audit data</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">User type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last login date</dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${user.lastLoginDate != null ? #temporals.format(user.lastLoginDate, 'dd MMM yyyy HH:mm') : ''}">
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Entra status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.entraStatus}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Activation Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.activationStatus}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Created date</dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${user.createdDate != null ? #temporals.format(user.createdDate, 'dd MMM yyyy HH:mm') : ''}">
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Created by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Information Section -->
+                <h2 class="govuk-heading-m govuk-!-margin-top-6">Profile information</h2>
+
+                <!-- Display profiles - for single firm show single profile, for multi-firm show first profile with note -->
+                <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
+                    <!-- Firm Association Card -->
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h3 class="govuk-summary-card__title">Firm association</h3>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Firm name</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${profile.firmName}"></span>
+                                    </dd>
+                                </div>
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Offices</dt>
+                                    <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Services Card -->
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h3 class="govuk-summary-card__title">Services</h3>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <!-- Display roles grouped by app -->
+                                <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
+                                    <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
+                                    <dd class="govuk-summary-list__value" th:text="${role.description != null ? role.description : role.name}"></dd>
+                                </div>
+                                <div class="govuk-summary-list__row" th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                    <dt class="govuk-summary-list__key">No services assigned</dt>
+                                    <dd class="govuk-summary-list__value"></dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Back Button -->
+                <a class="govuk-button govuk-!-margin-top-4"
+                   th:href="@{/admin/users/audit}">
+                    Back to User Profile Table
+                </a>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

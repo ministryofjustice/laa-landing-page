@@ -5835,4 +5835,315 @@ class UserServiceTest {
                     .isEqualTo(Sort.Direction.ASC);
         }
     }
+
+    @Nested
+    class GetAuditUserDetailTests {
+
+        @Test
+        void getAuditUserDetail_withValidUserId_returnsDetailDto() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID officeId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+            UUID appId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            Office.Address address = Office.Address.builder()
+                    .addressLine1("123 Test Street")
+                    .city("Test City")
+                    .postcode("TE1 1ST")
+                    .build();
+
+            Office office = Office.builder()
+                    .id(officeId)
+                    .code("TEST-OFFICE-01")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            App app = App.builder()
+                    .id(appId)
+                    .name("Test App")
+                    .build();
+
+            AppRole appRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("TEST_ROLE")
+                    .description("Test Role")
+                    .app(app)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(Set.of(office))
+                    .appRoles(Set.of(appRole))
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .createdBy("admin@example.com")
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUserId()).isEqualTo(userId.toString());
+            assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getFirstName()).isEqualTo("John");
+            assertThat(result.getLastName()).isEqualTo("Doe");
+            assertThat(result.getFullName()).isEqualTo("John Doe");
+            assertThat(result.isMultiFirmUser()).isFalse();
+            assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
+            assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getProfileId()).isEqualTo(profileId.toString());
+            assertThat(profileDto.getFirmName()).isEqualTo("Test Firm");
+            assertThat(profileDto.getFirmCode()).isEqualTo("TF001");
+            assertThat(profileDto.getUserType()).isEqualTo("EXTERNAL");
+            assertThat(profileDto.isActiveProfile()).isTrue();
+            assertThat(profileDto.getOffices()).hasSize(1);
+            assertThat(profileDto.getRoles()).hasSize(1);
+
+            verify(mockUserProfileRepository).findById(profileId);
+        }
+
+        @Test
+        void getAuditUserDetail_withMultipleFirms_returnsAllProfiles() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profile1Id = UUID.randomUUID();
+            UUID profile2Id = UUID.randomUUID();
+            UUID firm1Id = UUID.randomUUID();
+            UUID firm2Id = UUID.randomUUID();
+
+            Firm firm1 = Firm.builder()
+                    .id(firm1Id)
+                    .name("Firm One")
+                    .code("F001")
+                    .build();
+
+            Firm firm2 = Firm.builder()
+                    .id(firm2Id)
+                    .name("Firm Two")
+                    .code("F002")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>())
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(profile2Id)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>())
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(true)
+                    .userProfiles(Set.of(profile1, profile2))
+                    .build();
+
+            profile1.setEntraUser(user);
+            profile2.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.isMultiFirmUser()).isTrue();
+            assertThat(result.getProfiles()).hasSize(2);
+
+            List<String> firmNames = result.getProfiles().stream()
+                    .map(uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto::getFirmName)
+                    .collect(Collectors.toList());
+            assertThat(firmNames).containsExactlyInAnyOrder("Firm One", "Firm Two");
+        }
+
+        @Test
+        void getAuditUserDetail_withNoOffices_showsAccessToAllOffices() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>()) // No offices
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("Access to All Offices");
+        }
+
+        @Test
+        void getAuditUserDetail_withMultipleOffices_listsOfficeCount() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID office1Id = UUID.randomUUID();
+            UUID office2Id = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            Office.Address address = Office.Address.builder()
+                    .addressLine1("Main Street")
+                    .city("London")
+                    .postcode("SW1A 1AA")
+                    .build();
+
+            Office office1 = Office.builder()
+                    .id(office1Id)
+                    .code("OFFICE-A")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            Office office2 = Office.builder()
+                    .id(office2Id)
+                    .code("OFFICE-B")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(Set.of(office1, office2))
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("2 office(s) selected");
+            assertThat(profileDto.getOffices()).hasSize(2);
+        }
+
+        @Test
+        void getAuditUserDetail_withUserNotFound_throwsException() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            when(mockUserProfileRepository.findById(userId))
+                    .thenReturn(Optional.empty());
+
+            // When/Then
+            assertThrows(IllegalArgumentException.class, () -> {
+                userService.getAuditUserDetail(userId);
+            });
+        }
+    }
 }
