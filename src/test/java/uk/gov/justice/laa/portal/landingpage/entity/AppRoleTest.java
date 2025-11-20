@@ -65,19 +65,6 @@ public class AppRoleTest extends BaseEntityTest {
     }
 
     @Test
-    public void testLaaAppRoleNullAppRoleGroup() {
-        AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setAppRoleGroup(null));
-
-        Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application Role Group must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("appRoleGroup");
-    }
-
-    @Test
     public void testLaaAppRoleNullCcmsCode() {
         AppRole appRole = buildTestLaaAppRole();
         update(appRole, f -> f.setCcmsCode(null));

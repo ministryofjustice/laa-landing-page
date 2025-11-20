@@ -60,9 +60,9 @@ public class App extends BaseEntity {
     private String oidGroupName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "app_group", nullable = false, length = 255, unique = false)
-    @NotNull(message = "Application Group must be provided")
-    private AppGroup appGroup;
+    @Column(name = "app_type", nullable = false, length = 255, unique = false)
+    @NotNull(message = "Application Type must be provided")
+    private AppType appType;
 
     @Column(name = "ordinal", nullable = false)
     @ColumnDefault("0")

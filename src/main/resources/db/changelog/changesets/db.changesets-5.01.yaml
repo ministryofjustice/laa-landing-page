@@ -37,7 +37,7 @@ databaseChangeLog:
                   constraints:
                     nullable: true
               - column:
-                  name: app_group
+                  name: app_type
                   type: varchar(255)
                   constraints:
                     nullable: true
@@ -46,7 +46,7 @@ databaseChangeLog:
         - dropColumn: { tableName: app, columnName: description }
         - dropColumn: { tableName: app, columnName: oid_group_name }
         - dropColumn: { tableName: app, columnName: url }
-        - dropColumn: { tableName: app, columnName: app_group }
+        - dropColumn: { tableName: app, columnName: app_type }
         - dropColumn: { tableName: app, columnName: assigned_app_id }
         - dropColumn: { tableName: app, columnName: alternative_description }
 
@@ -58,12 +58,12 @@ databaseChangeLog:
             tableName: app_role
             columns:
               - column:
-                  name: app_role_group
+                  name: firm_type_restriction
                   type: varchar(255)
                   constraints:
                     nullable: true
       rollback:
-        - dropColumn: { tableName: app_role, columnName: app_role_group }
+        - dropColumn: { tableName: app_role, columnName: firm_type_restriction }
 
   - changeSet:
       id: 1763564262149-3
@@ -73,14 +73,14 @@ databaseChangeLog:
             dbms: postgresql
             sql: |
               ALTER TABLE app
-              ADD CONSTRAINT app_app_group_check
-              CHECK ((app_group)::text = ANY ((ARRAY['AUTHZ'::character varying, 'LAA'::character varying])::text[]));
+              ADD CONSTRAINT app_app_type_check
+              CHECK ((app_type)::text = ANY ((ARRAY['AUTHZ'::character varying, 'LAA'::character varying])::text[]));
         - sql:
             dbms: postgresql
             sql: |
               ALTER TABLE app_role
-              ADD CONSTRAINT app_role_app_role_group_check
-              CHECK ((app_role_group)::text = ANY ((ARRAY['NONE'::character varying, 'PROVIDER'::character varying, 'CHAMBERS'::character varying, 'ADVOCATE'::character varying])::text[]));
+              ADD CONSTRAINT app_role_firm_type_restriction_check
+              CHECK ((firm_type_restriction)::text = ANY ((ARRAY['LEGAL_SERVICES_PROVIDER'::character varying, 'CHAMBERS'::character varying, 'ADVOCATE'::character varying])::text[]));
 
   - changeSet:
       id: 1763564262149-4
@@ -92,13 +92,9 @@ databaseChangeLog:
               SET title = name,
                   description = name,
                   oid_group_name = name,
-                  app_group = 'LAA'
-              WHERE title IS NULL AND description IS NULL AND oid_group_name IS NULL AND app_group IS NULL;
-        - sql:
-            sql: |
-              UPDATE app_role
-              SET app_role_group = 'NONE'
-              WHERE app_role_group IS NULL;
+                  app_type = 'LAA',
+                  url = '#'
+              WHERE title IS NULL AND description IS NULL AND oid_group_name IS NULL AND app_type IS NULL;
 
   - changeSet:
       id: 1763564262149-5
@@ -107,8 +103,8 @@ databaseChangeLog:
         - addNotNullConstraint: { tableName: app, columnName: title }
         - addNotNullConstraint: { tableName: app, columnName: description }
         - addNotNullConstraint: { tableName: app, columnName: oid_group_name }
-        - addNotNullConstraint: { tableName: app_role, columnName: app_role_group }
+        - addNotNullConstraint: { tableName: app, columnName: app_type }
+        - addNotNullConstraint: { tableName: app, columnName: url }
         - addUniqueConstraint: { tableName: app, columnNames: title, constraintName: uq_app_title }
         - addUniqueConstraint: { tableName: app, columnNames: description, constraintName: uq_app_description }
         - addUniqueConstraint: { tableName: app, columnNames: oid_group_name, constraintName: uq_app_oid_group_name }
-        - addUniqueConstraint: { tableName: app, columnNames: url, constraintName: uq_app_url }

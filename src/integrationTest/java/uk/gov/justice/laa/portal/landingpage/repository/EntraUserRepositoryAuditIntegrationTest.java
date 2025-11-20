@@ -15,9 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppGroup;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRoleGroup;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -72,7 +71,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .securityGroupName("Test Audit Security Group")
                 .title("Lassie App Title").description("Lassie App Description")
                 .oidGroupName("Lassie OID Group")
-                .appGroup(AppGroup.LAA)
+                .appType(AppType.LAA)
                 .url("http://localhost:8080/lassie")
                 .build();
         testApp = appRepository.save(testApp);
@@ -84,7 +83,6 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .legacySync(false)
                 .authzRole(true)
                 .app(testApp)
-                .appRoleGroup(AppRoleGroup.NONE)
                 .build();
         globalAdminRole = appRoleRepository.save(globalAdminRole);
 
@@ -95,7 +93,6 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .legacySync(false)
                 .authzRole(true)
                 .app(testApp)
-                .appRoleGroup(AppRoleGroup.NONE)
                 .build();
         externalUserAdminRole = appRoleRepository.save(externalUserAdminRole);
     }

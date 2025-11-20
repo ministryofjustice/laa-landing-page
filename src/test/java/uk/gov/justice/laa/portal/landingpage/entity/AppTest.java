@@ -231,15 +231,15 @@ public class AppTest extends BaseEntityTest {
     @Test
     public void testLaaAppEmptyAppGroup() {
         App app = buildTestLaaApp();
-        update(app, f -> f.setAppGroup(null));
+        update(app, f -> f.setAppType(null));
 
         Set<ConstraintViolation<App>> violations = validator.validate(app);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Application Group must be provided"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("appGroup");
+        assertThat(messages).hasSameElementsAs(Set.of("Application Type must be provided"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("appType");
     }
 
     @Test
