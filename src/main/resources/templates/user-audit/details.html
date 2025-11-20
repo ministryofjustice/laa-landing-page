@@ -146,48 +146,86 @@
                 <!-- Profile Information Section -->
                 <h2 class="govuk-heading-m govuk-!-margin-top-6">Profile information</h2>
 
-                <!-- Display profiles - for single firm show single profile, for multi-firm show first profile with note -->
-                <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
-                    <!-- Firm Association Card -->
-                    <div class="govuk-summary-card">
-                        <div class="govuk-summary-card__title-wrapper">
-                            <h3 class="govuk-summary-card__title">Firm association</h3>
-                        </div>
-                        <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list">
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Firm name</dt>
-                                    <dd class="govuk-summary-list__value">
-                                        <span th:text="${profile.firmName}"></span>
-                                    </dd>
-                                </div>
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Offices</dt>
-                                    <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </div>
+                <!-- Multi-firm user: show nested table with all profiles -->
+                <div th:if="${user.isMultiFirmUser && user.profiles.size() > 1}">
+                    <table class="govuk-table">
+                        <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
+                        <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th scope="col" class="govuk-table__header">Firm name</th>
+                                <th scope="col" class="govuk-table__header">Firm code</th>
+                                <th scope="col" class="govuk-table__header">Office restrictions</th>
+                                <th scope="col" class="govuk-table__header">Services</th>
+                                <th scope="col" class="govuk-table__header">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="govuk-table__body">
+                            <tr class="govuk-table__row" th:each="profile : ${user.profiles}">
+                                <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
+                                <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
+                                <td class="govuk-table__cell" th:text="${profile.officeRestrictions}"></td>
+                                <td class="govuk-table__cell">
+                                    <ul class="govuk-list" th:if="${profile.roles != null && !profile.roles.isEmpty()}">
+                                        <li th:each="role : ${profile.roles}">
+                                            <strong th:text="${role.app.name}"></strong>: 
+                                            <span th:text="${role.description != null ? role.description : role.name}"></span>
+                                        </li>
+                                    </ul>
+                                    <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
+                                </td>
+                                <td class="govuk-table__cell">
+                                    <strong class="govuk-tag govuk-tag--green" th:if="${profile.activeProfile}">Active</strong>
+                                    <strong class="govuk-tag govuk-tag--grey" th:unless="${profile.activeProfile}">Inactive</strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                    <!-- Services Card -->
-                    <div class="govuk-summary-card">
-                        <div class="govuk-summary-card__title-wrapper">
-                            <h3 class="govuk-summary-card__title">Services</h3>
+                <!-- Single firm user: show traditional card view -->
+                <div th:if="${!user.isMultiFirmUser || user.profiles.size() == 1}">
+                    <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
+                        <!-- Firm Association Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Firm association</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Firm name</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:text="${profile.firmName}"></span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Offices</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
                         </div>
-                        <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list">
-                                <!-- Display roles grouped by app -->
-                                <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
-                                    <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
-                                    <dd class="govuk-summary-list__value"
-                                        th:text="${role.description != null ? role.description : role.name}"></dd>
-                                </div>
-                                <div class="govuk-summary-list__row"
-                                    th:if="${profile.roles == null || profile.roles.isEmpty()}">
-                                    <dt class="govuk-summary-list__key">No services assigned</dt>
-                                    <dd class="govuk-summary-list__value"></dd>
-                                </div>
-                            </dl>
+
+                        <!-- Services Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Services</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <!-- Display roles grouped by app -->
+                                    <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
+                                        <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${role.description != null ? role.description : role.name}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                        <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
                         </div>
                     </div>
                 </div>

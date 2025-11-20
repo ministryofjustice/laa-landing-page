@@ -5,10 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
@@ -374,6 +373,61 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+        verify(userService, times(1)).getAuditUserDetail(userId);
+    }
+
+    @Test
+    void displayUserAuditDetail_withMultiFirmUser_returnsDetailViewWithAllProfiles() {
+        // Given
+        UUID userId = UUID.randomUUID();
+
+        // Create multiple profiles for multi-firm user
+        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profile1 = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto
+                .builder()
+                .profileId(UUID.randomUUID().toString())
+                .firmName("Smith & Associates")
+                .firmCode("SA123")
+                .officeRestrictions("Access to All Offices")
+                .activeProfile(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profile2 = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto
+                .builder()
+                .profileId(UUID.randomUUID().toString())
+                .firmName("Jones Law Firm")
+                .firmCode("JL456")
+                .officeRestrictions("2 office(s) selected")
+                .activeProfile(false)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto mockUserDetail = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("multi.user@example.com")
+                .firstName("Multi")
+                .lastName("User")
+                .fullName("Multi User")
+                .isMultiFirmUser(true)
+                .profiles(List.of(profile1, profile2))
+                .build();
+
+        when(userService.getAuditUserDetail(userId)).thenReturn(mockUserDetail);
+
+        // When
+        String viewName = auditController.displayUserAuditDetail(userId, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/details");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+
+        // Verify user has multiple profiles
+        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = (uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto) model
+                .getAttribute("user");
+        assertThat(result.isMultiFirmUser()).isTrue();
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles().get(0).isActiveProfile()).isTrue();
+        assertThat(result.getProfiles().get(1).isActiveProfile()).isFalse();
+
         verify(userService, times(1)).getAuditUserDetail(userId);
     }
 }
