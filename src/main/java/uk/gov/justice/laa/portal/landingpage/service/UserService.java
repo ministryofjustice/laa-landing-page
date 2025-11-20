@@ -1616,10 +1616,11 @@ public class UserService {
         // Get all profiles for this user
         List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
 
-        // Map profiles to DTOs
+        // Map profiles to DTOs and sort with active profile first
         List<AuditProfileDto> profileDtos = allProfiles
                 .stream()
                 .map(this::mapToAuditProfileDto)
+                .sorted((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()))
                 .toList();
 
         // Determine user type using shared method

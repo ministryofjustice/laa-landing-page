@@ -25,6 +25,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -354,7 +355,7 @@ class AuditControllerTest {
     void displayUserAuditDetail_withValidUserId_returnsDetailView() {
         // Given
         UUID userId = UUID.randomUUID();
-        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto mockUserDetail = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
                 .email("john.doe@example.com")
@@ -382,7 +383,7 @@ class AuditControllerTest {
         UUID userId = UUID.randomUUID();
 
         // Create multiple profiles for multi-firm user
-        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profile1 = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto
+        AuditUserDetailDto.AuditProfileDto profile1 = AuditUserDetailDto.AuditProfileDto
                 .builder()
                 .profileId(UUID.randomUUID().toString())
                 .firmName("Smith & Associates")
@@ -391,7 +392,7 @@ class AuditControllerTest {
                 .activeProfile(true)
                 .build();
 
-        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profile2 = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto
+        AuditUserDetailDto.AuditProfileDto profile2 = AuditUserDetailDto.AuditProfileDto
                 .builder()
                 .profileId(UUID.randomUUID().toString())
                 .firmName("Jones Law Firm")
@@ -400,7 +401,7 @@ class AuditControllerTest {
                 .activeProfile(false)
                 .build();
 
-        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto mockUserDetail = uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
                 .email("multi.user@example.com")
@@ -421,7 +422,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
 
         // Verify user has multiple profiles
-        uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = (uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto) model
+        AuditUserDetailDto result = (AuditUserDetailDto) model
                 .getAttribute("user");
         assertThat(result.isMultiFirmUser()).isTrue();
         assertThat(result.getProfiles()).hasSize(2);

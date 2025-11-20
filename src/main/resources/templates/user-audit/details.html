@@ -51,6 +51,12 @@
                 white-space: nowrap;
                 padding-right: 50px;
             }
+
+            /* Remove list margins in table cells to ensure consistent row padding */
+            .govuk-table__cell .govuk-list {
+                margin-top: 0px;
+                margin-bottom: 5px;
+            }
         </style>
 
         <div class="govuk-grid-row">
@@ -167,15 +173,15 @@
                                 <td class="govuk-table__cell">
                                     <ul class="govuk-list" th:if="${profile.roles != null && !profile.roles.isEmpty()}">
                                         <li th:each="role : ${profile.roles}">
-                                            <strong th:text="${role.app.name}"></strong>: 
+                                            <strong th:text="${role.app.name}"></strong>:
                                             <span th:text="${role.description != null ? role.description : role.name}"></span>
                                         </li>
                                     </ul>
                                     <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
                                 </td>
                                 <td class="govuk-table__cell">
-                                    <strong class="govuk-tag govuk-tag--green" th:if="${profile.activeProfile}">Active</strong>
-                                    <strong class="govuk-tag govuk-tag--grey" th:unless="${profile.activeProfile}">Inactive</strong>
+                                    <span class="moj-badge moj-badge--green" th:if="${profile.activeProfile}">Active</span>
+                                    <span class="moj-badge" th:unless="${profile.activeProfile}">Inactive</span>
                                 </td>
                             </tr>
                         </tbody>
