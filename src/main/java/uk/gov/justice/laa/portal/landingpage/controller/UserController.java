@@ -2242,7 +2242,6 @@ public class UserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("selectedOffices");
-        session.removeAttribute("appWithOnlyOneRole");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
@@ -2280,7 +2279,6 @@ public class UserController {
         session.removeAttribute("selectedApps");
         session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("nonEditableRoles");
-        session.removeAttribute("appWithOnlyOneRole");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
