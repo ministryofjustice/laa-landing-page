@@ -51,7 +51,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveChildFirm() {
-        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm1 = buildParentFirm("Firm1", "Firm Code 1");
         Firm firm2 = buildChildFirm("Firm2", "Firm Code 2", firm1);
         repository.saveAllAndFlush(Arrays.asList(firm1, firm2));
 
@@ -65,7 +65,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveSelfParentFirm() {
-        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm1 = buildParentFirm("Firm1", "Firm Code 1");
         firm1.setParentFirm(firm1);
         DataIntegrityViolationException ex = assertThrows(DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(firm1), "Exception expected");
@@ -74,8 +74,9 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveGrandParentFirm() {
-        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        Firm firm1 = buildParentFirm("Firm1", "Firm Code 1");
         Firm firm2 = buildChildFirm("Firm2", "Firm Code 2", firm1);
+        firm2.setType(FirmType.LEGAL_SERVICES_PROVIDER);
         Firm firm3 = buildChildFirm("Firm3", "Firm Code 3", firm2);
         JpaSystemException ex = assertThrows(JpaSystemException.class,
                 () -> repository.saveAllAndFlush(Arrays.asList(firm1, firm2, firm3)), "Exception expected");
