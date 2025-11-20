@@ -45,6 +45,12 @@
             .govuk-summary-card__content {
                 flex-grow: 1;
             }
+
+            /* Add spacing only in Audit data section (second card in Identity Information) */
+            .govuk-grid-row .govuk-grid-column-one-half:nth-child(2) .govuk-summary-list__key {
+                white-space: nowrap;
+                padding-right: 50px;
+            }
         </style>
 
         <div class="govuk-grid-row">
@@ -53,13 +59,15 @@
 
                 <!-- Multi-firm user notification -->
                 <div th:if="${user.isMultiFirmUser}"
-                     style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
-                    <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
+                    style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
+                    <div
+                        style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
+                        !</div>
                     <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
                         This user is set up as a multi-firm user.
-                        <a class="govuk-link"
-                           th:href="@{/admin/users/audit(search=${user.email})}">
-                            <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for user.</span>
+                        <a class="govuk-link" th:href="@{/admin/users/audit(search=${user.email})}">
+                            <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for
+                                user.</span>
                         </a>
                     </p>
                 </div>
@@ -116,7 +124,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.entraStatus}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Activation Status</dt>
+                                        <dt class="govuk-summary-list__key">Activation status</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.activationStatus}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -171,9 +179,11 @@
                                 <!-- Display roles grouped by app -->
                                 <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
                                     <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
-                                    <dd class="govuk-summary-list__value" th:text="${role.description != null ? role.description : role.name}"></dd>
+                                    <dd class="govuk-summary-list__value"
+                                        th:text="${role.description != null ? role.description : role.name}"></dd>
                                 </div>
-                                <div class="govuk-summary-list__row" th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                <div class="govuk-summary-list__row"
+                                    th:if="${profile.roles == null || profile.roles.isEmpty()}">
                                     <dt class="govuk-summary-list__key">No services assigned</dt>
                                     <dd class="govuk-summary-list__value"></dd>
                                 </div>
@@ -183,8 +193,7 @@
                 </div>
 
                 <!-- Back Button -->
-                <a class="govuk-button govuk-!-margin-top-4"
-                   th:href="@{/admin/users/audit}">
+                <a class="govuk-button govuk-!-margin-top-4" th:href="@{/admin/users/audit}">
                     Back to User Profile Table
                 </a>
             </div>
