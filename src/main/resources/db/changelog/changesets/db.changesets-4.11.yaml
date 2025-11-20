@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1763544960002-1
+      author: sankavi.mohanraj
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: "CREATE OR REPLACE FUNCTION prevent_internal_multi_firm_true() 
+                RETURNS trigger LANGUAGE plpgsql AS $$ 
+                BEGIN 
+                  IF EXISTS ( 
+                    SELECT 1 FROM user_profile up 
+                    WHERE up.entra_user_id = NEW.id 
+                      AND up.user_type = 'INTERNAL' 
+                  ) THEN 
+                    RAISE EXCEPTION 'Internal users cannot have multi_firm_user=true (entra_user_id=%)', NEW.id; 
+                  END IF; 
+                  RETURN NEW; 
+                END; 
+                $$"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE TRIGGER trg_prevent_internal_multi_firm_true 
+                BEFORE INSERT OR UPDATE OF multi_firm_user 
+                ON entra_user 
+                FOR EACH ROW 
+                WHEN (NEW.multi_firm_user IS TRUE) 
+                EXECUTE FUNCTION prevent_internal_multi_firm_true();"
+      rollback:
+        - sql:
+            sql: "DROP TRIGGER IF EXISTS trg_prevent_internal_multi_firm_true ON entra_user; DROP FUNCTION IF EXISTS prevent_internal_multi_firm_true();"
