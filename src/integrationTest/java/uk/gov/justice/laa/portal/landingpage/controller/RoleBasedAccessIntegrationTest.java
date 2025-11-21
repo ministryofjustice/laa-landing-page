@@ -16,6 +16,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -355,5 +356,45 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             transactionManager.rollback(txStatus);
             throw e;
         }
+    }
+
+    protected Firm createChildFirm(Firm parent, String name, String code) {
+        Firm child = buildChildFirm(name, code, parent);
+        child = firmRepository.saveAndFlush(child);
+        return child;
+    }
+
+    protected EntraUser createExternalUserAtFirm(String email, Firm firm) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, "Ext", "User");
+        user = entraUserRepository.saveAndFlush(user);
+        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+        profile.setFirm(firm);
+        profile.setAppRoles(Set.of());
+        user.setUserProfiles(Set.of(profile));
+        userProfileRepository.saveAndFlush(profile);
+        return user;
+    }
+
+    protected EntraUser createExternalFirmUserManagerAtFirm(String email, Firm firm) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, "Ext", "FUM");
+        user = entraUserRepository.saveAndFlush(user);
+        UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+        profile.setFirm(firm);
+        profile.setAppRoles(Set.of(getFirmUserManagerRole()));
+        user.setUserProfiles(Set.of(profile));
+        userProfileRepository.saveAndFlush(profile);
+        return user;
+    }
+
+    protected AppRole getFirmUserManagerRole() {
+        return appRoleRepository.findAllWithPermissions().stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(r -> r.getName().equals("Firm User Manager"))
+                .findFirst().orElseThrow();
+    }
+
+    protected void setParentFirmType(Firm parentFirm) {
+        parentFirm.setType(FirmType.CHAMBERS);
+        firmRepository.saveAndFlush(parentFirm);
     }
 }
