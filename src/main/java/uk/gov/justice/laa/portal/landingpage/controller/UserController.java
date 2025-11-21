@@ -1022,8 +1022,9 @@ public class UserController {
 
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
         //add roles in session and increase selectedAppIndex
-        currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(rolesForm,
-                selectedAppIndex,
+        currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
+                rolesForm,
+                currentSelectedAppIndex,
                 selectedApps,
                 user,
                 editUserAllSelectedRoles,
@@ -1846,7 +1847,7 @@ public class UserController {
         //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
                 rolesForm,
-                selectedAppIndex,
+                currentSelectedAppIndex,
                 selectedApps,
                 user,
                 allSelectedRolesByPage,
