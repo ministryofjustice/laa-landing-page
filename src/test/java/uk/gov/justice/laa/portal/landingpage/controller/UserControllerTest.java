@@ -5964,8 +5964,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
             UserProfileDto user = UserProfileDto.builder()
@@ -5980,6 +5978,7 @@ class UserControllerTest {
             
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.CHAMBERS))
                     .thenReturn(List.of(chambersRole));
@@ -6000,8 +5999,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             FirmDto advocateFirm = FirmDto.builder().id(UUID.randomUUID()).name("Advocate Firm").type(FirmType.ADVOCATE).build();
             UserProfileDto user = UserProfileDto.builder()
@@ -6016,6 +6013,7 @@ class UserControllerTest {
             
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE))
                     .thenReturn(List.of(advocateRole));
@@ -6036,8 +6034,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
@@ -6051,6 +6047,7 @@ class UserControllerTest {
             
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null))
                     .thenReturn(List.of(unrestrictedRole));
@@ -6071,8 +6068,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             FirmDto lspFirm = FirmDto.builder().id(UUID.randomUUID()).name("LSP Firm").type(FirmType.LEGAL_SERVICES_PROVIDER).build();
             UserProfileDto user = UserProfileDto.builder()
@@ -6087,6 +6082,7 @@ class UserControllerTest {
             
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
                     .thenReturn(List.of(lspRole));
@@ -6107,8 +6103,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
@@ -6122,6 +6116,7 @@ class UserControllerTest {
             
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null))
                     .thenReturn(List.of(internalRole));
