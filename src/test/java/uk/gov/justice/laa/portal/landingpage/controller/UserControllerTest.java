@@ -161,7 +161,6 @@ class UserControllerTest {
         String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
 
-
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
                 .userType(UserType.EXTERNAL)
@@ -169,8 +168,6 @@ class UserControllerTest {
                 .build();
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
-        //AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
-        //AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
         List<AppRoleDto> roleDtos = new ArrayList<>();
         roleDtos.addAll(createAppRole(2, true));
         roleDtos.addAll(createAppRole(2, true));
@@ -201,7 +198,6 @@ class UserControllerTest {
         // Arrange
         String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
-        httpSession.setAttribute("selectedApps", List.of(UUID.randomUUID().toString()));
 
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
@@ -212,15 +208,17 @@ class UserControllerTest {
 
         AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
         AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
-        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
-                .thenReturn(List.of(roleDto));
+        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
+
+        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
+
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
         when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
-
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> roles);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         // Act
         String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
 
