@@ -127,7 +127,12 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Entra status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.entraStatus}"></dd>
+                                        <dd class="govuk-summary-list__value">
+                                            <span class="moj-badge moj-badge--green" th:if="${user.entraStatus == 'ACTIVE'}">Active</span>
+                                            <span class="moj-badge moj-badge--red" th:if="${user.entraStatus == 'DEACTIVE'}">Deactive</span>
+                                            <span class="moj-badge" th:if="${user.entraStatus == 'AWAITING_USER_APPROVAL'}">Awaiting user approval</span>
+                                            <span class="moj-badge" th:if="${user.entraStatus == 'UNKNOWN'}">Unknown</span>
+                                        </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Activation status</dt>
