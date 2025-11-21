@@ -57,6 +57,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -888,7 +889,7 @@ public class UserService {
         return appRoles;
     }
 
-    public List<AppRoleDto> getAppRolesByAppIdAndUserType(String appId, UserType userType) {
+    public List<AppRoleDto> getAppRolesByAppIdAndUserType(String appId, UserType userType, FirmType userFirmType) {
         UUID appUuid = UUID.fromString(appId);
         Optional<App> optionalApp = appRepository.findById(appUuid);
         List<AppRoleDto> appRoles = new ArrayList<>();
@@ -897,6 +898,7 @@ public class UserService {
             appRoles = app.getAppRoles().stream()
                     .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
                             .anyMatch(roleUserType -> roleUserType == userType))
+                    .filter(appRole -> appRole.getFirmTypeRestriction() == null || appRole.getFirmTypeRestriction().equals(userFirmType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .sorted()
                     .toList();
