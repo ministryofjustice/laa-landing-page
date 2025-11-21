@@ -833,7 +833,7 @@ public class MultiFirmUserControllerTest {
         AppDto appDto = AppDto.builder().id(appId).name("CCMS Application").build();
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
 
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), null))
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), eq(null)))
                 .thenReturn(List.of());
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
@@ -866,7 +866,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("CCMS_CODE");
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), null))
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), eq(null)))
                 .thenReturn(List.of(ccmsRole));
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
@@ -1650,8 +1650,12 @@ public class MultiFirmUserControllerTest {
     @Test
     public void testSelectUserAppRolesPassesCorrectFirmTypeForChambersUser() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("selectedAppIds", List.of("app-id-1"));
+        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
         session.setAttribute("delegateTargetFirmId", UUID.randomUUID().toString());
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        session.setAttribute("entraUser", entraUser);
+        
         Authentication authentication = mock(Authentication.class);
 
         Firm chambersFirm = Firm.builder().id(UUID.randomUUID()).type(FirmType.CHAMBERS).build();
@@ -1683,7 +1687,10 @@ public class MultiFirmUserControllerTest {
     @Test
     public void testSelectUserAppRolesPassesCorrectFirmTypeForAdvocateUser() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("selectedAppIds", List.of("app-id-1"));
+        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        session.setAttribute("entraUser", entraUser);
 
         Firm advocateFirm = Firm.builder().id(UUID.randomUUID()).type(FirmType.ADVOCATE).build();
         UserProfile currentUserProfile = UserProfile.builder().firm(advocateFirm).appRoles(Set.of()).build();
@@ -1711,7 +1718,10 @@ public class MultiFirmUserControllerTest {
     @Test
     public void testSelectUserAppRolesPassesNullFirmTypeWhenFirmIsNull() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("selectedAppIds", List.of("app-id-1"));
+        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        session.setAttribute("entraUser", entraUser);
 
         UserProfile currentUserProfile = UserProfile.builder().firm(null).appRoles(Set.of()).build();
         
