@@ -91,7 +91,9 @@
                         <div style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">!</div>
                         <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
                             This user is set up as a multi-firm user.
-                            <a class="govuk-link" href="#" th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
+                            <a class="govuk-link"
+                               th:href="@{/admin/users (search=${user.entraUser.email})}"
+                               th:text="'View all firms for ' + ${user.fullName} + '.'"></a>
                         </p>
                     </div>
                 </div>
@@ -159,7 +161,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                         <dd class="govuk-summary-list__actions"></dd>
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser && canViewAllProfiles}">
+                                    <div class="govuk-summary-list__row" th:if="${canViewAllProfiles}">
                                         <dt class="govuk-summary-list__key">
                                             Firm name
                                         </dt>
@@ -169,7 +171,7 @@
                                         <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row"
-                                        th:if="${enableMultiFirmUser and externalUser}">
+                                        th:if="${externalUser}">
                                         <dt class="govuk-summary-list__key">
                                             Multi-firm access
                                         </dt>
@@ -180,7 +182,7 @@
                                             <a th:if="${user.entraUser.multiFirmUser && canViewAllProfiles}"
                                                class="govuk-link"
                                                th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
-                                            <a th:if="${enableMultiFirmUser != null and enableMultiFirmUser and !user.entraUser.multiFirmUser and canEditUser}"
+                                            <a th:if="${!user.entraUser.multiFirmUser and canEditUser}"
                                                class="govuk-link"
                                                th:href="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}">
                                                 Convert to multi-firm

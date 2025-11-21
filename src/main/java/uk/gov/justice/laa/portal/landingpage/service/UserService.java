@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
@@ -48,6 +49,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -71,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1327,5 +1330,262 @@ public class UserService {
      */
     public long getProfileCountByEntraUserId(UUID entraUserId) {
         return userProfileRepository.countByEntraUserId(entraUserId);
+    }
+
+    /**
+     * Get paginated audit users for the User Access Audit Table
+     * Includes all registered users, even those without firm profiles
+     *
+     * @param searchTerm Search by name or email
+     * @param firmId     Filter by firm ID
+     * @param silasRole  Filter by SiLAS role (authz role name)
+     * @param page       Page number (1-based)
+     * @param pageSize   Number of results per page
+     * @param sort       Sort field
+     * @param direction  Sort direction (asc/desc)
+     * @return Paginated audit users
+     */
+    public PaginatedAuditUsers getAuditUsers(
+            String searchTerm, UUID firmId, String silasRole, UUID appId,
+            int page, int pageSize, String sort, String direction) {
+
+        // Check if sorting by profile count or firm (special cases - require different
+        // queries)
+        boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
+        boolean sortByFirm = sort != null
+                && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
+
+        Page<EntraUser> userPage;
+
+        if (sortByProfileCount || sortByFirm) {
+            // Use special queries for profile count or firm sorting
+            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
+            String sortField = sortByProfileCount ? "profileCount" : "firmName";
+            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
+            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+            Page<? extends UserAuditProjection> resultPage = sortByProfileCount
+                    ? entraUserRepository.findAllUsersForAuditWithProfileCount(
+                            searchTerm, firmId, silasRole, appId, pageRequest)
+                    : entraUserRepository.findAllUsersForAuditWithFirm(
+                            searchTerm, firmId, silasRole, appId, pageRequest);
+
+            // Extract user IDs in order
+            List<UUID> userIds = resultPage.getContent().stream()
+                    .map(UserAuditProjection::getUserId)
+                    .toList();
+
+            // Fetch full user details
+            List<EntraUser> users = Collections.emptyList();
+            if (!userIds.isEmpty()) {
+                users = entraUserRepository.findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
+
+                // Sort users to match the order from the query result
+                Map<UUID, Integer> orderMap = new HashMap<>();
+                for (int i = 0; i < userIds.size(); i++) {
+                    orderMap.put(userIds.get(i), i);
+                }
+                users.sort(Comparator.comparingInt(u -> orderMap.getOrDefault(u.getId(), Integer.MAX_VALUE)));
+            }
+
+            // Create page with sorted users
+            userPage = new PageImpl<>(users, pageRequest, resultPage.getTotalElements());
+        } else {
+            // Map sort field to entity field
+            String mappedSort = mapAuditSortField(sort != null ? sort : "name");
+            Sort sortObj = getAuditSort(mappedSort, direction);
+            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+            userPage = entraUserRepository.findAllUsersForAudit(
+                    searchTerm, firmId, silasRole, appId, pageRequest);
+
+            // Second query: Batch fetch relationships for the paginated users
+            if (!userPage.getContent().isEmpty()) {
+                Set<UUID> userIds = userPage.getContent().stream()
+                        .map(EntraUser::getId)
+                        .collect(Collectors.toSet());
+                List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
+
+                // Replace content with fully loaded entities, preserving order
+                Map<UUID, EntraUser> userMap = usersWithRelations.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
+                List<EntraUser> orderedUsers = userPage.getContent().stream()
+                        .map(u -> userMap.getOrDefault(u.getId(), u))
+                        .toList();
+                userPage = new PageImpl<>(
+                        orderedUsers, userPage.getPageable(), userPage.getTotalElements());
+            }
+        }
+
+        // Map to DTOs
+        List<uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto> auditUsers = userPage.getContent().stream()
+                .map(this::mapToAuditUserDto)
+                .toList();
+
+        return uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers.builder()
+                .users(auditUsers)
+                .totalUsers(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .currentPage(page)
+                .pageSize(pageSize)
+                .build();
+    }
+
+    /**
+     * Map EntraUser to AuditUserDto
+     */
+    private uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto mapToAuditUserDto(EntraUser user) {
+        // Get all user profiles
+        List<UserProfile> profiles = user.getUserProfiles() != null
+                ? new ArrayList<>(user.getUserProfiles())
+                : Collections.emptyList();
+
+        // Determine user type
+        String userType = determineUserType(user, profiles);
+
+        // Get firm associations
+        String firmAssociation = determineFirmAssociation(profiles);
+
+        // Get account status
+        String accountStatus = determineAccountStatus(user, profiles);
+
+        // Get profile count
+        int profileCount = profiles.size();
+
+        // Get first active profile ID for linking, or first profile if none active
+        String userId = profiles.stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .or(() -> profiles.stream().findFirst())
+                .map(profile -> profile.getId().toString())
+                .orElse(null);
+
+        return uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto.builder()
+                .name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail())
+                .userId(userId)
+                .userType(userType)
+                .firmAssociation(firmAssociation)
+                .accountStatus(accountStatus)
+                .isMultiFirmUser(user.isMultiFirmUser())
+                .profileCount(profileCount)
+                .build();
+    }
+
+    /**
+     * Determine user type for audit table
+     * Returns: "Internal", "External", or "External - 3rd Party"
+     */
+    private String determineUserType(EntraUser user, List<UserProfile> profiles) {
+        if (profiles.isEmpty()) {
+            // If multi-firm user with no profiles, show as External - 3rd Party
+            if (user.isMultiFirmUser()) {
+                return "External - 3rd Party";
+            }
+            if (!user.isMultiFirmUser()) {
+                return "External";
+            }
+            return "Unknown";
+        }
+
+        // Check if user has internal profile
+        boolean hasInternal = profiles.stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+
+        if (hasInternal) {
+            return "Internal";
+        }
+
+        // External user
+        if (user.isMultiFirmUser()) {
+            return "External - 3rd Party";
+        }
+
+        return "External";
+    }
+
+    /**
+     * Determine firm association for audit table
+     * Returns firm name(s) or "None" if no profiles
+     */
+    private String determineFirmAssociation(List<UserProfile> profiles) {
+        if (profiles.isEmpty()) {
+            return "Unknown";
+        }
+
+        Set<String> firmNames = profiles.stream()
+                .map(UserProfile::getFirm)
+                .filter(Objects::nonNull)
+                .map(Firm::getName)
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        if (firmNames.isEmpty()) {
+            return "Unknown";
+        }
+
+        return String.join(", ", firmNames);
+    }
+
+    /**
+     * Determine account status for audit table
+     * Returns: "Active", "Inactive", "Pending", or "Disabled"
+     */
+    private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+        // Check if user has any pending profiles
+        boolean hasPending = profiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        if (hasPending) {
+            return "Pending";
+        }
+
+        // Check user status
+        if (user.getUserStatus() == UserStatus.DEACTIVE) {
+            return "Disabled";
+        }
+
+        // All other cases considered active
+        return "Active";
+    }
+
+    /**
+     * Get all SiLAS roles (authz roles) for dropdown filter
+     * Returns list of role DTOs
+     */
+    public List<AppRoleDto> getAllSilasRoles() {
+        return appRoleRepository.findAllAuthzRoles().stream()
+                .map(role -> mapper.map(role, AppRoleDto.class))
+                .toList();
+    }
+
+    /**
+     * Map audit table sort field to entity field
+     */
+    private String mapAuditSortField(String sort) {
+        if (sort == null) {
+            return "firstName";
+        }
+
+        return switch (sort.toLowerCase()) {
+            case "name" -> "firstName"; // Sort by first name for name column
+            case "email" -> "email";
+            case "usertype" -> "multiFirmUser"; // Sort by multiFirmUser for user type (ex 3rd party sorts differently)
+            case "firm", "firmassociation" -> "f.name"; // Sort by firm name (uses LEFT JOIN with firm)
+            case "accountstatus" -> "userStatus"; // Sort by userStatus enum
+            case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
+            case "profilecount" -> "profilecount"; // Special case - handled separately
+            default -> "firstName"; // Default to first name
+        };
+    }
+
+    /**
+     * Get Sort for audit table queries
+     */
+    private Sort getAuditSort(String field, String direction) {
+        Sort.Direction order = Sort.Direction.ASC;
+        if (direction != null && !direction.isEmpty()) {
+            order = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+        return Sort.by(order, field);
     }
 }

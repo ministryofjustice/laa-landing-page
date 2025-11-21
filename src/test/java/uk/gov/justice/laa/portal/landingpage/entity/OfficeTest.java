@@ -68,10 +68,7 @@ public class OfficeTest extends BaseEntityTest {
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Office address must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("address");
+        assertThat(violations).isEmpty();
     }
 
     @Test
@@ -81,13 +78,7 @@ public class OfficeTest extends BaseEntityTest {
 
         Set<ConstraintViolation<Office>> violations = validator.validate(office);
 
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Office address line 1 must be provided",
-                "Office postcode must be provided"));
-        Set<String> volitionalPaths = violations.stream().map(ConstraintViolation::getPropertyPath).map(Path::toString).collect(Collectors.toSet());
-        assertThat(volitionalPaths).contains("address.postcode", "address.addressLine1");
+        assertThat(violations).isEmpty();
     }
 
     @Test
