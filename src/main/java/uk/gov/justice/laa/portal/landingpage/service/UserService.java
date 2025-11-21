@@ -1616,11 +1616,12 @@ public class UserService {
         // Get all profiles for this user
         List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
 
-        // Map profiles to DTOs and sort with active profile first
-        List<AuditProfileDto> profileDtos = allProfiles
-                .stream()
+        // Sort with active profile first
+        allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
+
+        // Map profiles to DTOs (no pagination for this method)
+        List<AuditProfileDto> profileDtos = allProfiles.stream()
                 .map(this::mapToAuditProfileDto)
-                .sorted((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()))
                 .toList();
 
         // Determine user type using shared method
@@ -1643,6 +1644,73 @@ public class UserService {
                 .activationStatus(null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
                 .profiles(profileDtos)
+                .totalProfiles(allProfiles.size())
+                .totalProfilePages(1)
+                .currentProfilePage(1)
+                .build();
+    }
+
+    /**
+     * Get detailed audit information for a specific user with profile pagination
+     * Includes all profiles, roles, offices, and audit data
+     *
+     * @param userId      The user profile ID to retrieve
+     * @param profilePage The page number for profiles (1-indexed)
+     * @param profileSize The number of profiles per page
+     * @return Detailed audit user DTO with paginated profiles
+     */
+    public AuditUserDetailDto getAuditUserDetail(UUID userId, int profilePage, int profileSize) {
+        // Fetch user profile with all relationships
+        UserProfile profile = userProfileRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User profile not found with id: " + userId));
+
+        EntraUser entraUser = profile.getEntraUser();
+
+        // Get all profiles for this user
+        List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
+
+        // Sort with active profile first
+        allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
+
+        // Calculate pagination
+        int totalProfiles = allProfiles.size();
+        int totalPages = (int) Math.ceil((double) totalProfiles / profileSize);
+        int startIndex = (profilePage - 1) * profileSize;
+        int endIndex = Math.min(startIndex + profileSize, totalProfiles);
+
+        // Get paginated profiles
+        List<UserProfile> paginatedProfiles = allProfiles.subList(
+                Math.max(0, startIndex),
+                Math.max(0, endIndex));
+
+        // Map profiles to DTOs
+        List<AuditProfileDto> profileDtos = paginatedProfiles.stream()
+                .map(this::mapToAuditProfileDto)
+                .toList();
+
+        // Determine user type using shared method
+        String userType = determineUserType(entraUser, allProfiles);
+
+        // Build detail DTO
+        return AuditUserDetailDto.builder()
+                .userId(entraUser.getId().toString())
+                .email(entraUser.getEmail())
+                .firstName(entraUser.getFirstName())
+                .lastName(entraUser.getLastName())
+                .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
+                .isMultiFirmUser(entraUser.isMultiFirmUser())
+                .userType(userType)
+                .createdDate(entraUser.getCreatedDate())
+                .createdBy(entraUser.getCreatedBy())
+                // TODO: Fetch lastLoginDate from Microsoft Graph API
+                .lastLoginDate(null)
+                // TODO: Fetch activationStatus from TechServices API or SILAS API
+                .activationStatus(null)
+                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                .profiles(profileDtos)
+                .totalProfiles(totalProfiles)
+                .totalProfilePages(totalPages)
+                .currentProfilePage(profilePage)
                 .build();
     }
 

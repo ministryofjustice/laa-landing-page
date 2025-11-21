@@ -68,6 +68,7 @@ import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
@@ -6144,6 +6145,123 @@ class UserServiceTest {
             assertThrows(IllegalArgumentException.class, () -> {
                 userService.getAuditUserDetail(userId);
             });
+        }
+
+        @Test
+        void getAuditUserDetail_withPagination_returnsCorrectPage() {
+            // Given
+            UUID profile1Id = UUID.randomUUID();
+            Firm firm1 = Firm.builder().name("Firm 1").code("F001").build();
+            Firm firm2 = Firm.builder().name("Firm 2").code("F002").build();
+            Firm firm3 = Firm.builder().name("Firm 3").code("F003").build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("user@example.com")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .multiFirmUser(true)
+                    .userStatus(UserStatus.ACTIVE)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .entraUser(entraUser)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            UserProfile profile3 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm3)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            entraUser.setUserProfiles(Set.of(profile1, profile2, profile3));
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When - Get page 1 with size 2
+            AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id, 1, 2);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(2);
+            assertThat(result.getTotalProfiles()).isEqualTo(3);
+            assertThat(result.getTotalProfilePages()).isEqualTo(2);
+            assertThat(result.getCurrentProfilePage()).isEqualTo(1);
+            assertThat(result.getProfiles().get(0).isActiveProfile()).isTrue();
+        }
+
+        @Test
+        void getAuditUserDetail_withPaginationLastPage_returnsRemainingProfiles() {
+            // Given
+            UUID profile1Id = UUID.randomUUID();
+            Firm firm1 = Firm.builder().name("Firm 1").code("F001").build();
+            Firm firm2 = Firm.builder().name("Firm 2").code("F002").build();
+            Firm firm3 = Firm.builder().name("Firm 3").code("F003").build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("user@example.com")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .multiFirmUser(true)
+                    .userStatus(UserStatus.ACTIVE)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .entraUser(entraUser)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            UserProfile profile3 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm3)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            entraUser.setUserProfiles(Set.of(profile1, profile2, profile3));
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When - Get page 2 with size 2 (should return 1 remaining profile)
+            AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id, 2, 2);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+            assertThat(result.getTotalProfiles()).isEqualTo(3);
+            assertThat(result.getTotalProfilePages()).isEqualTo(2);
+            assertThat(result.getCurrentProfilePage()).isEqualTo(2);
         }
     }
 }

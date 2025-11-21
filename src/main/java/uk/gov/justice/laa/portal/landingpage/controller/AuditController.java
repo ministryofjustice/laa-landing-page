@@ -114,15 +114,21 @@ public class AuditController {
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
     public String displayUserAuditDetail(
             @PathVariable("id") UUID userId,
+            @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
+            @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
             Model model) {
 
-        log.debug("AuditController.displayUserAuditDetail - userId: '{}'", userId);
+        log.debug("AuditController.displayUserAuditDetail - userId: '{}', profilePage: {}, profileSize: {}",
+                userId, profilePage, profileSize);
 
-        // Get detailed user audit data
-        AuditUserDetailDto userDetail = userService.getAuditUserDetail(userId);
+        // Get detailed user audit data with pagination for profiles
+        AuditUserDetailDto userDetail = userService.getAuditUserDetail(userId, profilePage, profileSize);
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
+        model.addAttribute("profileId", userId); // Add profile ID for pagination links
+        model.addAttribute("profilePage", profilePage);
+        model.addAttribute("profileSize", profileSize);
 
         return "user-audit/details";
     }

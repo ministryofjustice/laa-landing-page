@@ -88,6 +88,21 @@ public class AuditUserDetailDto implements Serializable {
     private List<AuditProfileDto> profiles;
 
     /**
+     * Total number of profiles (for pagination)
+     */
+    private long totalProfiles;
+
+    /**
+     * Total pages for profile pagination
+     */
+    private int totalProfilePages;
+
+    /**
+     * Current profile page number
+     */
+    private int currentProfilePage;
+
+    /**
      * Profile DTO for the audit detail view
      */
     @Data
