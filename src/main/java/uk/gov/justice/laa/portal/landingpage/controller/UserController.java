@@ -1031,11 +1031,11 @@ public class UserController {
                 false);
 
         // save if allSelectedRolesByPage is not empty
-        if(!editUserAllSelectedRoles.isEmpty()){
+        if (!editUserAllSelectedRoles.isEmpty()) {
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
         }
 
-        if (!isMultipleRoles(allRoles)){
+        if (!isMultipleRoles(allRoles)) {
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
@@ -1776,24 +1776,18 @@ public class UserController {
 
     }
 
-    private static Long getAppCounts(List<AppRoleDto> appRoleDtos, String appId) {
-        return appRoleDtos.stream()
-                .filter( appRoleDto -> appRoleDto.getApp().getId().equals(appId))
-                .count();
-    }
-
     private static List<AppRoleDto> getRolesByAppId(List<AppRoleDto> appRoleDtos, String appId) {
         return appRoleDtos.stream()
-                .filter( appRoleDto -> appRoleDto.getApp().getId().equals(appId))
+                .filter(appRoleDto -> appRoleDto.getApp().getId().equals(appId))
                 .collect(Collectors.toList());
 
     }
 
     private static boolean isMultipleRoles(List<AppRoleDto> appRoleDtos) {
         return appRoleDtos.stream()
-                    .collect(Collectors
-                            .groupingBy(dto -> dto.getApp().getId(),
-                                    Collectors.counting()))
+                .collect(Collectors
+                        .groupingBy(dto -> dto.getApp().getId(),
+                                Collectors.counting()))
                 .values().stream()
                 .anyMatch(count -> count > 1);
 
@@ -1844,13 +1838,14 @@ public class UserController {
 
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
-        } else if (selectedAppIndex.equals(0)){
-           session.removeAttribute("grantAccessAllSelectedRoles");
-            allSelectedRolesByPage =  new HashMap<>();
+        } else if (selectedAppIndex.equals(0)) {
+            session.removeAttribute("grantAccessAllSelectedRoles");
+            allSelectedRolesByPage = new HashMap<>();
         }
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
         //add roles in session and increase selectedAppIndex
-        currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(rolesForm,
+        currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
+                rolesForm,
                 selectedAppIndex,
                 selectedApps,
                 user,
@@ -1859,11 +1854,11 @@ public class UserController {
                 false);
 
         // save if allSelectedRolesByPage is not empty
-        if(!allSelectedRolesByPage.isEmpty()){
+        if (!allSelectedRolesByPage.isEmpty()) {
             session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
         }
 
-        if (!isMultipleRoles(allRoles)){
+        if (!isMultipleRoles(allRoles)) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             saveRolesInTheSession(id, session, allSelectedRolesByPage, currentUserProfile);
             UUID uuid = UUID.fromString(id);
@@ -1967,7 +1962,7 @@ public class UserController {
             allSelectedRolesByPage = new HashMap<>();
         }
 
-        if (selectedAppIndex >= selectedApps.size() - 1 ) {
+        if (selectedAppIndex >= selectedApps.size() - 1) {
             // Add the roles for the currently selected app to a map for lookup.
             allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
@@ -1988,7 +1983,7 @@ public class UserController {
                     user,
                     allSelectedRolesByPage,
                     allRoles,
-                    true );
+                    true);
 
             modelFromSession.addAttribute("grantAccessSelectedAppIndex", selectedAppIndex);
             session.setAttribute("grantAccessUserRolesModel", modelFromSession);
