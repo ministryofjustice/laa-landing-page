@@ -1080,33 +1080,40 @@ class UserControllerTest {
         UserProfileDto testUserProfile = new UserProfileDto();
         testUserProfile.setUserType(UserType.EXTERNAL);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUserProfile));
+        //setup App
+        AppDto currentApp = new AppDto();
+        currentApp.setId("testAppId");
+        currentApp.setName("testAppName");
         // Setup test user roles
         AppRoleDto testUserRole = new AppRoleDto();
         testUserRole.setId("testUserAppRoleId");
+        testUserRole.setApp(currentApp);
         List<AppRoleDto> testUserRoles = List.of(testUserRole);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
         // Setup all available roles
         AppRoleDto testRole1 = new AppRoleDto();
         testRole1.setId(UUID.randomUUID().toString());
         testRole1.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        testRole1.setApp(currentApp);
         AppRoleDto testRole2 = new AppRoleDto();
         testRole2.setId(UUID.randomUUID().toString());
         testRole2.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        testRole2.setApp(currentApp);
         AppRoleDto testRole3 = new AppRoleDto();
         testRole3.setId(UUID.randomUUID().toString());
         testRole3.setUserTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL });
-        AppDto currentApp = new AppDto();
-        currentApp.setId("testAppId");
-        currentApp.setName("testAppName");
+        testRole3.setApp(currentApp);
+
         List<String> selectedApps = List.of(currentApp.getId());
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", selectedApps);
         List<AppRoleDto> allRoles = List.of(testRole1, testRole2, testRole3);
         when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType(currentApp.getId(), UserType.EXTERNAL)).thenReturn(allRoles);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
+
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
                 testSession);
