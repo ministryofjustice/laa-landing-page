@@ -4343,26 +4343,33 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+        user.setUserType(UserType.EXTERNAL);
 
+        String appId = String.valueOf(UUID.randomUUID());
         AppDto regularApp = new AppDto();
-        regularApp.setId("app1");
+        regularApp.setId(appId);
         regularApp.setName("CCMS case transfer requests");
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN"); // Not a CCMS role
+        regularRole.setApp(regularApp);
 
-        final List<AppRoleDto> roles = List.of(regularRole);
+        AppRoleDto role = new AppRoleDto();
+        role.setId(UUID.randomUUID().toString());
+        role.setApp(regularApp);
+
+        final List<AppRoleDto> roles = List.of(regularRole, role);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of("app1"));
+        testSession.setAttribute("selectedApps", List.of(appId));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
