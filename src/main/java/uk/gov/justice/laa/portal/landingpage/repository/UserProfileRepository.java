@@ -56,7 +56,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                                 FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
+            OR (ups.firm.parentFirm IS NOT NULL AND ups.firm.parentFirm.id = :#{#criteria.firmSearch.selectedFirmId}))
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
                                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
@@ -72,7 +73,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT COUNT(ups) FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId})
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL 
+                   OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
+                   OR (ups.firm.parentFirm IS NOT NULL AND ups.firm.parentFirm.id = :#{#criteria.firmSearch.selectedFirmId}))
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
                                         OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))

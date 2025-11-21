@@ -1,21 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
 import org.assertj.core.api.Assertions;
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.dao.DataIntegrityViolationException;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
@@ -41,7 +38,9 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void roleAssignmentAndRetrieval() {
         // Arrange
-        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
+                .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
+                .appType(AppType.LAA).url("http://localhost:8080/lassie").build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
@@ -68,7 +67,9 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void findByAssigningRole() {
         // Arrange
-        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
+                .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
+                .appType(AppType.LAA).url("http://localhost:8080/lassie").build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();

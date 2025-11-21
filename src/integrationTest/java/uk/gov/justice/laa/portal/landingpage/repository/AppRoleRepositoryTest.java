@@ -7,8 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
@@ -94,9 +92,11 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     @Test
     public void findAllByIdInAndAuthzRoleIs() {
         App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
-                "Security Group Name");
+                "Security Group Name", "Lassie App Title", "Lassie App Description",
+                "Lassie OID Group", "http://localhost:8080/lassie");
         App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
-                "Security Group Name 2");
+                "Security Group Name 2", "Crime App Title", "Crime App Description",
+                "Crime OID Group", "http://localhost:8080/crime");
         appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
 
         AppRole lassieExMan = buildLaaAppRole(lassie, "App Role 1");
