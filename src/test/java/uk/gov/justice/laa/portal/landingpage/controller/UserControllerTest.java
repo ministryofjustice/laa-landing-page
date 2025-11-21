@@ -2210,26 +2210,32 @@ class UserControllerTest {
         currentApp.setId("app1");
         currentApp.setName("App 1");
 
-        AppRoleDto role = new AppRoleDto();
-        role.setId(UUID.randomUUID().toString());
-        role.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
-        List<AppRoleDto> appRoles = List.of(role);
+        AppRoleDto role1 = new AppRoleDto();
+        role1.setId(UUID.randomUUID().toString());
+        role1.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        role1.setApp(currentApp);
+        AppRoleDto role2 = new AppRoleDto();
+        role2.setId(UUID.randomUUID().toString());
+        role2.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        role2.setApp(currentApp);
+        List<AppRoleDto> appRoles = List.of(role1, role2);
 
         final UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
         lenient().when(userService.getAppByAppId("app2")).thenReturn(Optional.of(userApp2));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(appRoles);
         lenient().when(userService.getAppRolesByAppId("app2")).thenReturn(List.of());
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(appRoles);
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
@@ -2276,6 +2282,7 @@ class UserControllerTest {
         final UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
+                .userType(UserType.EXTERNAL)
                 .build();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
@@ -3132,22 +3139,23 @@ class UserControllerTest {
 
     private static @NotNull List<AppRoleDto> createAppRole(int quantityOfRoles, boolean withSameApp) {
         List<AppRoleDto> listOfRoles = new ArrayList<>();
-        int indexOfSameApp = 0;
+        String appId = String.valueOf(UUID.randomUUID());
+        int indexOfSameApp = 1;
         for (int i = 0; i < quantityOfRoles; i++) {
 
             AppRoleDto role = AppRoleDto.builder()
-                    .id(String.format("role%d", i))
+                    .id(String.valueOf(UUID.randomUUID()))
                     .name(String.format("role%d", i))
                     .build();
 
             if (withSameApp) {
                 role.setApp(AppDto.builder()
-                        .id(String.format("app%d", indexOfSameApp))
+                        .id(appId)
                         .name(String.format("role%d", indexOfSameApp))
                         .build());
             } else {
                 role.setApp(AppDto.builder()
-                        .id(String.format("app%d", i))
+                        .id(String.valueOf(UUID.randomUUID()))
                         .name(String.format("role%d", i))
                         .build());
             }
