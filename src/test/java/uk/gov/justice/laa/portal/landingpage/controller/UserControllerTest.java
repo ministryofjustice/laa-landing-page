@@ -3728,27 +3728,25 @@ class UserControllerTest {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440002";
         UserProfileDto user = new UserProfileDto();
+        user.setUserType(UserType.EXTERNAL);
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
 
-        AppDto currentApp = new AppDto();
-        currentApp.setId("app1");
-        currentApp.setName("App 1");
+        final List<AppRoleDto> roles = new ArrayList<>();
+        roles.addAll(createAppRole(2, true));
 
-        AppRoleDto role1 = new AppRoleDto();
-        role1.setId(UUID.randomUUID().toString());
-        role1.setName("Role 1");
-        final List<AppRoleDto> roles = List.of(role1);
+        AppDto currentApp = roles.get(0).getApp();
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
+        testSession.setAttribute("grantAccessSelectedApps", List.of(currentApp.getId()));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
+        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -4412,7 +4410,7 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-
+        user.setUserType(UserType.EXTERNAL);
         AppDto ccmsApp = new AppDto();
         ccmsApp.setId("app1");
         ccmsApp.setName("CCMS Application");
@@ -4422,17 +4420,20 @@ class UserControllerTest {
         normalRole.setCcmsCode("NORMAL_ROLE");
 
         final List<AppRoleDto> roles = List.of(normalRole);
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
+        List<AppRoleDto> allRoles = new ArrayList<>(createAppRole(2, true));
+        allRoles.get(0).getApp().setName("CCMS Application");
+        String appId = allRoles.get(0).getApp().getId();
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(roles);
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(ccmsApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
