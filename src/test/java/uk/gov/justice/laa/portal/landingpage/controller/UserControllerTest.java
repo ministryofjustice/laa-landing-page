@@ -5964,8 +5964,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
             FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
@@ -5997,8 +5995,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
             FirmDto advocateFirm = FirmDto.builder().id(UUID.randomUUID()).name("Advocate Firm").type(FirmType.ADVOCATE).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
@@ -6031,8 +6027,6 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            
-            Model model = new ExtendedModelMap();
 
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
