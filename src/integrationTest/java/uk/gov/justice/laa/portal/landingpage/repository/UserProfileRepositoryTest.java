@@ -241,7 +241,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindBySearchParams_SelectedParentFirmReturnsParentAndChildren() {
-        Firm parent = buildFirm("Parent Firm", "PARENT");
+        Firm parent = buildParentFirm("Parent Firm", "PARENT");
         Firm child = buildFirm("Child Firm", "CHILD");
         child.setParentFirm(parent);
         parent.setChildFirms(Set.of(child));
@@ -272,7 +272,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindBySearchParams_SelectedChildFirmReturnsOnlyChild() {
-        Firm parent = buildFirm("Parent F2", "P2");
+        Firm parent = buildParentFirm("Parent F2", "P2");
         Firm child = buildFirm("Child F2", "C2");
         child.setParentFirm(parent);
         parent.setChildFirms(Set.of(child));
@@ -303,7 +303,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindBySearchParams_SelectedParentFirmWithMultipleChildrenReturnsAllWithCorrectCountAndPagination() {
-        Firm parent = buildFirm("Parent F3", "P3");
+        Firm parent = buildParentFirm("Parent F3", "P3");
         Firm child1 = buildFirm("Child F3A", "C3A");
         Firm child2 = buildFirm("Child F3B", "C3B");
         child1.setParentFirm(parent);
@@ -351,7 +351,7 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindBySearchParams_SelectedParentFirmWithSearchTermFiltersWithinHierarchy() {
-        Firm parent = buildFirm("Parent F4", "P4");
+        Firm parent = buildParentFirm("Parent F4", "P4");
         Firm child1 = buildFirm("Child F4A", "C4A");
         Firm child2 = buildFirm("Child F4B", "C4B");
         child1.setParentFirm(parent);

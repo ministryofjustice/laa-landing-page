@@ -122,6 +122,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     @Transactional
     public void testExternalUserWithFirmUserManagerInParentFirmCanSeeParentAndChildFirmUsers() throws Exception {
         Firm parent = testFirm2;
+        setParentFirmType(parent);
         Firm child = createChildFirm(parent, "Child Firm RB-P", "CRB-P");
 
         EntraUser loggedInUser = firmUserManagers.getFirst();
@@ -147,6 +148,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
     @Transactional
     public void testExternalUserWithFirmUserManagerInChildFirmCanSeeChildFirmUsersOnly() throws Exception {
         Firm parent = testFirm2;
+        setParentFirmType(parent);
         Firm child = createChildFirm(parent, "Child Firm RB-C", "CRB-C");
 
         EntraUser loggedInUser = createExternalFirmUserManagerAtFirm("rbc-fum@example.com", child);

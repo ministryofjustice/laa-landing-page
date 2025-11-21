@@ -16,6 +16,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -390,5 +391,10 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(AppRole::isAuthzRole)
                 .filter(r -> r.getName().equals("Firm User Manager"))
                 .findFirst().orElseThrow();
+    }
+
+    protected void setParentFirmType(Firm parentFirm) {
+        parentFirm.setType(FirmType.CHAMBERS);
+        firmRepository.saveAndFlush(parentFirm);
     }
 }

@@ -21,6 +21,7 @@ public class DelegateAccessToChildFirmUserTest extends RoleBasedAccessIntegratio
     public void parentFirmManagerDelegatesAccessToChildFirmUser_redirectsViaSelectFirm() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
         Firm parent = loggedInUser.getUserProfiles().stream().findFirst().orElseThrow().getFirm();
+        setParentFirmType(parent);
         Firm child = createChildFirm(parent, "DA Child A", "DA-CH-A");
 
         MockHttpSession session = new MockHttpSession();
@@ -51,6 +52,7 @@ public class DelegateAccessToChildFirmUserTest extends RoleBasedAccessIntegratio
     public void parentFirmManagerDelegatesAccessToParentFirmUser_redirectsViaSelectFirm() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
         Firm parent = loggedInUser.getUserProfiles().stream().findFirst().orElseThrow().getFirm();
+        setParentFirmType(parent);
         createChildFirm(parent, "DA Child B", "DA-CH-B");
 
         MockHttpSession session = new MockHttpSession();
@@ -81,6 +83,7 @@ public class DelegateAccessToChildFirmUserTest extends RoleBasedAccessIntegratio
     @Transactional
     public void childFirmManagerDelegatesAccessToChildFirmUser_noSelectFirmPageShown() throws Exception {
         Firm parent = testFirm2;
+        setParentFirmType(parent);
         Firm child = createChildFirm(parent, "DA Child C", "DA-CH-C");
 
         EntraUser loggedInUser = createExternalFirmUserManagerAtFirm("child-fum@example.com", child);
