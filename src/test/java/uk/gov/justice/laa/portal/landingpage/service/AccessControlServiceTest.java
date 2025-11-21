@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -214,7 +215,6 @@ public class AccessControlServiceTest {
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         UUID accessedUserId = UUID.randomUUID();
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto2));
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com")
                 .build();
@@ -245,7 +245,6 @@ public class AccessControlServiceTest {
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(Collections.emptyList());
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
         UUID accessedUserId = UUID.randomUUID();
@@ -356,6 +355,96 @@ public class AccessControlServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertEquals(1, infoLogs.size());
         assertTrue(infoLogs.getFirst().toString().contains("does not have permission to edit this userId"));
+    }
+
+    @Test
+    public void testExternalParentFirmUserCanAccessChildFirmUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID parentFirmId = UUID.randomUUID();
+        UUID childFirmId = UUID.randomUUID();
+
+        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("parent@firm.test").userProfiles(HashSet.newHashSet(1)).build();
+        Firm parent = Firm.builder().id(parentFirmId).build();
+        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
+        parent.setChildFirms(Set.of(child));
+        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
+        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
+        UserProfile authProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authUser)
+                .userType(UserType.EXTERNAL)
+                .firm(parent)
+                .appRoles(Set.of(authz))
+                .build();
+        authUser.getUserProfiles().add(authProfile);
+
+        UUID accessedProfileId = UUID.randomUUID();
+        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL).entraUser(accessedEntra).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        Mockito.when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
+                FirmDto.builder().id(parentFirmId).build(),
+                FirmDto.builder().id(childFirmId).build()
+        ));
+        Mockito.when(userService.getUserProfileById(accessedProfileId.toString())).thenReturn(Optional.of(accessedProfile));
+        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+
+        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+                .thenReturn(List.of(FirmDto.builder().id(childFirmId).build()));
+
+        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
+        Assertions.assertThat(canAccess).isTrue();
+    }
+
+    @Test
+    public void testExternalChildFirmUserCannotAccessParentFirmUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID parentFirmId = UUID.randomUUID();
+        UUID childFirmId = UUID.randomUUID();
+
+        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("child@firm.test").userProfiles(HashSet.newHashSet(1)).build();
+        Firm parent = Firm.builder().id(parentFirmId).build();
+        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
+        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
+        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
+        UserProfile authProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authUser)
+                .userType(UserType.EXTERNAL)
+                .firm(child)
+                .appRoles(Set.of(authz))
+                .build();
+        authUser.getUserProfiles().add(authProfile);
+
+        UUID accessedProfileId = UUID.randomUUID();
+        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL).entraUser(accessedEntra).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        Mockito.when(userService.getUserProfileById(accessedProfileId.toString())).thenReturn(Optional.of(accessedProfile));
+        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+
+        // Ensure logging path has a non-null CurrentUserDto to prevent NPE when access is denied
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("test");
+        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+                .thenReturn(List.of(FirmDto.builder().id(parentFirmId).build()));
+
+        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
+        Assertions.assertThat(canAccess).isFalse();
     }
 
     @Test
