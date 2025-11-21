@@ -160,9 +160,7 @@ class UserControllerTest {
         // Arrange
         String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
-        // Two apps in session, we are on index 1 and expect back to index 0
-        httpSession.setAttribute("selectedApps", List.of(
-                UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+
 
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
@@ -171,16 +169,23 @@ class UserControllerTest {
                 .build();
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
-        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
-        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
-        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL)))
-                .thenReturn(List.of(roleDto));
+        //AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        //AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        List<AppRoleDto> roleDtos = new ArrayList<>();
+        roleDtos.addAll(createAppRole(2, true));
+        roleDtos.addAll(createAppRole(2, true));
+
+        // Two apps in session, we are on index 1 and expect back to index 0
+        httpSession.setAttribute("selectedApps", List.of(
+                roleDtos.get(0).getApp().getId(),
+                roleDtos.get(1).getApp().getId()));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
-        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(roleDtos.get(0).getApp()));
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> roleDtos);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roleDtos);
 
         // Act
         String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
