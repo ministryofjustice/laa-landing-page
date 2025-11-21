@@ -3786,11 +3786,17 @@ class UserControllerTest {
     void grantAccessUpdateUserRoles_shouldRedirectToNextAppWhenNotLastApp() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        List<AppRoleDto> roles = new ArrayList<>();
+        roles.addAll(createAppRole(2, true));
+        roles.addAll(createAppRole(2, true));
+
         RolesForm rolesForm = new RolesForm();
-        rolesForm.setRoles(List.of("role1"));
+        rolesForm.setRoles(List.of(roles.get(0).getApp().getId()));
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+        testSession.setAttribute("grantAccessSelectedApps",
+                List.of(roles.get(0).getApp().getId(), // first app from
+                        roles.get(2).getApp().getId()));
 
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
@@ -3798,7 +3804,11 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-
+        UserProfileDto user = UserProfileDto.builder()
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(user));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 0, authentication,
                 model, testSession);
@@ -3811,7 +3821,7 @@ class UserControllerTest {
         Map<Integer, List<String>> allRoles = (Map<Integer, List<String>>) testSession
                 .getAttribute("grantAccessAllSelectedRoles");
         assertThat(allRoles).isNotNull();
-        assertThat(allRoles.get(0)).containsExactly("role1");
+        assertThat(allRoles.get(0)).containsExactly(roles.get(0).getApp().getId());
     }
 
     @Test
