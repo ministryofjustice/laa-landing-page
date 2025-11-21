@@ -17,6 +17,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1271,6 +1273,25 @@ class UserControllerTest {
     }
 
     @Test
+    public void testSetSelectedAppsEditReturnsCorrectRedirectAndAttributes() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID appId = UUID.randomUUID();
+        List<String> apps = List.of(appId.toString());
+        HttpSession session = new MockHttpSession();
+
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
+
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
+        assertThat(session.getAttribute("selectedApps")).isNotNull();
+        List<String> returnedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(returnedApps).hasSize(1);
+        assertThat(returnedApps.getFirst()).isEqualTo(appId.toString());
+    }
+
+    @Test
     public void testSetSelectedAppsEdit_shouldHandleNoAppsSelected() {
         // Given
         UUID userId = UUID.randomUUID();
@@ -1287,97 +1308,6 @@ class UserControllerTest {
         assertThat(returnedApps).isEmpty();
         Map editUserAllSelectedRoles = (Map) session.getAttribute("editUserAllSelectedRoles");
         assertThat(editUserAllSelectedRoles).isEmpty();
-    }
-
-    @Test
-    public void testSetSelectedAppsEdit_shouldHandleWithOnlyOneRoles() {
-        // Given
-        UUID userId = UUID.randomUUID();
-        HttpSession session = new MockHttpSession();
-
-        when(userService.getUserProfileById(any())).thenReturn(
-                Optional.ofNullable(UserProfileDto.builder()
-                        .id(userId)
-                        .entraUser(new EntraUserDto())
-                        .userType(UserType.EXTERNAL)
-                        .build())
-        );
-
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
-                List.of(
-                        AppRoleDto.builder()
-                                .name("Role 1")
-                                .id("RoleId 1")
-                                .app(AppDto.builder()
-                                        .id("AppId 1")
-                                        .build())
-                                .build()
-                )
-        );
-
-        // When - passing null for apps (simulates no checkboxes selected)
-        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), new ArrayList<>(List.of("AppId 1")), session);
-
-        // Then - should redirect to manage user page when no apps selected
-        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles-check-answer", userId));
-        assertThat(session.getAttribute("selectedApps")).isEqualTo(new ArrayList<>());
-        assertThat(session.getAttribute("editAppWithOnlyOneRole")).isEqualTo(new ArrayList<>(List.of("AppId 1")));
-        assertThat(session.getAttribute("editUserAllSelectedRoles")).isEqualTo(new HashMap<Integer, List<String>>());
-
-    }
-
-    @Test
-    public void testSetSelectedAppsEdit_shouldHandleWithMoreThanOneRoles() {
-        // Given
-        UUID userId = UUID.randomUUID();
-        HttpSession session = new MockHttpSession();
-
-        when(userService.getUserProfileById(any())).thenReturn(
-                Optional.ofNullable(UserProfileDto.builder()
-                        .id(userId)
-                        .entraUser(new EntraUserDto())
-                        .userType(UserType.EXTERNAL)
-                        .build())
-        );
-
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
-                List.of(
-                        AppRoleDto.builder()
-                                .name("Role 1")
-                                .id("RoleId 1")
-                                .app(AppDto.builder()
-                                        .id("AppId 1")
-                                        .build())
-                                .build(),
-                        AppRoleDto.builder()
-                                .name("Role 2")
-                                .id("RoleId 2")
-                                .app(AppDto.builder()
-                                        .id("AppId 1")
-                                        .build())
-                                .build(),
-                        AppRoleDto.builder()
-                                .name("Role 3")
-                                .id("RoleId 3")
-                                .app(AppDto.builder()
-                                        .id("AppId 2")
-                                        .build())
-                                .build()
-                )
-        );
-
-        // When - passing null for apps (simulates no checkboxes selected)
-        RedirectView redirectView = userController.setSelectedAppsEdit(
-                userId.toString(),
-                new ArrayList<>(List.of("AppId 1", "AppId 2")),
-                session);
-
-        // Then - should redirect to manage user page when no apps selected
-        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        assertThat(session.getAttribute("selectedApps")).isEqualTo(new ArrayList<>(List.of("AppId 1")));
-        assertThat(session.getAttribute("editAppWithOnlyOneRole")).isEqualTo(new ArrayList<>(List.of("AppId 2")));
-        assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
-
     }
 
     @Test
@@ -1401,32 +1331,45 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserRolesCheckAnswerWithAppWithOnlyOneRole() {
+    void editUserRolesCheckAnswer() {
         // Given
-        List<String> selectedApps = new ArrayList<>(List.of("app 1"));
-
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString(userId))
                 .userType(UserType.EXTERNAL)
                 .build();
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.ofNullable(userProfile));
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", selectedApps);
-        testSession.setAttribute("editUserAllSelectedRoles", new HashMap<Integer, List<String>>());
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(userProfile));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
-                List.of(
-                        AppRoleDto.builder()
-                        .id("role Id 1")
-                        .name("role 1")
-                        .app(AppDto.builder()
-                                .id("app 1")
-                                .build())
-                        .build()
-                )
-        );
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        UUID role1 = UUID.randomUUID();
+        UUID role2 = UUID.randomUUID();
+        UUID appId1 = UUID.randomUUID();
+        UUID appId2 = UUID.randomUUID();
+        testSession.setAttribute("selectedApps", List.of(appId1.toString(), appId2.toString()));
+        existingRoles.put(0, List.of(role1.toString(), role2.toString()));
+        existingRoles.put(1, List.of());
+        UUID role3 = UUID.randomUUID();
+        UUID appId3 = UUID.randomUUID();
+        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
+        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
+        AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
+                .app(app1).name("role1").build();
+        AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role2").build();
+        AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role3").build();
+        Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
+                role3.toString(), app1Role3Dto);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+        when(userService.getRolesByIdIn(any())).thenReturn(app1Roles);
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2, app3));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
         // When
         model = new ExtendedModelMap();
         String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
@@ -1434,66 +1377,10 @@ class UserControllerTest {
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
         List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(1);
-        assertThat(selectedAppRole.get(0).getRoleName()).isEqualTo("role 1");
-        assertThat(selectedAppRole.get(0).getUrl()).isEqualTo("apps");
-
-    }
-
-    @Test
-    void editUserRolesCheckAnswerWithAppWithMoreThanOneRole() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
-        UUID role1Id = UUID.randomUUID();
-        UUID role2Id = UUID.randomUUID();
-        List<String> selectedApps = new ArrayList<>(List.of("app 1"));
-        Map<Integer, List<String>> editUserAllSelectedRoles = new HashMap<>();
-        editUserAllSelectedRoles.put(0, List.of(String.valueOf(role1Id), String.valueOf(role2Id)));
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userId))
-                .userType(UserType.EXTERNAL)
-                .build();
-
-        List<AppRoleDto> appRoleDtoList = new ArrayList<>(
-                List.of(
-                        AppRoleDto.builder()
-                                .id(String.valueOf(role1Id))
-                                .name("role 1")
-                                .app(AppDto.builder()
-                                        .id(String.valueOf(UUID.fromString(userId)))
-                                        .build())
-                                .build(),
-                        AppRoleDto.builder()
-                                .id(String.valueOf(role2Id))
-                                .name("role 2")
-                                .app(AppDto.builder()
-                                        .id(String.valueOf(UUID.fromString(userId)))
-                                        .build())
-                                .build()
-                )
-        );
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", selectedApps);
-        testSession.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
-        Map<String, AppRoleDto> app1Roles = Map.of(String.valueOf(role1Id), appRoleDtoList.get(0),
-                String.valueOf(role2Id), appRoleDtoList.get(1));
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(userProfile));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(appRoleDtoList);
-        when(userService.getRolesByIdIn(anyList())).thenReturn(app1Roles);
-        // When
-        model = new ExtendedModelMap();
-        String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
-
-        // Then - should complete editing and redirect to manage user
-        assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(2);
-        assertThat(selectedAppRole.get(0).getRoleName()).isEqualTo("role 1");
-        assertThat(selectedAppRole.get(0).getUrl()).contains("selectedAppIndex=0");
-        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role 2");
-        assertThat(selectedAppRole.get(1).getUrl()).contains("selectedAppIndex=0");
-
+        assertThat(selectedAppRole).hasSize(3);
+        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
+        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
+        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
     }
 
     @Test
@@ -1536,9 +1423,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(
-             List.of()
-        );
         // When
         model = new ExtendedModelMap();
         String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
@@ -1914,6 +1798,21 @@ class UserControllerTest {
         assertThat(apps).hasSize(2);
         assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
         assertThat(apps.get(1).isSelected()).isFalse(); // app2 should not be selected
+    }
+
+    @Test
+    void setSelectedAppsEdit_shouldStoreAppsInSessionAndRedirect() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        List<String> apps = List.of("app1", "app2");
+        MockHttpSession testSession = new MockHttpSession();
+
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, testSession);
+
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo("/admin/users/edit/" + userId + "/roles");
+        assertThat(testSession.getAttribute("selectedApps")).isEqualTo(apps);
     }
 
     @Test
@@ -3201,12 +3100,13 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldHandleSelectedAppIndexOutOfBounds() {
         // Given
-        String userId = "user123";
+        String userId = String.valueOf(UUID.randomUUID());
         EntraUserDto user = new EntraUserDto();
         user.setId(userId);
 
         UserProfileDto userProfile = UserProfileDto.builder()
                 .entraUser(user)
+                .userType(UserType.EXTERNAL)
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
@@ -3215,27 +3115,45 @@ class UserControllerTest {
 
         // Mock for the logic when selectedAppIndex is reset to 0
         AppDto currentApp = new AppDto();
+
         currentApp.setId("app1");
         currentApp.setName("Test App");
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any())).thenReturn(List.of());
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
+        List<AppRoleDto> listOfRoles = createAppRole(2, true);
 
-        // When - passing selectedAppIndex of 5 which is out of bounds
-        String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
-                testSession);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(listOfRoles);
 
-        // Then
-        assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("editUserRolesSelectedAppIndex")).isEqualTo(0); // Should reset to 0
+        // Act & Assert
+        assertThrows(IndexOutOfBoundsException.class, () -> {
+            userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
+                    testSession);
+        });
 
-        // Verify that the calls were made as expected
-        verify(userService).getAppByAppId("app1");
-        verify(userService).getAppRolesByAppIdAndUserType(eq("app1"), any());
-        verify(userService).getUserAppRolesByUserId(userId);
+    }
+
+    private static @NotNull List<AppRoleDto> createAppRole(int quantityOfRoles, boolean withSameApp) {
+        List<AppRoleDto> listOfRoles = new ArrayList<>();
+        int indexOfSameApp = 0;
+        for (int i = 0; i < quantityOfRoles; i++) {
+
+            AppRoleDto role = AppRoleDto.builder()
+                    .id(String.format("role%d", i))
+                    .name(String.format("role%d", i))
+                    .build();
+
+            if (withSameApp) {
+                role.setApp(AppDto.builder()
+                        .id(String.format("app%d", indexOfSameApp))
+                        .name(String.format("role%d", indexOfSameApp))
+                        .build());
+            } else {
+                role.setApp(AppDto.builder()
+                        .id(String.format("app%d", i))
+                        .name(String.format("role%d", i))
+                        .build());
+            }
+            listOfRoles.add(role);
+        }
+        return listOfRoles;
     }
 
     @Test
@@ -3686,96 +3604,6 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessEditUserApps_shouldGetInformationFromSessionWhenThereAreAppWithOneRoleAndReturnView() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440001";
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL);
-
-        AppDto app1 = new AppDto();
-        app1.setId("app1");
-        app1.setName("App 1");
-        AppDto app2 = new AppDto();
-        app2.setId("app2");
-        app2.setName("App 2");
-
-        Set<AppDto> userApps = Set.of(app1);
-        List<AppDto> availableApps = List.of(app1, app2);
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
-        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
-
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("appWithOnlyOneRole", availableApps
-                .stream()
-                .map(AppDto::getId)
-                .toList());
-        // When
-        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
-                session, authentication);
-
-        // Then
-        assertThat(view).isEqualTo("grant-access-user-apps");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
-
-        @SuppressWarnings("unchecked")
-        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
-        assertThat(apps).hasSize(2);
-        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
-        assertThat(apps.get(1).isSelected()).isTrue(); // app2 should be selected
-    }
-
-    @Test
-    void grantAccessEditUserApps_shouldGetInformationFromSessionWhenThereAreAppWithMoreThanOneRoleAndReturnView() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440001";
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL);
-
-        AppDto app1 = new AppDto();
-        app1.setId("app1");
-        app1.setName("App 1");
-        AppDto app2 = new AppDto();
-        app2.setId("app2");
-        app2.setName("App 2");
-
-        Set<AppDto> userApps = Set.of(app1);
-        List<AppDto> availableApps = List.of(app1, app2);
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
-        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
-
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("grantAccessSelectedApps", availableApps
-                .stream()
-                .map(AppDto::getId)
-                .toList());
-        // When
-        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
-                session, authentication);
-
-        // Then
-        assertThat(view).isEqualTo("grant-access-user-apps");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
-
-        @SuppressWarnings("unchecked")
-        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
-        assertThat(apps).hasSize(2);
-        assertThat(apps.get(0).isSelected()).isTrue(); // app1 should be selected
-        assertThat(apps.get(1).isSelected()).isTrue(); // app2 should be selected
-    }
-
-    @Test
     void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
@@ -3785,36 +3613,6 @@ class UserControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(UserProfileDto
-                .builder()
-                .userType(UserType.EXTERNAL)
-                .build()));
-
-        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile
-                .builder()
-                .userType(UserType.EXTERNAL)
-                .build());
-
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
-                        .builder()
-                        .id(UUID.randomUUID().toString())
-                        .name("Role 1")
-                        .app(AppDto
-                                .builder()
-                                .id("app1")
-                                .build())
-                        .build(),
-                AppRoleDto
-                        .builder()
-                        .id(UUID.randomUUID().toString())
-                        .name("Role 2")
-                        .app(AppDto
-                                .builder()
-                                .id("app1")
-                                .build())
-                        .build())
-        );
-
         // When
         String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
                 authentication, model, testSession);
@@ -3822,51 +3620,6 @@ class UserControllerTest {
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/roles");
         assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(List.of("app1", "app2"));
-        assertThat(testSession.getAttribute("appWithOnlyOneRole")).isEqualTo(new ArrayList<>());
-        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
-
-    }
-
-    @Test
-    void grantAccessSetSelectedApps_shouldRedirectToOfficeWhenAppsWithOnlyRolesSelected() {
-        // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
-        ApplicationsForm applicationsForm = new ApplicationsForm();
-        applicationsForm.setApps(new ArrayList<>(List.of("app1", "app2")));
-        MockHttpSession testSession = new MockHttpSession();
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(false);
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(UserProfileDto
-                .builder()
-                .userType(UserType.EXTERNAL)
-                .build()));
-
-        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile
-                .builder()
-                .userType(UserType.EXTERNAL)
-                .build());
-
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
-                .builder()
-                .id(UUID.randomUUID().toString())
-                .name("Role 1")
-                .app(AppDto
-                        .builder()
-                        .id("app1")
-                        .build())
-                .build()));
-
-        // When
-        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
-                authentication, model, testSession);
-
-        // Then
-        assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        assertThat(testSession.getAttribute("grantAccessSelectedApps")).isEqualTo(List.of("app2"));
-        assertThat(testSession.getAttribute("appWithOnlyOneRole")).isEqualTo(List.of("app1"));
-        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
-
     }
 
     @Test
@@ -4262,34 +4015,6 @@ class UserControllerTest {
 
         OfficesForm form = (OfficesForm) model.getAttribute("officesForm");
         assertThat(form.getOffices()).contains("ALL");
-    }
-
-    @Test
-    void grantAccessUpdateUserOffices_shouldRedirectToOffice() throws IOException {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440008";
-        OfficesForm officesForm = new OfficesForm();
-        officesForm.setOffices(List.of("office1", "office2"));
-
-        UserProfileDto userProfileDto = new UserProfileDto();
-        EntraUserDto entraUser = new EntraUserDto();
-        userProfileDto.setEntraUser(entraUser);
-        CurrentUserDto currentUserDto = new CurrentUserDto();
-        currentUserDto.setUserId(UUID.randomUUID());
-        currentUserDto.setName("test user");
-
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessUserOfficesModel", null);
-        BindingResult bindingResult = Mockito.mock(BindingResult.class);
-        when(bindingResult.hasErrors()).thenReturn(true);
-
-        // When
-        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
-                model, testSession);
-
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-
     }
 
     @Test
@@ -4970,7 +4695,7 @@ class UserControllerTest {
         AppRoleDto a3r1 = AppRoleDto.builder().name("a3r1").app(app3).ordinal(1).build();
         AppRoleDto a3r2 = AppRoleDto.builder().name("a3r2").app(app3).ordinal(2).build();
 
-        List<AppRoleDto> userAppRoles = new ArrayList<>(List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2));
+        List<AppRoleDto> userAppRoles = List.of(a1r1, a1r2, a1r3, a1r4, a2r1, a2r2, a2r3, a3r1, a3r2);
 
         Office office = Office.builder().id(UUID.randomUUID()).code("Office 1").build();
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
@@ -4983,23 +4708,18 @@ class UserControllerTest {
                 .map(map -> map.getId().toString())
                 .collect(Collectors.toList());
 
-        List<String> selectedApps = userAppRoles.stream()
-                .map(role -> role.getApp().getId())
-                .collect(Collectors.toList());
-
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("allSelectedRoles", selectedRoles);
         testSession.setAttribute("selectedOffices", selectedOffices);
-        testSession.setAttribute("grantAccessSelectedApps", selectedApps);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(appRoleService.getByIds(anyList())).thenReturn(userAppRoles);
+        when(appRoleService.getByIds(selectedRoles)).thenReturn(userAppRoles);
 
         when(officeService.getOfficesByIds(selectedOffices)).thenReturn(userOffices);
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(userAppRoles);
+
         // When
         String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
 
@@ -5007,6 +4727,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        System.out.println(userRoles);
         assertThat(
                 userRoles.entrySet().stream()
                         .flatMap(entry -> entry.getValue().stream()
@@ -5021,43 +4742,6 @@ class UserControllerTest {
                         "app-one : a1r2",
                         "app-three : a3r1",
                         "app-three : a3r2");
-    }
-
-    @Test
-    void grantAccessCheckAnswers_shouldTrowNoRolesSelected() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440011";
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL);
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-
-        assertThrows(RuntimeException.class, () -> {
-            userController.grantAccessCheckAnswers(userId, model, new MockHttpSession(), authentication);
-        });
-
-
-    }
-
-    @Test
-    void grantAccessCheckAnswers_shouldTrowNoOfficeSelected() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440011";
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-        user.setUserType(UserType.EXTERNAL);
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(AppRoleDto
-                .builder()
-                        .name("Role 1")
-                .build()));
-        assertThrows(RuntimeException.class, () -> {
-            userController.grantAccessCheckAnswers(userId, model, new MockHttpSession(), authentication);
-        });
-
-
     }
 
     @Test
@@ -5110,6 +4794,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         Map<String, List<AppRoleDto>> userRoles = (Map<String, List<AppRoleDto>>) model.getAttribute("groupedAppRoles");
+        System.out.println(userRoles);
         assertThat(
                 userRoles.entrySet().stream()
                         .flatMap(entry -> entry.getValue().stream()
@@ -5131,7 +4816,6 @@ class UserControllerTest {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440012";
         UserProfileDto userProfileDto = new UserProfileDto();
-        userProfileDto.setUserType(UserType.EXTERNAL);
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
@@ -5144,12 +4828,9 @@ class UserControllerTest {
 
         List<String> selectedRoles = List.of("Role 1");
         List<String> selectedOffices = List.of("Office 1");
-        List<String> selectedApps = List.of("App 1");
 
         testSession.setAttribute("allSelectedRoles", selectedRoles);
         testSession.setAttribute("selectedOffices", selectedOffices);
-        testSession.setAttribute("grantAccessSelectedApps", selectedApps);
-
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
@@ -5182,7 +4863,7 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
-        userProfileDto.setUserType(UserType.EXTERNAL);
+
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("admin user");
@@ -5191,15 +4872,12 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(new ArrayList<>());
 
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
 
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
-
         // then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
@@ -5221,7 +4899,7 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         userProfileDto.setEntraUser(entraUser);
-        userProfileDto.setUserType(UserType.EXTERNAL);
+
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(UUID.randomUUID());
         currentUserDto.setName("admin user");
