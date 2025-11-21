@@ -4613,18 +4613,33 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
+        user.setUserType(UserType.EXTERNAL);
+
+
+
+        List<AppRoleDto> roles = new ArrayList<>();
+        roles.addAll(createAppRole(2, true));
+        roles.addAll(createAppRole(2, true));
+        roles.get(2).getApp().setName("CCMS App 2"); //CCMS App 2
+        roles.get(2).setCcmsCode("XXCCMS_CASE_MANAGER"); //CCMS App 2
+        roles.get(3).getApp().setName("CCMS App 2"); //CCMS App 2
 
         AppDto ccmsApp = new AppDto();
-        ccmsApp.setId("app2");
+        ccmsApp.setId(roles.get(2).getApp().getId());
         ccmsApp.setName("CCMS App 2");
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId(UUID.randomUUID().toString());
+        ccmsRole.setId(roles.get(2).getId());
+        ccmsRole.setName(roles.get(2).getName());
+        ccmsRole.setApp(roles.get(2).getApp());
         ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
 
-        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+
+        AppDto app1 = roles.get(0).getApp();
+        AppDto app2 = roles.get(2).getApp(); //CCMS App 2
+
+        testSession.setAttribute("grantAccessSelectedApps", List.of(app1.getId(), app2.getId()));
 
         // Session model with app index 1 (second app)
         Model sessionModel = new ExtendedModelMap();
@@ -4632,13 +4647,13 @@ class UserControllerTest {
         testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId("app2")).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq("app2"), any())).thenReturn(roles);
+        when(userService.getAppByAppId(app2.getId())).thenReturn(Optional.of(ccmsApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq(app2.getId()), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -4646,7 +4661,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(1);
-        assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(ccmsApp);
+        assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(app2);
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
