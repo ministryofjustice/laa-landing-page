@@ -1020,9 +1020,7 @@ public class UserController {
             editUserAllSelectedRoles = new HashMap<>();
         }
 
-
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
-
         //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(rolesForm,
                 selectedAppIndex,
@@ -1042,8 +1040,7 @@ public class UserController {
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
 
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType());
+        List<AppRoleDto> roles = getRolesByAppId(allRoles, selectedApps.get(currentSelectedAppIndex));
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
@@ -1092,18 +1089,7 @@ public class UserController {
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
 
-        String rolesBackUrl = "/admin/users/edit/" + id + "/apps";
-        for (int i = 0; i < selectedApps.size(); i++) {
-            if (currentSelectedAppIndex.equals(i)) {
-                break;
-            } else {
-                List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(selectedApps.get(i), user.getUserType());
-                if (appRoleDtos.size() > 1) {
-                    int index = selectedApps.indexOf(selectedApps.get(i));
-                    rolesBackUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + index;
-                }
-            }
-        }
+        String rolesBackUrl = getRolesBackUrl(id, selectedApps, currentSelectedAppIndex, allRoles);
 
         model.addAttribute("backUrl", rolesBackUrl);
 
@@ -1115,6 +1101,46 @@ public class UserController {
         }
         return "edit-user-roles";
     }
+
+
+    /**
+     * Builds the URL to navigate back to the roles selection page based on the current app index.
+     *
+     * @param id                      The user ID.
+     * @param selectedApps            List of selected application IDs.
+     * @param currentSelectedAppIndex The index of the currently selected application.
+     * @param allRoles                List of all available roles for all apps.
+     * @return                        The constructed back URL for roles navigation.
+     */
+    private static String getRolesBackUrl(String id,
+                                          List<String> selectedApps,
+                                          Integer currentSelectedAppIndex,
+                                          List<AppRoleDto> allRoles) {
+
+        // Default URL points to the apps page for the user
+        String rolesBackUrl = "/admin/users/edit/" + id + "/apps";
+
+        // Iterate through selected apps to determine if a roles page should be used instead
+        for (int i = 0; i < selectedApps.size(); i++) {
+            // Stop checking once we reach the current selected app index
+            if (currentSelectedAppIndex.equals(i)) {
+                break;
+            } else {
+                // Get roles for the current app
+                List<AppRoleDto> appRoleDtos = getRolesByAppId(allRoles, selectedApps.get(i));
+
+                // If the app has more than one role, update the back URL to point to the roles page
+                if (appRoleDtos.size() > 1) {
+                    int index = selectedApps.indexOf(selectedApps.get(i));
+                    rolesBackUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + index;
+                }
+            }
+        }
+
+        // Return the final back URL
+        return rolesBackUrl;
+    }
+
 
     /**
      * Update user roles for a specific app.
@@ -1226,20 +1252,7 @@ public class UserController {
                         && !editUserAllSelectedRoles.get(key).isEmpty()) {
                     List<String> selectedRoles = editUserAllSelectedRoles.get(key);
 
-                    for (String selectedRole : selectedRoles) {
-                        String appId = roles.get(selectedRole).getApp().getId();
-                        List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType);
-                        if (appRoleDtos.size() == 1){
-                            url = "/admin/users/edit/" + id + "/apps";
-                        }
-
-                        AppRoleDto role = roles.get(selectedRole);
-                        UserRole userRole = new UserRole();
-                        userRole.setRoleName(role.getName());
-                        userRole.setAppName(role.getApp().getName());
-                        userRole.setUrl(url);
-                        selectedAppRole.add(userRole);
-                    }
+                    buildAppRoleObject(id, selectedRoles, roles, userType, url, selectedAppRole);
                 } else {
                     UserRole userRole = new UserRole();
                     if (selectedApps.size() <= key) {
@@ -1268,6 +1281,52 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         return "edit-user-roles-check-answer";
     }
+
+
+    /**
+     * Builds a list of UserRole objects based on selected roles and app-role mappings.
+     *
+     * @param id               The user ID for whom roles are being built.
+     * @param selectedRoles    List of selected role IDs.
+     * @param roles            Map of role IDs to their corresponding AppRoleDto objects.
+     * @param userType         The type of the user (used to fetch app roles).
+     * @param url              The base URL for navigation (may be updated if app has only one role).
+     * @param selectedAppRole  The list where constructed UserRole objects will be added.
+     */
+    private void buildAppRoleObject(String id,
+                                    List<String> selectedRoles,
+                                    Map<String, AppRoleDto> roles,
+                                    UserType userType,
+                                    String url,
+                                    List<UserRole> selectedAppRole) {
+
+        // Iterate through each selected role ID
+        for (String selectedRole : selectedRoles) {
+            // Get the application ID associated with the selected role
+            String appId = roles.get(selectedRole).getApp().getId();
+
+            // Fetch all roles for this app and user type
+            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType);
+
+            // If the app has only one role, update the URL to point to the apps page
+            if (appRoleDtos.size() == 1) {
+                url = "/admin/users/edit/" + id + "/apps";
+            }
+
+            // Retrieve the AppRoleDto for the selected role
+            AppRoleDto role = roles.get(selectedRole);
+
+            // Create a new UserRole object and populate its fields
+            UserRole userRole = new UserRole();
+            userRole.setRoleName(role.getName());       // Set role name
+            userRole.setAppName(role.getApp().getName()); // Set application name
+            userRole.setUrl(url);                       // Set navigation URL
+
+            // Add the constructed UserRole to the list
+            selectedAppRole.add(userRole);
+        }
+    }
+
 
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
