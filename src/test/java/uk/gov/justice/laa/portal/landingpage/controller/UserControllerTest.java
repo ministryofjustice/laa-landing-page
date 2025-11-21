@@ -4441,7 +4441,7 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-
+        user.setUserType(UserType.EXTERNAL);
         AppDto regularApp = new AppDto();
         regularApp.setId("app1");
         regularApp.setName("Regular Application");
@@ -4449,8 +4449,14 @@ class UserControllerTest {
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
+        ccmsRole.setApp(regularApp);
+        AppRoleDto ccmsRole2 = new AppRoleDto();
+        ccmsRole2.setId(UUID.randomUUID().toString());
+        ccmsRole2.setCcmsCode("XXCCMS_OFFICE_ADMIN2");
+        ccmsRole2.setApp(regularApp);
 
-        final List<AppRoleDto> roles = List.of(ccmsRole);
+        final List<AppRoleDto> roles = List.of(ccmsRole, ccmsRole2);
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -4461,6 +4467,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
@@ -4473,7 +4480,7 @@ class UserControllerTest {
         Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
                 .getAttribute("ccmsRolesBySection");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
+        assertThat(ccmsRolesBySection.get("Provider")).isEqualTo(roles);
     }
 
     @Test
