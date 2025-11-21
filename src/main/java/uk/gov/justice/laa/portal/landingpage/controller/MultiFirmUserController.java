@@ -46,6 +46,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -447,9 +448,13 @@ public class MultiFirmUserController {
             currentSelectedAppIndex = 0;
         }
 
-        List<AppRoleDto> availableRoles = userService
-                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+        Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
+        FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
+        
+        List<AppRoleDto> availableRoles = userService
+                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL, targetFirmType);
         List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
                 availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
 

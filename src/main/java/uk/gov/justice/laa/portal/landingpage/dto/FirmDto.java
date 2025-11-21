@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -17,6 +18,7 @@ public class FirmDto implements Serializable {
     private UUID id;
     private String name;
     private String code;
+    private FirmType type;
     private boolean skipFirmSelection;
     private boolean canChange;
 
