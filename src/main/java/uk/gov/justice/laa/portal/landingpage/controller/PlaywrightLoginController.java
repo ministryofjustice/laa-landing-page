@@ -3,11 +3,13 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -34,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @Profile("playwright")
@@ -46,7 +49,14 @@ public class PlaywrightLoginController {
 
     @GetMapping("/playwright/login")
     public RedirectView playwrightLogin(String email, HttpServletRequest request, HttpServletResponse response) {
-        authenticateTestUser(email, request, response);
+        String environmentName = System.getenv("ENV_NAME");
+        // This authentication should only happen during playwright testing (local or in the build pipeline)
+        // So if an environment name is set, don't do anything.
+        if (environmentName == null) {
+            authenticateTestUser(email, request, response);
+        } else {
+            log.warn("There was an attempt to access playwright authentication in a deployed environment. This should not be possible, please review.");
+        }
         return new RedirectView("/home");
     }
 
