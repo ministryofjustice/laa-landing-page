@@ -56,6 +56,11 @@ public class BaseRepositoryTest {
                 .code(firmCode).type(FirmType.ADVOCATE).build();
     }
 
+    protected Firm buildParentFirm(String name, String firmCode) {
+        return Firm.builder().name(name).offices(HashSet.newHashSet(11))
+                .code(firmCode).type(FirmType.LEGAL_SERVICES_PROVIDER).build();
+    }
+
     protected Firm buildChildFirm(String name, String firmCode, Firm parentFirm) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
                 .code(firmCode).type(FirmType.ADVOCATE).parentFirm(parentFirm).build();
