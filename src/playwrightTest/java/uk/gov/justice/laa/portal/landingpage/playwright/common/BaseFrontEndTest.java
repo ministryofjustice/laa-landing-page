@@ -6,14 +6,26 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.extension.TestWatcher;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@Testcontainers
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class BaseFrontEndTest {
     private static final Logger LOGGER = Logger.getLogger(BaseFrontEndTest.class.getName());
     private static final String CONFIG_FILE = "src/playwrightTest/resources/playwright.properties";
@@ -23,14 +35,36 @@ public abstract class BaseFrontEndTest {
     protected static Page page;
     protected static Properties config;
 
+    @LocalServerPort
+    protected int port;
+
+    private static boolean setupDone = false;
+
+    @Container
+    @ServiceConnection
+    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("test_db")
+            .withUsername("postgres")
+            .withPassword("password");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgresContainer::getUsername);
+        registry.add("spring.datasource.password", postgresContainer::getPassword);
+    }
+
     @RegisterExtension
     TestWatcher screenshotOnFailure = new ScreenshotWatcher();
 
-    @BeforeAll
-    static void setup() throws IOException {
-        loadConfig();
-        initializeBrowser();
-        performLogin();
+    @BeforeEach
+    void setup() throws IOException {
+        if (!setupDone) {
+            loadConfig();
+            initializeBrowser();
+            performLogin();
+            setupDone = true;
+        }
     }
 
     @AfterAll
@@ -53,23 +87,13 @@ public abstract class BaseFrontEndTest {
         page = browser.newPage();
     }
 
-    private static void performLogin() {
+    private void performLogin() {
         LOGGER.info("Performing login...");
         try {
             // Use properties for URL, username, and password
-            String url = config.getProperty("laa.landing.page.url");
-            final String username = config.getProperty("laa.landing.page.user");
-            final String password = config.getProperty("laa.landing.page.password");
-
+            String userEmail = config.getProperty("initial.user.email");
+            String url = String.format("http://localhost:%d/playwright/login?email=%s", port, userEmail);
             page.navigate(url);
-            page.locator("[id='i0116']").fill(username);
-            page.getByText("Next").click();
-            page.locator("[id='i0118']").fill(password);
-            page.waitForTimeout(1000);
-            page.locator("input[type='submit'][value='Sign in']").click();
-
-            // page.getByText("Yes").click();
-
             LOGGER.info("Login successful");
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Login failed", e);
