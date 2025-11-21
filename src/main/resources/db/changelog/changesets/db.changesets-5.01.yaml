@@ -178,3 +178,4 @@ databaseChangeLog:
             constraintName: uq_app_description
         - dropUniqueConstraint:
             tableName: app
+            constraintName: uq_app_oid_group_name
