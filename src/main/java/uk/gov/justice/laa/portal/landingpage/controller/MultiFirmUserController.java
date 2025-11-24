@@ -476,7 +476,7 @@ public class MultiFirmUserController {
         }
 
         if (!isMultipleRoles(allRoles)) {
-            saveRolesInTheSession(session, editUserAllSelectedRoles );
+            saveRolesInTheSession(session, editUserAllSelectedRoles);
             return "redirect:/admin/multi-firm/user/add/profile/select/offices";
         }
 
@@ -872,6 +872,7 @@ public class MultiFirmUserController {
         }
         return false;
     }
+
     /**
      * Adds roles for selected applications into the session and updates the index.
      *

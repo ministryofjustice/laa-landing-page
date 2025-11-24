@@ -447,7 +447,6 @@ public class MultiFirmUserControllerTest {
         userDto.setFullName("Test User");
         session.setAttribute("entraUser", userDto);
 
-        UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
         AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         AppRoleDto roleDto = new AppRoleDto();
@@ -457,6 +456,7 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto2 = new AppRoleDto();
         roleDto2.setId(UUID.randomUUID().toString());
         roleDto2.setApp(appDto);
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
         when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL)).thenReturn(List.of(roleDto));
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
@@ -572,7 +572,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(roleDto));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto,roleDto2));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto, roleDto2));
 
         AppRoleViewModel viewModel = new AppRoleViewModel();
         viewModel.setSelected(false);
@@ -836,7 +836,6 @@ public class MultiFirmUserControllerTest {
         form.setRoles(List.of(appId));
 
         AppDto appDto = AppDto.builder().id(appId).name("App One").build();
-        AppDto appDto1 = AppDto.builder().id(appId2).name("App One").build();
 
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
@@ -845,6 +844,8 @@ public class MultiFirmUserControllerTest {
         AppRoleDto roleDto2 = new AppRoleDto();
         roleDto2.setId(UUID.randomUUID().toString());
         roleDto2.setApp(appDto);
+
+        AppDto appDto1 = AppDto.builder().id(appId2).name("App One").build();
 
         AppRoleDto roleDt3 = new AppRoleDto();
         roleDt3.setId(UUID.randomUUID().toString());

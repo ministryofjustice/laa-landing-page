@@ -296,8 +296,6 @@ class UserControllerTest {
         roles.addAll(createAppRole(1, true));
         roles.addAll(createAppRole(2, true));
 
-        MockHttpSession httpSession = new MockHttpSession();
-
         Map<Integer, List<String>> selected = new HashMap<>();
         selected.put(0, List.of(roles.get(0).getId()));
         selected.put(1, List.of(roles.get(1).getId(), roles.get(2).getId()));
@@ -307,6 +305,7 @@ class UserControllerTest {
         selectedRoles.put(roles.get(1).getId(), roles.get(1));
         selectedRoles.put(roles.get(2).getId(), roles.get(2));
 
+        MockHttpSession httpSession = new MockHttpSession();
         httpSession.setAttribute("editUserAllSelectedRoles", selected);
 
         List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
