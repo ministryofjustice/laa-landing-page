@@ -57,6 +57,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
@@ -90,13 +91,81 @@ public class MultiFirmUserController {
 
     private final ModelMapper mapper;
 
+    private final FirmService firmService;
+
+    @GetMapping("/user/add/profile/select/firm")
+    public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
+                                     Model model,
+                                     HttpSession session,
+                                     Authentication authentication) {
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        Firm parentFirm = currentUserProfile.getFirm();
+
+        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
+            return "redirect:/admin/multi-firm/user/add/profile";
+        }
+
+        List<Firm> childFirms = firmService.getFilteredChildFirms(parentFirm, query);
+        boolean includeParent = firmService.includeParentFirm(parentFirm, query);
+
+        model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
+        model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
+        model.addAttribute("includeParent", includeParent);
+        model.addAttribute("query", query == null ? "" : query);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Choose the firm you are delegating access to");
+        return "multi-firm-user/select-firm";
+    }
+
+    @PostMapping("/user/add/profile/select/firm")
+    public String selectDelegateFirmPost(@RequestParam("firmId") String firmId,
+                                         HttpSession session,
+                                         Authentication authentication) {
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        Firm parentFirm = currentUserProfile.getFirm();
+        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
+            return "redirect:/admin/multi-firm/user/add/profile";
+        }
+
+        UUID selectedId = UUID.fromString(firmId);
+        boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
+        boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
+        if (!isChild && !isParent) {
+            return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+        }
+
+        session.setAttribute("delegateTargetFirmId", selectedId.toString());
+        return "redirect:/admin/multi-firm/user/add/profile";
+    }
+
+    @GetMapping("/user/add/profile/select/firm/choose")
+    public String selectDelegateFirmGet(@RequestParam("firmId") String firmId,
+                                        HttpSession session,
+                                        Authentication authentication) {
+        return selectDelegateFirmPost(firmId, session, authentication);
+    }
+
     @GetMapping("/user/add/profile")
-    public String addUserProfile(Model model, HttpSession session) {
+    public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+        if (targetFirmId == null) {
+            // If current user's firm has children, select a target firm first
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            Firm firm = currentUserProfile.getFirm();
+            if (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
+                return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+            }
+        }
         MultiFirmUserForm multiFirmUserForm = getObjectFromHttpSession(session, "multiFirmUserForm",
                 MultiFirmUserForm.class).orElse(new MultiFirmUserForm());
         model.addAttribute("multiFirmUserForm", multiFirmUserForm);
         model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
+        // Back link: if user's firm has children, return to firm selection, otherwise users list
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        Firm firm = currentUserProfile.getFirm();
+        String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
+                ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+        model.addAttribute("backUrl", backUrl);
         return "multi-firm-user/select-user";
     }
 
@@ -108,6 +177,11 @@ public class MultiFirmUserController {
             log.debug("Validation errors occurred while searching for user: {}", result.getAllErrors());
             session.setAttribute("multiFirmUserForm", multiFirmUserForm);
             model.addAttribute("multiFirmUserForm", multiFirmUserForm);
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            Firm firm = currentUserProfile.getFirm();
+            String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
+                    ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+            model.addAttribute("backUrl", backUrl);
             return "multi-firm-user/select-user";
         }
 
@@ -129,15 +203,57 @@ public class MultiFirmUserController {
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 UserProfile authenticatedUserProfile = loginService.getCurrentProfile(authentication);
 
+                String targetFirmIdForSameFirmCheck = (String) session.getAttribute("delegateTargetFirmId");
+                Firm compareFirm = targetFirmIdForSameFirmCheck != null
+                        ? firmService.getById(UUID.fromString(targetFirmIdForSameFirmCheck))
+                        : authenticatedUserProfile.getFirm();
+
                 Optional<UserProfile> sameFirmProfile = entraUser.getUserProfiles().stream()
-                        .filter(up -> up.getFirm().equals(authenticatedUserProfile.getFirm())).findFirst();
+                        .filter(up -> up.getFirm().equals(compareFirm)).findFirst();
 
                 if (sameFirmProfile.isPresent()) {
                     log.debug(
                             "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     result.rejectValue("email", "error.email",
                             "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
+                    UserProfile cur = loginService.getCurrentProfile(authentication);
+                    Firm f = cur.getFirm();
+                    String backUrl = (f != null && f.getChildFirms() != null && !f.getChildFirms().isEmpty())
+                            ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                    model.addAttribute("backUrl", backUrl);
                     return "multi-firm-user/select-user";
+                }
+
+                Firm targetFirm;
+                String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+                if (targetFirmId != null) {
+                    targetFirm = firmService.getById(UUID.fromString(targetFirmId));
+                } else {
+                    targetFirm = authenticatedUserProfile.getFirm();
+                }
+                for (UserProfile up : entraUser.getUserProfiles()) {
+                    Firm existingFirm = up.getFirm();
+                    if (existingFirm == null) {
+                        continue;
+                    }
+                    if (isAncestor(existingFirm, targetFirm)) {
+                        result.rejectValue("email", "error.email", "This user already belongs to a parent firm in this hierarchy and cannot be assigned to a child firm.");
+                        UserProfile cur2 = loginService.getCurrentProfile(authentication);
+                        Firm f2 = cur2.getFirm();
+                        String backUrl2 = (f2 != null && f2.getChildFirms() != null && !f2.getChildFirms().isEmpty())
+                                ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                        model.addAttribute("backUrl", backUrl2);
+                        return "multi-firm-user/select-user";
+                    }
+                    if (isAncestor(targetFirm, existingFirm)) {
+                        result.rejectValue("email", "error.email", "This user already belongs to a child firm in this hierarchy and cannot be assigned to a parent firm.");
+                        UserProfile cur3 = loginService.getCurrentProfile(authentication);
+                        Firm f3 = cur3.getFirm();
+                        String backUrl3 = (f3 != null && f3.getChildFirms() != null && !f3.getChildFirms().isEmpty())
+                                ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                        model.addAttribute("backUrl", backUrl3);
+                        return "multi-firm-user/select-user";
+                    }
                 }
             }
 
@@ -475,7 +591,8 @@ public class MultiFirmUserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
-        Firm currentUserFirm = currentUserProfile.getFirm();
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+        Firm currentUserFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
         Set<Office> currentUserOffices = currentUserFirm.getOffices();
 
         final List<OfficeModel> officeData = currentUserOffices.stream()
@@ -553,7 +670,8 @@ public class MultiFirmUserController {
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
-        FirmDto firmDto = currentUserProfileDto.getFirm();
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+        FirmDto firmDto = targetFirmId != null ? firmService.getFirm(UUID.fromString(targetFirmId)) : currentUserProfileDto.getFirm();
 
         session.setAttribute("userProfile", currentUserProfileDto);
         model.addAttribute("userOffices", userOfficeDtos);
@@ -606,8 +724,10 @@ public class MultiFirmUserController {
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
         if (!userOfficeDtos.isEmpty()) {
-            if (userProfile.getFirm() == null || userProfile.getFirm().getOffices() == null
-                    || !userOfficeDtos.stream().map(OfficeDto::getCode).allMatch(code -> userProfile.getFirm()
+            String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+            Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
+            if (validationFirm == null || validationFirm.getOffices() == null
+                    || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
                             .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
                 log.error(
                         "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
@@ -619,7 +739,8 @@ public class MultiFirmUserController {
 
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto currentUserProfileDto = mapper.map(userProfile, UserProfileDto.class);
-        FirmDto firmDto = currentUserProfileDto.getFirm();
+        String targetFirmIdForCreation = (String) session.getAttribute("delegateTargetFirmId");
+        FirmDto firmDto = targetFirmIdForCreation != null ? firmService.getFirm(UUID.fromString(targetFirmIdForCreation)) : currentUserProfileDto.getFirm();
 
         try {
             UserProfile newUserProfile = userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos,
@@ -673,6 +794,7 @@ public class MultiFirmUserController {
         session.removeAttribute("userOffices");
         session.removeAttribute("userProfile");
         session.removeAttribute("officesForm");
+        session.removeAttribute("delegateTargetFirmId");
     }
 
     /**
@@ -699,6 +821,21 @@ public class MultiFirmUserController {
     public RedirectView handleException(Exception ex) {
         log.error("Error while user management", ex);
         return new RedirectView("/error");
+    }
+
+    private boolean isAncestor(Firm potentialAncestor, Firm potentialDescendant) {
+        if (potentialAncestor == null || potentialDescendant == null) {
+            return false;
+        }
+        UUID ancestorId = potentialAncestor.getId();
+        Firm cursor = potentialDescendant.getParentFirm();
+        while (cursor != null) {
+            if (cursor.getId() != null && cursor.getId().equals(ancestorId)) {
+                return true;
+            }
+            cursor = cursor.getParentFirm();
+        }
+        return false;
     }
 
 }

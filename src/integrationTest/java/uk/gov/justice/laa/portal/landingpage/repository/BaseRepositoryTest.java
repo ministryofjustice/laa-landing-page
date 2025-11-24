@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -72,7 +73,14 @@ public class BaseRepositoryTest {
     }
 
     protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {
-        return App.builder().name(name).appRoles(HashSet.newHashSet(1))
+        return buildLaaApp(name, entraAppId, securityGroupOid, securityGroupName, "Test App Title", "Test App Description",
+                "http://localhost:8080/", "OID Group");
+    }
+
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName,
+                              String title, String description, String url, String oidGroupName) {
+        return App.builder().name(name).appRoles(HashSet.newHashSet(1)).url(url)
+                .title(title).description(description).appType(AppType.LAA).oidGroupName(oidGroupName)
                 .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName).build();
     }
 

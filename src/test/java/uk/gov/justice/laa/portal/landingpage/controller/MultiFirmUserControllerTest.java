@@ -64,6 +64,7 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
@@ -91,6 +92,8 @@ public class MultiFirmUserControllerTest {
     @Mock
     private EventService eventService;
     @Mock
+    private FirmService firmService;
+    @Mock
     private BindingResult bindingResult;
     @Mock
     private ApplicationsForm applicationsForm;
@@ -104,7 +107,7 @@ public class MultiFirmUserControllerTest {
         model = new ExtendedModelMap();
         session = new MockHttpSession();
         controller = new MultiFirmUserController(userService, loginService, appRoleService,
-                roleAssignmentService, officeService, eventService, mapper);
+                roleAssignmentService, officeService, eventService, mapper, firmService);
     }
 
     private MultiFirmUserForm createForm() {
@@ -124,7 +127,9 @@ public class MultiFirmUserControllerTest {
 
     @Test
     public void addUserProfile() {
-        String result = controller.addUserProfile(model, session);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(Firm.builder().build()).build());
+        String result = controller.addUserProfile(model, session, authentication);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
@@ -137,7 +142,9 @@ public class MultiFirmUserControllerTest {
     public void addUserProfileOnRevisit() {
         MultiFirmUserForm form = createForm();
         session.setAttribute("multiFirmUserForm", form);
-        String result = controller.addUserProfile(model, session);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(Firm.builder().build()).build());
+        String result = controller.addUserProfile(model, session, authentication);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
@@ -248,6 +255,9 @@ public class MultiFirmUserControllerTest {
     public void addUserProfilePost_invalidForm() {
         MultiFirmUserForm form = MultiFirmUserForm.builder().build();
         BindingResult bindingResult = mockBindingResult(true);
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(Firm.builder().build()).build());
 
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
@@ -1170,16 +1180,20 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("addUserProfileAllSelectedRoles", Map.of());
         session.setAttribute("userOffices", List.of("office1"));
 
-        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("Office One").build();
-        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build())
-                .build();
-        Firm firm = Firm.builder().offices(Set.of(office)).build();
-        UserProfile profile = UserProfile.builder().firm(firm).build();
+        Office office = Office.builder().id(UUID.randomUUID()).code("office2").address(Office.Address.builder().build()).build();
+        Firm currentUsersFirm = Firm.builder().id(UUID.randomUUID()).offices(Set.of(office)).build();
+        UserProfile profile = UserProfile.builder().firm(currentUsersFirm).build();
+        UUID targetFirmId = UUID.randomUUID();
+        session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
 
         when(appRoleService.getByIds(any())).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        OfficeDto officeDto = OfficeDto.builder().id(UUID.randomUUID()).code("office1").build();
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(officeDto));
+        Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
+        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
+        when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
 
         assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, session, model))
                 .isInstanceOf(RuntimeException.class)
@@ -1523,5 +1537,113 @@ public class MultiFirmUserControllerTest {
     // is now required=true, so Spring will handle missing parameter validation at
     // the
     // framework level before the controller method is invoked.
+
+    @Test
+    void shouldIncludeParentAndChildrenWhenNoQuery() {
+        Firm child1 = Firm.builder().id(UUID.randomUUID()).name("Child One").code("1001").build();
+        Firm child2 = Firm.builder().id(UUID.randomUUID()).name("Child Two").code("1002").build();
+        Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child1, child2)).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+        when(firmService.getFilteredChildFirms(parent, null)).thenReturn(List.of(child1, child2));
+        when(firmService.includeParentFirm(parent, null)).thenReturn(true);
+
+        String view = controller.selectDelegateFirm(null, model, session, authentication);
+
+        assertThat(view).isEqualTo("multi-firm-user/select-firm");
+        assertThat(model.getAttribute("parentFirm")).isInstanceOf(FirmDto.class);
+        assertThat((Boolean) model.getAttribute("includeParent")).isTrue();
+        List<?> childList = (List<?>) model.getAttribute("childFirms");
+        assertThat(childList).hasSize(2);
+    }
+
+    @Test
+    void shouldHideParentRowWhenQueryDoesNotMatchParent() {
+        Firm child = Firm.builder().id(UUID.randomUUID()).name("Alpha Firm").code("A1").build();
+        Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").code("9999").childFirms(Set.of(child)).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+        when(firmService.getFilteredChildFirms(parent, "alpha")).thenReturn(List.of(child));
+        when(firmService.includeParentFirm(parent, "alpha")).thenReturn(false);
+
+        String view = controller.selectDelegateFirm("alpha", model, session, authentication);
+
+        assertThat(view).isEqualTo("multi-firm-user/select-firm");
+        assertThat((Boolean) model.getAttribute("includeParent")).isFalse();
+        List<?> childList = (List<?>) model.getAttribute("childFirms");
+        assertThat(childList).hasSize(1);
+    }
+
+    @Test
+    void shouldStoreSelectionViaChooseAndRedirect() {
+        Firm child = Firm.builder().id(UUID.randomUUID()).name("Child One").build();
+        Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+
+        String result = controller.selectDelegateFirmGet(child.getId().toString(), session, authentication);
+
+        assertThat(result).isEqualTo("redirect:/admin/multi-firm/user/add/profile");
+        assertThat(session.getAttribute("delegateTargetFirmId")).isEqualTo(child.getId().toString());
+    }
+
+    @Test
+    void shouldStoreSelectionForParentOrChildAndRejectInvalid() {
+        Firm child = Firm.builder().id(UUID.randomUUID()).name("Child One").build();
+        Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+
+        String res1 = controller.selectDelegateFirmPost(child.getId().toString(), session, authentication);
+        assertThat(res1).isEqualTo("redirect:/admin/multi-firm/user/add/profile");
+
+        String res2 = controller.selectDelegateFirmPost(parent.getId().toString(), session, authentication);
+        assertThat(res2).isEqualTo("redirect:/admin/multi-firm/user/add/profile");
+
+        String res3 = controller.selectDelegateFirmPost(UUID.randomUUID().toString(), session, authentication);
+        assertThat(res3).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/firm");
+    }
+
+    @Test
+    void shouldSetBackUrlToFirmSelectWhenParentHasChildren() {
+        UUID selected = UUID.randomUUID();
+        session.setAttribute("delegateTargetFirmId", selected.toString());
+
+        Firm child = Firm.builder().id(selected).name("Child").build();
+        Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
+
+        String view = controller.addUserProfile(model, session, authentication);
+        assertThat(view).isEqualTo("multi-firm-user/select-user");
+        assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/multi-firm/user/add/profile/select/firm");
+    }
+
+    @Test
+    void shouldSetBackUrlToUsersWhenNoChildren() {
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(Firm.builder().build()).build());
+
+        String view = controller.addUserProfile(model, session, authentication);
+        assertThat(view).isEqualTo("multi-firm-user/select-user");
+        assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/users");
+    }
+
+    @Test
+    void shouldErrorWhenSelectedFirmAlreadyAssigned() {
+        BindingResult result = mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(false);
+
+        UUID firmId = UUID.randomUUID();
+        Firm selectedFirm = Firm.builder().id(firmId).name("Selected Firm").build();
+        session.setAttribute("delegateTargetFirmId", firmId.toString());
+        when(firmService.getById(firmId)).thenReturn(selectedFirm);
+        MultiFirmUserForm form = MultiFirmUserForm.builder().email("user@example.com").build();
+        EntraUser entraUser = EntraUser.builder().email(form.getEmail()).multiFirmUser(true)
+                .userProfiles(Set.of(UserProfile.builder().firm(selectedFirm).activeProfile(true).build()))
+                .build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(Firm.builder().build()).build());
+
+        String view = controller.addUserProfilePost(form, result, model, session, authentication);
+        assertThat(view).isEqualTo("multi-firm-user/select-user");
+        verify(result).rejectValue(eq("email"), eq("error.email"), eq("This user already has a profile for this firm. You can amend their access from the Manage your users table."));
+    }
 
 }

@@ -24,6 +24,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.util.ArrayList;
+
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 
 /**
@@ -78,19 +81,17 @@ public class FirmService {
     }
 
     public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
-        List<FirmDto> userFirms = new java.util.ArrayList<>(entraUser.getUserProfiles().stream()
+        List<FirmDto> userFirms = new ArrayList<>(entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .filter(userProfile -> userProfile.getFirm() != null)
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
-        if (entraUser.isMultiFirmUser()) {
-            List<FirmDto> child = entraUser.getUserProfiles().stream()
-                    .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
-                            && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
-                    .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
-                    .map(firm -> mapper.map(firm, FirmDto.class))
-                    .toList();
-            userFirms.addAll(child);
-        }
+        List<FirmDto> child = entraUser.getUserProfiles().stream()
+                .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
+                        && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
+                .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
+                .map(firm -> mapper.map(firm, FirmDto.class))
+                .toList();
+        userFirms.addAll(child);
         return userFirms;
     }
 
@@ -208,5 +209,38 @@ public class FirmService {
 
     public Firm getById(UUID id) {
         return firmRepository.getReferenceById(id);
+    }
+
+    public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {
+        List<Firm> childFirms = parentFirm.getChildFirms() == null
+                ? List.of()
+                : parentFirm.getChildFirms().stream().toList();
+        if (query == null || query.trim().isEmpty()) {
+            return childFirms;
+        }
+        String q = query.trim().toLowerCase();
+        return childFirms.stream()
+                .filter(f -> firmMatchesQuery(f, q))
+                .toList();
+    }
+
+    public boolean includeParentFirm(Firm parentFirm, String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return true;
+        }
+        String q = query.trim().toLowerCase();
+        return firmMatchesQuery(parentFirm, q);
+    }
+
+    public boolean firmMatchesQuery(Firm firm, String query) {
+        if (firm == null || query == null) {
+            return false;
+        }
+        String q = query.trim().toLowerCase();
+        if (q.isEmpty()) {
+            return false;
+        }
+        return (firm.getName() != null && firm.getName().toLowerCase().contains(q))
+                || (firm.getCode() != null && firm.getCode().toLowerCase().contains(q));
     }
 }
