@@ -1026,7 +1026,6 @@ public class UserController {
                 rolesForm,
                 currentSelectedAppIndex,
                 selectedApps,
-                user,
                 editUserAllSelectedRoles,
                 allRoles,
                 false);
@@ -1849,7 +1848,6 @@ public class UserController {
                 rolesForm,
                 currentSelectedAppIndex,
                 selectedApps,
-                user,
                 allSelectedRolesByPage,
                 allRoles,
                 false);
@@ -1981,7 +1979,6 @@ public class UserController {
                     rolesForm,
                     selectedAppIndex,
                     selectedApps,
-                    user,
                     allSelectedRolesByPage,
                     allRoles,
                     true);
@@ -2031,7 +2028,6 @@ public class UserController {
      * @param rolesForm               Form containing selected roles.
      * @param selectedAppIndex        Current index of the selected application.
      * @param selectedApps            List of selected application IDs.
-     * @param user                    User profile data.
      * @param allSelectedRolesByPage  Map storing selected roles for each page (indexed by app index).
      * @param isPost                  Flag indicating if the request is a POST (form submission).
      * @return                        Updated index after processing roles.
@@ -2039,7 +2035,6 @@ public class UserController {
     private int addRolesInSessionAndIncreaseIndex(RolesForm rolesForm,
                                                   int selectedAppIndex,
                                                   List<String> selectedApps,
-                                                  UserProfileDto user,
                                                   Map<Integer, List<String>> allSelectedRolesByPage,
                                                   List<AppRoleDto> appRoles,
                                                   Boolean isPost) {
