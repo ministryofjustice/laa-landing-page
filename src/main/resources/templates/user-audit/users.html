@@ -891,7 +891,7 @@
                             <tr class="govuk-table__row" th:each="user : ${users}">
                                 <td class="govuk-table__cell">
                                     <a class="govuk-link" th:if="${user.userId != null}"
-                                        th:href="@{/admin/users/manage/{id}(id=${user.userId})}"
+                                        th:href="@{/admin/users/audit/{id}(id=${user.userId})}"
                                         th:text="${user.name}"></a>
                                     <span th:if="${user.userId == null}" th:text="${user.name}"></span>
                                 </td>
