@@ -159,7 +159,6 @@ class UserControllerTest {
     void editUserRoles_shouldSetBackUrlToPreviousIndex() {
         // Arrange
         String id = UUID.randomUUID().toString();
-        MockHttpSession httpSession = new MockHttpSession();
 
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
@@ -171,6 +170,8 @@ class UserControllerTest {
         List<AppRoleDto> roleDtos = new ArrayList<>();
         roleDtos.addAll(createAppRole(2, true));
         roleDtos.addAll(createAppRole(2, true));
+
+        MockHttpSession httpSession = new MockHttpSession();
 
         // Two apps in session, we are on index 1 and expect back to index 0
         httpSession.setAttribute("selectedApps", List.of(
