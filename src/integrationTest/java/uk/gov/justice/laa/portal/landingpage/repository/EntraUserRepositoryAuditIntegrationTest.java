@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -68,6 +69,10 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .enabled(true)
                 .securityGroupOid("test-audit-security-group-oid")
                 .securityGroupName("Test Audit Security Group")
+                .title("Lassie App Title").description("Lassie App Description")
+                .oidGroupName("Lassie OID Group")
+                .appType(AppType.LAA)
+                .url("http://localhost:8080/lassie")
                 .build();
         testApp = appRepository.save(testApp);
 
