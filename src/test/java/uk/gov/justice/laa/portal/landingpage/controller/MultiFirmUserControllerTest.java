@@ -551,16 +551,20 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void shouldInitializeEmptySelectedRolesIfNoneInSession() {
-        String appId = "app-id-1";
+        String appId = UUID.randomUUID().toString();;
         String roleId = UUID.randomUUID().toString();
 
         session.setAttribute("addProfileSelectedApps", List.of(appId));
         session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
 
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(roleId);
+        roleDto.setApp(appDto);
 
-        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
+        AppRoleDto roleDto2 = new AppRoleDto();
+        roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setApp(appDto);
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -568,6 +572,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(roleDto));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto,roleDto2));
 
         AppRoleViewModel viewModel = new AppRoleViewModel();
         viewModel.setSelected(false);
@@ -959,17 +964,25 @@ public class MultiFirmUserControllerTest {
     @Test
     void testIsCcmsApp_true_dueToRole() {
         // Setup
-        String appId = "app-id";
+        String appId = UUID.randomUUID().toString();
         List<String> selectedAppIds = List.of(appId);
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
         AppDto appDto = new AppDto();
         appDto.setName("Non-CCMS App");
+        appDto.setId(appId);
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
 
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("CCMS_CODE");
+        ccmsRole.setApp(appDto);
+
+        AppRoleDto ccmsRole2 = new AppRoleDto();
+        ccmsRole2.setId(UUID.randomUUID().toString());
+        ccmsRole2.setCcmsCode("other");
+        ccmsRole2.setApp(appDto);
+
         when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL)))
                 .thenReturn(List.of(ccmsRole));
 
@@ -977,6 +990,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(ccmsRole));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(ccmsRole, ccmsRole2));
 
         session.setAttribute("addUserProfileAllSelectedRoles", null);
         session.setAttribute("entraUser", new EntraUserDto());
