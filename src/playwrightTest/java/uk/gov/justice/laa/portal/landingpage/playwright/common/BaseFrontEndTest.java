@@ -5,7 +5,6 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.extension.TestWatcher;
@@ -38,8 +37,6 @@ public abstract class BaseFrontEndTest {
     @LocalServerPort
     protected int port;
 
-    private static boolean setupDone = false;
-
     @Container
     @ServiceConnection
     public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -59,44 +56,59 @@ public abstract class BaseFrontEndTest {
 
     @BeforeEach
     void setup() throws IOException {
-        if (!setupDone) {
-            loadConfig();
-            initializeBrowser();
-            performLogin();
-            setupDone = true;
-        }
+        loadConfig();
+        initializeBrowser();
+        // Removed performLogin() to let each test decide which user to log in as
     }
 
     @AfterAll
     static void tearDown() {
-        ResourceCloser.closeAll(page, browser, playwright);
+        if (page != null) {
+            page.close();
+        }
+        if (browser != null) {
+            browser.close();
+        }
+        if (playwright != null) {
+            playwright.close();
+        }
     }
 
     private static void loadConfig() throws IOException {
-        config = new Properties();
-        try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
-            config.load(input);
+        if (config == null) {
+            config = new Properties();
+            try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
+                config.load(input);
+            }
         }
     }
 
     private static void initializeBrowser() {
-        LOGGER.info("Initializing browser...");
-        playwright = Playwright.create();
+        if (playwright == null) {
+            playwright = Playwright.create();
+        }
         boolean headless = Boolean.parseBoolean(config.getProperty("app.playwright.headless", "false"));
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
-        page = browser.newPage();
+        if (browser == null) {
+            browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
+        }
+        if (page == null) {
+            page = browser.newPage();
+        }
     }
 
-    private void performLogin() {
-        LOGGER.info("Performing login...");
+    /**
+     * Navigate to the login page as the specified test user.
+     *
+     * @param userEmail the email of the test user
+     */
+    protected void loginAs(String userEmail) {
+        LOGGER.info("Logging in as " + userEmail);
         try {
-            // Use properties for URL, username, and password
-            String userEmail = config.getProperty("initial.user.email");
             String url = String.format("http://localhost:%d/playwright/login?email=%s", port, userEmail);
             page.navigate(url);
-            LOGGER.info("Login successful");
+            LOGGER.info("Login complete for " + userEmail);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Login failed", e);
+            LOGGER.log(Level.SEVERE, "Login failed for " + userEmail, e);
             throw e;
         }
     }

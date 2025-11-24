@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="${user.fullName}">User Audit Detail</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{/home}">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{/admin/users/audit}">Audit</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item" aria-current="page">
+                <span th:text="${user.fullName}">User Name</span>
+            </li>
+        </ol>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <style>
+            /* Match height for identity information cards */
+            .govuk-grid-row {
+                display: flex;
+                flex-wrap: wrap;
+            }
+
+            .govuk-grid-row .govuk-grid-column-one-half {
+                display: flex;
+            }
+
+            .govuk-grid-row .govuk-grid-column-one-half .govuk-summary-card {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .govuk-summary-card__content {
+                flex-grow: 1;
+            }
+
+            /* Add spacing only in Audit data section (second card in Identity Information) */
+            .govuk-grid-row .govuk-grid-column-one-half:nth-child(2) .govuk-summary-list__key {
+                white-space: nowrap;
+                padding-right: 50px;
+            }
+
+            /* Remove list margins in table cells to ensure consistent row padding */
+            .govuk-table__cell .govuk-list {
+                margin-top: 0px;
+                margin-bottom: 5px;
+            }
+        </style>
+
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <h1 class="govuk-heading-l" th:text="${user.fullName}">User Name</h1>
+
+                <!-- Multi-firm user notification -->
+                <div th:if="${user.isMultiFirmUser}"
+                    style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
+                    <div
+                        style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
+                        !</div>
+                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                        This user is set up as a multi-firm user.
+                        <a class="govuk-link" th:href="@{/admin/users/audit(search=${user.email})}">
+                            <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for
+                                user.</span>
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Identity Information Section -->
+                <h2 class="govuk-heading-m">Identity information</h2>
+
+                <div class="govuk-grid-row">
+                    <!-- User Details Card -->
+                    <div class="govuk-grid-column-one-half">
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">User details</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">First name</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last name</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Data Card -->
+                    <div class="govuk-grid-column-one-half">
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Audit data</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">User type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last login date</dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${user.lastLoginDate != null ? #temporals.format(user.lastLoginDate, 'dd MMM yyyy HH:mm') : ''}">
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Entra status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${user.entraStatus == 'ACTIVE'}">Active</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:if="${user.entraStatus == 'DEACTIVE'}">Deactive</strong>
+                                            <strong class="govuk-tag govuk-tag--grey" th:if="${user.entraStatus == 'AWAITING_USER_APPROVAL'}">Awaiting user approval</strong>
+                                            <strong class="govuk-tag govuk-tag--grey" th:if="${user.entraStatus == 'UNKNOWN'}">Unknown</strong>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Activation status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.activationStatus}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Created date</dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${user.createdDate != null ? #temporals.format(user.createdDate, 'dd MMM yyyy HH:mm') : ''}">
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Created by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Information Section -->
+                <h2 class="govuk-heading-m govuk-!-margin-top-6">Profile information</h2>
+
+                <!-- Multi-firm user: show nested table with all profiles -->
+                <div th:if="${user.isMultiFirmUser && user.profiles.size() > 1}">
+                    <table class="govuk-table">
+                        <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
+                        <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th scope="col" class="govuk-table__header">Firm name</th>
+                                <th scope="col" class="govuk-table__header">Firm code</th>
+                                <th scope="col" class="govuk-table__header">Office restrictions</th>
+                                <th scope="col" class="govuk-table__header">Services</th>
+                                <th scope="col" class="govuk-table__header">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="govuk-table__body">
+                            <tr class="govuk-table__row" th:each="profile : ${user.profiles}">
+                                <td class="govuk-table__cell" th:text="${profile.firmName}"></td>
+                                <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
+                                <td class="govuk-table__cell" th:text="${profile.officeRestrictions}"></td>
+                                <td class="govuk-table__cell">
+                                    <ul class="govuk-list" th:if="${profile.roles != null && !profile.roles.isEmpty()}">
+                                        <li th:each="role : ${profile.roles}">
+                                            <strong th:text="${role.app.name}"></strong>:
+                                            <span th:text="${role.description != null ? role.description : role.name}"></span>
+                                        </li>
+                                    </ul>
+                                    <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
+                                </td>
+                                <td class="govuk-table__cell">
+                                    <span class="moj-badge moj-badge--green" th:if="${profile.activeProfile}">Active</span>
+                                    <span class="moj-badge" th:unless="${profile.activeProfile}">Inactive</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination controls for multi-firm table -->
+                    <nav class="govuk-pagination" aria-label="Pagination" th:if="${user.totalProfilePages gt 1}">
+                        <div class="govuk-pagination__prev" th:if="${user.currentProfilePage gt 1}">
+                            <a class="govuk-link govuk-pagination__link"
+                                th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.currentProfilePage - 1}, profileSize=${profileSize})}"
+                                rel="prev">
+                                <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
+                                    height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                    <path
+                                        d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                                    </path>
+                                </svg>
+                                <span class="govuk-pagination__link-title">
+                                    Previous<span class="govuk-visually-hidden"> page</span>
+                                </span>
+                            </a>
+                        </div>
+
+                        <ul class="govuk-pagination__list">
+                            <!-- First page -->
+                            <li class="govuk-pagination__item"
+                                th:classappend="${user.currentProfilePage == 1 ? 'govuk-pagination__item--current' : ''}">
+                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != 1}"
+                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=1, profileSize=${profileSize})}"
+                                    th:aria-label="'Page 1'">1</a>
+                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == 1}"
+                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=1, profileSize=${profileSize})}"
+                                    th:aria-label="'Page 1'" aria-current="page">1</a>
+                            </li>
+
+                            <!-- Ellipsis before current page range -->
+                            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage gt 4}">
+                                &ctdot;
+                            </li>
+
+                            <!-- Page range around current page (current - 2 to current + 2, excluding first and last) -->
+                            <th:block
+                                th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, user.currentProfilePage - 2), T(java.lang.Math).min(user.totalProfilePages - 1, user.currentProfilePage + 2))}">
+                                <li class="govuk-pagination__item" th:if="${i gt 1 and i lt user.totalProfilePages}"
+                                    th:classappend="${i == user.currentProfilePage ? 'govuk-pagination__item--current' : ''}">
+                                    <a class="govuk-link govuk-pagination__link" th:if="${i != user.currentProfilePage}"
+                                        th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${i}, profileSize=${profileSize})}"
+                                        th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                                    <a class="govuk-link govuk-pagination__link" th:if="${i == user.currentProfilePage}"
+                                        th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${i}, profileSize=${profileSize})}"
+                                        th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
+                                </li>
+                            </th:block>
+
+                            <!-- Ellipsis after current page range -->
+                            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${user.currentProfilePage lt user.totalProfilePages - 3}">
+                                &ctdot;
+                            </li>
+
+                            <!-- Last page -->
+                            <li class="govuk-pagination__item" th:if="${user.totalProfilePages gt 1}"
+                                th:classappend="${user.currentProfilePage == user.totalProfilePages ? 'govuk-pagination__item--current' : ''}">
+                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage != user.totalProfilePages}"
+                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.totalProfilePages}, profileSize=${profileSize})}"
+                                    th:aria-label="'Page ' + ${user.totalProfilePages}" th:text="${user.totalProfilePages}"></a>
+                                <a class="govuk-link govuk-pagination__link" th:if="${user.currentProfilePage == user.totalProfilePages}"
+                                    th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.totalProfilePages}, profileSize=${profileSize})}"
+                                    th:aria-label="'Page ' + ${user.totalProfilePages}" aria-current="page" th:text="${user.totalProfilePages}"></a>
+                            </li>
+                        </ul>
+
+                        <div class="govuk-pagination__next" th:if="${user.currentProfilePage lt user.totalProfilePages}">
+                            <a class="govuk-link govuk-pagination__link"
+                                th:href="@{/admin/users/audit/{id}(id=${profileId}, profilePage=${user.currentProfilePage + 1}, profileSize=${profileSize})}"
+                                rel="next">
+                                <span class="govuk-pagination__link-title">
+                                    Next<span class="govuk-visually-hidden"> page</span>
+                                </span>
+                                <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg"
+                                    height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                    <path
+                                        d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                                    </path>
+                                </svg>
+                            </a>
+                        </div>
+                    </nav>
+                </div>
+
+                <!-- Single firm user: show traditional card view -->
+                <div th:if="${!user.isMultiFirmUser || user.profiles.size() == 1}">
+                    <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
+                        <!-- Firm Association Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Firm association</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Firm name</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <span th:text="${profile.firmName}"></span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Offices</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <!-- Services Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Services</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <!-- Display roles grouped by app -->
+                                    <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
+                                        <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
+                                        <dd class="govuk-summary-list__value"
+                                            th:text="${role.description != null ? role.description : role.name}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                        <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Back Button -->
+                <a class="govuk-button govuk-!-margin-top-4" th:href="@{/admin/users/audit}">
+                    Back to User Profile Table
+                </a>
+            </div>
+        </div>
+
+        <script>
+            // Restore scroll position immediately
+            (function() {
+                const savedScrollPosition = sessionStorage.getItem('auditDetailScrollPosition');
+                if (savedScrollPosition !== null) {
+                    // Use requestAnimationFrame to ensure DOM is ready
+                    requestAnimationFrame(function() {
+                        window.scrollTo(0, parseInt(savedScrollPosition, 10));
+                        sessionStorage.removeItem('auditDetailScrollPosition');
+                    });
+                }
+            })();
+
+            // Add scroll position saving to pagination links after DOM is loaded
+            window.addEventListener('load', function () {
+                const paginationLinks = document.querySelectorAll('.govuk-pagination__link');
+                paginationLinks.forEach(link => {
+                    link.addEventListener('click', function () {
+                        // Save current scroll position before navigation
+                        sessionStorage.setItem('auditDetailScrollPosition', window.scrollY);
+                    });
+                });
+            });
+        </script>
+    </main>
+
+</body>
+
+</html>

@@ -57,6 +57,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -1039,9 +1040,10 @@ public class UserController {
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
+        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
-        List<AppRoleDto> roles = getRolesByAppId(allRoles, selectedApps.get(currentSelectedAppIndex));
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                user.getUserType(), userFirmType);        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
@@ -1713,7 +1715,6 @@ public class UserController {
                 .toList();
 
         Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
-
         if (selectedApps.isPresent()) {
             editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
         } else {
@@ -1807,7 +1808,6 @@ public class UserController {
             RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
         Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
                 String.class);
 
@@ -1864,8 +1864,10 @@ public class UserController {
             return "redirect:/admin/users/grant-access/" + uuid + "/offices";
         }
 
+        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
+
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType());
+                user.getUserType(), userFirmType);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
@@ -1910,6 +1912,7 @@ public class UserController {
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
         // Store the model in session to handle validation errors later and track
+        // currently selected app.
         session.setAttribute("grantAccessUserRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select roles - " + user.getFullName());
         return "grant-access-user-roles";
@@ -2486,5 +2489,4 @@ public class UserController {
             throw runtimeException;
         }
     }
-
 }

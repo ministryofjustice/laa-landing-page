@@ -5,10 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -86,7 +86,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("users")).isEqualTo(mockPaginatedUsers.getUsers());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(10);
         assertThat(model.getAttribute("actualPageSize")).isEqualTo(1);
@@ -114,7 +114,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "john", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("search")).isEqualTo("john");
 
         verify(userService, times(1)).getAuditUsers("john", null, "", null, 1, 10, "name", "asc");
@@ -129,10 +129,11 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", firmId.toString(), "", null, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", firmId.toString(), "", null,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
 
         verify(userService, times(1)).getAuditUsers("", firmId, "", null, 1, 10, "name", "asc");
     }
@@ -145,10 +146,11 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", "invalid-uuid", "", null, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", "invalid-uuid", "", null,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
 
         verify(userService, times(1)).getAuditUsers("", null, "", null, 1, 10, "name", "asc");
     }
@@ -161,10 +163,11 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "Global Admin", null, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "Global Admin", null,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("selectedSilasRole")).isEqualTo("Global Admin");
 
         verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, 1, 10, "name", "asc");
@@ -181,7 +184,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(25, 1, "name", "asc", "", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(25);
 
         verify(userService, times(1)).getAuditUsers("", null, "", null, 1, 25, "name", "asc");
@@ -198,7 +201,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(10, 2, "name", "asc", "", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("page")).isEqualTo(2);
 
         verify(userService, times(1)).getAuditUsers("", null, "", null, 2, 10, "name", "asc");
@@ -215,7 +218,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(10, 1, "email", "desc", "", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("sort")).isEqualTo("email");
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
@@ -235,7 +238,7 @@ class AuditControllerTest {
                 "Global Admin", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("search")).isEqualTo("test");
         assertThat(model.getAttribute("selectedSilasRole")).isEqualTo("Global Admin");
         assertThat(model.getAttribute("selectedAppId")).isEqualTo("");
@@ -266,7 +269,7 @@ class AuditControllerTest {
         String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", null, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("users")).isEqualTo(Collections.emptyList());
         assertThat(model.getAttribute("totalUsers")).isEqualTo(0L);
         assertThat(model.getAttribute("totalPages")).isEqualTo(0);
@@ -281,10 +284,11 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "Test Firm", null, "", null, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "Test Firm", null, "", null,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.containsAttribute("firmSearch")).isTrue();
     }
 
@@ -297,10 +301,11 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", appId.toString(), model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", appId.toString(),
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
 
         verify(userService, times(1)).getAuditUsers("", null, "", appId, 1, 10, "name", "asc");
     }
@@ -315,10 +320,11 @@ class AuditControllerTest {
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(AuditController.class);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", selectedAppId, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", selectedAppId,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
 
         verify(userService, times(1)).getAuditUsers("", null, "", null, 1, 10, "name", "asc");
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
@@ -336,11 +342,125 @@ class AuditControllerTest {
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         // When
-        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", selectedAppId, model);
+        String viewName = auditController.displayAuditTable(10, 1, "name", "asc", "", "", null, "", selectedAppId,
+                model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit");
+        assertThat(viewName).isEqualTo("user-audit/users");
 
         verify(userService, times(1)).getAuditUsers("", null, "", null, 1, 10, "name", "asc");
+    }
+
+    @Test
+    void displayUserAuditDetail_withValidUserId_returnsDetailView() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("john.doe@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .fullName("John Doe")
+                .isMultiFirmUser(false)
+                .profiles(Collections.emptyList())
+                .build();
+
+        when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
+
+        // When
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/details");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+        verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
+    }
+
+    @Test
+    void displayUserAuditDetail_withMultiFirmUser_returnsDetailViewWithAllProfiles() {
+        // Given
+        UUID userId = UUID.randomUUID();
+
+        // Create multiple profiles for multi-firm user
+        AuditUserDetailDto.AuditProfileDto profile1 = AuditUserDetailDto.AuditProfileDto
+                .builder()
+                .profileId(UUID.randomUUID().toString())
+                .firmName("Smith & Associates")
+                .firmCode("SA123")
+                .officeRestrictions("Access to All Offices")
+                .activeProfile(true)
+                .build();
+
+        AuditUserDetailDto.AuditProfileDto profile2 = AuditUserDetailDto.AuditProfileDto
+                .builder()
+                .profileId(UUID.randomUUID().toString())
+                .firmName("Jones Law Firm")
+                .firmCode("JL456")
+                .officeRestrictions("2 office(s) selected")
+                .activeProfile(false)
+                .build();
+
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("multi.user@example.com")
+                .firstName("Multi")
+                .lastName("User")
+                .fullName("Multi User")
+                .isMultiFirmUser(true)
+                .profiles(List.of(profile1, profile2))
+                .build();
+
+        when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
+
+        // When
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/details");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+
+        // Verify user has multiple profiles
+        AuditUserDetailDto result = (AuditUserDetailDto) model
+                .getAttribute("user");
+        assertThat(result.isMultiFirmUser()).isTrue();
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles().get(0).isActiveProfile()).isTrue();
+        assertThat(result.getProfiles().get(1).isActiveProfile()).isFalse();
+
+        verify(userService, times(1)).getAuditUserDetail(userId, 1, 10);
+    }
+
+    @Test
+    void displayUserAuditDetail_withPaginationParams_callsServiceWithParams() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        int profilePage = 2;
+        int profileSize = 5;
+
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("multi.user@example.com")
+                .firstName("Multi")
+                .lastName("User")
+                .fullName("Multi User")
+                .isMultiFirmUser(true)
+                .profiles(Collections.emptyList())
+                .totalProfiles(25)
+                .totalProfilePages(5)
+                .currentProfilePage(2)
+                .build();
+
+        when(userService.getAuditUserDetail(userId, profilePage, profileSize)).thenReturn(mockUserDetail);
+
+        // When
+        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/details");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+        verify(userService, times(1)).getAuditUserDetail(userId, profilePage, profileSize);
     }
 }

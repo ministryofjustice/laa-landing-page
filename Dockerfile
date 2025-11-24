@@ -1,8 +1,8 @@
 FROM amazoncorretto:21-alpine
 
-# Update only OpenSSL to fix vulnerabilities
+# CVE-2024-58251
 RUN apk update && \
-    apk add --no-cache --upgrade openssl && \
+    apk add --no-cache --upgrade openssl busybox && \
     rm -rf /var/cache/apk/*
 
 # Create a group and user to run the application
