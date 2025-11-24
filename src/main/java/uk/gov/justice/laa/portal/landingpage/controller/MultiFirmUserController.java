@@ -460,8 +460,6 @@ public class MultiFirmUserController {
             editUserAllSelectedRoles = new HashMap<>();
         }
 
-
-
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedAppIds, UserType.EXTERNAL.name());
         //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
@@ -496,9 +494,6 @@ public class MultiFirmUserController {
                 availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
 
         final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
-
-
-
 
         List<AppRoleViewModel> appRoleViewModels = assignableRoles.stream()
                 .map(appRoleDto -> {
