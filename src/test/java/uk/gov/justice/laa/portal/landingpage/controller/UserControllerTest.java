@@ -324,9 +324,9 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
         when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
         when(userService.getRolesByIdIn(any())).thenReturn(selectedRoles);
-        when(userService.getAppRolesByAppIdAndUserType(roles.get(0).getApp().getId(), UserType.EXTERNAL))
+        when(userService.getAppRolesByAppIdAndUserType(roles.get(0).getApp().getId(), UserType.EXTERNAL, any()))
                 .thenReturn(List.of(roles.get(0)));
-        when(userService.getAppRolesByAppIdAndUserType(roles.get(1).getApp().getId(), UserType.EXTERNAL))
+        when(userService.getAppRolesByAppIdAndUserType(roles.get(1).getApp().getId(), UserType.EXTERNAL, any()))
                 .thenReturn(List.of(roles.get(1), roles.get(2)));
 
         when(roleAssignmentService.canUserAssignRolesForApp(any(UserProfile.class), any(AppDto.class)))
@@ -4800,7 +4800,7 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any())).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
@@ -4856,7 +4856,7 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId(app2.getId())).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(app2.getId()), any())).thenReturn(roles);
+        when(userService.getAppRolesByAppIdAndUserType(eq(app2.getId()), any(), any())).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());

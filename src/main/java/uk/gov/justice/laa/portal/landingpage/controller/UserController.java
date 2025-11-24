@@ -1253,8 +1253,8 @@ public class UserController {
                 if (Objects.nonNull(editUserAllSelectedRoles.get(key))
                         && !editUserAllSelectedRoles.get(key).isEmpty()) {
                     List<String> selectedRoles = editUserAllSelectedRoles.get(key);
-
-                    buildAppRoleObject(id, selectedRoles, roles, userType, url, selectedAppRole);
+                    FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
+                    buildAppRoleObject(id, selectedRoles, roles, userType, url, selectedAppRole, userFirmType);
                 } else {
                     UserRole userRole = new UserRole();
                     if (selectedApps.size() <= key) {
@@ -1300,15 +1300,15 @@ public class UserController {
                                     Map<String, AppRoleDto> roles,
                                     UserType userType,
                                     String url,
-                                    List<UserRole> selectedAppRole) {
+                                    List<UserRole> selectedAppRole,
+                                    FirmType userFirmType) {
 
         // Iterate through each selected role ID
         for (String selectedRole : selectedRoles) {
             // Get the application ID associated with the selected role
             String appId = roles.get(selectedRole).getApp().getId();
-
             // Fetch all roles for this app and user type
-            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType);
+            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType, userFirmType);
 
             // If the app has only one role, update the URL to point to the apps page
             if (appRoleDtos.size() == 1) {
