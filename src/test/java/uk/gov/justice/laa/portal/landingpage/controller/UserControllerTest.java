@@ -229,6 +229,29 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRoles_redirectToCyaWhenIsOnlyOneRole() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        List<AppRoleDto> roles = new ArrayList<>(createAppRole(1, true));
+        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        // Act
+        String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer", id));
+
+    }
+
+    @Test
     void editUserRolesCheckAnswer_backUrlPointsToLastValidIndex() {
         // Arrange
         MockHttpSession httpSession = new MockHttpSession();
