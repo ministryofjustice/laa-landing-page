@@ -440,22 +440,30 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void shouldResetIndexIfOutOfBounds() {
-        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
-
-        AppRoleDto roleDto = new AppRoleDto();
-        roleDto.setId(UUID.randomUUID().toString());
+        String appId = UUID.randomUUID().toString();
+        session.setAttribute("addProfileSelectedApps", List.of(appId));
 
         EntraUserDto userDto = new EntraUserDto();
         userDto.setFullName("Test User");
         session.setAttribute("entraUser", userDto);
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
-        AppDto appDto = AppDto.builder().id("app-id-1").name("App One").build();
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
-        when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL)).thenReturn(List.of(roleDto));
+        AppRoleDto roleDto = new AppRoleDto();
+        roleDto.setId(UUID.randomUUID().toString());
+        roleDto.setApp(appDto);
+
+        AppRoleDto roleDto2 = new AppRoleDto();
+        roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setApp(appDto);
+
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL)).thenReturn(List.of(roleDto));
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(Set.class), any(List.class))).thenReturn(List.of(roleDto));
-        when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto, roleDto2));
+
 
         AppRoleViewModel viewModel = new AppRoleViewModel();
         viewModel.setSelected(false);
@@ -572,20 +580,25 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void shouldSetBackUrlCorrectlyForFirstApp() {
-        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
+        String appId = UUID.randomUUID().toString();
+        session.setAttribute("addProfileSelectedApps", List.of(appId));
         session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
 
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
-
-        AppDto appDto = AppDto.builder().id("app-id-1").name("App One").build();
+        roleDto.setApp(appDto);
+        AppRoleDto roleDto2 = new AppRoleDto();
+        roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setApp(appDto);
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
-        when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL)).thenReturn(List.of(roleDto));
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL)).thenReturn(List.of(roleDto));
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(roleDto));
-        when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto, roleDto2));
 
         AppRoleViewModel viewModel = new AppRoleViewModel();
         viewModel.setSelected(false);
@@ -641,10 +654,14 @@ public class MultiFirmUserControllerTest {
         selectedRolesMap.put(0, List.of(invalidRoleId));
         session.setAttribute("addUserProfileAllSelectedRoles", selectedRolesMap);
 
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
         AppRoleDto validRole = new AppRoleDto();
         validRole.setId(UUID.randomUUID().toString());
+        validRole.setApp(appDto);
 
-        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
+        AppRoleDto validRole2 = new AppRoleDto();
+        validRole2.setId(UUID.randomUUID().toString());
+        validRole2.setApp(appDto);
 
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
 
@@ -652,6 +669,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(validRole));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(validRole, validRole2));
 
         AppRoleViewModel viewModel = new AppRoleViewModel();
         viewModel.setSelected(false); // invalid role should not be marked selected
@@ -802,16 +820,38 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void shouldRedirectToNextAppIfNotLast() {
+        String appId = UUID.randomUUID().toString();
+        String appId2 = UUID.randomUUID().toString();
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("addProfileSelectedAppIndex", 0);
         session.setAttribute("addProfileUserRolesModel", sessionModel);
-        session.setAttribute("addProfileSelectedApps", List.of("app1", "app2"));
+        session.setAttribute("addProfileSelectedApps", List.of(appId, appId2));
 
         RolesForm form = new RolesForm();
-        form.setRoles(List.of("role1"));
+        form.setRoles(List.of(appId));
+
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
+        AppDto appDto1 = AppDto.builder().id(appId2).name("App One").build();
+
+        AppRoleDto roleDto = new AppRoleDto();
+        roleDto.setId(UUID.randomUUID().toString());
+        roleDto.setApp(appDto);
+
+        AppRoleDto roleDto2 = new AppRoleDto();
+        roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setApp(appDto);
+
+        AppRoleDto roleDt3 = new AppRoleDto();
+        roleDt3.setId(UUID.randomUUID().toString());
+        roleDt3.setApp(appDto1);
+
+        AppRoleDto roleDto4 = new AppRoleDto();
+        roleDto4.setId(UUID.randomUUID().toString());
+        roleDto4.setApp(appDto1);
 
         BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto, roleDto2, roleDt3, roleDto4));
 
         String view = controller.selectUserAppRolesPost(form, result, 0, authentication, model, session);
 
@@ -819,7 +859,7 @@ public class MultiFirmUserControllerTest {
 
         Map<Integer, List<String>> storedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("addUserProfileAllSelectedRoles");
-        assertThat(storedRoles).containsEntry(0, List.of("role1"));
+        assertThat(storedRoles).containsEntry(0, List.of(appId));
 
         Model updatedModel = (Model) session.getAttribute("addProfileUserRolesModel");
         assertThat(updatedModel.getAttribute("addProfileSelectedAppIndex")).isEqualTo(1);
@@ -885,6 +925,15 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
         AppDto appDto = AppDto.builder().id(appId).name("CCMS Application").build();
+
+        AppRoleDto roleDto = new AppRoleDto();
+        roleDto.setId(UUID.randomUUID().toString());
+        roleDto.setApp(appDto);
+
+        AppRoleDto roleDto2 = new AppRoleDto();
+        roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setApp(appDto);
+
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
 
         when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL)))
@@ -894,6 +943,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(roleDto, roleDto2));
 
         session.setAttribute("addUserProfileAllSelectedRoles", null);
         session.setAttribute("entraUser", new EntraUserDto());
