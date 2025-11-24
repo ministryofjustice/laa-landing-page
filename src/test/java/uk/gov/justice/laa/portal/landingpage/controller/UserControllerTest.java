@@ -3200,7 +3200,7 @@ class UserControllerTest {
             if (withSameApp) {
                 role.setApp(AppDto.builder()
                         .id(appId)
-                        .name(String.format("role%d", indexOfSameApp))
+                        .name(String.format("app%d", indexOfSameApp))
                         .build());
             } else {
                 role.setApp(AppDto.builder()
@@ -3797,6 +3797,44 @@ class UserControllerTest {
         assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(0);
         assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(currentApp);
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+    }
+
+    @Test
+    void grantAccessEditUserRoles_shouldRedirectToTheOfficeWhenIsOneRole() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440002";
+        UserProfileDto user = new UserProfileDto();
+        user.setUserType(UserType.EXTERNAL);
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        final List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, false));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of(
+                roles.get(0).getApp().getId(),
+                roles.get(1).getApp().getId()));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        // When
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+                testSession, redirectAttributes);
+
+        // Then
+        assertThat(view).isEqualTo(String.format("redirect:/admin/users/grant-access/%s/offices", userId));
+        assertThat(model.getAttribute("user")).isNull();
+        assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isNull();
+        assertThat(model.getAttribute("grantAccessCurrentApp")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("allSelectedRoles"))
+                .isEqualTo(roles
+                        .stream()
+                        .map(AppRoleDto::getId)
+                        .toList());
+        assertThat(testSession.getAttribute("nonEditableRoles")).isNotNull();
+
     }
 
     @Test
