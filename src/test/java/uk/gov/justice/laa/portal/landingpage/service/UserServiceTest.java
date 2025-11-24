@@ -79,6 +79,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -1419,7 +1420,7 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.INTERNAL);
+                UserType.INTERNAL, null);
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
@@ -1457,7 +1458,7 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL);
+                UserType.EXTERNAL, null);
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
@@ -1471,8 +1472,218 @@ class UserServiceTest {
     public void testGetAppRolesByAppIdAndUserTypeReturnsEmptyListWhenAppIdIsNotFound() {
         when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL);
+                UserType.EXTERNAL, null);
         Assertions.assertEquals(0, returnedAppRoles.size());
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersByFirmTypeWhenRestrictionExists() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
+        
+        Assertions.assertEquals(2, chambersRoles.size());
+        Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersByFirmTypeForAdvocateFirm() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
+        
+        Assertions.assertEquals(2, advocateRoles.size());
+        Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeIncludesOnlyUnrestrictedRolesWhenNoFirmTypeProvided() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, null);
+        
+        Assertions.assertEquals(1, unrestrictedRoles.size());
+        Assertions.assertTrue(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersOnlyRolesWithNoFirmRestrictionWhenFirmTypeDoesNotMatch() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
+        
+        Assertions.assertEquals(1, lspRoles.size());
+        Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeCombinesUserTypeAndFirmTypeFiltering() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole internalChambersRole = AppRole.builder()
+                .name("Internal Chambers Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole externalChambersRole = AppRole.builder()
+                .name("External Chambers Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole externalAdvocateRole = AppRole.builder()
+                .name("External Advocate Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalChambersRole, externalChambersRole, externalAdvocateRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
+        
+        Assertions.assertEquals(1, externalChambersRoles.size());
+        Assertions.assertTrue(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
+        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
+        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
     }
 
     @Test
