@@ -893,7 +893,10 @@
                                     <a class="govuk-link" th:if="${user.userId != null}"
                                         th:href="@{/admin/users/audit/{id}(id=${user.userId})}"
                                         th:text="${user.name}"></a>
-                                    <span th:if="${user.userId == null}" th:text="${user.name}"></span>
+                                    <a class="govuk-link" th:if="${user.userId == null && user.entraUserId != null}"
+                                        th:href="@{/admin/users/audit/{id}(id=${user.entraUserId}, isEntraId=true)}"
+                                        th:text="${user.name}"></a>
+                                    <span th:if="${user.userId == null && user.entraUserId == null}" th:text="${user.name}"></span>
                                 </td>
                                 <td class="govuk-table__cell" th:text="${user.email}"></td>
                                 <td class="govuk-table__cell"

@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
 @Service
 public class AccessControlService {
@@ -32,19 +33,24 @@ public class AccessControlService {
 
     private final LoginService loginService;
 
+    private final EntraUserRepository entraUserRepository;
+
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
-    public AccessControlService(UserService userService, LoginService loginService, FirmService firmService) {
+    public AccessControlService(UserService userService, LoginService loginService,
+            FirmService firmService, EntraUserRepository entraUserRepository) {
         this.userService = userService;
         this.loginService = loginService;
         this.firmService = firmService;
+        this.entraUserRepository = entraUserRepository;
     }
 
     public boolean canAccessUser(String userProfileId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile =
+                userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -74,8 +80,8 @@ public class AccessControlService {
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(),
-                    userProfileId);
+            log.warn("User {} does not have permission to access this userId {}",
+                    currentUserDto.getName(), userProfileId);
         }
         return canAccess;
     }
@@ -88,7 +94,8 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile =
+                userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -101,8 +108,64 @@ public class AccessControlService {
     }
 
     /**
-     * Check if the authenticated user can delete a specific firm profile.
-     * Used for multi-firm users where we delete individual firm access.
+     * Check if the authenticated user can delete a user without a profile (Entra-only user). Used
+     * for multi-firm users or external users who don't yet have a firm association. Requires one
+     * of: - Global Admin role with DELETE_AUDIT_USER permission - Quality & Assurance role AND
+     * Global Admin role with DELETE_AUDIT_USER permission
+     *
+     * @param entraUserId the ID of the EntraUser to delete (as String)
+     * @return true if user has permission to delete this user without profile
+     */
+    public boolean canDeleteUserWithoutProfile(String entraUserId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        if (authenticatedUser == null) {
+            log.debug("Authenticated user is null, returning false");
+            return false;
+        }
+
+        log.debug("Checking canDeleteUserWithoutProfile for user: {}, target: {}",
+                authenticatedUser.getEmail(), entraUserId);
+
+        // Check if target user exists - lookup by database ID (not entra_oid)
+        Optional<EntraUser> targetUserOpt =
+                entraUserRepository.findById(UUID.fromString(entraUserId));
+        if (targetUserOpt.isEmpty()) {
+            log.debug("Target user not found with ID: {}", entraUserId);
+            return false;
+        }
+
+        EntraUser targetUser = targetUserOpt.get();
+
+        // Cannot delete internal users (even if they somehow have no profile)
+        if (targetUser.getUserProfiles() != null && targetUser.getUserProfiles().stream()
+                .anyMatch(p -> p.getUserType() == UserType.INTERNAL)) {
+            log.debug("Target user is internal, cannot delete");
+            return false;
+        }
+
+        // Check roles and permissions
+        boolean hasGlobalAdmin = userHasAuthzRole(authenticatedUser, "Global Admin");
+        boolean hasQualityAssurance = userHasAuthzRole(authenticatedUser, "Quality & Assurance");
+        boolean hasDeletePermission =
+                userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
+
+        log.debug(
+                "Authorization checks - Global Admin: {}, Quality & Assurance: {}, DELETE_AUDIT_USER: {}",
+                hasGlobalAdmin, hasQualityAssurance, hasDeletePermission);
+
+        // Require DELETE_AUDIT_USER permission AND either:
+        // 1. Global Admin role alone, OR
+        // 2. Both Quality & Assurance AND Global Admin roles
+        boolean hasRequiredRoles = hasGlobalAdmin || (hasQualityAssurance && hasGlobalAdmin);
+
+        return hasDeletePermission && hasRequiredRoles;
+    }
+
+    /**
+     * Check if the authenticated user can delete a specific firm profile. Used for multi-firm users
+     * where we delete individual firm access.
      *
      * @param userProfileId the ID of the user profile to delete
      * @return true if user has permission to delete this firm profile
@@ -116,7 +179,8 @@ public class AccessControlService {
             return false;
         }
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile =
+                userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -128,15 +192,15 @@ public class AccessControlService {
         }
 
         // Must be a multi-firm user
-        if (accessedUserProfile.getEntraUser() == null || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+        if (accessedUserProfile.getEntraUser() == null
+                || !accessedUserProfile.getEntraUser().isMultiFirmUser()) {
             return false;
         }
 
         // Check if authenticated user is internal (LAA staff)
         boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
 
-        // Only external users (provider admins/firm user managers) can delete firm
-        // profiles
+        // Only external users (provider admins/firm user managers) can delete firm profiles
         // Internal users should not see the revoke link
         if (isInternalUser) {
             return false;
@@ -147,7 +211,8 @@ public class AccessControlService {
 
         // External users (firm admins) with DELEGATE_EXTERNAL_USER_ACCESS can only
         // delete profiles from their own firm
-        if (sameFirm && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
+        if (sameFirm
+                && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
             return true;
         }
 
@@ -158,7 +223,8 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile =
+                userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -189,15 +255,15 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
-            log.warn("User {} does not have permission to edit this userId {}", authenticatedUser.getId(),
-                    userProfileId);
+            log.warn("User {} does not have permission to edit this userId {}",
+                    authenticatedUser.getId(), userProfileId);
         }
         return canAccess;
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {
-        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream().map(FirmDto::getId)
-                .toList();
+        List<UUID> userManagerFirms = firmService.getUserActiveAllFirms(authenticatedUser).stream()
+                .map(FirmDto::getId).toList();
         List<FirmDto> userFirms = firmService.getUserFirmsByUserId(accessedUserProfileId);
         return userFirms.stream().map(FirmDto::getId).anyMatch(userManagerFirms::contains);
     }
@@ -221,19 +287,18 @@ public class AccessControlService {
     }
 
     public static boolean userHasAuthzRole(EntraUser user, String authzRoleName) {
-        return user.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
+        return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile)
                 .flatMap(userProfile -> userProfile.getAppRoles().stream())
                 .anyMatch(appRole -> appRole.isAuthzRole() && appRole.getName() != null
                         && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
-    public static boolean userHasAnyGivenPermissions(EntraUser entraUser, Permission... permissions) {
+    public static boolean userHasAnyGivenPermissions(EntraUser entraUser,
+            Permission... permissions) {
         Set<Permission> userPermissions = entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                .filter(AppRole::isAuthzRole)
-                .flatMap(appRole -> appRole.getPermissions().stream())
+                .filter(AppRole::isAuthzRole).flatMap(appRole -> appRole.getPermissions().stream())
                 .collect(Collectors.toSet());
         return Arrays.stream(permissions).anyMatch(userPermissions::contains);
     }
@@ -242,7 +307,8 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile =
+                userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -251,8 +317,8 @@ public class AccessControlService {
 
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
-                && userHasAnyGivenPermissions(authenticatedUser,
-                        Permission.CREATE_EXTERNAL_USER, Permission.EDIT_EXTERNAL_USER);
+                && userHasAnyGivenPermissions(authenticatedUser, Permission.CREATE_EXTERNAL_USER,
+                        Permission.EDIT_EXTERNAL_USER);
     }
 
 }

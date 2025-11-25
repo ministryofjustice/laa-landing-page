@@ -155,10 +155,21 @@
                 </div>
 
                 <!-- Profile Information Section -->
-                <h2 class="govuk-heading-m govuk-!-margin-top-6">Profile information</h2>
+                <h2 class="govuk-heading-m govuk-!-margin-top-6" th:unless="${user.hasNoProfile}">Profile information</h2>
+
+                <!-- Show message for users without profiles -->
+                <div th:if="${user.hasNoProfile}"
+                    style="display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 2rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
+                    <div
+                        style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
+                        i</div>
+                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                        This user does not have any firm profiles or service assignments.
+                    </p>
+                </div>
 
                 <!-- Multi-firm user: show nested table with all profiles -->
-                <div th:if="${user.isMultiFirmUser && user.profiles.size() > 1}">
+                <div th:if="${user.isMultiFirmUser && !user.hasNoProfile && user.profiles.size() > 0}">
                     <table class="govuk-table">
                         <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
                         <thead class="govuk-table__head">
@@ -276,8 +287,8 @@
                     </nav>
                 </div>
 
-                <!-- Single firm user: show traditional card view -->
-                <div th:if="${!user.isMultiFirmUser || user.profiles.size() == 1}">
+                <!-- Single firm user OR multi-firm user with only 1 profile: show traditional card view -->
+                <div th:if="${!user.hasNoProfile && (!user.isMultiFirmUser || user.profiles.size() == 1)}">
                     <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
                         <!-- Firm Association Card -->
                         <div class="govuk-summary-card">
@@ -324,10 +335,20 @@
                     </div>
                 </div>
 
-                <!-- Back Button -->
-                <a class="govuk-button govuk-!-margin-top-4" th:href="@{/admin/users/audit}">
-                    Back to User Profile Table
-                </a>
+                <!-- Action Buttons -->
+                <div class="govuk-button-group govuk-!-margin-top-4">
+                    <!-- Back Button -->
+                    <a class="govuk-button" th:href="@{/admin/users/audit}">
+                        Back to Audit Users
+                    </a>
+
+                    <!-- Delete Button - Only for users without profiles -->
+                    <a class="govuk-button govuk-button--warning"
+                        th:if="${user.hasNoProfile and @accessControlService.canDeleteUserWithoutProfile(user.userId)}"
+                        th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
+                        Delete User
+                    </a>
+                </div>
             </div>
         </div>
 
