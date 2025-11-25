@@ -71,6 +71,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testGlobalAdminCanAssignFirmUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
+
         assignAuthzRoleToUser(loggedInUser, editedUser, "Firm User Manager", true);
     }
 

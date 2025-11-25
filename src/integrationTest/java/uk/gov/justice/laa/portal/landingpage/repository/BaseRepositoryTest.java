@@ -89,6 +89,11 @@ public class BaseRepositoryTest {
                 .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
     }
 
+    protected AppRole buildLaaAppRoleWithUserTypes(App app, String name, UserType[] userTypes) {
+        return AppRole.builder().name(name).description(name)
+                .userTypeRestriction(userTypes).app(app).build();
+    }
+
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
         AppRole globalAdminAppRole = allAppRoles.stream()
