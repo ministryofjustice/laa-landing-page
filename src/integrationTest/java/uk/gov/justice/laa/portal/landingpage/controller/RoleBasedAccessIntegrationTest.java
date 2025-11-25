@@ -126,7 +126,16 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Index to keep all email addresses unique.
         int emailIndex = 0;
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
-
+        //create appRoles
+/*        for (int i = 0; i < allAppRoles.size(); i++) {
+            AppRole appRoleTest = buildLaaAppRoleWithUserTypes(allAppRoles.get(0).getApp(),
+                    String.format("appRole test %s", i),
+                    allAppRoles.get(0).getUserTypeRestriction(),
+                    allAppRoles.get(0).getPermissions()
+            );
+            allAppRoles.add(appRoleTest);
+            appRoleRepository.saveAndFlush(appRoleTest);
+        }*/
         for (int i = 0; i < 5; i++) {
             // Setup 5 internal users no roles
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
@@ -146,8 +155,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                     .filter(role -> role.getName().equals("Internal User Manager"))
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("Could not find app role"));
-            AppRole appRole2 = buildLaaAppRole(appRole.getApp(), "Internal User Manager" + i);
-
             profile.setAppRoles(Set.of(appRole));
             user.setUserProfiles(Set.of(profile));
             profile.setEntraUser(user);
@@ -235,12 +242,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("External User Admin"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        AppRole appRoleExternal = buildLaaAppRoleWithUserTypes(appRole.getApp(),
-                "External User Admin test 01",
-                appRole.getUserTypeRestriction());
-        appRoleExternal.setPermissions(appRole.getPermissions());
-        appRoleRepository.saveAndFlush(appRoleExternal);
-        profile.setAppRoles(Set.of(appRole, appRoleExternal));
+        profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         externalUserAdmins.add(entraUserRepository.saveAndFlush(user));
@@ -248,7 +250,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Setup Firm2 admin
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwoAdmin");
         profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
-        profile.setAppRoles(Set.of(appRole, appRoleExternal));
+        profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         externalUserAdmins.add(entraUserRepository.saveAndFlush(user));
@@ -261,12 +263,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("Global Admin"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        AppRole appRoleGlobalTest = buildLaaAppRoleWithUserTypes(appRole.getApp(),
-                "Global Admin test 01",
-                appRole.getUserTypeRestriction());
-        appRoleGlobalTest.setPermissions(appRole.getPermissions());
-        appRoleRepository.saveAndFlush(appRoleGlobalTest);
-        profile.setAppRoles(Set.of(appRole, appRoleGlobalTest));
+        profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         globalAdmins.add(entraUserRepository.saveAndFlush(user));
@@ -279,12 +276,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("Internal User Viewer"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        AppRole appRoleInternalTest = buildLaaAppRoleWithUserTypes(appRole.getApp(),
-                "Internal User Viewer test 01",
-                appRole.getUserTypeRestriction());
-        appRoleInternalTest.setPermissions(appRole.getPermissions());
-        appRoleRepository.saveAndFlush(appRoleInternalTest);
-        profile.setAppRoles(Set.of(appRole, appRoleInternalTest));
+        profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         internalUserViewers.add(entraUserRepository.saveAndFlush(user));
@@ -297,12 +289,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("External User Viewer"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        AppRole appRoleViewerTest = buildLaaAppRoleWithUserTypes(appRole.getApp(),
-                "External User Viewer test 01",
-                appRole.getUserTypeRestriction());
-        appRoleViewerTest.setPermissions(appRole.getPermissions());
-        appRoleRepository.saveAndFlush(appRoleViewerTest);
-        profile.setAppRoles(Set.of(appRole, appRoleViewerTest));
+        profile.setAppRoles(Set.of(appRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         externalUserViewers.add(entraUserRepository.saveAndFlush(user));
@@ -315,12 +302,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("Firm User Manager"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        AppRole appRoleFirmTest = buildLaaAppRoleWithUserTypes(firmUserManagerRole.getApp(),
-                "Firm User Manager test 01",
-                firmUserManagerRole.getUserTypeRestriction());
-        appRoleFirmTest.setPermissions(firmUserManagerRole.getPermissions());
-        appRoleRepository.saveAndFlush(appRoleFirmTest);
-        profile.setAppRoles(Set.of(firmUserManagerRole, appRoleFirmTest));
+
+        profile.setAppRoles(Set.of(firmUserManagerRole));
         profile.setFirm(testFirm2);
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
