@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-delete-audit-user-permission
+      author: paul.snowdon
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES (
+                (SELECT id FROM app_role WHERE name = 'Global Admin'),
+                'DELETE_AUDIT_USER'
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE permission = 'DELETE_AUDIT_USER'
+                AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin');
