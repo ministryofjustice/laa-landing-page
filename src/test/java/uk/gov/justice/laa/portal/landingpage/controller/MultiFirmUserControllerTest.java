@@ -1807,7 +1807,7 @@ public class MultiFirmUserControllerTest {
                 .thenReturn(List.of(advocateRole));
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(role1,role2));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(role1, role2));
 
         Model model = new ExtendedModelMap();
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
@@ -1824,10 +1824,6 @@ public class MultiFirmUserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         session.setAttribute("entraUser", entraUser);
-
-        Firm advocateFirm = Firm.builder().id(UUID.randomUUID()).type(FirmType.ADVOCATE).build();
-        UserProfile currentUserProfile = UserProfile.builder().firm(advocateFirm).appRoles(Set.of()).build();
-
         AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
 
         AppRoleDto advocateRole = new AppRoleDto();
@@ -1842,6 +1838,9 @@ public class MultiFirmUserControllerTest {
 
         Model model = new ExtendedModelMap();
         Authentication authentication = mock(Authentication.class);
+        Firm advocateFirm = Firm.builder().id(UUID.randomUUID()).type(FirmType.ADVOCATE).build();
+
+        UserProfile currentUserProfile = UserProfile.builder().firm(advocateFirm).appRoles(Set.of()).build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(currentUserProfile);
         when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE))
@@ -1849,7 +1848,7 @@ public class MultiFirmUserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
 
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(advocateRole,advocateRole2));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(advocateRole, advocateRole2));
 
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
 
@@ -1867,8 +1866,6 @@ public class MultiFirmUserControllerTest {
         entraUser.setFullName("Test User");
         session.setAttribute("entraUser", entraUser);
 
-        UserProfile currentUserProfile = UserProfile.builder().firm(null).appRoles(Set.of()).build();
-
         AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
         AppRoleDto unrestrictedRole = new AppRoleDto();
         unrestrictedRole.setId(UUID.randomUUID().toString());
@@ -1882,13 +1879,14 @@ public class MultiFirmUserControllerTest {
 
         Model model = new ExtendedModelMap();
         Authentication authentication = mock(Authentication.class);
+        UserProfile currentUserProfile = UserProfile.builder().firm(null).appRoles(Set.of()).build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(currentUserProfile);
         when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null))
                 .thenReturn(List.of(unrestrictedRole));
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(unrestrictedRole));
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(unrestrictedRole,unrestrictedRole2));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(unrestrictedRole, unrestrictedRole2));
 
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
 

@@ -324,7 +324,7 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
         when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
         when(userService.getRolesByIdIn(any())).thenReturn(selectedRoles);
-        when(userService.getAppRolesByAppIdAndUserType(eq(roles.get(0).getApp().getId()), eq(UserType.EXTERNAL),eq(null)))
+        when(userService.getAppRolesByAppIdAndUserType(eq(roles.get(0).getApp().getId()), eq(UserType.EXTERNAL), eq(null)))
                 .thenReturn(List.of(roles.get(0)));
         when(userService.getAppRolesByAppIdAndUserType(eq(roles.get(1).getApp().getId()), eq(UserType.EXTERNAL), eq(null)))
                 .thenReturn(List.of(roles.get(1), roles.get(2)));
@@ -6232,16 +6232,9 @@ class UserControllerTest {
 
         @Test
         public void testEditUserRolesPassesCorrectFirmTypeForChambersUser() {
-            UUID userId = UUID.randomUUID();
             String appId = UUID.randomUUID().toString();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of(appId));
-            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .firm(chambersFirm)
-                    .build();
             AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
 
             AppRoleDto chambersRole = new AppRoleDto();
@@ -6254,6 +6247,14 @@ class UserControllerTest {
             chambersRole2.setName("Chambers Role2");
             chambersRole2.setApp(appDto);
 
+            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
+            UUID userId = UUID.randomUUID();
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(chambersFirm)
+                    .build();
+
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.CHAMBERS))
                     .thenReturn(List.of(chambersRole));
@@ -6262,7 +6263,7 @@ class UserControllerTest {
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(chambersRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(chambersRole,chambersRole2));
+            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(chambersRole, chambersRole2));
 
             String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
 
@@ -6272,16 +6273,9 @@ class UserControllerTest {
 
         @Test
         public void testEditUserRolesPassesCorrectFirmTypeForAdvocateUser() {
-            UUID userId = UUID.randomUUID();
             String appId = UUID.randomUUID().toString();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of(appId));
-            FirmDto advocateFirm = FirmDto.builder().id(UUID.randomUUID()).name("Advocate Firm").type(FirmType.ADVOCATE).build();
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .firm(advocateFirm)
-                    .build();
             AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
 
             AppRoleDto advocateRole = new AppRoleDto();
@@ -6294,6 +6288,13 @@ class UserControllerTest {
             advocateRole2.setName("Advocate Role2");
             advocateRole2.setApp(appDto);
 
+            UUID userId = UUID.randomUUID();
+            FirmDto advocateFirm = FirmDto.builder().id(UUID.randomUUID()).name("Advocate Firm").type(FirmType.ADVOCATE).build();
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(advocateFirm)
+                    .build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE))
                     .thenReturn(List.of(advocateRole));
@@ -6312,19 +6313,10 @@ class UserControllerTest {
 
         @Test
         public void testEditUserRolesPassesNullFirmTypeWhenUserHasNoFirm() {
-            UUID userId = UUID.randomUUID();
             String appId = UUID.randomUUID().toString();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of(appId));
-
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .firm(null)
-                    .build();
-
             AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-
             AppRoleDto unrestrictedRole = new AppRoleDto();
             unrestrictedRole.setId(UUID.randomUUID().toString());
             unrestrictedRole.setName("Unrestricted Role");
@@ -6335,6 +6327,12 @@ class UserControllerTest {
             unrestrictedRole2.setName("Unrestricted Role2");
             unrestrictedRole2.setApp(appDto);
 
+            UUID userId = UUID.randomUUID();
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(null)
+                    .build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null))
                     .thenReturn(List.of(unrestrictedRole));
@@ -6355,17 +6353,9 @@ class UserControllerTest {
 
         @Test
         public void testGrantAccessEditUserRolesPassesCorrectFirmTypeForLegalServicesProviderUser() {
-            UUID userId = UUID.randomUUID();
             String appId = UUID.randomUUID().toString();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
-
-            FirmDto lspFirm = FirmDto.builder().id(UUID.randomUUID()).name("LSP Firm").type(FirmType.LEGAL_SERVICES_PROVIDER).build();
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .firm(lspFirm)
-                    .build();
 
             AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
             AppRoleDto lspRole = new AppRoleDto();
@@ -6379,6 +6369,13 @@ class UserControllerTest {
             lspRole2.setApp(appDto);
 
             Model model = new ExtendedModelMap();
+            UUID userId = UUID.randomUUID();
+            FirmDto lspFirm = FirmDto.builder().id(UUID.randomUUID()).name("LSP Firm").type(FirmType.LEGAL_SERVICES_PROVIDER).build();
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .firm(lspFirm)
+                    .build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
                     .thenReturn(List.of(lspRole));
@@ -6397,16 +6394,9 @@ class UserControllerTest {
 
         @Test
         public void testGrantAccessEditUserRolesPassesCorrectFirmTypeForInternalUser() {
-            UUID userId = UUID.randomUUID();
             String appId = UUID.randomUUID().toString();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
-
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.INTERNAL)
-                    .firm(null)
-                    .build();
 
             AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
 
@@ -6420,6 +6410,12 @@ class UserControllerTest {
             internalRole2.setApp(appDto);
 
             Model model = new ExtendedModelMap();
+            UUID userId = UUID.randomUUID();
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.INTERNAL)
+                    .firm(null)
+                    .build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(appId, UserType.INTERNAL, null))
                     .thenReturn(List.of(internalRole));
@@ -6428,7 +6424,7 @@ class UserControllerTest {
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(internalRole,internalRole2));
+            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(internalRole, internalRole2));
 
             String view = userController.grantAccessEditUserRoles(userId.toString(), 0, new RolesForm(), authentication, model, testSession, redirectAttributes);
 
