@@ -5182,7 +5182,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 2);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5190,7 +5190,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5208,7 +5208,7 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
             verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(any(Set.class));
         }
 
@@ -5242,7 +5242,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(searchTerm), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(searchTerm), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5250,7 +5250,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(searchTerm,
-                    null, null, null, 1, 10, "name", "asc");
+                    null, null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5259,7 +5259,7 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getName()).contains("John");
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(searchTerm), eq(null), eq(null), eq(null), any(PageRequest.class));
+                    eq(searchTerm), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -5299,7 +5299,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(firmId), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(firmId), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5307,7 +5307,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null,
-                    firmId, null, null, 1, 10, "name", "asc");
+                    firmId, null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5316,7 +5316,7 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Specific Firm");
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(firmId), eq(null), eq(null), any(PageRequest.class));
+                    eq(null), eq(firmId), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -5355,7 +5355,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(silasRole), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(silasRole), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5363,7 +5363,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    silasRole, null, 1, 10, "name", "asc");
+                    silasRole, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5371,7 +5371,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(silasRole), eq(null), any(PageRequest.class));
+                    eq(null), eq(null), eq(silasRole), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         @Test
@@ -5426,7 +5426,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5434,7 +5434,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5452,12 +5452,12 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 0);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(emptyPage);
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5466,7 +5466,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).isEmpty();
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
             verify(mockEntraUserRepository, never()).findUsersWithProfilesAndRoles(any(Set.class));
         }
 
@@ -5500,7 +5500,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5508,7 +5508,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5551,7 +5551,7 @@ class UserServiceTest {
                     PageRequest.of(1, 10), 25);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5559,7 +5559,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 2, 10, "name", "asc");
+                    null, null, null, null, 2, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5589,7 +5589,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5597,7 +5597,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5643,7 +5643,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5651,7 +5651,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5695,7 +5695,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5703,7 +5703,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5787,7 +5787,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 2);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5795,7 +5795,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "desc");
+                    null, null, null, null, 1, 10, "name", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5824,7 +5824,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5832,7 +5832,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5859,7 +5859,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5867,7 +5867,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "email", "desc");
+                    null, null, null, null, 1, 10, "email", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5875,7 +5875,7 @@ class UserServiceTest {
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
@@ -5901,7 +5901,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5909,14 +5909,14 @@ class UserServiceTest {
 
             // When - using "accountstatus" as the sort field which maps to "userStatus"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "accountstatus", "asc");
+                    null, null, null, null, 1, 10, "accountstatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("userStatus")).isNotNull();
@@ -5942,7 +5942,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5950,14 +5950,14 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "usertype", "desc");
+                    null, null, null, null, 1, 10, "usertype", "desc");
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
@@ -5983,7 +5983,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -5991,14 +5991,14 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "name", null);
+                    null, null, null, null, 1, 10, "name", null);
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("firstName")).isNotNull();
@@ -6024,7 +6024,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6032,14 +6032,14 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, 1, 10, "email", "");
+                    null, null, null, null, 1, 10, "email", "");
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();

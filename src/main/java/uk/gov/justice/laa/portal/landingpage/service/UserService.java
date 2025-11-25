@@ -1351,7 +1351,7 @@ public class UserService {
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId,
+            String searchTerm, UUID firmId, String silasRole, UUID appId, UserType userType, Boolean multiFirm,
             int page, int pageSize, String sort, String direction) {
 
         // Check if sorting by profile count or firm (special cases - require different
@@ -1368,12 +1368,13 @@ public class UserService {
             String sortField = sortByProfileCount ? "profileCount" : "firmName";
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-
+            // UserType must be treated as a string because we are using native queries here.
+            String userTypeString = userType != null ? userType.toString() : null;
             Page<? extends UserAuditProjection> resultPage = sortByProfileCount
                     ? entraUserRepository.findAllUsersForAuditWithProfileCount(
-                            searchTerm, firmId, silasRole, appId, pageRequest)
+                            searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest)
                     : entraUserRepository.findAllUsersForAuditWithFirm(
-                            searchTerm, firmId, silasRole, appId, pageRequest);
+                            searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
 
             // Extract user IDs in order
             List<UUID> userIds = resultPage.getContent().stream()
@@ -1402,7 +1403,7 @@ public class UserService {
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
             userPage = entraUserRepository.findAllUsersForAudit(
-                    searchTerm, firmId, silasRole, appId, pageRequest);
+                    searchTerm, firmId, silasRole, appId, userType, multiFirm, pageRequest);
 
             // Second query: Batch fetch relationships for the paginated users
             if (!userPage.getContent().isEmpty()) {
