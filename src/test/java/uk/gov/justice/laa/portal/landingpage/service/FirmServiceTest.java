@@ -242,9 +242,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", false, false),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", false, false),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", false, false)
+                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false),
+                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false),
+                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false)
             );
 
             // Setup cache mock

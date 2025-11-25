@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -100,6 +102,34 @@ public class AuditController {
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
 
-        return "user-audit";
+        return "user-audit/users";
+    }
+
+    /**
+     * Display detailed audit information for a specific user
+     * Shows complete identity and profile information including audit data
+     */
+    @GetMapping("/users/audit/{id}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+    public String displayUserAuditDetail(
+            @PathVariable("id") UUID userId,
+            @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
+            @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
+            Model model) {
+
+        log.debug("AuditController.displayUserAuditDetail - userId: '{}', profilePage: {}, profileSize: {}",
+                userId, profilePage, profileSize);
+
+        // Get detailed user audit data with pagination for profiles
+        AuditUserDetailDto userDetail = userService.getAuditUserDetail(userId, profilePage, profileSize);
+
+        // Add attributes to model
+        model.addAttribute("user", userDetail);
+        model.addAttribute("profileId", userId); // Add profile ID for pagination links
+        model.addAttribute("profilePage", profilePage);
+        model.addAttribute("profileSize", profileSize);
+
+        return "user-audit/details";
     }
 }

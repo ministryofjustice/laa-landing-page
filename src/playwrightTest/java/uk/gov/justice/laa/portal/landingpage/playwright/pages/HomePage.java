@@ -26,6 +26,8 @@ public class HomePage {
     private final Locator submitCrimeFormLink;
     private final Locator accessRestrictionMessage;
 
+
+
     public HomePage(Page page) {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl");
@@ -36,8 +38,7 @@ public class HomePage {
         this.applyForCriminalLegalAidLink = page.locator("a.govuk-link:has-text('Apply for criminal legal aid')");
         this.ccmsLink = page.locator("a.govuk-link:has-text('Client and Cost Management System')");
         this.submitCrimeFormLink = page.locator("a.govuk-link:has-text('Submit a crime form')");
-        this.accessRestrictionMessage = page.locator(
-                "div.govuk-inset-text p:has-text('You cannot currently access any services. Please contact the MOJ Service Desk to request access.')");
+        this.accessRestrictionMessage = page.locator("div.govuk-inset-text", new Page.LocatorOptions().setHasText("Your account has been activated. You cannot currently access any services."));
 
 
         log.info("HomePage initialised");

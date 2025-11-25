@@ -18,7 +18,7 @@ jobs:
           fail_action: false
 
       - name: Upload Weekly Scan ZAP Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: weekly-zap-report
           path: |
