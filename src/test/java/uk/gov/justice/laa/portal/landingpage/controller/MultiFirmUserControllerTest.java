@@ -1770,7 +1770,8 @@ public class MultiFirmUserControllerTest {
     @Test
     public void testSelectUserAppRolesPassesCorrectFirmTypeForChambersUser() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
+        String appId = UUID.randomUUID().toString();
+        session.setAttribute("addProfileSelectedApps", List.of(appId));
         session.setAttribute("delegateTargetFirmId", UUID.randomUUID().toString());
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
@@ -1785,23 +1786,34 @@ public class MultiFirmUserControllerTest {
         advocateRole.setId(UUID.randomUUID().toString());
         advocateRole.setName("Advocate Role");
 
-        AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
 
+        AppRoleDto role1 = AppRoleDto.builder()
+                .id(UUID.randomUUID().toString())
+                .name("role1")
+                .app(appDto)
+                .build();
+        AppRoleDto role2 = AppRoleDto.builder()
+                .id(UUID.randomUUID().toString())
+                .name("role2")
+                .app(appDto)
+                .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(currentUserProfile);
 
         Firm targetFirm = Firm.builder().id(UUID.fromString((String) session.getAttribute("delegateTargetFirmId")))
                 .type(FirmType.ADVOCATE).build();
         when(firmService.getById(UUID.fromString((String) session.getAttribute("delegateTargetFirmId")))).thenReturn(targetFirm);
-        when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE))
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE))
                 .thenReturn(List.of(advocateRole));
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole));
-        when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(role1,role2));
 
         Model model = new ExtendedModelMap();
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
-        verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE);
+        verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE);
     }
 
     @Test
@@ -1848,32 +1860,40 @@ public class MultiFirmUserControllerTest {
     @Test
     public void testSelectUserAppRolesPassesNullFirmTypeWhenFirmIsNull() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("addProfileSelectedApps", List.of("app-id-1"));
+        String appId = UUID.randomUUID().toString();
+
+        session.setAttribute("addProfileSelectedApps", List.of(appId));
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setFullName("Test User");
         session.setAttribute("entraUser", entraUser);
 
         UserProfile currentUserProfile = UserProfile.builder().firm(null).appRoles(Set.of()).build();
 
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
         AppRoleDto unrestrictedRole = new AppRoleDto();
         unrestrictedRole.setId(UUID.randomUUID().toString());
         unrestrictedRole.setName("Unrestricted Role");
+        unrestrictedRole.setApp(appDto);
 
-        AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
+        AppRoleDto unrestrictedRole2 = new AppRoleDto();
+        unrestrictedRole2.setId(UUID.randomUUID().toString());
+        unrestrictedRole2.setName("Unrestricted Role");
+        unrestrictedRole2.setApp(appDto);
 
         Model model = new ExtendedModelMap();
         Authentication authentication = mock(Authentication.class);
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(currentUserProfile);
-        when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null))
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null))
                 .thenReturn(List.of(unrestrictedRole));
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(unrestrictedRole));
-        when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(unrestrictedRole,unrestrictedRole2));
 
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
-        verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null);
+        verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null);
     }
 
 }
