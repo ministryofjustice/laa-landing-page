@@ -17,6 +17,7 @@ public enum Permission {
     EDIT_USER_DETAILS,
     DELEGATE_EXTERNAL_USER_ACCESS,
     DELETE_EXTERNAL_USER,
+    DELETE_AUDIT_USER,
     VIEW_AUDIT_TABLE;
 
     public static final String[] ADMIN_PERMISSIONS = {
@@ -31,6 +32,7 @@ public enum Permission {
             VIEW_USER_OFFICE.name(),
             EDIT_USER_DETAILS.name(),
             DELETE_EXTERNAL_USER.name(),
+            DELETE_AUDIT_USER.name(),
             VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(),
             VIEW_AUDIT_TABLE.name()
     };

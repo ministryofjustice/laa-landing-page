@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
 
@@ -53,6 +55,11 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
+            AND (:userType IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.entraUser.id = u.id AND up5.userType = :userType
+            ))
+            AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id) FROM EntraUser u
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
@@ -72,12 +79,19 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
+            AND (:userType IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.entraUser.id = u.id AND up5.userType = :userType
+            ))
+            AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
             """)
     Page<EntraUser> findAllUsersForAudit(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") UserType userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
     /**
@@ -120,6 +134,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditProfileCountProjection> findAllUsersForAuditWithProfileCount(
@@ -127,6 +143,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
     /**
@@ -158,6 +176,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditFirmProjection> findAllUsersForAuditWithFirm(
@@ -165,5 +185,84 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
+            Pageable pageable);
+
+    /**
+     * Simplified query for sorting by account status
+     * Returns calculated account status for each user
+     * Uses same filtering logic as main audit query for consistency
+     */
+    @Query(value = """
+            SELECT u.id as userId,
+                   CASE
+                       WHEN EXISTS (
+                           SELECT 1 FROM user_profile
+                           WHERE entra_user_id = u.id
+                           AND status = 'PENDING'
+                       ) THEN 'Pending'
+                       WHEN u.status = 'DEACTIVE' THEN 'Disabled'
+                       ELSE 'Active'
+                   END as accountStatus
+            FROM entra_user u
+            LEFT JOIN user_profile up ON up.entra_user_id = u.id
+            LEFT JOIN (
+                SELECT DISTINCT up_role.entra_user_id
+                FROM user_profile up_role
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up_role.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE ar.authz_role = true
+                AND (:silasRole IS NULL OR :silasRole = '' OR ar.name = :silasRole)
+            ) role_filter ON role_filter.entra_user_id = u.id
+            LEFT JOIN (
+                SELECT DISTINCT up_app.entra_user_id
+                FROM user_profile up_app
+                JOIN user_profile_app_role upar_app ON upar_app.user_profile_id = up_app.id
+                JOIN app_role ar_app ON ar_app.id = upar_app.app_role_id
+                WHERE :appId IS NULL OR ar_app.app_id = CAST(:appId AS uuid)
+            ) app_filter ON app_filter.entra_user_id = u.id
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
+                   LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+                   LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+            AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
+            AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
+            AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
+            GROUP BY u.id
+            """, countQuery = """
+            SELECT COUNT(DISTINCT u.id)
+            FROM entra_user u
+            LEFT JOIN user_profile up ON up.entra_user_id = u.id
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
+                   LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+                   LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+            AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
+            AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
+                SELECT 1 FROM user_profile up2
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up2.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up2.entra_user_id = u.id
+                AND ar.authz_role = true
+                AND ar.name = :silasRole
+            ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1 FROM user_profile up2
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up2.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up2.entra_user_id = u.id
+                AND ar.app_id = CAST(:appId AS uuid)
+            ))
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
+            """, nativeQuery = true)
+    Page<UserAuditAccountStatusProjection> findAllUsersForAuditWithAccountStatus(
+            @Param("searchTerm") String searchTerm,
+            @Param("firmId") UUID firmId,
+            @Param("silasRole") String silasRole,
+            @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 }
