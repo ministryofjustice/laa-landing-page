@@ -169,7 +169,7 @@ public class AuditController {
         model.addAttribute(ModelAttributes.PAGE_TITLE,
                 "Remove access - " + userDetail.getFullName());
 
-        return "delete-user-without-profile-reason";
+        return "user-audit/delete-user-without-profile-reason";
     }
 
     /**
@@ -192,7 +192,7 @@ public class AuditController {
                     "Please enter a reason (minimum 10 characters).");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
-            return "delete-user-without-profile-reason";
+            return "user-audit/delete-user-without-profile-reason";
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
@@ -211,12 +211,12 @@ public class AuditController {
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
-            return "delete-user-without-profile-reason";
+            return "user-audit/delete-user-without-profile-reason";
         }
 
         model.addAttribute("deletedUserFullName", userDetail.getFullName());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
 
-        return "delete-user-success";
+        return "user-audit/delete-user-success";
     }
 }
