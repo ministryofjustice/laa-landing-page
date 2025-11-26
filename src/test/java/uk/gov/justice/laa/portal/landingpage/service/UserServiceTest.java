@@ -469,7 +469,7 @@ class UserServiceTest {
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
 
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
         // Act
         List<AppRoleDto> result = userService.getUserAppRolesByUserId(userProfileId.toString());
@@ -501,7 +501,7 @@ class UserServiceTest {
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
 
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
         // Act
         List<AppRoleDto> result = userService.getUserAppRolesByUserId(userProfileId.toString());
@@ -523,7 +523,7 @@ class UserServiceTest {
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
 
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
         // Act
         List<AppRoleDto> result = userService.getUserAppRolesByUserId(userProfileId.toString());
@@ -536,7 +536,7 @@ class UserServiceTest {
     void getUserAppRolesByUserId_returnsEmptyList_whenNoUser() {
         // Arrange
         UUID userProfileId = UUID.randomUUID();
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(null);
 
         // Act
         List<AppRoleDto> result = userService.getUserAppRolesByUserId(userProfileId.toString());
@@ -767,7 +767,7 @@ class UserServiceTest {
         entraUser.getUserProfiles().add(userProfile);
 
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
-        when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+        when(mockUserProfileRepository.findByIdWithRelations(any(UUID.class))).thenReturn(null);
         // When
         Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(userId.toString());
         // Then
@@ -837,7 +837,7 @@ class UserServiceTest {
                 .userProfiles(Set.of(userProfile))
                 .build();
         when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
         List<LaaApplication> applications = Arrays.asList(
                 LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
                 LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
@@ -1016,7 +1016,7 @@ class UserServiceTest {
                 .appRoles(Set.of(appRole))
                 .userProfileStatus(UserProfileStatus.COMPLETE)
                 .build();
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
         // When
         Set<AppDto> returnedApps = userService.getUserAppsByUserId(userProfileId.toString());
 
@@ -1032,7 +1032,7 @@ class UserServiceTest {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userProfileId = UUID.randomUUID();
-        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+        when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(null);
         // When
         Set<AppDto> returnedApps = userService.getUserAppsByUserId(userProfileId.toString());
         // Then
@@ -1511,10 +1511,11 @@ class UserServiceTest {
 
         List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
-        
+
         Assertions.assertEquals(2, chambersRoles.size());
         Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
@@ -1553,10 +1554,11 @@ class UserServiceTest {
 
         List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
-        
+
         Assertions.assertEquals(2, advocateRoles.size());
         Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
-        Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
     }
 
@@ -1595,11 +1597,14 @@ class UserServiceTest {
 
         List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, null);
-        
+
         Assertions.assertEquals(1, unrestrictedRoles.size());
-        Assertions.assertTrue(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        Assertions.assertTrue(
+                unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
     @Test
@@ -1637,7 +1642,7 @@ class UserServiceTest {
 
         List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
-        
+
         Assertions.assertEquals(1, lspRoles.size());
         Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
@@ -1679,11 +1684,14 @@ class UserServiceTest {
 
         List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
-        
+
         Assertions.assertEquals(1, externalChambersRoles.size());
-        Assertions.assertTrue(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
-        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
-        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
+        Assertions.assertTrue(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
     }
 
     @Test
@@ -1896,7 +1904,7 @@ class UserServiceTest {
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             // Act
             List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
@@ -1910,7 +1918,7 @@ class UserServiceTest {
         void getUserOfficesByUserId_returnsEmptyList_whenUserNotFound() {
             // Arrange
             UUID userProfileId = UUID.randomUUID();
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(null);
 
             // Act
             List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
@@ -1926,7 +1934,7 @@ class UserServiceTest {
             UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true)
                     .offices(new HashSet<>()).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             // Act
             List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
@@ -1955,7 +1963,7 @@ class UserServiceTest {
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             // Act
             List<OfficeDto> result = userService.getUserOfficesByUserId(userProfileId.toString());
@@ -2346,7 +2354,7 @@ class UserServiceTest {
                     .build();
 
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             List<LaaApplication> configuredApps = List.of(
                     LaaApplication.builder().name("Test App 1").ordinal(1).build(),
@@ -2384,7 +2392,7 @@ class UserServiceTest {
                     .build();
 
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             List<LaaApplication> configuredApps = List.of(
                     LaaApplication.builder().name("Different App").ordinal(1).build());
@@ -2422,7 +2430,7 @@ class UserServiceTest {
                     .build();
 
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             List<LaaApplication> configuredApps = List.of(
                     LaaApplication.builder().name("App C").ordinal(3).build(),
@@ -2464,7 +2472,7 @@ class UserServiceTest {
                     .build();
 
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             List<LaaApplication> configuredApps = List.of(
                     LaaApplication.builder().name("App C").ordinal(3).build(),
@@ -2512,7 +2520,7 @@ class UserServiceTest {
                     .build();
 
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
-            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.findByIdWithRelations(userProfileId)).thenReturn(userProfile);
 
             List<LaaApplication> configuredApps = List.of(
                     LaaApplication.builder().name("App C").ordinal(3).build(),
@@ -4104,7 +4112,7 @@ class UserServiceTest {
                 .build();
         userProfile.setEntraUser(user);
 
-        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(profileId)).thenReturn(userProfile);
         when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .build()));
@@ -4133,7 +4141,7 @@ class UserServiceTest {
                 .build();
         userProfile.setEntraUser(user);
 
-        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
+        when(mockUserProfileRepository.findByIdWithRelations(profileId)).thenReturn(userProfile);
         when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
                 .thenReturn(TechServicesApiResponse.error(TechServicesErrorResponse.builder().success(false)
                         .build()));
@@ -4154,7 +4162,7 @@ class UserServiceTest {
         // Arrange
         UUID profileId = UUID.randomUUID();
 
-        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.empty());
+        when(mockUserProfileRepository.findByIdWithRelations(profileId)).thenReturn(null);
 
         // Act
         RuntimeException ex = assertThrows(RuntimeException.class,

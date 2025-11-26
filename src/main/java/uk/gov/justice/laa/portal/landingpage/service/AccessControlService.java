@@ -41,23 +41,38 @@ public class AccessControlService {
     }
 
     public boolean canAccessUser(String userProfileId) {
+        if (userProfileId == null) {
+            log.warn("canAccessUser called with null userProfileId");
+            return false;
+        }
+        
+        log.debug("canAccessUser called with userProfileId: {}", userProfileId);
+        
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        
+        log.debug("Authenticated user: {}", authenticatedUser.getEmail());
 
         Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
+            log.warn("User profile not found for id: {}", userProfileId);
             return false;
         }
 
         // Global Admin
         if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+            log.debug("User is Global Admin - access granted");
             return true;
         }
 
         EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+        
+        log.debug("Accessed user: {}, isInternal: {}", accessedUser.getEmail(), userService.isInternal(accessedUser.getId()));
+        log.debug("Authenticated user isInternal: {}", userService.isInternal(authenticatedUser.getId()));
 
         if (userHasPermission(authenticatedUser, Permission.VIEW_INTERNAL_USER)
                 && userService.isInternal(accessedUser.getId())) {
+            log.debug("User has VIEW_INTERNAL_USER permission and target is internal - access granted");
             return true;
         }
 
@@ -65,6 +80,7 @@ public class AccessControlService {
         if (userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER)
                 && !userService.isInternal(accessedUser.getId())
                 && userService.isInternal(authenticatedUser.getId())) {
+            log.debug("Internal user with VIEW_EXTERNAL_USER permission accessing external user - access granted");
             return true;
         }
 
@@ -74,8 +90,11 @@ public class AccessControlService {
                 && usersAreInSameFirm(authenticatedUser, userProfileId);
         if (!canAccess) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            log.warn("User {} does not have permission to access this userId {}", currentUserDto.getName(),
-                    userProfileId);
+            log.warn("User {} does not have permission to access this userId {}. Has VIEW_EXTERNAL_USER: {}, Same firm: {}",
+                    currentUserDto.getName(),
+                    userProfileId,
+                    userHasPermission(authenticatedUser, Permission.VIEW_EXTERNAL_USER),
+                    usersAreInSameFirm(authenticatedUser, userProfileId));
         }
         return canAccess;
     }

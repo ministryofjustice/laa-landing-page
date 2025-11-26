@@ -68,12 +68,11 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
                         AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
-            """,
-            countQuery = """
+            """, countQuery = """
                         SELECT COUNT(ups) FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL 
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
                    OR (ups.firm.parentFirm IS NOT NULL AND ups.firm.parentFirm.id = :#{#criteria.firmSearch.selectedFirmId}))
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
@@ -136,4 +135,14 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.entraUser.id = :entraUserId
             """)
     long countByEntraUserId(@Param("entraUserId") UUID entraUserId);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        LEFT JOIN FETCH ups.firm f
+                        LEFT JOIN FETCH ups.offices o
+                        LEFT JOIN FETCH ups.appRoles ar
+                        LEFT JOIN FETCH ups.entraUser u
+            WHERE ups.id = :id
+            """)
+    UserProfile findByIdWithRelations(@Param("id") UUID id);
 }

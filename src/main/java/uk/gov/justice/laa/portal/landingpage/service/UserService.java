@@ -325,7 +325,12 @@ public class UserService {
     }
 
     public Optional<UserProfileDto> getUserProfileById(String userId) {
-        return userProfileRepository.findById(UUID.fromString(userId))
+        if (userId == null) {
+            logger.warn("getUserProfileById called with null userId");
+            return Optional.empty();
+        }
+        UserProfile userProfile = userProfileRepository.findByIdWithRelations(UUID.fromString(userId));
+        return Optional.ofNullable(userProfile)
                 .map(user -> mapper.map(user, UserProfileDto.class));
     }
 
@@ -901,7 +906,8 @@ public class UserService {
             appRoles = app.getAppRoles().stream()
                     .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
                             .anyMatch(roleUserType -> roleUserType == userType))
-                    .filter(appRole -> appRole.getFirmTypeRestriction() == null || appRole.getFirmTypeRestriction().equals(userFirmType))
+                    .filter(appRole -> appRole.getFirmTypeRestriction() == null
+                            || appRole.getFirmTypeRestriction().equals(userFirmType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                     .sorted()
                     .toList();
