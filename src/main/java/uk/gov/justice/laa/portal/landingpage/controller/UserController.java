@@ -1043,7 +1043,8 @@ public class UserController {
         FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType(), userFirmType);        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+                user.getUserType(), userFirmType);
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);

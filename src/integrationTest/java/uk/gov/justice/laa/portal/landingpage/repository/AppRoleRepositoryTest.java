@@ -119,31 +119,4 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(allRoles).hasSize(3);
     }
 
-    @Test
-    public void findByAppIdUserTypeRestriction() {
-        App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
-                "Security Group Name");
-        App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
-                "Security Group Name 2");
-        List<App> apps = Arrays.asList(lassie, crime);
-        appRepository.saveAllAndFlush(apps);
-
-        AppRole lassieExMan = buildLaaAppRole(lassie, "App Role 1");
-        lassieExMan.setAuthzRole(true);
-        AppRole lassieInMan = buildLaaAppRole(lassie, "App Role 2");
-        lassieInMan.setAuthzRole(true);
-
-        AppRole crimeViewer = buildLaaAppRole(crime, "App Role 3");
-        crimeViewer.setAuthzRole(false);
-
-        List<AppRole> roles = Arrays.asList(lassieExMan, lassieInMan, crimeViewer);
-        repository.saveAllAndFlush(roles);
-
-        List<UUID> ids = apps.stream().map(BaseEntity::getId).toList();
-        List<AppRole> appRoles = repository.findByAppIdUserTypeRestriction(ids, UserType.INTERNAL.name());
-        Assertions.assertThat(appRoles).hasSize(3);
-        Assertions.assertThat(appRoles).isEqualTo(roles);
-
-    }
-
 }

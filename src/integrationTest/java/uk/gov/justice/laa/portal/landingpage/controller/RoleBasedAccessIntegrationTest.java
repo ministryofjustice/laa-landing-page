@@ -126,16 +126,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         // Index to keep all email addresses unique.
         int emailIndex = 0;
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
-        //create appRoles
-/*        for (int i = 0; i < allAppRoles.size(); i++) {
-            AppRole appRoleTest = buildLaaAppRoleWithUserTypes(allAppRoles.get(0).getApp(),
-                    String.format("appRole test %s", i),
-                    allAppRoles.get(0).getUserTypeRestriction(),
-                    allAppRoles.get(0).getPermissions()
-            );
-            allAppRoles.add(appRoleTest);
-            appRoleRepository.saveAndFlush(appRoleTest);
-        }*/
+
         for (int i = 0; i < 5; i++) {
             // Setup 5 internal users no roles
             EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
@@ -302,7 +293,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .filter(role -> role.getName().equals("Firm User Manager"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
-
         profile.setAppRoles(Set.of(firmUserManagerRole));
         profile.setFirm(testFirm2);
         user.setUserProfiles(Set.of(profile));

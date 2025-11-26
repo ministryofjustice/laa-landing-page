@@ -477,7 +477,7 @@ public class MultiFirmUserController {
         }
 
         if (!isMultipleRoles(allRoles)) {
-            saveRolesInTheSession(session, editUserAllSelectedRoles);
+            session.setAttribute("addUserProfileAllSelectedRoles", editUserAllSelectedRoles);
             return "redirect:/admin/multi-firm/user/add/profile/select/offices";
         }
 
@@ -937,22 +937,4 @@ public class MultiFirmUserController {
 
     }
 
-    /**
-     * Saves the selected roles and non-editable roles into the session.
-     *
-     * @param session                The current HTTP session to store role data.
-     * @param allSelectedRolesByPage A map containing selected roles grouped by page index.
-     */
-    private void saveRolesInTheSession(HttpSession session,
-                                       Map<Integer, List<String>> allSelectedRolesByPage) {
-
-        // Flatten the map values (lists of roles) into a single list of all selected roles across all pages.
-        List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
-                .filter(Objects::nonNull) // Ignore null lists
-                .flatMap(List::stream)    // Merge all lists into a single stream
-                .toList();                // Collect as a list
-
-        // Store both lists in the session for later use.
-        session.setAttribute("addUserProfileAllSelectedRoles", allSelectedRoles);
-    }
 }
