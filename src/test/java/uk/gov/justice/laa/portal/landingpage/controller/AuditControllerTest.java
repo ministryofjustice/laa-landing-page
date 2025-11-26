@@ -28,6 +28,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
@@ -39,13 +41,19 @@ class AuditControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private LoginService loginService;
+
+    @Mock
+    private EventService eventService;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
 
     @BeforeEach
     void setUp() {
-        auditController = new AuditController(userService);
+        auditController = new AuditController(userService, loginService, eventService);
         model = new ExtendedModelMap();
         // Setup mock audit users
         AuditUserDto user1 = AuditUserDto.builder()
@@ -369,7 +377,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -415,7 +423,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -456,7 +464,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetail(userId, profilePage, profileSize)).thenReturn(mockUserDetail);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, model);
+        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");

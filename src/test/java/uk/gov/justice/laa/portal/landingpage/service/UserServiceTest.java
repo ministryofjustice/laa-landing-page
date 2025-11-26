@@ -96,6 +96,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1511,10 +1512,11 @@ class UserServiceTest {
 
         List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
-        
+
         Assertions.assertEquals(2, chambersRoles.size());
         Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
@@ -1553,10 +1555,11 @@ class UserServiceTest {
 
         List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
-        
+
         Assertions.assertEquals(2, advocateRoles.size());
         Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
-        Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
     }
 
@@ -1595,11 +1598,14 @@ class UserServiceTest {
 
         List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, null);
-        
+
         Assertions.assertEquals(1, unrestrictedRoles.size());
-        Assertions.assertTrue(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions.assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        Assertions.assertTrue(
+                unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
     @Test
@@ -1637,7 +1643,7 @@ class UserServiceTest {
 
         List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
-        
+
         Assertions.assertEquals(1, lspRoles.size());
         Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
@@ -1679,11 +1685,14 @@ class UserServiceTest {
 
         List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
-        
+
         Assertions.assertEquals(1, externalChambersRoles.size());
-        Assertions.assertTrue(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
-        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
-        Assertions.assertFalse(externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
+        Assertions.assertTrue(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
     }
 
     @Test
@@ -6473,6 +6482,231 @@ class UserServiceTest {
             assertThat(result.getTotalProfiles()).isEqualTo(3);
             assertThat(result.getTotalProfilePages()).isEqualTo(2);
             assertThat(result.getCurrentProfilePage()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    class GetAuditUsersWithAccountStatusSorting {
+
+        @Test
+        void shouldSortByAccountStatusAscending() {
+            // Given
+            UUID userId1 = UUID.randomUUID();
+            UUID userId2 = UUID.randomUUID();
+            UUID userId3 = UUID.randomUUID();
+
+            // Mock projection results (ordered by account status: Active, Disabled,
+            // Pending)
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            // Mock full user fetching
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1, user2, user3));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(3);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+
+            // Verify repository was called with correct parameters
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedRequest = pageRequestCaptor.getValue();
+            assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
+            assertThat(capturedRequest.getPageSize()).isEqualTo(10);
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus")).isNotNull();
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void shouldSortByAccountStatusDescending() {
+            // Given
+            UUID userId1 = UUID.randomUUID();
+            UUID userId2 = UUID.randomUUID();
+            UUID userId3 = UUID.randomUUID();
+
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").descending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1, user2, user3));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "accountStatus", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(3);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedRequest = pageRequestCaptor.getValue();
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void shouldHandleEmptyResultsWithAccountStatusSort() {
+            // Given
+            Page<UserAuditAccountStatusProjection> emptyPage = new PageImpl<>(
+                    Collections.emptyList(),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    0);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(emptyPage);
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).isEmpty();
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+        }
+
+        @Test
+        void shouldPreserveOrderFromRepository() {
+            // Given
+            UUID id1 = UUID.randomUUID();
+            UUID id2 = UUID.randomUUID();
+            UUID id3 = UUID.randomUUID();
+
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            // Return users in different order to test sorting preservation
+            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE);
+            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user3, user1, user2)); // Different order
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result.getUsers()).hasSize(3);
+            // Order should match projection page order
+            assertThat(result.getUsers().get(0).getUserId()).isEqualTo(id1);
+            assertThat(result.getUsers().get(1).getUserId()).isEqualTo(id2);
+            assertThat(result.getUsers().get(2).getUserId()).isEqualTo(id3);
+        }
+
+        @Test
+        void shouldHandleFiltersWithAccountStatusSort() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            UUID appId = UUID.randomUUID();
+
+            UUID userId1 = UUID.randomUUID();
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    1);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
+                    eq(appId), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
+                    firmId, "PUI_CASE_WORKER", appId, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
+                    eq(appId), any(PageRequest.class));
+        }
+
+        // Helper methods
+        private UserAuditAccountStatusProjection createAccountStatusProjection(UUID userId, String accountStatus) {
+            return new UserAuditAccountStatusProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
+
+                @Override
+                public String getAccountStatus() {
+                    return accountStatus;
+                }
+            };
+        }
+
+        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status) {
+            return EntraUser.builder()
+                    .id(id)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@example.com")
+                    .userStatus(status)
+                    .userProfiles(new HashSet<>())
+                    .build();
         }
     }
 }

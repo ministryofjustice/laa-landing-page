@@ -1603,10 +1603,10 @@ public class UserService {
         return switch (sort.toLowerCase()) {
             case "name" -> "firstName"; // Sort by first name for name column
             case "email" -> "email";
-            case "usertype" -> "multiFirmUser"; // Sort by multiFirmUser for user type (ex 3rd party
-                                                // sorts differently)
-            case "firm", "firmassociation" -> "f.name"; // Sort by firm name (uses LEFT JOIN with
-                                                        // firm)
+            // Sort by multiFirmUser for user type (ex 3rd party sorts differently)
+            case "usertype" -> "multiFirmUser";
+            // Sort by firm name (uses LEFT JOIN with firm)
+            case "firm", "firmassociation" -> "f.name";
             case "accountstatus" -> "userStatus"; // Sort by userStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
             case "profilecount" -> "profilecount"; // Special case - handled separately

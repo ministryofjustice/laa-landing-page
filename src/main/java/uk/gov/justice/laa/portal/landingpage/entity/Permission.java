@@ -4,14 +4,16 @@ public enum Permission {
     // Some of these are out of scope for MVP but included to be used post-release.
     ACCESS_LANDING_PAGE, // Not used.
     ACCESS_LAA_APPS, // Not used.
-    VIEW_INTERNAL_USER, VIEW_EXTERNAL_USER, VIEW_ALL_USER_MULTI_FIRM_PROFILES, CREATE_INTERNAL_USER, CREATE_EXTERNAL_USER, EDIT_INTERNAL_USER, EDIT_EXTERNAL_USER, EDIT_USER_FIRM, // Not
-                                                                                                                                                                                   // used.
-    EDIT_USER_OFFICE, VIEW_USER_OFFICE, EDIT_USER_DETAILS, DELEGATE_EXTERNAL_USER_ACCESS, DELETE_EXTERNAL_USER, DELETE_AUDIT_USER, VIEW_AUDIT_TABLE;
+    VIEW_INTERNAL_USER, VIEW_EXTERNAL_USER, VIEW_ALL_USER_MULTI_FIRM_PROFILES, CREATE_INTERNAL_USER,
+    CREATE_EXTERNAL_USER, EDIT_INTERNAL_USER, EDIT_EXTERNAL_USER,
+    EDIT_USER_FIRM, // Not used.
+    EDIT_USER_OFFICE, VIEW_USER_OFFICE, EDIT_USER_DETAILS, DELEGATE_EXTERNAL_USER_ACCESS,
+    DELETE_EXTERNAL_USER, DELETE_AUDIT_USER, VIEW_AUDIT_TABLE;
 
-    public static final String[] ADMIN_PERMISSIONS = {VIEW_INTERNAL_USER.name(),
+    public static final String[] ADMIN_PERMISSIONS = { VIEW_INTERNAL_USER.name(),
             VIEW_EXTERNAL_USER.name(), CREATE_INTERNAL_USER.name(), CREATE_EXTERNAL_USER.name(),
             EDIT_INTERNAL_USER.name(), EDIT_EXTERNAL_USER.name(), EDIT_USER_FIRM.name(),
             EDIT_USER_OFFICE.name(), VIEW_USER_OFFICE.name(), EDIT_USER_DETAILS.name(),
             DELETE_EXTERNAL_USER.name(), DELETE_AUDIT_USER.name(),
-            VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(), VIEW_AUDIT_TABLE.name()};
+            VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(), VIEW_AUDIT_TABLE.name() };
 }
