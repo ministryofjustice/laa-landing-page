@@ -287,8 +287,8 @@
                     </nav>
                 </div>
 
-                <!-- Single firm user OR multi-firm user with only 1 profile: show traditional card view -->
-                <div th:if="${!user.hasNoProfile && (!user.isMultiFirmUser || user.profiles.size() == 1)}">
+                <!-- Single firm user: show traditional card view -->
+                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser}">
                     <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
                         <!-- Firm Association Card -->
                         <div class="govuk-summary-card">

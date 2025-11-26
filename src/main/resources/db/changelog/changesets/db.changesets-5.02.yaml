@@ -10,11 +10,12 @@ databaseChangeLog:
               VALUES (
                 (SELECT id FROM app_role WHERE name = 'Global Admin'),
                 'DELETE_AUDIT_USER'
-              );
+              )
+              ON CONFLICT DO NOTHING;
       rollback:
         - sql:
             dbms: postgresql
             sql: |
               DELETE FROM role_permission
-              WHERE permission = 'DELETE_AUDIT_USER'
-                AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin');
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')
+              AND permission = 'DELETE_AUDIT_USER';
