@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
@@ -47,70 +49,43 @@ public class AuditController {
     @GetMapping("/users/audit")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
-    public String displayAuditTable(@RequestParam(name = "size", defaultValue = "10") int size,
-            @RequestParam(name = "page", defaultValue = "1") int page,
-            @RequestParam(name = "sort", required = false, defaultValue = "name") String sort,
-            @RequestParam(name = "direction", required = false, defaultValue = "asc") String direction,
-            @RequestParam(name = "search", required = false, defaultValue = "") String search,
-            @RequestParam(name = "firmSearch", required = false) String firmSearch,
-            @RequestParam(name = "selectedFirmId", required = false) String selectedFirmId,
-            @RequestParam(name = "silasRole", required = false) String silasRole,
-            @RequestParam(name = "selectedAppId", required = false) String selectedAppId,
+    public String displayAuditTable(
+            @ModelAttribute AuditTableSearchCriteria criteria,
             Model model) {
 
-        log.debug(
-                "AuditController.displayAuditTable - search: '{}', firmSearch: '{}', silasRole: '{}'",
-                search, firmSearch, silasRole);
-
-        // Parse firm ID if provided
-        UUID firmId = null;
-        if (selectedFirmId != null && !selectedFirmId.isBlank()) {
-            try {
-                firmId = UUID.fromString(selectedFirmId);
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid firm ID format: {}", selectedFirmId);
-            }
-        }
-
-        // Parse app ID if provided
-        UUID appId = null;
-        if (selectedAppId != null && !selectedAppId.isBlank()) {
-            try {
-                appId = UUID.fromString(selectedAppId);
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid app ID format: {}", selectedAppId);
-            }
-        }
-
+        log.debug("AuditController.displayAuditTable - {}", criteria);
         // Get audit users
-        PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(search, firmId, silasRole,
-                appId, page, size, sort, direction);
-
+        PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
+                criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
+                criteria.getSelectedAppId(), criteria.getSelectedUserType(), criteria.getMultiFirm(), criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
         // Build firm search form
-        FirmSearchForm firmSearchForm = new FirmSearchForm();
-        firmSearchForm.setFirmSearch(firmSearch);
-        firmSearchForm.setSelectedFirmId(firmId);
-
+        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
+        buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
+
+        return "user-audit/users";
+    }
+
+    private void buildDisplayAuditTableModel(AuditTableSearchCriteria criteria, Model model, PaginatedAuditUsers paginatedUsers, FirmSearchForm firmSearchForm) {
         model.addAttribute("users", paginatedUsers.getUsers());
-        model.addAttribute("requestedPageSize", size);
+        model.addAttribute("requestedPageSize", criteria.getSize());
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
-        model.addAttribute("page", page);
+        model.addAttribute("page", criteria.getPage());
         model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
-        model.addAttribute("search", search);
+        model.addAttribute("search", criteria.getSearch());
         model.addAttribute("firmSearch", firmSearchForm);
         // Get all SiLAS roles for dropdown filter
         List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
         model.addAttribute("silasRoles", silasRoles);
         List<AppDto> apps = userService.getApps();
         model.addAttribute("apps", apps);
-        model.addAttribute("selectedSilasRole", silasRole != null ? silasRole : "");
-        model.addAttribute("selectedAppId", selectedAppId != null ? selectedAppId : "");
-        model.addAttribute("sort", sort);
-        model.addAttribute("direction", direction);
-
-        return "user-audit/users";
+        model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
+        model.addAttribute("selectedAppId", criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
+        model.addAttribute("selectedUserType", criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
+        model.addAttribute("multiFirm", criteria.getMultiFirm() != null ? criteria.getMultiFirm().toString() : "");
+        model.addAttribute("sort", criteria.getSort());
+        model.addAttribute("direction", criteria.getDirection());
     }
 
     /**

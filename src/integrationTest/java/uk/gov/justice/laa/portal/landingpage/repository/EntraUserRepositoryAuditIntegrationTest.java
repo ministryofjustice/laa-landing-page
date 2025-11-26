@@ -107,7 +107,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result).isNotNull();
@@ -125,7 +125,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("john", null, null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("john", null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -143,7 +143,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("email"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("jane.smith", null, null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("jane.smith", null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -160,7 +160,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, testFirm1.getId(), null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, testFirm1.getId(), null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -179,7 +179,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, "Test Global Admin", null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, "Test Global Admin", null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -197,7 +197,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
 
         // When
         Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
-                "john", testFirm1.getId(), "Test External User Admin", null, pageRequest);
+                "john", testFirm1.getId(), "Test External User Admin", null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -215,7 +215,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(1, 5, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(15);
@@ -306,7 +306,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
         // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, pageRequest);
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, pageRequest);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);

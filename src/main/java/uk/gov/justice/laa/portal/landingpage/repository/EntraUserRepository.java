@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
@@ -54,6 +55,14 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
+            AND (:userType IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.userType = :userType
+            ))
+            AND (:multiFirm IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.entraUser.multiFirmUser = :multiFirm
+            ))
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id) FROM EntraUser u
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
@@ -73,12 +82,22 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
+            AND (:userType IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.userType = :userType
+            ))
+            AND (:multiFirm IS NULL OR EXISTS (
+                SELECT 1 FROM UserProfile up5
+                WHERE up5.entraUser.multiFirmUser = :multiFirm
+            ))
             """)
     Page<EntraUser> findAllUsersForAudit(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") UserType userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
     /**
@@ -121,6 +140,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditProfileCountProjection> findAllUsersForAuditWithProfileCount(
@@ -128,6 +149,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
     /**
@@ -159,6 +182,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditFirmProjection> findAllUsersForAuditWithFirm(
@@ -166,6 +191,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
     /**

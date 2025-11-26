@@ -110,6 +110,8 @@
                                     name="silasRole" th:value="${selectedSilasRole}">
                                 <input th:if="${selectedAppId != null and selectedAppId != ''}" type="hidden"
                                     name="selectedAppId" th:value="${selectedAppId}">
+                                <input th:if="${selectedUserType != null and selectedUserType != ''}" type="hidden"
+                                       name="selectedUserType" th:value="${selectedUserType}">
                             </form>
                         </fieldset>
                     </div>
@@ -139,6 +141,20 @@
                                 <option value="">All apps</option>
                                 <option th:each="app : ${apps}" th:value="${app.id}" th:text="${app.name}"
                                     th:selected="${app.id == selectedAppId}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- User Type Filter -->
+                    <div class="govuk-!-padding-top-2">
+                        <div class="govuk-form-group">
+                            <label class="govuk-label govuk-label--s" for="userTypeFilter">
+                                User Type
+                            </label>
+                            <select class="govuk-select" id="userTypeFilter" name="userType">
+                                <option value="">All user types</option>
+                                <option value="INTERNAL" th:selected="${selectedUserType == 'INTERNAL'}">Internal</option>
+                                <option value="EXTERNAL" th:selected="${selectedUserType == 'EXTERNAL'}">External</option>
+                                <option value="MULTI_FIRM" th:selected="${multiFirm == 'true'}">External Multi-Firm</option>
                             </select>
                         </div>
                     </div>
@@ -708,6 +724,21 @@
                     });
                 }
 
+                // User Type filter auto-submit
+                const userTypeFilter = document.getElementById('userTypeFilter');
+                if (userTypeFilter) {
+                    userTypeFilter.addEventListener('change', function () {
+                        const currentUrl = new URL(window.location.href);
+                        if (this.value) {
+                            currentUrl.searchParams.set('selectedUserType', this.value);
+                        } else {
+                            currentUrl.searchParams.delete('selectedUserType');
+                        }
+                        currentUrl.searchParams.set('page', '1');
+                        window.location.href = currentUrl.toString();
+                    });
+                }
+
                 // Clean up form submissions
                 const forms = document.querySelectorAll('form[method="get"]');
                 forms.forEach(form => {
@@ -746,7 +777,8 @@
                             firmSearch: this.dataset.firmSearch,
                             selectedFirmId: this.dataset.selectedFirmId,
                             silasRole: this.dataset.silasRole,
-                            selectedAppId: this.dataset.selectedAppId
+                            selectedAppId: this.dataset.selectedAppId,
+                            selectedUserType: this.dataset.selectedUserType
                         };
                         window.location.href = buildCleanUrl('/admin/users/audit', params);
                     });
@@ -783,7 +815,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="name"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Name
                                         <img th:if="${sort == 'name' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -798,7 +830,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'email' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="email"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Email
                                         <img th:if="${sort == 'email' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -813,7 +845,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="userType"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Type
                                         <img th:if="${sort == 'userType' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -828,7 +860,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'firm' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="firm"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firm' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Firm
                                         <img th:if="${sort == 'firm' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -843,7 +875,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'accountStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="accountStatus"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'accountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'accountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Status
                                         <img th:if="${sort == 'accountStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -858,7 +890,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Multi-firm
                                         <img th:if="${sort == 'isMultiFirmUser' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -873,7 +905,7 @@
                                 <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'profileCount' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="profileCount"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'profileCount' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}">
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'profileCount' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         Profiles
                                         <img th:if="${sort == 'profileCount' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -918,7 +950,7 @@
         <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
             <div class="govuk-pagination__prev" th:if="${page > 1}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                     rel="prev">
                     <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                         height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -937,10 +969,10 @@
                 <li class="govuk-pagination__item"
                     th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                         th:aria-label="'Page 1'">1</a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                         th:aria-label="'Page 1'" aria-current="page">1</a>
                 </li>
 
@@ -953,10 +985,10 @@
                     <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                         th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                         <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                             th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                         <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                            th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                             th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                     </li>
                 </th:block>
@@ -968,17 +1000,17 @@
                 <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                     th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                         th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                        th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                         th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
                 </li>
             </ul>
 
             <div class="govuk-pagination__next" th:if="${page < totalPages}">
                 <a class="govuk-link govuk-pagination__link"
-                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, sort=${sort}, direction=${direction})}"
+                    th:href="@{/admin/users/audit(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                     rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>
