@@ -547,7 +547,7 @@ public class MultiFirmUserControllerTest {
         String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
 
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/offices");
-        assertThat(session.getAttribute("addUserProfileAllSelectedRoles")).isEqualTo(List.of(roleDto.getId()));
+        assertThat(session.getAttribute("addUserProfileAllSelectedRoles")).isEqualTo(selectedRolesMap);
     }
 
     @Test
