@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
 
@@ -161,6 +162,80 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditFirmProjection> findAllUsersForAuditWithFirm(
+            @Param("searchTerm") String searchTerm,
+            @Param("firmId") UUID firmId,
+            @Param("silasRole") String silasRole,
+            @Param("appId") UUID appId,
+            Pageable pageable);
+
+    /**
+     * Simplified query for sorting by account status
+     * Returns calculated account status for each user
+     * Uses same filtering logic as main audit query for consistency
+     */
+    @Query(value = """
+            SELECT u.id as userId,
+                   CASE
+                       WHEN EXISTS (
+                           SELECT 1 FROM user_profile
+                           WHERE entra_user_id = u.id
+                           AND status = 'PENDING'
+                       ) THEN 'Pending'
+                       WHEN u.status = 'DEACTIVE' THEN 'Disabled'
+                       ELSE 'Active'
+                   END as accountStatus
+            FROM entra_user u
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
+                   LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+                   LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+            AND (:firmId IS NULL OR EXISTS (
+                SELECT 1 FROM user_profile
+                WHERE entra_user_id = u.id
+                AND firm_id = CAST(:firmId AS uuid)
+            ))
+            AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
+                SELECT 1 FROM user_profile up
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up.entra_user_id = u.id
+                AND ar.authz_role = true
+                AND ar.name = :silasRole
+            ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1 FROM user_profile up
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up.entra_user_id = u.id
+                AND ar.app_id = CAST(:appId AS uuid)
+            ))
+            """, countQuery = """
+            SELECT COUNT(*)
+            FROM entra_user u
+            WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
+                   LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+                   LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+            AND (:firmId IS NULL OR EXISTS (
+                SELECT 1 FROM user_profile
+                WHERE entra_user_id = u.id
+                AND firm_id = CAST(:firmId AS uuid)
+            ))
+            AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
+                SELECT 1 FROM user_profile up
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up.entra_user_id = u.id
+                AND ar.authz_role = true
+                AND ar.name = :silasRole
+            ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1 FROM user_profile up
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up.entra_user_id = u.id
+                AND ar.app_id = CAST(:appId AS uuid)
+            ))
+            """, nativeQuery = true)
+    Page<UserAuditAccountStatusProjection> findAllUsersForAuditWithAccountStatus(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,

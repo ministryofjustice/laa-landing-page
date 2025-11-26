@@ -150,8 +150,7 @@ public class UserService {
         allAssignableRoles.addAll(nonEditableRoles);
         List<AppRole> roles = appRoleRepository.findAllById(
                 allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
-        Optional<UserProfile> optionalUserProfile =
-                userProfileRepository.findById(UUID.fromString(userProfileId));
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
 
         String diff = "";
         Map<String, String> result = new HashMap<>();
@@ -228,18 +227,15 @@ public class UserService {
             return "";
         }
         List<UUID> newIds = newRoles.stream().map(AppRole::getId).toList();
-        List<AppRole> removed =
-                oldRoles.stream().filter(role -> !newIds.contains(role.getId())).toList();
+        List<AppRole> removed = oldRoles.stream().filter(role -> !newIds.contains(role.getId())).toList();
         PageRequest pageRequest = PageRequest.of(0, 2);
         if (Objects.nonNull(firm)) {
             String userManagerRoleName = internal ? "External User Manager" : "Firm User Manager";
-            Optional<AppRole> optionalUserManagerRole =
-                    appRoleRepository.findByName(userManagerRoleName);
+            Optional<AppRole> optionalUserManagerRole = appRoleRepository.findByName(userManagerRoleName);
             if (optionalUserManagerRole.isPresent()) {
                 AppRole userManagerRole = optionalUserManagerRole.get();
-                Page<UserProfile> existingManagers =
-                        userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(),
-                                userManagerRole.getName(), pageRequest);
+                Page<UserProfile> existingManagers = userProfileRepository.findFirmUserByAuthzRoleAndFirm(firm.getId(),
+                        userManagerRole.getName(), pageRequest);
                 boolean removeManager = removed.stream().anyMatch(
                         role -> role.getId().equals(optionalUserManagerRole.get().getId()));
                 if (removeManager && self) {
@@ -331,13 +327,13 @@ public class UserService {
      * Delete an EXTERNAL user and all related local records.
      *
      * @param userProfileId the ID of the user profile (UUID as String)
-     * @param reason the reason for deletion, used for logging/audit
-     * @param actorId the UUID of the actor performing the deletion (for logging)
+     * @param reason        the reason for deletion, used for logging/audit
+     * @param actorId       the UUID of the actor performing the deletion (for
+     *                      logging)
      */
     @Transactional
     public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
-        Optional<UserProfile> optionalUserProfile =
-                userProfileRepository.findById(UUID.fromString(userProfileId));
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
         }
@@ -362,8 +358,8 @@ public class UserService {
 
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
-        DeletedUser.DeletedUserBuilder builder =
-                new DeletedUser().toBuilder().deletedUserId(userProfile.getEntraUser().getId());
+        DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
+                .deletedUserId(userProfile.getEntraUser().getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
                 Set<String> puiRoles = new HashSet<>();
@@ -398,16 +394,17 @@ public class UserService {
      * Delete a specific firm profile from a multi-firm user.
      *
      * @param userProfileId the ID of the user profile to delete (UUID as String)
-     * @param actorId the UUID of the actor performing the deletion (for logging)
+     * @param actorId       the UUID of the actor performing the deletion (for
+     *                      logging)
      * @return true if deletion was successful, false otherwise
-     * @throws RuntimeException if profile not found, user not multi-firm, or attempting to delete
-     *         last profile
+     * @throws RuntimeException if profile not found, user not multi-firm, or
+     *                          attempting to delete
+     *                          last profile
      */
     @Transactional
     public boolean deleteFirmProfile(String userProfileId, UUID actorId) {
-        UserProfile userProfile =
-                userProfileRepository.findById(UUID.fromString(userProfileId)).orElseThrow(
-                        () -> new RuntimeException("User profile not found: " + userProfileId));
+        UserProfile userProfile = userProfileRepository.findById(UUID.fromString(userProfileId)).orElseThrow(
+                () -> new RuntimeException("User profile not found: " + userProfileId));
 
         EntraUser entraUser = userProfile.getEntraUser();
 
@@ -422,8 +419,7 @@ public class UserService {
                     "User is not a multi-firm user. Profile deletion is only allowed for multi-firm users.");
         }
 
-        final String firmName =
-                userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
+        final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
         logger.info(
                 "Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={}, email={}, firm={}",
@@ -462,12 +458,10 @@ public class UserService {
         // If the deleted profile was active, set another one as active
         if (wasActiveProfile) {
             // Reload profiles from database to get current state
-            List<UserProfile> remainingProfiles =
-                    userProfileRepository.findAllByEntraUser(entraUser);
+            List<UserProfile> remainingProfiles = userProfileRepository.findAllByEntraUser(entraUser);
 
             // Check if any profile is already active
-            boolean hasActiveProfile =
-                    remainingProfiles.stream().anyMatch(UserProfile::isActiveProfile);
+            boolean hasActiveProfile = remainingProfiles.stream().anyMatch(UserProfile::isActiveProfile);
 
             // If no active profile exists, set the first one as active
             if (!hasActiveProfile && !remainingProfiles.isEmpty()) {
@@ -484,12 +478,14 @@ public class UserService {
     }
 
     /**
-     * Delete an external user who has no firm profiles (Entra-only user) Notifies Tech Services to
+     * Delete an external user who has no firm profiles (Entra-only user) Notifies
+     * Tech Services to
      * remove Entra group memberships and deletes from local database
      *
      * @param entraUserId the ID of the EntraUser to delete (UUID as String)
-     * @param reason the reason for deletion, used for logging/audit
-     * @param actorId the UUID of the actor performing the deletion (for logging)
+     * @param reason      the reason for deletion, used for logging/audit
+     * @param actorId     the UUID of the actor performing the deletion (for
+     *                    logging)
      * @return DeletedUser containing deletion metadata
      * @throws RuntimeException if user not found, has profiles, or is internal user
      */
@@ -499,7 +495,8 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserId))
                 .orElseThrow(() -> new RuntimeException("Entra user not found: " + entraUserId));
 
-        // Check if user has any profiles - this method is only for users without profiles
+        // Check if user has any profiles - this method is only for users without
+        // profiles
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         if (profiles != null && !profiles.isEmpty()) {
             throw new RuntimeException(
@@ -535,8 +532,7 @@ public class UserService {
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
-        Optional<EntraUser> optionalEntraUser =
-                entraUserRepository.findById(UUID.fromString(userId));
+        Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalEntraUser.isPresent()) {
             return getUserTypeByEntraUser(optionalEntraUser.get());
         } else {
@@ -553,8 +549,7 @@ public class UserService {
         if (dateTime == null) {
             return "N/A";
         }
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH);
 
         return dateTime.format(formatter);
     }
@@ -571,24 +566,26 @@ public class UserService {
     /**
      * Retrieves a paginated list of users based on the provided search criteria.
      * <p>
-     * This method is intended to be the primary entry point for searching users. The
-     * {@link UserSearchCriteria} object should be extended to include all necessary search
+     * This method is intended to be the primary entry point for searching users.
+     * The
+     * {@link UserSearchCriteria} object should be extended to include all necessary
+     * search
      * parameters.
      * </p>
      *
      * @param searchCriteria the criteria to filter users by
-     * @param page the page number to retrieve (1-based index)
-     * @param pageSize the number of users per page
-     * @param sort the field to sort by
-     * @param direction the direction of sorting ("asc" or "desc")
-     * @return a {@link PaginatedUsers} object containing the users for the requested page
+     * @param page           the page number to retrieve (1-based index)
+     * @param pageSize       the number of users per page
+     * @param sort           the field to sort by
+     * @param direction      the direction of sorting ("asc" or "desc")
+     * @return a {@link PaginatedUsers} object containing the users for the
+     *         requested page
      */
     public PaginatedUsers getPageOfUsersBySearch(UserSearchCriteria searchCriteria, int page,
             int pageSize, String sort, String direction) {
-        PageRequest pageRequest =
-                PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
-        Page<UserSearchResultsDto> userProfilePage =
-                userProfileRepository.findBySearchParams(searchCriteria, pageRequest);
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), pageSize, getSort(sort, direction));
+        Page<UserSearchResultsDto> userProfilePage = userProfileRepository.findBySearchParams(searchCriteria,
+                pageRequest);
         return getPageOfUsers(() -> userProfilePage);
     }
 
@@ -651,8 +648,7 @@ public class UserService {
             for (String id : batch) {
                 User user = new User();
                 user.setAccountEnabled(false);
-                RequestInformation patchMessage =
-                        graphClient.users().byUserId(id).toPatchRequestInformation(user);
+                RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
                 batchRequestContent.addBatchRequestStep(patchMessage);
             }
             graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
@@ -682,16 +678,14 @@ public class UserService {
     public EntraUser createUser(EntraUserDto user, FirmDto firm, boolean isUserManager,
             String createdBy, boolean isMultiFirmUser) {
 
-        TechServicesApiResponse<RegisterUserResponse> registerUserResponse =
-                techServicesClient.registerNewUser(user);
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = techServicesClient.registerNewUser(user);
         if (!registerUserResponse.isSuccess()) {
             throw new TechServicesClientException(registerUserResponse.getError().getMessage(),
                     registerUserResponse.getError().getCode(),
                     registerUserResponse.getError().getErrors());
         }
 
-        RegisterUserResponse.CreatedUser createdUser =
-                registerUserResponse.getData().getCreatedUser();
+        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
 
         if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
             user.setEntraOid(createdUser.getId());
@@ -721,8 +715,7 @@ public class UserService {
         if (!isMultiFirmUser || !firmDto.isSkipFirmSelection()) {
             Set<AppRole> appRoles = new HashSet<>();
             if (isUserManager) {
-                Optional<AppRole> firmUserManagerRole =
-                        appRoleRepository.findByName("Firm User Manager");
+                Optional<AppRole> firmUserManagerRole = appRoleRepository.findByName("Firm User Manager");
                 firmUserManagerRole.ifPresent(appRoles::add);
             }
 
@@ -798,8 +791,7 @@ public class UserService {
             }
         }
 
-        boolean activeProfile =
-                entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
+        boolean activeProfile = entraUser.getUserProfiles() == null || entraUser.getUserProfiles().isEmpty();
 
         UserProfile userProfile = UserProfile.builder().entraUser(entraUser)
                 .activeProfile(activeProfile).userType(UserType.EXTERNAL)
@@ -975,9 +967,9 @@ public class UserService {
     /**
      * Update user details in Microsoft Graph and local database
      *
-     * @param userId The user ID
+     * @param userId    The user ID
      * @param firstName The user's first name
-     * @param lastName The user's last name
+     * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
     public void updateUserDetails(String userId, String firstName, String lastName)
@@ -1006,10 +998,12 @@ public class UserService {
     }
 
     /**
-     * Convert a single-firm user to a multi-firm user This operation is irreversible
+     * Convert a single-firm user to a multi-firm user This operation is
+     * irreversible
      *
      * @param userId The ID of the user to convert
-     * @throws RuntimeException if the user is not found or is already a multi-firm user
+     * @throws RuntimeException if the user is not found or is already a multi-firm
+     *                          user
      */
     @Transactional
     public void convertToMultiFirmUser(String userId) {
@@ -1058,8 +1052,7 @@ public class UserService {
     private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
         List<LaaApplication> applications = laaApplicationsList.getApplications();
 
-        Set<String> userAppNames =
-                userApps.stream().map(LaaApplicationForView::getName).collect(Collectors.toSet());
+        Set<String> userAppNames = userApps.stream().map(LaaApplicationForView::getName).collect(Collectors.toSet());
 
         userApps.forEach(app -> {
             Optional<LaaApplication> matchingApp = applications.stream()
@@ -1097,14 +1090,13 @@ public class UserService {
     /**
      * Update user offices
      *
-     * @param userId The user ID
+     * @param userId          The user ID
      * @param selectedOffices List of selected office IDs
      * @throws IOException If an error occurs during the update
      */
     public String updateUserOffices(String userId, List<String> selectedOffices)
             throws IOException {
-        Optional<UserProfile> optionalUserProfile =
-                userProfileRepository.findById(UUID.fromString(userId));
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userId));
         String diff;
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
@@ -1112,8 +1104,7 @@ public class UserService {
                 diff = diffOffices(userProfile.getOffices(), null);
                 userProfile.setOffices(null);
             } else {
-                List<UUID> officeIds =
-                        selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
+                List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
@@ -1190,8 +1181,7 @@ public class UserService {
 
     public boolean isAccessGranted(String userId) {
         // Get user profile by userId
-        Optional<UserProfile> optionalUser =
-                userProfileRepository.findById(UUID.fromString(userId));
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             UserProfile user = optionalUser.get();
             // Check if the user has access granted
@@ -1206,13 +1196,12 @@ public class UserService {
     /**
      * Grant access to a user by updating their profile status to COMPLETE
      *
-     * @param userId The user profile ID
+     * @param userId          The user profile ID
      * @param currentUserName The name of the user granting access
      * @return true if access was granted successfully, false otherwise
      */
     public boolean grantAccess(String userId, String currentUserName) {
-        Optional<UserProfile> optionalUser =
-                userProfileRepository.findById(UUID.fromString(userId));
+        Optional<UserProfile> optionalUser = userProfileRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             UserProfile user = optionalUser.get();
             user.setUserProfileStatus(UserProfileStatus.COMPLETE);
@@ -1310,16 +1299,14 @@ public class UserService {
      * Remove a specific app role from a user
      */
     public void removeUserAppRole(String userProfileId, String appId, String roleName) {
-        Optional<UserProfile> optionalUserProfile =
-                userProfileRepository.findById(UUID.fromString(userProfileId));
+        Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             Set<AppRole> currentRoles = new HashSet<>(userProfile.getAppRoles());
 
             // Find and remove the specific role
-            boolean removed =
-                    currentRoles.removeIf(role -> role.getApp().getId().toString().equals(appId)
-                            && role.getName().equals(roleName));
+            boolean removed = currentRoles.removeIf(role -> role.getApp().getId().toString().equals(appId)
+                    && role.getName().equals(roleName));
 
             if (removed) {
                 userProfile.setAppRoles(currentRoles);
@@ -1361,7 +1348,7 @@ public class UserService {
      * Get user profiles by Entra user ID with optional search filter
      *
      * @param entraUserId The Entra user ID
-     * @param search Optional search term to filter by firm name or code
+     * @param search      Optional search term to filter by firm name or code
      * @return List of user profiles matching the search criteria
      */
     public List<UserProfile> getUserProfilesByEntraUserIdAndSearch(UUID entraUserId,
@@ -1380,46 +1367,60 @@ public class UserService {
     }
 
     /**
-     * Get paginated audit users for the User Access Audit Table Includes all registered users, even
+     * Get paginated audit users for the User Access Audit Table Includes all
+     * registered users, even
      * those without firm profiles
      *
      * @param searchTerm Search by name or email
-     * @param firmId Filter by firm ID
-     * @param silasRole Filter by SiLAS role (authz role name)
-     * @param page Page number (1-based)
-     * @param pageSize Number of results per page
-     * @param sort Sort field
-     * @param direction Sort direction (asc/desc)
+     * @param firmId     Filter by firm ID
+     * @param silasRole  Filter by SiLAS role (authz role name)
+     * @param page       Page number (1-based)
+     * @param pageSize   Number of results per page
+     * @param sort       Sort field
+     * @param direction  Sort direction (asc/desc)
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(String searchTerm, UUID firmId, String silasRole,
             UUID appId, int page, int pageSize, String sort, String direction) {
 
-        // Check if sorting by profile count or firm (special cases - require different
-        // queries)
+        // Check if sorting by profile count, firm, or account status (special cases -
+        // require different queries)
         boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
         boolean sortByFirm = sort != null
                 && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
+        boolean sortByAccountStatus = sort != null && sort.equalsIgnoreCase("accountstatus");
 
         Page<EntraUser> userPage;
 
-        if (sortByProfileCount || sortByFirm) {
-            // Use special queries for profile count or firm sorting
+        if (sortByProfileCount || sortByFirm || sortByAccountStatus) {
+            // Use special queries for profile count, firm, or account status sorting
             boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
-            String sortField = sortByProfileCount ? "profileCount" : "firmName";
-            Sort sortObj =
-                    ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
+            String sortField;
+            if (sortByProfileCount) {
+                sortField = "profileCount";
+            } else if (sortByFirm) {
+                sortField = "firmName";
+            } else {
+                sortField = "accountStatus";
+            }
+
+            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
-            Page<? extends UserAuditProjection> resultPage = sortByProfileCount
-                    ? entraUserRepository.findAllUsersForAuditWithProfileCount(searchTerm, firmId,
-                            silasRole, appId, pageRequest)
-                    : entraUserRepository.findAllUsersForAuditWithFirm(searchTerm, firmId,
-                            silasRole, appId, pageRequest);
+            Page<? extends UserAuditProjection> resultPage;
+            if (sortByProfileCount) {
+                resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(searchTerm, firmId,
+                        silasRole, appId, pageRequest);
+            } else if (sortByFirm) {
+                resultPage = entraUserRepository.findAllUsersForAuditWithFirm(searchTerm, firmId,
+                        silasRole, appId, pageRequest);
+            } else {
+                resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(searchTerm, firmId,
+                        silasRole, appId, pageRequest);
+            }
 
             // Extract user IDs in order
-            List<UUID> userIds =
-                    resultPage.getContent().stream().map(UserAuditProjection::getUserId).toList();
+            List<UUID> userIds = resultPage.getContent().stream().map(UserAuditProjection::getUserId).toList();
 
             // Fetch full user details
             List<EntraUser> users = Collections.emptyList();
@@ -1451,8 +1452,7 @@ public class UserService {
             if (!userPage.getContent().isEmpty()) {
                 Set<UUID> userIds = userPage.getContent().stream().map(EntraUser::getId)
                         .collect(Collectors.toSet());
-                List<EntraUser> usersWithRelations =
-                        entraUserRepository.findUsersWithProfilesAndRoles(userIds);
+                List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
 
                 // Replace content with fully loaded entities, preserving order
                 Map<UUID, EntraUser> userMap = usersWithRelations.stream()
@@ -1465,8 +1465,7 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<AuditUserDto> auditUsers =
-                userPage.getContent().stream().map(this::mapToAuditUserDto).toList();
+        List<AuditUserDto> auditUsers = userPage.getContent().stream().map(this::mapToAuditUserDto).toList();
 
         return PaginatedAuditUsers.builder().users(auditUsers)
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
@@ -1478,9 +1477,8 @@ public class UserService {
      */
     private AuditUserDto mapToAuditUserDto(EntraUser user) {
         // Get all user profiles
-        List<UserProfile> profiles =
-                user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
-                        : Collections.emptyList();
+        List<UserProfile> profiles = user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
+                : Collections.emptyList();
 
         // Determine user type
         String userType = determineUserType(user, profiles);
@@ -1512,7 +1510,8 @@ public class UserService {
     }
 
     /**
-     * Determine user type for audit table Returns: "Internal", "External", or "External - 3rd
+     * Determine user type for audit table Returns: "Internal", "External", or
+     * "External - 3rd
      * Party"
      */
     private String determineUserType(EntraUser user, List<UserProfile> profiles) {
@@ -1528,8 +1527,7 @@ public class UserService {
         }
 
         // Check if user has internal profile
-        boolean hasInternal =
-                profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+        boolean hasInternal = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
 
         if (hasInternal) {
             return "Internal";
@@ -1544,7 +1542,8 @@ public class UserService {
     }
 
     /**
-     * Determine firm association for audit table Returns firm name(s) or "None" if no profiles
+     * Determine firm association for audit table Returns firm name(s) or "None" if
+     * no profiles
      */
     private String determineFirmAssociation(List<UserProfile> profiles) {
         if (profiles.isEmpty()) {
@@ -1562,7 +1561,8 @@ public class UserService {
     }
 
     /**
-     * Determine account status for audit table Returns: "Active", "Inactive", "Pending", or
+     * Determine account status for audit table Returns: "Active", "Inactive",
+     * "Pending", or
      * "Disabled"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
@@ -1584,7 +1584,8 @@ public class UserService {
     }
 
     /**
-     * Get all SiLAS roles (authz roles) for dropdown filter Returns list of role DTOs
+     * Get all SiLAS roles (authz roles) for dropdown filter Returns list of role
+     * DTOs
      */
     public List<AppRoleDto> getAllSilasRoles() {
         return appRoleRepository.findAllAuthzRoles().stream()
@@ -1625,7 +1626,8 @@ public class UserService {
     }
 
     /**
-     * Get detailed audit information for a specific user Includes all profiles, roles, offices, and
+     * Get detailed audit information for a specific user Includes all profiles,
+     * roles, offices, and
      * audit data
      *
      * @param userId The user profile ID to retrieve
@@ -1645,8 +1647,7 @@ public class UserService {
         allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
 
         // Map profiles to DTOs (no pagination for this method)
-        List<AuditProfileDto> profileDtos =
-                allProfiles.stream().map(this::mapToAuditProfileDto).toList();
+        List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
 
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
@@ -1669,10 +1670,11 @@ public class UserService {
     }
 
     /**
-     * Get detailed audit information for a specific user with profile pagination Includes all
+     * Get detailed audit information for a specific user with profile pagination
+     * Includes all
      * profiles, roles, offices, and audit data
      *
-     * @param userId The user profile ID to retrieve
+     * @param userId      The user profile ID to retrieve
      * @param profilePage The page number for profiles (1-indexed)
      * @param profileSize The number of profiles per page
      * @return Detailed audit user DTO with paginated profiles
@@ -1697,12 +1699,10 @@ public class UserService {
         int endIndex = Math.min(startIndex + profileSize, totalProfiles);
 
         // Get paginated profiles
-        List<UserProfile> paginatedProfiles =
-                allProfiles.subList(Math.max(0, startIndex), Math.max(0, endIndex));
+        List<UserProfile> paginatedProfiles = allProfiles.subList(Math.max(0, startIndex), Math.max(0, endIndex));
 
         // Map profiles to DTOs
-        List<AuditProfileDto> profileDtos =
-                paginatedProfiles.stream().map(this::mapToAuditProfileDto).toList();
+        List<AuditProfileDto> profileDtos = paginatedProfiles.stream().map(this::mapToAuditProfileDto).toList();
 
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
@@ -1725,7 +1725,8 @@ public class UserService {
     }
 
     /**
-     * Get audit user detail for an EntraUser without any profiles Used for multi-firm users or
+     * Get audit user detail for an EntraUser without any profiles Used for
+     * multi-firm users or
      * external users who don't yet have a firm association
      *
      * @param entraUserId The EntraUser ID
@@ -1736,9 +1737,9 @@ public class UserService {
                 () -> new IllegalArgumentException("Entra user not found with id: " + entraUserId));
 
         // Get all profiles for this user (may be empty)
-        List<UserProfile> allProfiles =
-                entraUser.getUserProfiles() != null ? new ArrayList<>(entraUser.getUserProfiles())
-                        : Collections.emptyList();
+        List<UserProfile> allProfiles = entraUser.getUserProfiles() != null
+                ? new ArrayList<>(entraUser.getUserProfiles())
+                : Collections.emptyList();
 
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);

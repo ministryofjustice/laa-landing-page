@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: add-delete-audit-user-permission
+      id: delete-audit-user-permission
       author: paul.snowdon
       changes:
         - sql:
