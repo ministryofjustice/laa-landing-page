@@ -49,8 +49,7 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile =
-                userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -94,8 +93,7 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile =
-                userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -108,13 +106,10 @@ public class AccessControlService {
     }
 
     /**
-     * Check if the authenticated user can delete a user without a profile (Entra-only user). Used
-     * for multi-firm users or external users who don't yet have a firm association. Requires one
-     * of: - Global Admin role with DELETE_AUDIT_USER permission - Quality & Assurance role AND
-     * Global Admin role with DELETE_AUDIT_USER permission
+     * Check if the authenticated user can delete a user without a profile
      *
      * @param entraUserId the ID of the EntraUser to delete (as String)
-     * @return true if user has permission to delete this user without profile
+     * @return true if user has permission to delete this user
      */
     public boolean canDeleteUserWithoutProfile(String entraUserId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -129,8 +124,7 @@ public class AccessControlService {
                 authenticatedUser.getEmail(), entraUserId);
 
         // Check if target user exists - lookup by database ID (not entra_oid)
-        Optional<EntraUser> targetUserOpt =
-                entraUserRepository.findById(UUID.fromString(entraUserId));
+        Optional<EntraUser> targetUserOpt = entraUserRepository.findById(UUID.fromString(entraUserId));
         if (targetUserOpt.isEmpty()) {
             log.debug("Target user not found with ID: {}", entraUserId);
             return false;
@@ -148,8 +142,7 @@ public class AccessControlService {
         // Check roles and permissions
         boolean hasGlobalAdmin = userHasAuthzRole(authenticatedUser, "Global Admin");
         boolean hasQualityAssurance = userHasAuthzRole(authenticatedUser, "Quality & Assurance");
-        boolean hasDeletePermission =
-                userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
+        boolean hasDeletePermission = userHasPermission(authenticatedUser, Permission.DELETE_AUDIT_USER);
 
         log.debug(
                 "Authorization checks - Global Admin: {}, Quality & Assurance: {}, DELETE_AUDIT_USER: {}",
@@ -164,8 +157,7 @@ public class AccessControlService {
     }
 
     /**
-     * Check if the authenticated user can delete a specific firm profile. Used for multi-firm users
-     * where we delete individual firm access.
+     * Check if the authenticated user can delete a specific firm profile.
      *
      * @param userProfileId the ID of the user profile to delete
      * @return true if user has permission to delete this firm profile
@@ -179,8 +171,7 @@ public class AccessControlService {
             return false;
         }
 
-        Optional<UserProfileDto> optionalAccessedUserProfile =
-                userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -200,7 +191,8 @@ public class AccessControlService {
         // Check if authenticated user is internal (LAA staff)
         boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
 
-        // Only external users (provider admins/firm user managers) can delete firm profiles
+        // Only external users (provider admins/firm user managers) can delete firm
+        // profiles
         // Internal users should not see the revoke link
         if (isInternalUser) {
             return false;
@@ -223,8 +215,7 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile =
-                userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
@@ -307,8 +298,7 @@ public class AccessControlService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<UserProfileDto> optionalAccessedUserProfile =
-                userService.getUserProfileById(userProfileId);
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
         if (optionalAccessedUserProfile.isEmpty()) {
             return false;
         }
