@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -6723,6 +6724,283 @@ class UserServiceTest {
                     .userStatus(status)
                     .userProfiles(new HashSet<>())
                     .build();
+        }
+    }
+
+    @Nested
+    class ConvertToMultiFirmUserTests {
+        @Test
+        void convertToMultiFirmUser_success() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+            user.getUserProfiles().add(profile);
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(user);
+
+            // When
+            userService.convertToMultiFirmUser(userId.toString());
+
+            // Then
+            ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+            verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+            assertThat(captor.getValue().isMultiFirmUser()).isTrue();
+        }
+
+        @Test
+        void convertToMultiFirmUser_userNotFound() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("User not found");
+        }
+
+        @Test
+        void convertToMultiFirmUser_alreadyMultiFirm() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("already a multi-firm user");
+        }
+    }
+
+    @Nested
+    class IsMultiFirmUserByEmailTests {
+        @Test
+        void isMultiFirmUserByEmail_returnsTrue() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .email(email)
+                    .multiFirmUser(true)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void isMultiFirmUserByEmail_returnsFalse_whenNotMultiFirm() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .email(email)
+                    .multiFirmUser(false)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void isMultiFirmUserByEmail_returnsFalse_whenUserNotFound() {
+            // Given
+            String email = "nonexistent@example.com";
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.empty());
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    class GetUserProfilesByEntraUserIdTests {
+        @Test
+        void getUserProfilesByEntraUserIdAndSearch_withSearch() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            String search = "Law Firm";
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .email("user@example.com")
+                    .build();
+
+            Firm firm1 = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Law Firm One")
+                    .code("LF001")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm1)
+                    .activeProfile(true)
+                    .build();
+
+            List<UserProfile> profiles = List.of(profile1);
+            when(mockUserProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search))
+                    .thenReturn(profiles);
+
+            // When
+            List<UserProfile> result = userService.getUserProfilesByEntraUserIdAndSearch(entraUserId, search);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result).contains(profile1);
+            verify(mockUserProfileRepository).findByEntraUserIdAndFirmSearch(entraUserId, search);
+        }
+    }
+
+    @Nested
+    class GetEntraUserByIdAndEmailTests {
+        @Test
+        void getEntraUserById_returnsUser() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            String email = "user@example.com";
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email(email)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserById(userId.toString());
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getId()).isEqualTo(userId.toString());
+        }
+
+        @Test
+        void getEntraUserById_returnsEmpty_whenNotFound() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserById(userId.toString());
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void getEntraUserByEmail_returnsUser() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email(email)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserByEmail(email);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getEmail()).isEqualToIgnoringCase(email);
+        }
+
+        @Test
+        void getEntraUserByEmail_returnsEmpty_whenNotFound() {
+            // Given
+            String email = "nonexistent@example.com";
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.empty());
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserByEmail(email);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    class GetUserProfileByIdTests {
+        @Test
+        void getUserProfileById_returnsProfile() {
+            // Given
+            UUID profileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .email("user@example.com")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .entraUser(entraUser)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            Optional<UserProfileDto> result = userService.getUserProfileById(profileId.toString());
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getId()).isEqualTo(profileId);
+            assertThat(result.get().getUserType()).isEqualTo(UserType.EXTERNAL);
+        }
+
+        @Test
+        void getUserProfileById_returnsEmpty_whenNotFound() {
+            // Given
+            UUID profileId = UUID.randomUUID();
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.empty());
+
+            // When
+            Optional<UserProfileDto> result = userService.getUserProfileById(profileId.toString());
+
+            // Then
+            assertThat(result).isEmpty();
         }
     }
 }
