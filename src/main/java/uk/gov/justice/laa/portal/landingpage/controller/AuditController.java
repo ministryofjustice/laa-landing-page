@@ -57,7 +57,8 @@ public class AuditController {
         // Get audit users
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
-                criteria.getSelectedAppId(), criteria.getSelectedUserType(), criteria.getMultiFirm(), criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
+                criteria.getSelectedAppId(), criteria.getSelectedUserType(), criteria.getMultiFirm(),
+                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -66,7 +67,8 @@ public class AuditController {
         return "user-audit/users";
     }
 
-    private void buildDisplayAuditTableModel(AuditTableSearchCriteria criteria, Model model, PaginatedAuditUsers paginatedUsers, FirmSearchForm firmSearchForm) {
+    private void buildDisplayAuditTableModel(AuditTableSearchCriteria criteria, Model model,
+            PaginatedAuditUsers paginatedUsers, FirmSearchForm firmSearchForm) {
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", criteria.getSize());
         model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
@@ -81,8 +83,10 @@ public class AuditController {
         List<AppDto> apps = userService.getApps();
         model.addAttribute("apps", apps);
         model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
-        model.addAttribute("selectedAppId", criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
-        model.addAttribute("selectedUserType", criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
+        model.addAttribute("selectedAppId",
+                criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
+        model.addAttribute("selectedUserType",
+                criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("multiFirm", criteria.getMultiFirm() != null ? criteria.getMultiFirm().toString() : "");
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());

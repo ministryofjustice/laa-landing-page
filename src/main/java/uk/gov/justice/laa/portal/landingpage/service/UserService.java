@@ -1407,7 +1407,8 @@ public class UserService {
 
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-            // UserType must be treated as a string because we are using native queries here.
+            // UserType must be treated as a string because we are using native queries
+            // here.
             String userTypeString = userType != null ? userType.toString() : null;
             Page<? extends UserAuditProjection> resultPage = sortByProfileCount
                     ? entraUserRepository.findAllUsersForAuditWithProfileCount(
