@@ -9,8 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for User Access Audit Table
- * Contains aggregated user information across all their profiles
+ * DTO for User Access Audit Table Contains aggregated user information across all their profiles
  */
 @Data
 @Builder
@@ -39,8 +38,7 @@ public class AuditUserDto implements Serializable {
     private String userType;
 
     /**
-     * Firm name(s) or "None" if no profile
-     * Multiple firms separated by comma for multi-firm users
+     * Firm name(s) or "None" if no profile Multiple firms separated by comma for multi-firm users
      */
     private String firmAssociation;
 
@@ -80,8 +78,13 @@ public class AuditUserDto implements Serializable {
     private String entraStatus;
 
     /**
-     * Activation status from TechServices API
-     * Values: Pending, Accepted, Expired, Revoked
+     * Activation status from TechServices API Values: Pending, Accepted, Expired, Revoked
      */
     private String activationStatus;
+
+    /**
+     * EntraUser ID for users without profiles Used for linking to detail view when userId (profile
+     * ID) is null
+     */
+    private String entraUserId;
 }

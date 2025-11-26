@@ -10,9 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * DTO for detailed User Access Audit drill-down view
- * Contains complete user information including all profiles, roles, and audit
- * data
+ * DTO for detailed User Access Audit drill-down view Contains complete user information including
+ * all profiles, roles, and audit data
  */
 @Data
 @Builder
@@ -51,8 +50,7 @@ public class AuditUserDetailDto implements Serializable {
     private boolean isMultiFirmUser;
 
     /**
-     * User type classification
-     * Values: "Internal", "External", or "External - 3rd Party"
+     * User type classification Values: "Internal", "External", or "External - 3rd Party"
      */
     private String userType;
 
@@ -77,8 +75,7 @@ public class AuditUserDetailDto implements Serializable {
     private String entraStatus;
 
     /**
-     * Activation status from TechServices API
-     * Values: Pending, Accepted, Expired, Revoked
+     * Activation status from TechServices API Values: Pending, Accepted, Expired, Revoked
      */
     private String activationStatus;
 
@@ -101,6 +98,11 @@ public class AuditUserDetailDto implements Serializable {
      * Current profile page number
      */
     private int currentProfilePage;
+
+    /**
+     * Flag indicating if user has no profile (Entra-only data)
+     */
+    private boolean hasNoProfile;
 
     /**
      * Profile DTO for the audit detail view
