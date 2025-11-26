@@ -458,7 +458,9 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         MvcResult getRolesResult = this.mockMvc.perform(get(redirectedUrl)
                         .with(userOauth2Login(loggedInUser))
                         .session(session))
-                .andExpect(isMultiplesRoles? status().isOk() : status().is3xxRedirection())
+                .andExpect(isMultiplesRoles
+                        ? status().isOk()
+                        : status().is3xxRedirection())
                 .andReturn();
 
         AppRoleViewModel authzRole = null;
@@ -492,9 +494,9 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         }
 
         // Check we're redirected to cya screen
-        String cyaUrl = isMultiplesRoles ?
-                postAppsResult.getResponse().getRedirectedUrl() :
-                getRolesResult.getResponse().getRedirectedUrl();
+        String cyaUrl = isMultiplesRoles
+                ? postAppsResult.getResponse().getRedirectedUrl()
+                : getRolesResult.getResponse().getRedirectedUrl();
 
         Assertions.assertThat(cyaUrl).isNotNull();
         this.mockMvc.perform(get(cyaUrl)
