@@ -5896,6 +5896,27 @@ class UserServiceTest {
         void getAuditUsers_whenSortingByStatusAscending_appliesCorrectSort() {
             // Given
             UUID userId = UUID.randomUUID();
+            UserAuditAccountStatusProjection projection = new UserAuditAccountStatusProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
+
+                @Override
+                public String getAccountStatus() {
+                    return "Active";
+                }
+            };
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(projection),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    1);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
             EntraUser user = EntraUser.builder()
                     .id(userId)
                     .firstName("Test")
@@ -5906,30 +5927,24 @@ class UserServiceTest {
                     .userProfiles(new HashSet<>())
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
-
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
-
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
-                    .thenReturn(List.of(user));
+                    .thenReturn(new ArrayList<>(List.of(user)));
 
-            // When - using "accountstatus" as the sort field which maps to "userStatus"
+            // When - using "accountstatus" as the sort field
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, 1, 10, "accountstatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
                     eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("userStatus")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("userStatus").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
         }
 
@@ -6642,10 +6657,11 @@ class UserServiceTest {
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
-            // Order should match projection page order
-            assertThat(result.getUsers().get(0).getUserId()).isEqualTo(id1);
-            assertThat(result.getUsers().get(1).getUserId()).isEqualTo(id2);
-            assertThat(result.getUsers().get(2).getUserId()).isEqualTo(id3);
+            // Order should match projection page order (checking entraUserId since users
+            // have no profiles)
+            assertThat(result.getUsers().get(0).getEntraUserId()).isEqualTo(id1.toString());
+            assertThat(result.getUsers().get(1).getEntraUserId()).isEqualTo(id2.toString());
+            assertThat(result.getUsers().get(2).getEntraUserId()).isEqualTo(id3.toString());
         }
 
         @Test

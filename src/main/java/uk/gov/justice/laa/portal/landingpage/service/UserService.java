@@ -1425,7 +1425,7 @@ public class UserService {
             // Fetch full user details
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
-                users = entraUserRepository
+                List<EntraUser> fetchedUsers = entraUserRepository
                         .findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
 
                 // Sort users to match the order from the query result
@@ -1433,6 +1433,7 @@ public class UserService {
                 for (int i = 0; i < userIds.size(); i++) {
                     orderMap.put(userIds.get(i), i);
                 }
+                users = new ArrayList<>(fetchedUsers);
                 users.sort(Comparator
                         .comparingInt(u -> orderMap.getOrDefault(u.getId(), Integer.MAX_VALUE)));
             }
