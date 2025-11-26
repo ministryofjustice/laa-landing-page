@@ -5914,7 +5914,7 @@ class UserServiceTest {
                     1);
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
             EntraUser user = EntraUser.builder()
@@ -5926,13 +5926,6 @@ class UserServiceTest {
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .build();
-
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
-
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(new ArrayList<>(List.of(user)));
@@ -5946,7 +5939,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
@@ -6529,7 +6522,7 @@ class UserServiceTest {
                     3);
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
             // Mock full user fetching
@@ -6553,7 +6546,7 @@ class UserServiceTest {
             // Verify repository was called with correct parameters
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
             assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
@@ -6580,7 +6573,7 @@ class UserServiceTest {
                     3);
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
             EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
@@ -6601,7 +6594,7 @@ class UserServiceTest {
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
             assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
@@ -6617,7 +6610,7 @@ class UserServiceTest {
                     0);
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(emptyPage);
 
             // When
@@ -6647,7 +6640,7 @@ class UserServiceTest {
                     3);
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
-                    eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
             // Return users in different order to test sorting preservation
@@ -6687,7 +6680,7 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
-                    eq(appId), any(PageRequest.class)))
+                    eq(appId), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
             EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
@@ -6703,7 +6696,7 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(1);
             verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
-                    eq(appId), any(PageRequest.class));
+                    eq(appId), eq(null), eq(null), any(PageRequest.class));
         }
 
         // Helper methods

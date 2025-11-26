@@ -1410,11 +1410,17 @@ public class UserService {
             // UserType must be treated as a string because we are using native queries
             // here.
             String userTypeString = userType != null ? userType.toString() : null;
-            Page<? extends UserAuditProjection> resultPage = sortByProfileCount
-                    ? entraUserRepository.findAllUsersForAuditWithProfileCount(
-                            searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest)
-                    : entraUserRepository.findAllUsersForAuditWithFirm(
-                            searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+            Page<? extends UserAuditProjection> resultPage;
+            if (sortByProfileCount) {
+                resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
+                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+            } else if (sortByFirm) {
+                resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
+                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+            } else {
+                resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
+                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+            }
 
             // Extract user IDs in order
             List<UUID> userIds = resultPage.getContent().stream().map(UserAuditProjection::getUserId).toList();
