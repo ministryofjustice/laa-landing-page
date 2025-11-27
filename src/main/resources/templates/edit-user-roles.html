@@ -184,7 +184,7 @@
                 </div>
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                    <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </div>

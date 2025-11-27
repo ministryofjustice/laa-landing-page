@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}">
+        <a class="govuk-back-link" th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}">
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -33,7 +33,7 @@
                                 (<span th:text="${office.code}"></span>)
                             </dd>
                             <dd class="govuk-summary-list__actions">
-                                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}" class="govuk-link">Change</a>
+                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">Change</a>
                             </dd>
                         </div>
                     </dl>
@@ -43,7 +43,7 @@
                                 <span>Access to All Offices</span>
                             </dd>
                             <dd class="govuk-summary-list__actions">
-                                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/offices'}" class="govuk-link">Change</a>
+                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">Change</a>
                             </dd>
                         </div>
                     </div>
@@ -54,7 +54,7 @@
             </p>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Confirm</button>
-                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
             </div>
         </form>
     </main>
