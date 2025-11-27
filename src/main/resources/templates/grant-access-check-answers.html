@@ -97,7 +97,7 @@
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Confirm
                         </button>
-                        <a th:href="@{'/admin/users/grant-access/' + ${user.id} + '/cancel'}"
+                        <a th:href="@{/admin/users/grant-access/{id}/cancel(id=${user.id})}"
                             class="govuk-link">Cancel</a>
                     </div>
                 </form>
