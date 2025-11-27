@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}">
+        <a class="govuk-back-link" th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}">
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -52,7 +52,7 @@
             </div>
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+                <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
             </div>
         </form>
     </main>
