@@ -35,6 +35,7 @@ public class UserProfileDto implements Serializable {
     private String createdBy;
     private LocalDateTime lastModified;
     private String lastModifiedBy;
+    private boolean unrestrictedOfficeAccess;
 
     // Helper method for compatibility with tests
     public String getFullName() {
