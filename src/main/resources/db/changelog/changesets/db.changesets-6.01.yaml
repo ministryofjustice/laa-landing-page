@@ -1,0 +1,28 @@
+
+databaseChangeLog:
+  - changeSet:
+      id: create-unrestricted_office_access-on-user_profile
+      author: leonardopalmeiro
+      changes:
+        - addColumn:
+            tableName: user_profile
+            columns:
+              - column:
+                  name: unrestricted_office_access
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+        - sql:
+            comment: "Set unrestricted_office_access based on user_profile_office entries"
+            splitStatements: false
+            stripComments: true
+            sql: |
+              UPDATE user_profile up
+              SET unrestricted_office_access = CASE
+                WHEN NOT EXISTS (
+                  SELECT 1 FROM user_profile_office uo WHERE uo.user_profile_id = up.id
+                ) THEN TRUE
+                ELSE FALSE
+              END;
