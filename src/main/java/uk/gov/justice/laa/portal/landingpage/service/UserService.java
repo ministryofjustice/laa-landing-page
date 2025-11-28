@@ -1110,6 +1110,7 @@ public class UserService {
                 diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
                 userProfile.setOffices(offices);
+                userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
