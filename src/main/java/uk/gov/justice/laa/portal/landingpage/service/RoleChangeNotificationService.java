@@ -52,6 +52,7 @@ public class RoleChangeNotificationService {
         }
         
         try {
+            log.info("Initializing CCMS role change message for user: {}", userProfile.getEntraUser().getEntraOid());
             sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
@@ -66,6 +67,7 @@ public class RoleChangeNotificationService {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)
                 && userProfile.getUserType() != UserType.INTERNAL) {
+            log.info("CCMS roles updated for user: {}, generating message", userProfile.getEntraUser().getEntraOid());
             CcmsMessage message = CcmsMessage.builder()
                     .userName(userProfile.getLegacyUserId().toString())
                     .vendorNumber(userProfile.getFirm().getCode())
@@ -89,6 +91,8 @@ public class RoleChangeNotificationService {
             SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
             log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
                 entraUser.getEntraOid(), response.messageId());
+        } else {
+            log.info("No CCMS roles updated for user: {}, skipping", userProfile.getEntraUser().getEntraOid());
         }
     }
 
