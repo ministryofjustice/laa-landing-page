@@ -132,6 +132,7 @@ dependencies {
     testImplementation('org.testcontainers:postgresql')
     testImplementation('org.testcontainers:junit-jupiter')
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
+    testImplementation "org.testcontainers:testcontainers:2.0.2"
     testImplementation('com.microsoft.playwright:playwright:1.52.0')
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
