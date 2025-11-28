@@ -2008,6 +2008,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isNull();
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isTrue();
             assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
@@ -2051,6 +2052,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
             assertThat(diff).contains("Removed : Unrestricted access, Added : ");
             assertThat(diff).contains("of1");
             assertThat(diff).contains("of2");
@@ -2150,6 +2152,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
             assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : of1");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
@@ -2209,6 +2212,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
             assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
