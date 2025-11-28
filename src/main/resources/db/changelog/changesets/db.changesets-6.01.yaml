@@ -10,9 +10,9 @@ databaseChangeLog:
               - column:
                   name: unrestricted_office_access
                   type: boolean
+                  defaultValueBoolean: false
                   constraints:
-                    nullable: true
-
+                    nullable: false
         - sql:
             comment: "Set unrestricted_office_access based on user_profile_office entries"
             splitStatements: false
