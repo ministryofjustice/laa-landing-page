@@ -20,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -87,6 +88,13 @@ public class BaseRepositoryTest {
     protected AppRole buildLaaAppRole(App app, String name) {
         return AppRole.builder().name(name).description(name)
                 .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
+    }
+
+    protected AppRole buildLaaAppRoleWithUserTypes(App app, String name, UserType[] userTypes, Set<Permission> permissions) {
+        return AppRole.builder().name(name).description(name)
+                .userTypeRestriction(userTypes)
+                .permissions(permissions)
+                .app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
