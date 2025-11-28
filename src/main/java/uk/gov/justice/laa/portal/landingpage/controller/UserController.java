@@ -20,7 +20,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -111,9 +110,6 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
-
-    @Value("${feature.flag.enable.resend.verification.code}")
-    private boolean enableResendVerificationCode;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -348,8 +344,7 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
 
@@ -2468,11 +2463,6 @@ public class UserController {
     }
 
     private void handleResendVerification(String id, Model model) {
-        if (!Boolean.TRUE.equals(enableResendVerificationCode)) {
-            log.error("Resend activation code is disabled");
-            throw new AccessDeniedException("Resend verification is disabled.");
-        }
-
         if (!accessControlService.canSendVerificationEmail(id)) {
             throw new AccessDeniedException("User does not have permission to send verification email.");
         }
