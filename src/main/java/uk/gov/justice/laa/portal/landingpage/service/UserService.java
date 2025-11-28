@@ -1124,14 +1124,14 @@ public class UserService {
         String removed = "";
         String added = "";
         if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
-            removed = "Removed : All";
+            removed = "Removed : Unrestricted access";
             if (!Objects.isNull(newOffices)) {
                 added = "Added : " + newOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
             }
         }
         if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
-            added = "Added : All";
+            added = "Added : Unrestricted access";
             if (!Objects.isNull(oldOffices)) {
                 removed = "Removed : " + oldOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));

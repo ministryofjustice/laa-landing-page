@@ -2008,7 +2008,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isNull();
-            assertThat(diff).isEqualTo("Removed : All, Added : All");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2051,7 +2051,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
-            assertThat(diff).contains("Removed : All, Added : ");
+            assertThat(diff).contains("Removed : Unrestricted access, Added : ");
             assertThat(diff).contains("of1");
             assertThat(diff).contains("of2");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
@@ -2107,7 +2107,7 @@ class UserServiceTest {
             assertThat(changedOffices[0]).contains("Removed : ");
             assertThat(changedOffices[0]).contains("of1");
             assertThat(changedOffices[0]).contains("of2");
-            assertThat(changedOffices[1]).contains("All");
+            assertThat(changedOffices[1]).contains("Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfileOld);
         }
 
@@ -2150,7 +2150,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
-            assertThat(diff).isEqualTo("Removed : All, Added : of1");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : of1");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2209,7 +2209,7 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
-            assertThat(diff).isEqualTo("Removed : All, Added : All");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access, Added : Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
