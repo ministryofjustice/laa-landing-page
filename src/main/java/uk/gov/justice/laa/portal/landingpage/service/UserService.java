@@ -1103,12 +1103,14 @@ public class UserService {
             if (selectedOffices.contains("ALL")) {
                 diff = diffOffices(userProfile.getOffices(), null);
                 userProfile.setOffices(null);
+                userProfile.setUnrestrictedOfficeAccess(true);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 diff = diffOffices(userProfile.getOffices(), offices);
                 // Update user profile offices
                 userProfile.setOffices(offices);
+                userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
@@ -1123,14 +1125,14 @@ public class UserService {
         String removed = "";
         String added = "";
         if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
-            removed = "Removed : All";
+            removed = "Removed : Unrestricted access";
             if (!Objects.isNull(newOffices)) {
                 added = "Added : " + newOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
             }
         }
         if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
-            added = "Added : All";
+            added = "Added : Unrestricted access";
             if (!Objects.isNull(oldOffices)) {
                 removed = "Removed : " + oldOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
