@@ -289,6 +289,11 @@ public class LiveTechServicesClient implements TechServicesClient {
             ObjectMapper mapper = new ObjectMapper();
             try {
                 TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
+                    logger.info("Failed to send verification email for {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    return TechServicesApiResponse.error(errorResponse);
+                }
                 logger.error("Failed to send verification email for {}, the root cause is {} ({}) ",
                         user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 return TechServicesApiResponse.error(errorResponse);
