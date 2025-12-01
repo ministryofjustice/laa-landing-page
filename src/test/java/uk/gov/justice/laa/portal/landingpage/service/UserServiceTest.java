@@ -4627,9 +4627,6 @@ class UserServiceTest {
             UUID firmId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID generatedProfileId = UUID.randomUUID();
-            
-            FirmDto firmDto = FirmDto.builder().id(firmId).build();
-            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
@@ -4648,7 +4645,8 @@ class UserServiceTest {
             });
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anySet(), anySet()))
                     .thenReturn(true);
-
+            FirmDto firmDto = FirmDto.builder().id(firmId).build();
+            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
             userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
             ArgumentCaptor<UserProfile> notificationCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockRoleChangeNotificationService).sendMessage(notificationCaptor.capture(), anySet(), anySet());
