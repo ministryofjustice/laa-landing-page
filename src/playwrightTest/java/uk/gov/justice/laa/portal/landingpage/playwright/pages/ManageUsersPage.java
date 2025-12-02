@@ -21,6 +21,8 @@ public class ManageUsersPage {
 
     private final Page page;
     private final String url;
+    private final int port;
+
 
     // Locators
     private final Locator header;
@@ -61,12 +63,12 @@ public class ManageUsersPage {
 
     public ManageUsersPage(Page page, int port) {
         this.page = page;
+        this.port = port;
         this.url = "http://localhost:" + port + "/admin/users";
 
         log.info("Navigating to Manage Users page: {}", url);
         page.navigate(url);
 
-        // same locators as your original code
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
         this.notAuthorisedHeading = page.locator("h1.govuk-heading-l");
@@ -99,8 +101,8 @@ public class ManageUsersPage {
 
         this.emailFormatError = page.locator("div.govuk-error-message p:has-text('Enter an email address in the correct format')");
         this.emailDomainError = page.locator("div.govuk-error-message p:has-text('The email address domain is not valid or cannot receive emails.')");
-        this.firstNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('First name must not contain numbers, spaces or special characters')");
-        this.lastNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('Last name must not contain numbers, spaces or special characters')");
+        this.firstNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('First name must not contain numbers or special characters')");
+        this.lastNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('Last name must not contain numbers or special characters')");
         this.selectUserTypeError = page.locator("div.govuk-error-message p:has-text('Select a user type')");
     }
 
@@ -244,5 +246,14 @@ public class ManageUsersPage {
         clickContinueUserDetails();
 
         assertTrue(emailDomainError.isVisible());
+    }
+
+    public AuditPage goToAuditPage() {
+        String auditUrl = "http://localhost:" + port + "/admin/users/audit";
+
+        log.info("Navigating to Audit page: {}", auditUrl);
+        page.navigate(auditUrl);
+
+        return new AuditPage(page, port);
     }
 }
