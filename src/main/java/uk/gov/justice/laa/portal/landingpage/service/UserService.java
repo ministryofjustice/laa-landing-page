@@ -146,7 +146,7 @@ public class UserService {
     @Transactional
     public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
-        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);
         List<AppRole> roles = appRoleRepository.findAllById(
                 allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
