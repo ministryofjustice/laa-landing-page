@@ -767,6 +767,16 @@ public class UserService {
             entraUser.getUserProfiles().add(userProfile);
         }
 
+
+        userProfile = userProfileRepository.save(userProfile); //save to generate legacy user id for ccms sync
+        Set<String> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptySet();
+
+        // Try to send role change notification with retry logic before saving
+        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
+                newPuiRoles, Collections.emptySet());
+        userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+
+        // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
         entraUserRepository.save(entraUser);
 

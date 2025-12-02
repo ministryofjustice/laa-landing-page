@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
@@ -4004,6 +4005,9 @@ class UserServiceTest {
         @Mock
         private ModelMapper mapper;
 
+        @Mock
+        private RoleChangeNotificationService mockRoleChangeNotificationService;
+
         @InjectMocks
         private UserService userService;
 
@@ -4111,11 +4115,12 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
             assertThat(result.isActiveProfile()).isTrue();
-            verify(userProfileRepository).save(result);
+            verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
@@ -4139,6 +4144,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
             when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
 
@@ -4146,11 +4152,288 @@ class UserServiceTest {
                     List.of(appRoleDto), "admin");
 
             assertThat(result.isActiveProfile()).isFalse();
-            verify(userProfileRepository).save(result);
+            verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
+        @Test
+        void shouldSendCcmsNotificationWhenPuiRolesAreAssigned() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Test PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Test PUI Role")
+                    .legacySync(true)
+                    .ccmsCode("PUI_CODE")
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldNotSendCcmsNotificationWhenNoPuiRoles() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Non-PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Non-PUI Role")
+                    .ccmsCode(null) // No CCMS code = not a PUI role
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(nonPuiRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
+
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldHandleCcmsNotificationFailure() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Test PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Test PUI Role")
+                    .ccmsCode("PUI_CODE")
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(false);
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isFalse();
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(techServicesClient, times(1)).updateRoleAssignment(entraUserId);
+        }
+
+        @Test
+        void shouldSendCcmsNotificationWithMultiplePuiRoles() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID puiRole1Id = UUID.randomUUID();
+            UUID puiRole2Id = UUID.randomUUID();
+            UUID nonPuiRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            List<AppRoleDto> appRoleDtos = List.of(
+                    AppRoleDto.builder().id(puiRole1Id.toString()).name("PUI Role 1").build(),
+                    AppRoleDto.builder().id(puiRole2Id.toString()).name("PUI Role 2").build(),
+                    AppRoleDto.builder().id(nonPuiRoleId.toString()).name("Non-PUI Role").build()
+            );
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole1 = AppRole.builder()
+                    .id(puiRole1Id)
+                    .name("PUI Role 1")
+                    .ccmsCode("PUI_CODE_1")
+                    .legacySync(true)
+                    .build();
+
+            AppRole puiRole2 = AppRole.builder()
+                    .id(puiRole2Id)
+                    .name("PUI Role 2")
+                    .ccmsCode("PUI_CODE_2")
+                    .legacySync(true)
+                    .build();
+
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(nonPuiRoleId)
+                    .name("Non-PUI Role")
+                    .ccmsCode(null)
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(puiRole1Id)).thenReturn(Optional.of(puiRole1));
+            when(appRoleRepository.findById(puiRole2Id)).thenReturn(Optional.of(puiRole2));
+            when(appRoleRepository.findById(nonPuiRoleId)).thenReturn(Optional.of(nonPuiRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    appRoleDtos, "admin");
+
+            ArgumentCaptor<Set<String>> newRolesCaptor = ArgumentCaptor.forClass(Set.class);
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), newRolesCaptor.capture(), eq(Collections.emptySet()));
+
+            Set<String> capturedNewRoles = newRolesCaptor.getValue();
+            assertThat(capturedNewRoles).containsExactlyInAnyOrder("PUI_CODE_1", "PUI_CODE_2");
+            assertThat(capturedNewRoles).doesNotContain("Non-PUI Role");
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
+        }
+
+        @Test
+        void shouldNotSendCcmsNotificationWhenNoRolesAssigned() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    null, "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
+
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldEnsureProfileHasLegacyUserIdBeforeCcmsNotification() {
+            UUID firmId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID generatedProfileId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> {
+                UserProfile profile = invocation.getArgument(0);
+                if (profile.getId() == null) {
+                    return UserProfile.builder()
+                            .id(generatedProfileId)
+                            .entraUser(profile.getEntraUser())
+                            .userType(profile.getUserType())
+                            .activeProfile(profile.isActiveProfile())
+                            .userProfileStatus(profile.getUserProfileStatus())
+                            .build();
+                }
+                return profile;
+            });
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anySet(), anySet()))
+                    .thenReturn(true);
+            FirmDto firmDto = FirmDto.builder().id(firmId).build();
+            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+            userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
+            ArgumentCaptor<UserProfile> notificationCaptor = ArgumentCaptor.forClass(UserProfile.class);
+            verify(mockRoleChangeNotificationService).sendMessage(notificationCaptor.capture(), anySet(), anySet());
+
+            UserProfile profileSentToNotification = notificationCaptor.getValue();
+            assertThat(profileSentToNotification.getId()).isEqualTo(generatedProfileId);
+        }
     }
 
     @Nested
