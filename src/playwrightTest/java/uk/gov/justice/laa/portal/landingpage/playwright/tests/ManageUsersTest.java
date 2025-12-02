@@ -36,39 +36,31 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUser(email);
     }
+
     @Test
     @DisplayName("Create a new provider admin user with multi-firm access")
-    void createMultiFirmUserAndVerifyItAppears() throws InterruptedException{
+    void createMultiFirmUserAndVerifyItAppears() throws InterruptedException {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
         manageUsersPage.clickCreateUser();
-        Thread.sleep(1000);
-        String email = manageUsersPage.fillInUserDetails(true);
-        Thread.sleep(10000);
-
+        final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(true);
-        Thread.sleep(10000);
-
         manageUsersPage.clickConfirmButton();
-        Thread.sleep(10000);
-
         manageUsersPage.clickGoBackToManageUsers();
-        Thread.sleep(10000);
-
         AuditPage auditPage = manageUsersPage.goToAuditPage();
-        Thread.sleep(10000);
-
         auditPage.assertUserIsPresent(email);
 
-        }
+    }
 
     @Test
     @DisplayName("Create a new provider admin user with non multi-firm access")
-    void createMultiFirmUserAndVerify() {
+    void createUserAndVerify() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        String email = manageUsersPage.fillInUserDetails(true);
-        manageUsersPage.selectMultiFirmAccess(true);
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
         manageUsersPage.clickConfirmButton();
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUser(email);
