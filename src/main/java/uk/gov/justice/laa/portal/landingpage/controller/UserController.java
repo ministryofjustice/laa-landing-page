@@ -2044,6 +2044,12 @@ public class UserController {
             // Fetch roles for the current application based on user type
             List<AppRoleDto> roles = getRolesByAppId(appRoles, selectedApps.get(index));
 
+            // Skip apps with no assignable roles (after filtering)
+            if (roles.isEmpty()) {
+                selectedAppIndex++;
+                continue;
+            }
+
             // Check whether the application has more than one role
             if (roles.size() > 1) {
                 // If it's a POST request, store the roles selected in the form for this app
