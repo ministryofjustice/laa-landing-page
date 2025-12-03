@@ -265,7 +265,7 @@ class UserControllerTest {
                 .build();
         List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
         roles.addAll(createAppRole(1, true));
-        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
+        httpSession.setAttribute("selectedApps", List.of(roles.get(2).getApp().getId()));
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
