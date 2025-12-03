@@ -1520,7 +1520,7 @@ public class UserController {
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
-        if (!selectedOffices.contains("ALL")) {
+        if (!(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1539,6 +1539,8 @@ public class UserController {
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
         model.addAttribute("userOffices", selectOfficesDisplay);
         model.addAttribute("user", modelFromSession.getAttribute("user"));
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
         return "edit-user-offices-check-answer";
     }
 
