@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -112,9 +111,6 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
-
-    @Value("${feature.flag.enable.resend.verification.code}")
-    private boolean enableResendVerificationCode;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -349,8 +345,7 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
 
@@ -1863,7 +1858,11 @@ public class UserController {
             session.removeAttribute("grantAccessAllSelectedRoles");
             allSelectedRolesByPage = new HashMap<>();
         }
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
+        // Filter roles to only those the editor can assign
+        allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
         //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
                 rolesForm,
@@ -1889,7 +1888,6 @@ public class UserController {
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType(), userFirmType);
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
@@ -1997,7 +1995,11 @@ public class UserController {
 
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
+            // Filter roles to only those the editor can assign
+            allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                    allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
             //add roles in session and increase selectedAppIndex
             selectedAppIndex = addRolesInSessionAndIncreaseIndex(
                     rolesForm,
@@ -2513,11 +2515,6 @@ public class UserController {
     }
 
     private void handleResendVerification(String id, Model model) {
-        if (!Boolean.TRUE.equals(enableResendVerificationCode)) {
-            log.error("Resend activation code is disabled");
-            throw new AccessDeniedException("Resend verification is disabled.");
-        }
-
         if (!accessControlService.canSendVerificationEmail(id)) {
             throw new AccessDeniedException("User does not have permission to send verification email.");
         }

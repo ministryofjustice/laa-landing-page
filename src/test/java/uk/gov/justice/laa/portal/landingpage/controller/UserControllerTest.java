@@ -49,7 +49,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -151,7 +150,6 @@ class UserControllerTest {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService);
-        ReflectionTestUtils.setField(userController, "enableResendVerificationCode", true);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -762,21 +760,6 @@ class UserControllerTest {
         assertThat(model.getAttribute("canEditUser")).isNotNull();
         assertThat(model.getAttribute("showResendVerificationLink")).isNotNull();
         verify(userService).getUserProfileById(mockUser.getId().toString());
-    }
-
-    @Test
-    void manageUser_resendVerificationDisabledShouldThrowErrorIfTriedResend() {
-        // Arrange
-        ReflectionTestUtils.setField(userController, "enableResendVerificationCode", false);
-
-        // Act
-        AccessDeniedException accEx = Assertions.assertThrows(AccessDeniedException.class,
-                () -> userController.manageUser("550e8400-e29b-41d4-a716-446655440000", true, model, session,
-                        authentication),
-                "Excpected Access Denied Exception!");
-
-        // Assert
-        assertThat(accEx.getMessage()).isEqualTo("Resend verification is disabled.");
     }
 
     @Test
@@ -3894,6 +3877,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -3961,6 +3945,9 @@ class UserControllerTest {
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(user));
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 0, authentication,
                 model, testSession);
@@ -4625,7 +4612,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles, roles);
         when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
@@ -6381,7 +6368,7 @@ class UserControllerTest {
                     .thenReturn(List.of(lspRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole, lspRole2), List.of(lspRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
             when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(lspRole, lspRole2));
@@ -6421,7 +6408,7 @@ class UserControllerTest {
                     .thenReturn(List.of(internalRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole, internalRole2), List.of(internalRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
             when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(internalRole, internalRole2));
