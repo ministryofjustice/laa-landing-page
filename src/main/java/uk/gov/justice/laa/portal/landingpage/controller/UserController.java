@@ -1031,7 +1031,7 @@ public class UserController {
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
         }
 
-        if (!isMultipleRoles(allRoles)) {
+        if (!isMultipleRoles(allRoles) || (selectedAppIndex >= selectedApps.size() - 1) ) {
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
@@ -1217,7 +1217,6 @@ public class UserController {
                     allRoles,
                     true);
 
-            modelFromSession.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex);
             session.setAttribute("editProfileUserRolesModel", modelFromSession);
             session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
             return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + selectedAppIndex;
