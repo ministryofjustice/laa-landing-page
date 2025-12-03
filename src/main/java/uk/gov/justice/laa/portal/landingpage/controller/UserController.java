@@ -2083,7 +2083,8 @@ public class UserController {
             userOffices = userService.getUserOfficesByUserId(id);
         } else {
             List<String> selectedOffices = selectedOfficesOptional.get();
-            if (!selectedOffices.isEmpty() && !selectedOffices.contains("ALL")) {
+            if (!selectedOffices.isEmpty() &&
+                    !(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
                 userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
             }
         }
@@ -2100,8 +2101,16 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.isEmpty();
-
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        boolean hasAllOffices;
+        boolean hasNoOffices;
+        if (selectedOfficesOptional.isEmpty()) {
+            hasAllOffices = user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+            hasNoOffices = !user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+        } else {
+            hasAllOffices = selectedOfficesOptional.get().contains("ALL");
+            hasNoOffices = selectedOfficesOptional.get().contains("NO_OFFICES");
+        }
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
@@ -2120,18 +2129,19 @@ public class UserController {
 
         if (hasAllOffices) {
             selectedOffices.add("ALL");
+        } else if (hasNoOffices) {
+            selectedOffices.add("NO_OFFICES");
         } else {
             selectedOffices.addAll(userOfficeIds);
         }
 
         officesForm.setOffices(selectedOffices);
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", hasAllOffices);
-
+        model.addAttribute("hasNoOffices", hasNoOffices);
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
@@ -2218,7 +2228,8 @@ public class UserController {
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
-        if (!selectedOffices.getFirst().equals("ALL")) {
+        if (!(selectedOffices.getFirst().equals("ALL")
+                || selectedOffices.getFirst().equals("NO_OFFICES"))) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
@@ -2235,6 +2246,9 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
+
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";
