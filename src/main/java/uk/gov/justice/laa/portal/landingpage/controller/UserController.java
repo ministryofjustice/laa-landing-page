@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -1384,7 +1385,7 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
-    public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
+    public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         session.removeAttribute("editUserOfficesModel");
         // Get user's current offices
@@ -1399,11 +1400,11 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.isEmpty();
-
+        //boolean hasAllOffices = userOffices.isEmpty();
         // Create form object or load from session if exist
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
-        if (officesForm == null) {
+
+        /*if (officesForm == null) {
             officesForm = new OfficesForm();
             List<String> selectedOffices = new ArrayList<>();
             if (hasAllOffices) {
@@ -1421,6 +1422,20 @@ public class UserController {
                     userOfficeIds = new HashSet<String>(officesForm.getOffices());
                 }
             }
+        }*/
+        List<String> selectedOffices = new ArrayList<>();
+        AllOfficesNoOffice result = verifyAllOffices(Optional.of(userOfficeIds.stream().toList()), user, userOffices);
+        if (result.hasAllOffices()) {
+            selectedOffices.add("ALL");
+        } else if (result.hasNoOffices()) {
+            selectedOffices.add("NO_OFFICES");
+        } else {
+            selectedOffices.addAll(userOfficeIds);
+        }
+
+        if (officesForm == null){
+            officesForm = new OfficesForm();
+            officesForm.setOffices(selectedOffices);
         }
         Set<String> finalUserOfficeIds = userOfficeIds;
         final List<OfficeModel> officeData = allOffices.stream()
@@ -1433,12 +1448,15 @@ public class UserController {
                         office.getId().toString(),
                         finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
-
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
-        model.addAttribute("hasAllOffices", hasAllOffices);
-
+        model.addAttribute("hasAllOffices", result.hasAllOffices());
+        model.addAttribute("hasNoOffices", result.hasNoOffices());
+        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
@@ -2074,7 +2092,7 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
-    public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
+    public String grantAccessEditUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices",
                 String.class);
         List<OfficeDto> userOffices = List.of();
@@ -2088,9 +2106,7 @@ public class UserController {
                 userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
             }
         }
-
         // Get user's current offices
-
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -2102,15 +2118,7 @@ public class UserController {
 
         // Check if user has access to all offices
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        boolean hasAllOffices;
-        boolean hasNoOffices;
-        if (selectedOfficesOptional.isEmpty()) {
-            hasAllOffices = user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
-            hasNoOffices = !user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
-        } else {
-            hasAllOffices = selectedOfficesOptional.get().contains("ALL");
-            hasNoOffices = selectedOfficesOptional.get().contains("NO_OFFICES");
-        }
+
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
@@ -2127,25 +2135,46 @@ public class UserController {
         OfficesForm officesForm = new OfficesForm();
         List<String> selectedOffices = new ArrayList<>();
 
-        if (hasAllOffices) {
+        AllOfficesNoOffice result = verifyAllOffices(selectedOfficesOptional, user, userOffices);
+        if (result.hasAllOffices()) {
             selectedOffices.add("ALL");
-        } else if (hasNoOffices) {
+        } else if (result.hasNoOffices()) {
             selectedOffices.add("NO_OFFICES");
         } else {
             selectedOffices.addAll(userOfficeIds);
         }
 
         officesForm.setOffices(selectedOffices);
-
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
-        model.addAttribute("hasAllOffices", hasAllOffices);
-        model.addAttribute("hasNoOffices", hasNoOffices);
+        model.addAttribute("hasAllOffices", result.hasAllOffices());
+        model.addAttribute("hasNoOffices", result.hasNoOffices());
+        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
+    }
+
+    @NotNull
+    private static AllOfficesNoOffice verifyAllOffices(Optional<List<String>> selectedOfficesOptional, UserProfileDto user, List<OfficeDto> userOffices) {
+        boolean hasNoOffices;
+        boolean hasAllOffices;
+        if (selectedOfficesOptional.isEmpty()) {
+            hasAllOffices = user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+            hasNoOffices = !user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+        } else {
+            hasAllOffices = selectedOfficesOptional.get().contains("ALL");
+            hasNoOffices = selectedOfficesOptional.get().contains("NO_OFFICES");
+        }
+        return new AllOfficesNoOffice(hasAllOffices, hasNoOffices);
+    }
+
+    private record AllOfficesNoOffice(boolean hasAllOffices, boolean hasNoOffices) {
     }
 
     /**
