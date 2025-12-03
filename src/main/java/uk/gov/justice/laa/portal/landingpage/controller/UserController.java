@@ -347,6 +347,7 @@ public class UserController {
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
+
         // Multi-firm user information
         boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
@@ -1016,7 +1017,7 @@ public class UserController {
         }
 
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
-        // add roles in session and increase selectedAppIndex
+        //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
                 rolesForm,
                 currentSelectedAppIndex,
@@ -1099,27 +1100,25 @@ public class UserController {
         return "edit-user-roles";
     }
 
+
     /**
-     * Builds the URL to navigate back to the roles selection page based on the
-     * current app index.
+     * Builds the URL to navigate back to the roles selection page based on the current app index.
      *
      * @param id                      The user ID.
      * @param selectedApps            List of selected application IDs.
-     * @param currentSelectedAppIndex The index of the currently selected
-     *                                application.
+     * @param currentSelectedAppIndex The index of the currently selected application.
      * @param allRoles                List of all available roles for all apps.
-     * @return The constructed back URL for roles navigation.
+     * @return                        The constructed back URL for roles navigation.
      */
     private static String getRolesBackUrl(String id,
-            List<String> selectedApps,
-            Integer currentSelectedAppIndex,
-            List<AppRoleDto> allRoles) {
+                                          List<String> selectedApps,
+                                          Integer currentSelectedAppIndex,
+                                          List<AppRoleDto> allRoles) {
 
         // Default URL points to the apps page for the user
         String rolesBackUrl = "/admin/users/edit/" + id + "/apps";
 
-        // Iterate through selected apps to determine if a roles page should be used
-        // instead
+        // Iterate through selected apps to determine if a roles page should be used instead
         for (int i = 0; i < selectedApps.size(); i++) {
             // Stop checking once we reach the current selected app index
             if (currentSelectedAppIndex.equals(i)) {
@@ -1128,8 +1127,7 @@ public class UserController {
                 // Get roles for the current app
                 List<AppRoleDto> appRoleDtos = getRolesByAppId(allRoles, selectedApps.get(i));
 
-                // If the app has more than one role, update the back URL to point to the roles
-                // page
+                // If the app has more than one role, update the back URL to point to the roles page
                 if (appRoleDtos.size() > 1) {
                     int index = selectedApps.indexOf(selectedApps.get(i));
                     rolesBackUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + index;
@@ -1140,6 +1138,7 @@ public class UserController {
         // Return the final back URL
         return rolesBackUrl;
     }
+
 
     /**
      * Update user roles for a specific app.
@@ -1281,27 +1280,24 @@ public class UserController {
         return "edit-user-roles-check-answer";
     }
 
+
     /**
-     * Builds a list of UserRole objects based on selected roles and app-role
-     * mappings.
+     * Builds a list of UserRole objects based on selected roles and app-role mappings.
      *
-     * @param id              The user ID for whom roles are being built.
-     * @param selectedRoles   List of selected role IDs.
-     * @param roles           Map of role IDs to their corresponding AppRoleDto
-     *                        objects.
-     * @param userType        The type of the user (used to fetch app roles).
-     * @param url             The base URL for navigation (may be updated if app has
-     *                        only one role).
-     * @param selectedAppRole The list where constructed UserRole objects will be
-     *                        added.
+     * @param id               The user ID for whom roles are being built.
+     * @param selectedRoles    List of selected role IDs.
+     * @param roles            Map of role IDs to their corresponding AppRoleDto objects.
+     * @param userType         The type of the user (used to fetch app roles).
+     * @param url              The base URL for navigation (may be updated if app has only one role).
+     * @param selectedAppRole  The list where constructed UserRole objects will be added.
      */
     private void buildAppRoleObject(String id,
-            List<String> selectedRoles,
-            Map<String, AppRoleDto> roles,
-            UserType userType,
-            String url,
-            List<UserRole> selectedAppRole,
-            FirmType userFirmType) {
+                                    List<String> selectedRoles,
+                                    Map<String, AppRoleDto> roles,
+                                    UserType userType,
+                                    String url,
+                                    List<UserRole> selectedAppRole,
+                                    FirmType userFirmType) {
 
         // Iterate through each selected role ID
         for (String selectedRole : selectedRoles) {
@@ -1320,14 +1316,15 @@ public class UserController {
 
             // Create a new UserRole object and populate its fields
             UserRole userRole = new UserRole();
-            userRole.setRoleName(role.getName()); // Set role name
+            userRole.setRoleName(role.getName());       // Set role name
             userRole.setAppName(role.getApp().getName()); // Set application name
-            userRole.setUrl(url); // Set navigation URL
+            userRole.setUrl(url);                       // Set navigation URL
 
             // Add the constructed UserRole to the list
             selectedAppRole.add(userRole);
         }
     }
+
 
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
@@ -1846,7 +1843,7 @@ public class UserController {
         // Filter roles to only those the editor can assign
         allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
-        // add roles in session and increase selectedAppIndex
+        //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
                 rolesForm,
                 currentSelectedAppIndex,
@@ -1983,7 +1980,7 @@ public class UserController {
             // Filter roles to only those the editor can assign
             allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                     allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
-            // add roles in session and increase selectedAppIndex
+            //add roles in session and increase selectedAppIndex
             selectedAppIndex = addRolesInSessionAndIncreaseIndex(
                     rolesForm,
                     selectedAppIndex,
@@ -2006,29 +2003,25 @@ public class UserController {
      *
      * @param id                     The user ID for which roles are being saved.
      * @param session                The current HTTP session to store role data.
-     * @param allSelectedRolesByPage A map containing selected roles grouped by page
-     *                               index.
-     * @param currentUserProfile     The profile of the current user performing the
-     *                               action.
+     * @param allSelectedRolesByPage A map containing selected roles grouped by page index.
+     * @param currentUserProfile     The profile of the current user performing the action.
      */
     private void saveRolesInTheSession(String id,
-            HttpSession session,
-            Map<Integer, List<String>> allSelectedRolesByPage,
-            UserProfile currentUserProfile) {
+                                       HttpSession session,
+                                       Map<Integer, List<String>> allSelectedRolesByPage,
+                                       UserProfile currentUserProfile) {
 
-        // Flatten the map values (lists of roles) into a single list of all selected
-        // roles across all pages.
+        // Flatten the map values (lists of roles) into a single list of all selected roles across all pages.
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream()
                 .filter(Objects::nonNull) // Ignore null lists
-                .flatMap(List::stream) // Merge all lists into a single stream
-                .toList(); // Collect as a list
+                .flatMap(List::stream)    // Merge all lists into a single stream
+                .toList();                // Collect as a list
 
-        // Fetch roles assigned to the user and filter out roles that the current user
-        // cannot edit.
+        // Fetch roles assigned to the user and filter out roles that the current user cannot edit.
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                 .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
-                .map(AppRoleDto::getId) // Extract role IDs
-                .toList(); // Collect as a list
+                .map(AppRoleDto::getId)   // Extract role IDs
+                .toList();                // Collect as a list
 
         // Store both lists in the session for later use.
         session.setAttribute("allSelectedRoles", allSelectedRoles);
@@ -2038,21 +2031,19 @@ public class UserController {
     /**
      * Adds roles for selected applications into the session and updates the index.
      *
-     * @param rolesForm              Form containing selected roles.
-     * @param selectedAppIndex       Current index of the selected application.
-     * @param selectedApps           List of selected application IDs.
-     * @param allSelectedRolesByPage Map storing selected roles for each page
-     *                               (indexed by app index).
-     * @param isPost                 Flag indicating if the request is a POST (form
-     *                               submission).
-     * @return Updated index after processing roles.
+     * @param rolesForm               Form containing selected roles.
+     * @param selectedAppIndex        Current index of the selected application.
+     * @param selectedApps            List of selected application IDs.
+     * @param allSelectedRolesByPage  Map storing selected roles for each page (indexed by app index).
+     * @param isPost                  Flag indicating if the request is a POST (form submission).
+     * @return                        Updated index after processing roles.
      */
     private int addRolesInSessionAndIncreaseIndex(RolesForm rolesForm,
-            int selectedAppIndex,
-            List<String> selectedApps,
-            Map<Integer, List<String>> allSelectedRolesByPage,
-            List<AppRoleDto> appRoles,
-            Boolean isPost) {
+                                                  int selectedAppIndex,
+                                                  List<String> selectedApps,
+                                                  Map<Integer, List<String>> allSelectedRolesByPage,
+                                                  List<AppRoleDto> appRoles,
+                                                  Boolean isPost) {
         // Loop through selected applications starting from the current index
         while (selectedAppIndex < selectedApps.size()) {
             int index = selectedAppIndex;
@@ -2078,6 +2069,7 @@ public class UserController {
         // Return the updated index after processing
         return selectedAppIndex;
     }
+
 
     /**
      * Grant Access Flow - Get user offices for editing
