@@ -254,6 +254,30 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRoles_redirectToCyaWhenIsMultipleRolesAndNextIsSingleRole() {
+        // Arrange
+        String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        UserProfileDto user = UserProfileDto.builder()
+                .id(UUID.fromString(id))
+                .userType(UserType.EXTERNAL)
+                .entraUser(new EntraUserDto())
+                .build();
+        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
+        roles.addAll(createAppRole(1, true));
+        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
+
+        // Act
+        String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
+
+        // Assert
+        assertThat(view).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer", id));
+
+    }
+
+    @Test
     void editUserRolesCheckAnswer_backUrlPointsToLastValidIndex() {
         // Arrange
         MockHttpSession httpSession = new MockHttpSession();
@@ -2492,17 +2516,16 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
-        // When - updating roles for last app (index 0)
+        // When
         String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
                 0, testSession, model);
 
         // Then - should complete editing and redirect to manage user
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
 
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) testSession
                 .getAttribute("editUserAllSelectedRoles");
-        assertThat(allSelectedRolesByPage).hasSize(2);
-        assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+        assertThat(allSelectedRolesByPage).hasSize(1);
     }
 
     @Test
