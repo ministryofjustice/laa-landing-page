@@ -1498,6 +1498,8 @@ public class UserController {
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            model.addAttribute("shouldShowNoOffice", modelFromSession.getAttribute("shouldShowNoOffice"));
+
             return "edit-user-offices";
         }
         session.setAttribute("officesForm", officesForm);
@@ -2214,6 +2216,8 @@ public class UserController {
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            model.addAttribute("shouldShowNoOffice", modelFromSession.getAttribute("shouldShowNoOffice"));
+
             return "grant-access-user-offices";
         }
 
