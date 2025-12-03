@@ -1031,7 +1031,7 @@ public class UserController {
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
         }
 
-        if (!isMultipleRoles(allRoles) || (selectedAppIndex >= selectedApps.size() - 1) ) {
+        if (!isMultipleRoles(allRoles) || (currentSelectedAppIndex >= selectedApps.size() - 1) ) {
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
