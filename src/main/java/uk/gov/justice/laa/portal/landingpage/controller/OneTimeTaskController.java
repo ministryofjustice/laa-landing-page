@@ -19,7 +19,7 @@ public class OneTimeTaskController {
 
     @RequestMapping("/ccms-role-sync")
     @PreAuthorize("@accessControlService"
-            + ".authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_CCMS_SYNC)")
+            + ".authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_CCMS_ROLE_SYNC)")
     public RedirectView oneTimeTasks(RedirectAttributes redirectAttributes) {
         log.info("CCMS Role Sync triggered");
         roleChangeNotificationService.ccmsRoleSync();
