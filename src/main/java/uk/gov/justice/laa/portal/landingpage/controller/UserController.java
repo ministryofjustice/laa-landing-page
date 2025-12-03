@@ -1838,7 +1838,11 @@ public class UserController {
             session.removeAttribute("grantAccessAllSelectedRoles");
             allSelectedRolesByPage = new HashMap<>();
         }
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
+        // Filter roles to only those the editor can assign
+        allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
         //add roles in session and increase selectedAppIndex
         currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
                 rolesForm,
@@ -1864,7 +1868,6 @@ public class UserController {
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType(), userFirmType);
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
@@ -1972,7 +1975,11 @@ public class UserController {
 
             return "redirect:/admin/users/grant-access/" + id + "/offices";
         } else {
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
+            // Filter roles to only those the editor can assign
+            allRoles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                    allRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
             //add roles in session and increase selectedAppIndex
             selectedAppIndex = addRolesInSessionAndIncreaseIndex(
                     rolesForm,
