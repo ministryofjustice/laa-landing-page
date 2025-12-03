@@ -2474,6 +2474,38 @@ class UserControllerTest {
     }
 
     @Test
+    void updateUserRoles_shouldMultiplesRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        List<AppRoleDto> roles = new ArrayList<>();
+        roles.addAll(createAppRole(2, true));
+        roles.addAll(createAppRole(1, true));
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of(roles.get(0).getId()));
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId(), roles.get(2).getApp().getId()));
+        UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
+        userProfileDto.setUserType(UserType.EXTERNAL);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+
+        // When - updating roles for last app (index 0)
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult,
+                0, testSession, model);
+
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
+
+        Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) testSession
+                .getAttribute("editUserAllSelectedRoles");
+        assertThat(allSelectedRolesByPage).hasSize(2);
+        assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+    }
+
+    @Test
     void updateUserRoles_whenValidationErrors_shouldReturnEditUserRolesView() {
         // Arrange
         RolesForm rolesForm = new RolesForm();

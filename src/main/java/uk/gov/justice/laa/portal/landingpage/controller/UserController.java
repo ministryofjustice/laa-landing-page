@@ -1158,8 +1158,8 @@ public class UserController {
             HttpSession session, Model model) {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
+        final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         if (result.hasErrors()) {
-            final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
             log.debug("Validation errors occurred while setting user roles: {}", result.getAllErrors());
             @SuppressWarnings("unchecked")
             List<AppRoleViewModel> roles = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
@@ -1201,12 +1201,22 @@ public class UserController {
         session.setAttribute("editUserAllSelectedRoles", allSelectedRolesByPage);
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
+
+        List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
+        //add roles in session and increase selectedAppIndex
+        selectedAppIndex = addRolesInSessionAndIncreaseIndex(
+                rolesForm,
+                selectedAppIndex,
+                selectedApps,
+                allSelectedRolesByPage,
+                allRoles,
+                true);
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
         if (selectedAppIndex >= selectedApps.size() - 1) {
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         } else {
-            return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + (selectedAppIndex + 1);
+            return "redirect:/admin/users/edit/" + uuid + "/roles?selectedAppIndex=" + selectedAppIndex;
         }
     }
 
