@@ -1005,6 +1005,7 @@ public class UserController {
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
         }
+        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType(), userFirmType);
@@ -1655,10 +1656,9 @@ public class UserController {
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
-        List<String> selectedApps = getAppsFromSession(session);
-
-        if (!selectedApps.isEmpty()) {
-                editableApps.forEach(app -> app.setSelected(selectedApps.contains(app.getId())));
+        Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        if (selectedApps.isPresent()) {
+            editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
         } else {
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
@@ -1757,6 +1757,8 @@ public class UserController {
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
         }
+        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
+        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType(), userFirmType);
