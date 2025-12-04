@@ -146,7 +146,7 @@ public class UserService {
     @Transactional
     public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
-        List<String> allAssignableRoles = new ArrayList<>(selectedRoles);
+        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);
         List<AppRole> roles = appRoleRepository.findAllById(
                 allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
@@ -804,6 +804,15 @@ public class UserService {
             entraUser.getUserProfiles().add(userProfile);
         }
 
+        userProfile = userProfileRepository.save(userProfile); //save to generate legacy user id for ccms sync
+        Set<String> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptySet();
+
+        // Try to send role change notification with retry logic before saving
+        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
+                newPuiRoles, Collections.emptySet());
+        userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+
+        // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
         entraUserRepository.save(entraUser);
 
@@ -1327,16 +1336,6 @@ public class UserService {
         return appRoleRepository.findAllByIdIn(roleIds).stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toMap(AppRoleDto::getId, Function.identity()));
-    }
-
-    public List<AppRoleDto> getAppRolesByAppsId(List<String> apps, String userType) {
-        List<UUID> appsId = apps
-                .stream()
-                .map(UUID::fromString)
-                .toList();
-        return appRoleRepository.findByAppIdUserTypeRestriction(appsId, userType).stream()
-                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                .toList();
     }
 
     /**

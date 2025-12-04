@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
 public class ManageUsersTest extends BaseFrontEndTest {
@@ -28,6 +29,35 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
         String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchAndVerifyUser(email);
+    }
+
+    @Test
+    @DisplayName("Create a new provider admin user with multi-firm access")
+    void createMultiFirmUserAndVerifyItAppears() throws InterruptedException {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(true);
+        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        AuditPage auditPage = manageUsersPage.goToAuditPage();
+        auditPage.assertUserIsPresent(email);
+
+    }
+
+    @Test
+    @DisplayName("Create a new provider admin user with non multi-firm access")
+    void createUserAndVerify() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();

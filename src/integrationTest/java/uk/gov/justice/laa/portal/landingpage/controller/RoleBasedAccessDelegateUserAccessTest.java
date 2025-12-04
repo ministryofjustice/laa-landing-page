@@ -182,17 +182,26 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
         redirectedUrl = postSelectApps.getResponse().getRedirectedUrl();
         assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/roles");
 
-        // get Role
+        // Post Role
         MvcResult getAppRolesResult = this.mockMvc.perform(get("/admin/multi-firm/user/add/profile/select/roles")
                         .with(userOauth2Login(loggedInUser))
                         .with(csrf())
                         .session(session))
+                .andExpect(status().is2xxSuccessful())
+                .andReturn();
+
+        // Post Role
+        MvcResult postAppRolesResult = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/roles")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .param("roles", testExternalAppRole.getId().toString())
+                        .param("selectedAppIndex", "0")
+                        .session(session))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-
-        assertThat(getAppRolesResult.getResponse()).isNotNull();
-        redirectedUrl = getAppRolesResult.getResponse().getRedirectedUrl();
+        assertThat(postAppRolesResult.getResponse()).isNotNull();
+        redirectedUrl = postAppRolesResult.getResponse().getRedirectedUrl();
         assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/offices");
 
         // Access Offices page

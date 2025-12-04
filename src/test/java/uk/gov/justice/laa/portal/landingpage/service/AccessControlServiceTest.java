@@ -1185,4 +1185,56 @@ public class AccessControlServiceTest {
         Assertions.assertThat(result).isTrue();
     }
 
+    @Test
+    public void testAuthenticatedUserIsInternalReturnsTrueWhenUserIsInternal() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        boolean internal = accessControlService.authenticatedUserIsInternal();
+        Assertions.assertThat(internal).isTrue();
+    }
+
+    @Test
+    public void testAuthenticatedUserIsExternalReturnsFalseWhenUserIsExternal() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+        boolean internal = accessControlService.authenticatedUserIsInternal();
+        Assertions.assertThat(internal).isFalse();
+    }
+
 }
