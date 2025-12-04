@@ -141,8 +141,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser eu
                         JOIN FETCH ups.appRoles ars
-            WHERE ups.activeProfile = true
-                AND ups.lastCcmsSyncSuccessful = false
+            WHERE ups.lastCcmsSyncSuccessful = false
                 AND ars.legacySync = true
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
