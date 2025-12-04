@@ -1369,7 +1369,7 @@ public class UserController {
             selectedOffices.addAll(userOfficeIds);
         }
 
-        if (officesForm == null){
+        if (officesForm == null) {
             officesForm = new OfficesForm();
             officesForm.setOffices(selectedOffices);
         }
@@ -1920,8 +1920,8 @@ public class UserController {
             userOffices = userService.getUserOfficesByUserId(id);
         } else {
             List<String> selectedOffices = selectedOfficesOptional.get();
-            if (!selectedOffices.isEmpty() &&
-                    !(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
+            if (!selectedOffices.isEmpty()
+                    && !(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
                 userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
             }
         }
@@ -1979,7 +1979,6 @@ public class UserController {
         return "grant-access-user-offices";
     }
 
-    @NotNull
     private static AllOfficesNoOffice verifyAllOffices(Optional<List<String>> selectedOfficesOptional, UserProfileDto user, List<OfficeDto> userOffices) {
         boolean hasNoOffices;
         boolean hasAllOffices;

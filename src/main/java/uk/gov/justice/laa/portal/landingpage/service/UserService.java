@@ -1113,11 +1113,11 @@ public class UserService {
                 diff = diffOffices(userProfile.getOffices(), null, "true");
                 userProfile.setOffices(null);
                 userProfile.setUnrestrictedOfficeAccess(true);
-            } else if(selectedOffices.contains("NO_OFFICES")) {
+            } else if (selectedOffices.contains("NO_OFFICES")) {
                 diff = diffOffices(userProfile.getOffices(), null, "false");
                 userProfile.setOffices(null);
                 userProfile.setUnrestrictedOfficeAccess(false);
-            }else {
+            } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
                 diff = diffOffices(userProfile.getOffices(), offices, "");
