@@ -2445,14 +2445,19 @@ class UserControllerTest {
     void updateUserRoles_shouldHandleMultipleAppsNavigation() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
-        RolesForm rolesForm = new RolesForm();
-        rolesForm.setRoles(List.of("role1", "role2"));
 
+        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
+        roles.addAll(createAppRole(2, true));
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of(roles.get(0).getId(), roles.get(2).getId()));
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        testSession.setAttribute("selectedApps",
+                List.of(roles.get(0).getApp().getId(),
+                        roles.get(2).getApp().getId()));
         UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
         userProfileDto.setUserType(UserType.EXTERNAL);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
@@ -2467,7 +2472,7 @@ class UserControllerTest {
         Map<Integer, List<String>> allRoles = (Map<Integer, List<String>>) testSession
                 .getAttribute("editUserAllSelectedRoles");
         assertThat(allRoles).isNotNull();
-        assertThat(allRoles.get(0)).containsExactlyInAnyOrder("role1", "role2");
+        assertThat(allRoles.get(0)).containsExactlyInAnyOrder(roles.get(0).getId(), roles.get(2).getId());
     }
 
     @Test
@@ -2475,17 +2480,17 @@ class UserControllerTest {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
         List<AppRoleDto> roles = new ArrayList<>();
-        roles.addAll(createAppRole(2, true));
         roles.addAll(createAppRole(1, true));
+        roles.addAll(createAppRole(2, true));
         RolesForm rolesForm = new RolesForm();
-        rolesForm.setRoles(List.of("role3"));
+        rolesForm.setRoles(List.of(roles.get(2).getId()));
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        testSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId(), roles.get(1).getApp().getId()));
 
         // Simulate roles for previous apps already selected
         Map<Integer, List<String>> existingRoles = new HashMap<>();
-        existingRoles.put(0, List.of("role1", "role2"));
+        existingRoles.put(0, List.of(roles.get(0).getId()));
         existingRoles.put(1, null);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
         UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
@@ -2503,7 +2508,7 @@ class UserControllerTest {
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) testSession
                 .getAttribute("editUserAllSelectedRoles");
         assertThat(allSelectedRolesByPage).hasSize(2);
-        assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+        assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo(roles.get(2).getId());
     }
 
     @Test

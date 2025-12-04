@@ -1204,7 +1204,7 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        if (selectedAppIndex >= selectedApps.size()) {
+        if (selectedAppIndex >= selectedApps.size() - 1) {
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         } else {
             List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
