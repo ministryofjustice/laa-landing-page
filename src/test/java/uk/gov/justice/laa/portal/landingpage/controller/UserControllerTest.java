@@ -256,17 +256,17 @@ class UserControllerTest {
     @Test
     void editUserRoles_redirectToCyaWhenIsMultipleRolesAndNextIsSingleRole() {
         // Arrange
-        String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
+        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
+        roles.addAll(createAppRole(1, true));
+        httpSession.setAttribute("selectedApps", List.of(roles.get(2).getApp().getId()));
+        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        String id = UUID.randomUUID().toString();
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
                 .userType(UserType.EXTERNAL)
                 .entraUser(new EntraUserDto())
                 .build();
-        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
-        roles.addAll(createAppRole(1, true));
-        httpSession.setAttribute("selectedApps", List.of(roles.get(2).getApp().getId()));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
         // Act
