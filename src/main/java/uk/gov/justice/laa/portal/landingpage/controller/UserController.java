@@ -1704,7 +1704,7 @@ public class UserController {
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
 
-         session.setAttribute("grantAccessSelectedApps", selectedApps);
+        session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                 .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                 .map(AppRoleDto::getId)
