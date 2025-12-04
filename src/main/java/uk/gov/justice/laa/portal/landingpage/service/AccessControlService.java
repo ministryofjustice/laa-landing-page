@@ -267,6 +267,12 @@ public class AccessControlService {
         return userHasPermission(authenticatedUser, permission);
     }
 
+    public boolean authenticatedUserIsInternal() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        return userService.isInternal(authenticatedUser.getId());
+    }
+
     public boolean authenticatedUserHasAnyGivenPermissions(Permission... permission) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
