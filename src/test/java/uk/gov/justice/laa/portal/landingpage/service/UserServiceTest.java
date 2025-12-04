@@ -2232,7 +2232,7 @@ class UserServiceTest {
             Office n2 = Office.builder().id(new2).code("new2").build();
             Set<Office> oldOffices = Set.of(o1, o2, k1);
             Set<Office> newOffices = Set.of(k1, n1, n2);
-            String changed = userService.diffOffices(oldOffices, newOffices);
+            String changed = userService.diffOffices(oldOffices, newOffices, "");
             assertThat(changed).doesNotContain("kep1");
             String[] changedOffices = changed.split(", Added");
             assertThat(changedOffices[0]).contains("old1");

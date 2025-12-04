@@ -1360,7 +1360,9 @@ public class UserController {
             }
         }*/
         List<String> selectedOffices = new ArrayList<>();
-        AllOfficesNoOffice result = verifyAllOffices(Optional.of(userOfficeIds.stream().toList()), user, userOffices);
+        AllOfficesNoOffice result = verifyAllOffices(userOfficeIds.isEmpty()
+                ? Optional.empty()
+                : Optional.of(userOfficeIds.stream().toList()), user, userOffices);
         if (result.hasAllOffices()) {
             selectedOffices.add("ALL");
         } else if (result.hasNoOffices()) {

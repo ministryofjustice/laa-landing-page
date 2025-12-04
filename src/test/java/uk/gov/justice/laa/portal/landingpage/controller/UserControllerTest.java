@@ -78,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -1825,7 +1826,7 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
 
-        UserProfileDto userProfile = UserProfileDto.builder()
+        UserProfileDto userProfileDto = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
@@ -1846,19 +1847,31 @@ class UserControllerTest {
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         List<FirmDto> userFirms = List.of(firmDto);
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.editUserOffices(userId, model, testSession);
+        String view = userController.editUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(model.getAttribute("user")).isEqualTo(userProfileDto);
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("hasNoOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("shouldShowNoOffice")).isEqualTo(false);
 
         @SuppressWarnings("unchecked")
         List<OfficeModel> offices = (List<OfficeModel>) model.getAttribute("officeData");
@@ -1874,9 +1887,10 @@ class UserControllerTest {
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
 
-        UserProfileDto userProfile = UserProfileDto.builder()
+        UserProfileDto userProfileDto = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
+                .unrestrictedOfficeAccess(true)
                 .build();
 
         Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code")
@@ -1891,18 +1905,29 @@ class UserControllerTest {
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         List<FirmDto> userFirms = List.of(firmDto);
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
         MockHttpSession testSession = new MockHttpSession();
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
         // When
-        String view = userController.editUserOffices(userId, model, testSession);
+        String view = userController.editUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(true);
+        assertThat(model.getAttribute("hasNoOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("shouldShowNoOffice")).isEqualTo(false);
 
         @SuppressWarnings("unchecked")
         List<OfficeModel> offices = (List<OfficeModel>) model.getAttribute("officeData");
@@ -3503,17 +3528,27 @@ class UserControllerTest {
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         List<FirmDto> userFirms = List.of(firmDto);
 
-        UserProfileDto userProfile = UserProfileDto.builder()
+        UserProfileDto userProfileDto = UserProfileDto.builder()
                 .entraUser(user)
                 .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.editUserOffices(userId, model, testSession);
+        String view = userController.editUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("edit-user-offices");
@@ -3873,6 +3908,7 @@ class UserControllerTest {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440006";
         UserProfileDto user = new UserProfileDto();
+
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
 
         UUID office1Id = UUID.randomUUID();
@@ -3894,19 +3930,29 @@ class UserControllerTest {
 
         MockHttpSession testSession = new MockHttpSession();
 
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
         when(firmService.getUserFirmsByUserId(userId)).thenReturn(userFirms);
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
         // When
-        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+        String view = userController.grantAccessEditUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-offices");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
-
+        assertThat(model.getAttribute("hasNoOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("shouldShowNoOffice")).isEqualTo(false);
         @SuppressWarnings("unchecked")
         List<OfficeModel> officeData = (List<OfficeModel>) model.getAttribute("officeData");
         assertThat(officeData).hasSize(2);
@@ -3951,15 +3997,27 @@ class UserControllerTest {
         Office office2 = Office.builder().id(office2Id).code("Office 2")
                 .address(Office.Address.builder().addressLine1("Address 2").build()).build();
         List<Office> allOffices = List.of(office1, office2);
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
         // When
-        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+        String view = userController.grantAccessEditUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-offices");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("hasNoOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("shouldShowNoOffice")).isEqualTo(false);
+
 
         @SuppressWarnings("unchecked")
         List<OfficeModel> officeData = (List<OfficeModel>) model.getAttribute("officeData");
@@ -3978,7 +4036,7 @@ class UserControllerTest {
         final String userId = "550e8400-e29b-41d4-a716-446655440007";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-
+        user.setUnrestrictedOfficeAccess(true);
         UUID office1Id = UUID.randomUUID();
         UUID office2Id = UUID.randomUUID();
         Office office1 = Office.builder().id(office1Id).code("Office 1")
@@ -3993,6 +4051,15 @@ class UserControllerTest {
         final List<FirmDto> userFirms = List.of(firmDto);
 
         MockHttpSession testSession = new MockHttpSession();
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.fromString(userId))
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name("Firm User Manager")
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getUserOfficesByUserId(userId)).thenReturn(userOffices);
@@ -4000,11 +4067,13 @@ class UserControllerTest {
         when(officeService.getOfficesByFirms(anyList())).thenReturn(allOffices);
 
         // When
-        String view = userController.grantAccessEditUserOffices(userId, model, testSession);
+        String view = userController.grantAccessEditUserOffices(userId, model, authentication, testSession);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-offices");
         assertThat(model.getAttribute("hasAllOffices")).isEqualTo(true);
+        assertThat(model.getAttribute("hasNoOffices")).isEqualTo(false);
+        assertThat(model.getAttribute("shouldShowNoOffice")).isEqualTo(false);
 
         OfficesForm form = (OfficesForm) model.getAttribute("officesForm");
         assertThat(form.getOffices()).contains("ALL");
