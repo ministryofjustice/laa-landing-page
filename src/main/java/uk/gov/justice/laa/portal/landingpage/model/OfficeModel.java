@@ -24,11 +24,13 @@ public class OfficeModel implements Serializable {
     public static class Address implements Serializable {
         private String addressLine1;
         private String addressLine2;
+        private String addressLine3;
         private String city;
         private String postcode;
 
         public String getFormattedAddress() {
-            return AddressFormatter.formatAddress(addressLine1, addressLine2, city, postcode);
+            String formattedAddress = AddressFormatter.formatAddress(addressLine1, addressLine2, addressLine3, city, postcode);
+            return formattedAddress.isBlank() ? "Unknown" : formattedAddress;
         }
     }
 }

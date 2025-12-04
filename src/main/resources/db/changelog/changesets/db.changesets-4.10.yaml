@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1763398564710-1
+      author: suresh.kavali
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN address_line_1 DROP NOT NULL;
+              ALTER TABLE office ALTER COLUMN address_line_1 DROP DEFAULT;
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN post_code DROP NOT NULL;
+              ALTER TABLE office ALTER COLUMN post_code DROP DEFAULT;
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN city DROP DEFAULT;
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN address_line_1 SET NOT NULL;
+              ALTER TABLE office ALTER COLUMN address_line_1 SET DEFAULT 'ADDRESS LINE 1';
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN post_code SET NOT NULL;              
+              ALTER TABLE office ALTER COLUMN post_code SET DEFAULT 'POSTCODE';
+        - sql:
+            sql: |
+              ALTER TABLE office ALTER COLUMN city SET DEFAULT 'CITY';

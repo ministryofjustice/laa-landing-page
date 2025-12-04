@@ -32,7 +32,7 @@
                     </p>
                 </div>
                 <div class="govuk-grid-column-one-third" style="text-align: right;">
-                    <a href="/switch-firm" class="govuk-link govuk-body-m" th:if="${enableMultiFirmUser and activeFirm.isCanChange() and pageCategory == 'home'}">Switch firm</a>
+                    <a href="/switch-firm" class="govuk-link govuk-body-m" th:if="${activeFirm.isCanChange() and pageCategory == 'home'}">Switch firm</a>
                 </div>
             </div>
         </div>

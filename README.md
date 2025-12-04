@@ -268,8 +268,6 @@ If a pipeline is picking up a vulnerability that you wish to add to the ignore l
 | TEST_DATA_ADMIN_PRINCIPALS          | The user list to be loaded as admin users for testing using test data population (The values should be in the format of email:entra_id, comma separated)             |
 | TEST_DATA_INTERNAL_PRINCIPALS       | The user list to be loaded as internal users for testing using test data population (The values should be in the format of email:entra_id, comma separated)          |
 | TEST_DATA_NON_ADMIN_PRINCIPALS      | The user list to be loaded as standard external users for testing using test data population (The values should be in the format of email:entra_id, comma separated) |
-| FEATURE_FLAG_ENABLE_RESEND_VER_CODE | Flag to define if resend verification code is enabled or not                                                                                                         |
-| FEATURE_FLAG_ENABLE_MULTI_FIRM_USER | Flag to enable multi-firm user functionality. When enabled, allows external users to be associated with multiple firms without requiring a firm during user creation |
 | SPRING_SESSION_JDBC_ENABLED         | Enable or Disable storing of http session in db                                                                                                                      |
 
 </details>

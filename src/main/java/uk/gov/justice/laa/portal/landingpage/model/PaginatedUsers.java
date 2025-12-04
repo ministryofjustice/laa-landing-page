@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Data;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 
 @Data
 public class PaginatedUsers implements Serializable {
 
-    private List<UserProfileDto> users = new ArrayList<>();
+    private List<UserSearchResultsDto> users = new ArrayList<>();
     private String previousPageLink;
     private String nextPageLink;
     private long totalUsers;

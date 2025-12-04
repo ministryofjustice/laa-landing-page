@@ -18,11 +18,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -59,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -112,12 +110,6 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
-
-    @Value("${feature.flag.enable.resend.verification.code}")
-    private boolean enableResendVerificationCode;
-
-    @Value("${feature.flag.enable.multi.firm.user}")
-    private boolean enableMultiFirmUser;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -216,7 +208,6 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
@@ -299,7 +290,15 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
+    public String manageUser(@PathVariable String id,
+            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
+            Model model, HttpSession session, Authentication authentication) {
+
+        // Handle verification email resend if requested
+        if (Boolean.TRUE.equals(resendVerification)) {
+            handleResendVerification(id, model);
+        }
+
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
@@ -324,6 +323,7 @@ public class UserController {
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
 
         model.addAttribute("canViewAllProfiles", canViewAllProfiles);
+        model.addAttribute("editorInternalUser", editorInternalUser);
 
         boolean hasViewOfficePermission = accessControlService
                 .authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE);
@@ -334,30 +334,49 @@ public class UserController {
         boolean canManageOffices = hasEditOfficePermission && canEditUser;
 
         boolean showOfficesTab = hasViewOfficePermission || canManageOffices;
+
+        boolean isInternalUser = userService.isInternal(user.getEntraUser().getId());
+
         model.addAttribute("showOfficesTab", showOfficesTab);
         model.addAttribute("canManageOffices", canManageOffices);
+        model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
-        // Add multi-firm feature flag
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         // Multi-firm user information
         boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
-        if (isMultiFirmUser && enableMultiFirmUser) {
+        // Check if this profile belongs to the logged-in user
+        boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
+
+        if (isMultiFirmUser) {
             // Check if user can delete the currently viewed profile (not all profiles)
-            boolean canDeleteFirmProfile = accessControlService.canDeleteFirmProfile(user.getId().toString());
+            // but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
             model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Get profile count for multi-firm users (using count query instead of fetching
+            // all profiles)
+            long profileCount = userService.getProfileCountByEntraUserId(UUID.fromString(user.getEntraUser().getId()));
+            model.addAttribute("profileCount", profileCount);
+        } else {
+            // For non-multi-firm users, still add canDeleteFirmProfile if they have the
+            // permission but not their own profile
+            boolean canDeleteFirmProfile = !isOwnProfile
+                    && accessControlService.canDeleteFirmProfile(user.getId().toString());
+            model.addAttribute("canDeleteFirmProfile", canDeleteFirmProfile);
+
+            // Non-multi-firm users have exactly 1 profile
+            model.addAttribute("profileCount", 1);
         }
 
         // Add filter state to model for "Back to search results" link
@@ -421,65 +440,6 @@ public class UserController {
         model.addAttribute("user", optionalUser.get());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         return "delete-user-reason";
-    }
-
-    @GetMapping("/user/{id}/verify")
-    @PreAuthorize("@accessControlService.canSendVerificationEmail(#id)")
-    public String resendActivationCode(@PathVariable String id, Model model, HttpSession session) {
-        if (!enableResendVerificationCode) {
-            log.error("Resend activation code is disabled");
-            throw new AccessDeniedException("Resend verification is disabled.");
-        }
-
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
-        List<AppRoleDto> userAppRoles = user.getAppRoles() != null
-                ? user.getAppRoles().stream()
-                        .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
-                        .sorted()
-                        .collect(Collectors.toList())
-                : Collections.emptyList();
-        List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
-        final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
-        model.addAttribute("user", user);
-        model.addAttribute("userAppRoles", userAppRoles);
-        model.addAttribute("userOffices", userOffices);
-        model.addAttribute("isAccessGranted", isAccessGranted);
-        boolean externalUser = UserType.EXTERNAL == user.getUserType();
-        model.addAttribute("externalUser", externalUser);
-        boolean showOfficesTab = externalUser; // Hide for internal users, show for external users
-        model.addAttribute("showOfficesTab", showOfficesTab);
-
-        boolean hasEditOfficePermission = accessControlService
-                .authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE);
-        boolean canManageOffices = hasEditOfficePermission && canEditUser;
-        model.addAttribute("canManageOffices", canManageOffices);
-        model.addAttribute("canEditUser", canEditUser);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
-        boolean showResendVerificationLink = enableResendVerificationCode
-                && accessControlService.canSendVerificationEmail(id);
-        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
-        // Add filter state to model for "Back to search results" link
-        @SuppressWarnings("unchecked")
-        Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
-        boolean hasFilters = filters != null && hasActiveFilters(filters);
-        model.addAttribute("hasFilters", hasFilters);
-
-        try {
-            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(id);
-            if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
-            } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
-            }
-        } catch (RuntimeException runtimeException) {
-            log.error("Error sending activation code for user profile: {}", id, runtimeException);
-            throw runtimeException;
-        }
-
-        return "manage-user";
     }
 
     @GetMapping("/user/create/details")
@@ -554,22 +514,13 @@ public class UserController {
         session.removeAttribute("createUserDetailsModel");
 
         // Check feature flag to determine next step
-        if (enableMultiFirmUser) {
-            return "redirect:/admin/user/create/multi-firm";
-        } else {
-            // Skip multi-firm screen and go directly to firm selection
-            return "redirect:/admin/user/create/firm";
-        }
+        return "redirect:/admin/user/create/multi-firm";
     }
 
     @GetMapping("/user/create/multi-firm")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String createUserMultiFirm(MultiFirmForm multiFirmForm, HttpSession session, Model model) {
         // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/firm";
-        }
-
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
             return "redirect:/admin/user/create/details";
@@ -590,11 +541,6 @@ public class UserController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
     public String postUserMultiFirm(@Valid MultiFirmForm multiFirmForm, BindingResult result,
             HttpSession session, Model model) {
-
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            return "redirect:/admin/user/create/select-firm";
-        }
 
         if (multiFirmForm.getMultiFirmUser() == null) {
             result.rejectValue("multiFirmUser", "error.multiFirmUser",
@@ -649,8 +595,7 @@ public class UserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
@@ -665,9 +610,8 @@ public class UserController {
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-            boolean showSkipFirmSelection = enableMultiFirmUser && Boolean.TRUE.equals(isMultiFirmUser);
+            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
             model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
-            model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "add-user-firm";
@@ -724,9 +668,6 @@ public class UserController {
 
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
-
-        // Add feature flag to control multi-firm UI display
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
         return "add-user-check-answers";
@@ -831,9 +772,6 @@ public class UserController {
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
-
-        // Add feature flag to control multi-firm UI display
-        model.addAttribute("enableMultiFirmUser", enableMultiFirmUser);
 
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
@@ -1007,6 +945,7 @@ public class UserController {
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
+
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
         session.setAttribute("selectedApps", selectedApps);
@@ -1068,7 +1007,7 @@ public class UserController {
         }
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType());
+                user.getUserType(), userFirmType);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
@@ -1282,6 +1221,52 @@ public class UserController {
         return "edit-user-roles-check-answer";
     }
 
+
+    /**
+     * Builds a list of UserRole objects based on selected roles and app-role mappings.
+     *
+     * @param id               The user ID for whom roles are being built.
+     * @param selectedRoles    List of selected role IDs.
+     * @param roles            Map of role IDs to their corresponding AppRoleDto objects.
+     * @param userType         The type of the user (used to fetch app roles).
+     * @param url              The base URL for navigation (may be updated if app has only one role).
+     * @param selectedAppRole  The list where constructed UserRole objects will be added.
+     */
+    private void buildAppRoleObject(String id,
+                                    List<String> selectedRoles,
+                                    Map<String, AppRoleDto> roles,
+                                    UserType userType,
+                                    String url,
+                                    List<UserRole> selectedAppRole,
+                                    FirmType userFirmType) {
+
+        // Iterate through each selected role ID
+        for (String selectedRole : selectedRoles) {
+            // Get the application ID associated with the selected role
+            String appId = roles.get(selectedRole).getApp().getId();
+            // Fetch all roles for this app and user type
+            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType, userFirmType);
+
+            // If the app has only one role, update the URL to point to the apps page
+            if (appRoleDtos.size() == 1) {
+                url = "/admin/users/edit/" + id + "/apps";
+            }
+
+            // Retrieve the AppRoleDto for the selected role
+            AppRoleDto role = roles.get(selectedRole);
+
+            // Create a new UserRole object and populate its fields
+            UserRole userRole = new UserRole();
+            userRole.setRoleName(role.getName());       // Set role name
+            userRole.setAppName(role.getApp().getName()); // Set application name
+            userRole.setUrl(url);                       // Set navigation URL
+
+            // Add the constructed UserRole to the list
+            selectedAppRole.add(userRole);
+        }
+    }
+
+
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
@@ -1379,6 +1364,7 @@ public class UserController {
                         office.getCode(),
                         new OfficeModel.Address(office.getAddress().getAddressLine1(),
                                 office.getAddress().getAddressLine2(),
+                                office.getAddress().getAddressLine3(),
                                 office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
                         finalUserOfficeIds.contains(office.getId().toString())))
@@ -1535,7 +1521,6 @@ public class UserController {
 
         // Clear any success messages
         session.removeAttribute("successMessage");
-
         return "redirect:/admin/users/manage/" + id;
     }
 
@@ -1543,14 +1528,10 @@ public class UserController {
      * Convert to Multi-Firm Flow - Show conversion form
      */
     @GetMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
+            + "&& @accessControlService.authenticatedUserIsInternal()")
     public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
             Model model, HttpSession session, RedirectAttributes redirectAttributes) {
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            throw new RuntimeException("The multi-firm feature is not available. "
-                    + "Please contact your system administrator for assistance.");
-        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1580,7 +1561,8 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
+            + "&& @accessControlService.authenticatedUserIsInternal()")
     public String convertToMultiFirmPost(@PathVariable String id,
             @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
             BindingResult result,
@@ -1588,11 +1570,6 @@ public class UserController {
             Authentication authentication,
             RedirectAttributes redirectAttributes,
             Model model) {
-        // Check if multi-firm feature is enabled
-        if (!enableMultiFirmUser) {
-            throw new RuntimeException("The multi-firm feature is not available. "
-                    + "Please contact your system administrator for assistance.");
-        }
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -1678,9 +1655,10 @@ public class UserController {
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
-        Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
-        if (selectedApps.isPresent()) {
-            editableApps.forEach(app -> app.setSelected(selectedApps.get().contains(app.getId())));
+        List<String> selectedApps = getAppsFromSession(session);
+
+        if (!selectedApps.isEmpty()) {
+                editableApps.forEach(app -> app.setSelected(selectedApps.contains(app.getId())));
         } else {
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
@@ -1711,7 +1689,7 @@ public class UserController {
                 // If no model in session, redirect to apps page to repopulate
                 return "redirect:/admin/users/grant-access/" + id + "/apps";
             }
-            //unchecked all the apps
+            // unchecked all the apps
             List<AppDto> apps = (List<AppDto>) modelFromSession.getAttribute("apps");
             if (apps != null) {
                 apps.forEach(app -> app.setSelected(false));
@@ -1721,10 +1699,18 @@ public class UserController {
             return "grant-access-user-apps";
         }
 
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
 
          session.setAttribute("grantAccessSelectedApps", selectedApps);
+        List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                .map(AppRoleDto::getId)
+                .toList();
+        session.setAttribute("nonEditableRoles", nonEditableRoles);
+        session.setAttribute("grantAccessSelectedApps", selectedApps);
 
         // Clear the grantAccessUserAppsModel from session to avoid stale data
         session.removeAttribute("grantAccessUserAppsModel");
@@ -1748,7 +1734,8 @@ public class UserController {
             RedirectAttributes redirectAttributes) {
 
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
+        Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
+                String.class);
 
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
@@ -1772,8 +1759,7 @@ public class UserController {
         }
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType());
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+                user.getUserType(), userFirmType);
         roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
                 roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
@@ -1934,7 +1920,9 @@ public class UserController {
                 .map(office -> new OfficeModel(
                         office.getCode(),
                         OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
-                                .addressLine2(office.getAddress().getAddressLine2()).city(office.getAddress().getCity())
+                                .addressLine2(office.getAddress().getAddressLine2())
+                                .addressLine3(office.getAddress().getAddressLine3())
+                                .city(office.getAddress().getCity())
                                 .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
@@ -2291,5 +2279,24 @@ public class UserController {
         session.setAttribute("userListFilters", result);
 
         return result;
+    }
+
+    private void handleResendVerification(String id, Model model) {
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 }

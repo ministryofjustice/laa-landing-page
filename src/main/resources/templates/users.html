@@ -44,7 +44,7 @@
                     <form class="form" method="post" action="">
                         <div class="moj-page-header-actions__actions">
                             <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider">
-                                <button th:if="${enableMultiFirmUser && allowDelegateUserAccess}" type="button"
+                                <button th:if="${allowDelegateUserAccess}" type="button"
                                     class="govuk-button" data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/multi-firm/user/add/profile'">
                                     Delegate access
@@ -817,15 +817,15 @@
                                     th:text="${user.fullName}"></a>
                             </td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                th:text="${user.firm != null ? user.firm.name : ''}"></td>
+                                th:text="${user.firmName() != null ? user.firmName() : ''}"></td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
-                                th:text="${user.entraUser.email}"></td>
+                                th:text="${user.email}"></td>
                             <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
                                 <span th:switch="${#strings.trim(user.userType)}">
                                     <span th:case="'INTERNAL'">Internal</span>
                                     <span th:case="'EXTERNAL'">
-                                        <span th:if="${user.entraUser.multiFirmUser}">External - 3rd Party</span>
-                                        <span th:unless="${user.entraUser.multiFirmUser}">External</span>
+                                        <span th:if="${user.multiFirmUser}">External - 3rd Party</span>
+                                        <span th:unless="${user.multiFirmUser}">External</span>
                                     </span>
                                     <span th:case="*" th:text="${user.userType}"></span>
                                 </span>
