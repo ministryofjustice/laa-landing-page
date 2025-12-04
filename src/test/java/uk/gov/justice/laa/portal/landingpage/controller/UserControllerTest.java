@@ -158,6 +158,10 @@ class UserControllerTest {
     void editUserRoles_shouldSetBackUrlToPreviousIndex() {
         // Arrange
         String id = UUID.randomUUID().toString();
+        MockHttpSession httpSession = new MockHttpSession();
+        // Two apps in session, we are on index 1 and expect back to index 0
+        httpSession.setAttribute("selectedApps", List.of(
+                UUID.randomUUID().toString(), UUID.randomUUID().toString()));
 
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
@@ -166,23 +170,16 @@ class UserControllerTest {
                 .build();
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
-        List<AppRoleDto> roleDtos = new ArrayList<>();
-        roleDtos.addAll(createAppRole(2, true));
-        roleDtos.addAll(createAppRole(2, true));
-
-        MockHttpSession httpSession = new MockHttpSession();
-
-        // Two apps in session, we are on index 1 and expect back to index 0
-        httpSession.setAttribute("selectedApps", List.of(
-                roleDtos.get(0).getApp().getId(),
-                roleDtos.get(1).getApp().getId()));
+        AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
+        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL), eq(null)))
+                .thenReturn(List.of(roleDto));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
-        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(roleDtos.get(0).getApp()));
+        when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> roleDtos);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roleDtos);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
 
         // Act
         String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
@@ -198,6 +195,7 @@ class UserControllerTest {
         // Arrange
         String id = UUID.randomUUID().toString();
         MockHttpSession httpSession = new MockHttpSession();
+        httpSession.setAttribute("selectedApps", List.of(UUID.randomUUID().toString()));
 
         UserProfileDto user = UserProfileDto.builder()
                 .id(UUID.fromString(id))
@@ -208,10 +206,6 @@ class UserControllerTest {
 
         AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
         AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
-        List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, true));
-
-        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
-
         when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL), eq(null)))
                 .thenReturn(List.of(roleDto));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
@@ -219,8 +213,8 @@ class UserControllerTest {
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+
         // Act
         String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
 
@@ -228,29 +222,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-roles");
         String backUrl = (String) model.getAttribute("backUrl");
         assertThat(backUrl).endsWith("/apps");
-    }
-
-    @Test
-    void editUserRoles_redirectToCyaWhenIsOnlyOneRole() {
-        // Arrange
-        String id = UUID.randomUUID().toString();
-        MockHttpSession httpSession = new MockHttpSession();
-        UserProfileDto user = UserProfileDto.builder()
-                .id(UUID.fromString(id))
-                .userType(UserType.EXTERNAL)
-                .entraUser(new EntraUserDto())
-                .build();
-        List<AppRoleDto> roles = new ArrayList<>(createAppRole(1, true));
-        httpSession.setAttribute("selectedApps", List.of(roles.get(0).getApp().getId()));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
-        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
-
-        // Act
-        String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
-
-        // Assert
-        assertThat(view).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer", id));
-
     }
 
     @Test
@@ -287,75 +258,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
         String backUrl = (String) model.getAttribute("backUrl");
         assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
-    }
-
-    @Test
-    void editUserRolesCheckAnswer_backUrlPointsWhenIsMixOfOneRoleAndMultipleRoles() {
-        // Arrange
-
-        List<AppRoleDto> roles = new ArrayList<>();
-        roles.addAll(createAppRole(1, true));
-        roles.addAll(createAppRole(2, true));
-
-        Map<Integer, List<String>> selected = new HashMap<>();
-        selected.put(0, List.of(roles.get(0).getId()));
-        selected.put(1, List.of(roles.get(1).getId(), roles.get(2).getId()));
-
-        Map<String, AppRoleDto> selectedRoles = new HashMap<>();
-        selectedRoles.put(roles.get(0).getId(), roles.get(0));
-        selectedRoles.put(roles.get(1).getId(), roles.get(1));
-        selectedRoles.put(roles.get(2).getId(), roles.get(2));
-
-        MockHttpSession httpSession = new MockHttpSession();
-        httpSession.setAttribute("editUserAllSelectedRoles", selected);
-
-        List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-        httpSession.setAttribute("selectedApps", selectedApps);
-        String id = UUID.randomUUID().toString();
-        UserProfileDto user = UserProfileDto.builder()
-                .id(UUID.fromString(id))
-                .userType(UserType.EXTERNAL)
-                .entraUser(new EntraUserDto())
-                .build();
-        when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
-        AppDto app1 = AppDto.builder().id(selectedApps.get(0)).name("A1").build();
-        AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
-        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
-        when(userService.getRolesByIdIn(any())).thenReturn(selectedRoles);
-        when(userService.getAppRolesByAppIdAndUserType(eq(roles.get(0).getApp().getId()), eq(UserType.EXTERNAL), eq(null)))
-                .thenReturn(List.of(roles.get(0)));
-        when(userService.getAppRolesByAppIdAndUserType(eq(roles.get(1).getApp().getId()), eq(UserType.EXTERNAL), eq(null)))
-                .thenReturn(List.of(roles.get(1), roles.get(2)));
-
-        when(roleAssignmentService.canUserAssignRolesForApp(any(UserProfile.class), any(AppDto.class)))
-                .thenReturn(true);
-
-        UserProfile editor = UserProfile.builder().build();
-        when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        List<UserRole> expectedUserRoles = new ArrayList<>();
-        expectedUserRoles.add(UserRole.builder()
-                        .appName("app1")
-                        .roleName("role0")
-                        .url(String.format("/admin/users/edit/%s/apps", id))
-                .build());
-        expectedUserRoles.add(UserRole.builder()
-                .appName("app1")
-                .roleName("role0")
-                .url(String.format("/admin/users/edit/%s/roles?selectedAppIndex=1", id))
-                .build());
-        expectedUserRoles.add(UserRole.builder()
-                .appName("app1")
-                .roleName("role1")
-                .url(String.format("/admin/users/edit/%s/roles?selectedAppIndex=1", id))
-                .build());
-        // Act
-        String view = userController.editUserRolesCheckAnswer(id, null, model, httpSession, authentication);
-
-        // Assert
-        assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        String backUrl = (String) model.getAttribute("backUrl");
-        assertThat(backUrl).endsWith("/roles?selectedAppIndex=1"); // size(2) - 1
-        assertThat(model.getAttribute("selectedAppRole")).isEqualTo(expectedUserRoles);
     }
 
     @Test
@@ -1150,8 +1052,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
-
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
                 testSession);
@@ -1202,8 +1102,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
-
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
                 testSession);
@@ -1257,7 +1155,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
                 testSession);
@@ -2342,7 +2239,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(appRoles);
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
         // When
@@ -2402,7 +2298,6 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(appRoles);
 
         MockHttpSession testSession = new MockHttpSession(); // No selectedApps in session
 
@@ -3215,8 +3110,7 @@ class UserControllerTest {
     @Test
     void editUserRoles_shouldHandleSelectedAppIndexOutOfBounds() {
         // Given
-        String userId = String.valueOf(UUID.randomUUID());
-        String appId = String.valueOf(UUID.randomUUID());
+        String userId = "user123";
         EntraUserDto user = new EntraUserDto();
         user.setId(userId);
 
@@ -3227,49 +3121,31 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         // Mock for the logic when selectedAppIndex is reset to 0
         AppDto currentApp = new AppDto();
-        currentApp.setId(appId);
+        currentApp.setId("app1");
         currentApp.setName("Test App");
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(List.of());
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
-        List<AppRoleDto> listOfRoles = createAppRole(2, true);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(listOfRoles);
+        // When - passing selectedAppIndex of 5 which is out of bounds
+        String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
+                testSession);
 
-        // Act & Assert
-        assertThrows(IndexOutOfBoundsException.class, () -> {
-            userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
-                    testSession);
-        });
+        // Then
+        assertThat(view).isEqualTo("edit-user-roles");
+        assertThat(model.getAttribute("editUserRolesSelectedAppIndex")).isEqualTo(0); // Should reset to 0
 
-    }
-
-    private static @NotNull List<AppRoleDto> createAppRole(int quantityOfRoles, boolean withSameApp) {
-        List<AppRoleDto> listOfRoles = new ArrayList<>();
-        String appId = String.valueOf(UUID.randomUUID());
-        int indexOfSameApp = 1;
-        for (int i = 0; i < quantityOfRoles; i++) {
-
-            AppRoleDto role = AppRoleDto.builder()
-                    .id(String.valueOf(UUID.randomUUID()))
-                    .name(String.format("role%d", i))
-                    .build();
-
-            if (withSameApp) {
-                role.setApp(AppDto.builder()
-                        .id(appId)
-                        .name(String.format("app%d", indexOfSameApp))
-                        .build());
-            } else {
-                role.setApp(AppDto.builder()
-                        .id(String.valueOf(UUID.randomUUID()))
-                        .name(String.format("role%d", i))
-                        .build());
-            }
-            listOfRoles.add(role);
-        }
-        return listOfRoles;
+        // Verify that the calls were made as expected
+        verify(userService).getAppByAppId("app1");
+        verify(userService).getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null));
+        verify(userService).getUserAppRolesByUserId(userId);
     }
 
     @Test
@@ -3830,22 +3706,25 @@ class UserControllerTest {
         user.setUserType(UserType.EXTERNAL);
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
 
-        final List<AppRoleDto> roles = new ArrayList<>();
-        roles.addAll(createAppRole(2, true));
+        AppDto currentApp = new AppDto();
+        currentApp.setId("app1");
+        currentApp.setName("App 1");
 
-        AppDto currentApp = roles.get(0).getApp();
+        AppRoleDto role1 = new AppRoleDto();
+        role1.setId(UUID.randomUUID().toString());
+        role1.setName("Role 1");
+        final List<AppRoleDto> roles = List.of(role1);
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of(currentApp.getId()));
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(currentApp.getId())).thenReturn(Optional.of(currentApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any(), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(currentApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -3856,45 +3735,6 @@ class UserControllerTest {
         assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(0);
         assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(currentApp);
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
-    }
-
-    @Test
-    void grantAccessEditUserRoles_shouldRedirectToTheOfficeWhenIsOneRole() {
-        // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440002";
-        UserProfileDto user = new UserProfileDto();
-        user.setUserType(UserType.EXTERNAL);
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-
-        final List<AppRoleDto> roles = new ArrayList<>(createAppRole(2, false));
-
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of(
-                roles.get(0).getApp().getId(),
-                roles.get(1).getApp().getId()));
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        // When
-        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession, redirectAttributes);
-
-        // Then
-        assertThat(view).isEqualTo(String.format("redirect:/admin/users/grant-access/%s/offices", userId));
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isNull();
-        assertThat(model.getAttribute("grantAccessCurrentApp")).isNull();
-        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
-        assertThat(testSession.getAttribute("allSelectedRoles"))
-                .isEqualTo(roles
-                        .stream()
-                        .map(AppRoleDto::getId)
-                        .toList());
-        assertThat(testSession.getAttribute("nonEditableRoles")).isNotNull();
-
     }
 
     @Test
@@ -3922,17 +3762,11 @@ class UserControllerTest {
     void grantAccessUpdateUserRoles_shouldRedirectToNextAppWhenNotLastApp() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000";
-        List<AppRoleDto> roles = new ArrayList<>();
-        roles.addAll(createAppRole(2, true));
-        roles.addAll(createAppRole(2, true));
-
         RolesForm rolesForm = new RolesForm();
-        rolesForm.setRoles(List.of(roles.get(0).getApp().getId()));
+        rolesForm.setRoles(List.of("role1"));
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps",
-                List.of(roles.get(0).getApp().getId(), // first app from
-                        roles.get(2).getApp().getId()));
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
 
         Model sessionModel = new ExtendedModelMap();
         sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
@@ -3940,14 +3774,7 @@ class UserControllerTest {
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
-        UserProfileDto user = UserProfileDto.builder()
-                .userType(UserType.EXTERNAL)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.ofNullable(user));
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
-        when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+
         // When
         String view = userController.grantAccessUpdateUserRoles(userId, rolesForm, bindingResult, 0, authentication,
                 model, testSession);
@@ -3960,7 +3787,7 @@ class UserControllerTest {
         Map<Integer, List<String>> allRoles = (Map<Integer, List<String>>) testSession
                 .getAttribute("grantAccessAllSelectedRoles");
         assertThat(allRoles).isNotNull();
-        assertThat(allRoles.get(0)).containsExactly(roles.get(0).getApp().getId());
+        assertThat(allRoles.get(0)).containsExactly("role1");
     }
 
     @Test
@@ -4283,34 +4110,26 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
-        String appId = String.valueOf(UUID.randomUUID());
         AppDto ccmsApp = new AppDto();
-        ccmsApp.setId(appId);
+        ccmsApp.setId("app1");
         ccmsApp.setName("CCMS Application"); // Contains "CCMS" in name
 
         AppRoleDto normalRole = new AppRoleDto();
         normalRole.setId(UUID.randomUUID().toString());
         normalRole.setCcmsCode("NORMAL_ROLE");
-        normalRole.setApp(ccmsApp);
 
-        AppRoleDto role2 = new AppRoleDto();
-        role2.setId(UUID.randomUUID().toString());
-        role2.setApp(ccmsApp);
-
-        final List<AppRoleDto> roles = List.of(normalRole, role2);
+        final List<AppRoleDto> roles = List.of(normalRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(ccmsApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4331,35 +4150,26 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
-        String appId = String.valueOf(UUID.randomUUID());
         AppDto regularApp = new AppDto();
-        regularApp.setId(appId);
+        regularApp.setId("app1");
         regularApp.setName("Regular Application"); // Doesn't contain "CCMS"
 
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN"); // CCMS role code
-        ccmsRole.setApp(regularApp);
 
-        AppRoleDto role = new AppRoleDto();
-        role.setId(UUID.randomUUID().toString());
-        role.setApp(regularApp);
-
-        final List<AppRoleDto> roles = List.of(ccmsRole, role);
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), eq(null))).thenReturn(roles);
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4381,7 +4191,6 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
         AppDto ccmsApp = new AppDto();
         ccmsApp.setId("app1");
@@ -4419,7 +4228,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4445,34 +4253,26 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
-        String appId = String.valueOf(UUID.randomUUID());
         AppDto regularApp = new AppDto();
-        regularApp.setId(appId);
+        regularApp.setId("app1");
         regularApp.setName("Regular Application");
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE"); // Not a CCMS role
-        regularRole.setApp(regularApp);
 
-        AppRoleDto regularRole2 = new AppRoleDto();
-        regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setApp(regularApp);
-
-        final List<AppRoleDto> roles = List.of(regularRole, regularRole2);
+        final List<AppRoleDto> roles = List.of(regularRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4490,34 +4290,26 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
-        String appId = String.valueOf(UUID.randomUUID());
         AppDto regularApp = new AppDto();
-        regularApp.setId(appId);
+        regularApp.setId("app1");
         regularApp.setName("CCMS case transfer requests");
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN"); // Not a CCMS role
-        regularRole.setApp(regularApp);
 
-        AppRoleDto role = new AppRoleDto();
-        role.setId(UUID.randomUUID().toString());
-        role.setApp(regularApp);
-
-        final List<AppRoleDto> roles = List.of(regularRole, role);
+        final List<AppRoleDto> roles = List.of(regularRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4535,34 +4327,30 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
-        String appId = String.valueOf(UUID.randomUUID());
+
         AppDto mixedApp = new AppDto();
-        mixedApp.setId(appId);
+        mixedApp.setId("app1");
         mixedApp.setName("Mixed App");
 
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
-        ccmsRole.setApp(mixedApp);
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE");
-        regularRole.setApp(mixedApp);
 
         final List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("selectedApps", List.of(appId));
+        testSession.setAttribute("selectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(mixedApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(mixedApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
@@ -4590,7 +4378,7 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
+
         AppDto ccmsApp = new AppDto();
         ccmsApp.setId("app1");
         ccmsApp.setName("CCMS Application");
@@ -4600,20 +4388,17 @@ class UserControllerTest {
         normalRole.setCcmsCode("NORMAL_ROLE");
 
         final List<AppRoleDto> roles = List.of(normalRole);
-
-        List<AppRoleDto> allRoles = new ArrayList<>(createAppRole(2, true));
-        allRoles.get(0).getApp().setName("CCMS Application");
-        String appId = allRoles.get(0).getApp().getId();
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), eq(null))).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(ccmsApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles, roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(allRoles);
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -4630,7 +4415,7 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
+
         AppDto regularApp = new AppDto();
         regularApp.setId("app1");
         regularApp.setName("Regular Application");
@@ -4638,14 +4423,8 @@ class UserControllerTest {
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
-        ccmsRole.setApp(regularApp);
-        AppRoleDto ccmsRole2 = new AppRoleDto();
-        ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setCcmsCode("XXCCMS_OFFICE_ADMIN2");
-        ccmsRole2.setApp(regularApp);
 
-        final List<AppRoleDto> roles = List.of(ccmsRole, ccmsRole2);
-
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -4656,7 +4435,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
@@ -4669,7 +4447,7 @@ class UserControllerTest {
         Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
                 .getAttribute("ccmsRolesBySection");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).isEqualTo(roles);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
     }
 
     @Test
@@ -4678,7 +4456,6 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
         AppDto ccmsApp = new AppDto();
         ccmsApp.setId("app1");
@@ -4727,7 +4504,6 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
@@ -4758,34 +4534,26 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
 
-        String appId = String.valueOf(UUID.randomUUID());
         AppDto regularApp = new AppDto();
-        regularApp.setId(appId);
+        regularApp.setId("app1");
         regularApp.setName("Regular Grant Access App");
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE");
-        regularRole.setApp(regularApp);
 
-        AppRoleDto role = new AppRoleDto();
-        role.setId(UUID.randomUUID().toString());
-        role.setApp(regularApp);
-
-        final List<AppRoleDto> roles = List.of(regularRole, role);
+        final List<AppRoleDto> roles = List.of(regularRole);
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(appId)).thenReturn(Optional.of(regularApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(appId), any(), any())).thenReturn(roles);
+        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
 
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
@@ -4803,31 +4571,18 @@ class UserControllerTest {
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
         user.setId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"));
-        user.setUserType(UserType.EXTERNAL);
-
-        List<AppRoleDto> roles = new ArrayList<>();
-        roles.addAll(createAppRole(2, true));
-        roles.addAll(createAppRole(2, true));
-        roles.get(2).getApp().setName("CCMS App 2"); //CCMS App 2
-        roles.get(2).setCcmsCode("XXCCMS_CASE_MANAGER"); //CCMS App 2
-        roles.get(3).getApp().setName("CCMS App 2"); //CCMS App 2
 
         AppDto ccmsApp = new AppDto();
-        ccmsApp.setId(roles.get(2).getApp().getId());
+        ccmsApp.setId("app2");
         ccmsApp.setName("CCMS App 2");
 
         AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId(roles.get(2).getId());
-        ccmsRole.setName(roles.get(2).getName());
-        ccmsRole.setApp(roles.get(2).getApp());
+        ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
 
+        final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
-
-        AppDto app1 = roles.get(0).getApp();
-        AppDto app2 = roles.get(2).getApp(); //CCMS App 2
-
-        testSession.setAttribute("grantAccessSelectedApps", List.of(app1.getId(), app2.getId()));
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
 
         // Session model with app index 1 (second app)
         Model sessionModel = new ExtendedModelMap();
@@ -4835,13 +4590,13 @@ class UserControllerTest {
         testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppByAppId(app2.getId())).thenReturn(Optional.of(ccmsApp));
-        when(userService.getAppRolesByAppIdAndUserType(eq(app2.getId()), any(), any())).thenReturn(roles);
+        when(userService.getAppByAppId("app2")).thenReturn(Optional.of(ccmsApp));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app2"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(roles);
+
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -4849,7 +4604,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(1);
-        assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(app2);
+        assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(ccmsApp);
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
@@ -6219,204 +5974,167 @@ class UserControllerTest {
 
         @Test
         public void testEditUserRolesPassesCorrectFirmTypeForChambersUser() {
-            String appId = UUID.randomUUID().toString();
-            MockHttpSession testSession = new MockHttpSession();
-            testSession.setAttribute("selectedApps", List.of(appId));
-            AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-
-            AppRoleDto chambersRole = new AppRoleDto();
-            chambersRole.setId(UUID.randomUUID().toString());
-            chambersRole.setName("Chambers Role");
-            chambersRole.setApp(appDto);
-
-            AppRoleDto chambersRole2 = new AppRoleDto();
-            chambersRole2.setId(UUID.randomUUID().toString());
-            chambersRole2.setName("Chambers Role2");
-            chambersRole2.setApp(appDto);
-
-            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
             UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            testSession.setAttribute("selectedApps", List.of("app-id-1"));
+            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
                     .firm(chambersFirm)
                     .build();
 
+            AppRoleDto chambersRole = new AppRoleDto();
+            chambersRole.setId(UUID.randomUUID().toString());
+            chambersRole.setName("Chambers Role");
+
+            AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.CHAMBERS))
+            when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.CHAMBERS))
                     .thenReturn(List.of(chambersRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(chambersRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(chambersRole, chambersRole2));
-
+            when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
             String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
 
             assertThat(view).isEqualTo("edit-user-roles");
-            verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.CHAMBERS);
+            verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.CHAMBERS);
         }
 
         @Test
         public void testEditUserRolesPassesCorrectFirmTypeForAdvocateUser() {
-            String appId = UUID.randomUUID().toString();
-            MockHttpSession testSession = new MockHttpSession();
-            testSession.setAttribute("selectedApps", List.of(appId));
-            AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-
-            AppRoleDto advocateRole = new AppRoleDto();
-            advocateRole.setId(UUID.randomUUID().toString());
-            advocateRole.setName("Advocate Role");
-            advocateRole.setApp(appDto);
-
-            AppRoleDto advocateRole2 = new AppRoleDto();
-            advocateRole2.setId(UUID.randomUUID().toString());
-            advocateRole2.setName("Advocate Role2");
-            advocateRole2.setApp(appDto);
-
             UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            testSession.setAttribute("selectedApps", List.of("app-id-1"));
             FirmDto advocateFirm = FirmDto.builder().id(UUID.randomUUID()).name("Advocate Firm").type(FirmType.ADVOCATE).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
                     .firm(advocateFirm)
                     .build();
+
+            AppRoleDto advocateRole = new AppRoleDto();
+            advocateRole.setId(UUID.randomUUID().toString());
+            advocateRole.setName("Advocate Role");
+
+            AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE))
+            when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE))
                     .thenReturn(List.of(advocateRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(advocateRole, advocateRole2));
+            when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
             String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
 
             assertThat(view).isEqualTo("edit-user-roles");
-            verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.ADVOCATE);
+            verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE);
         }
 
         @Test
         public void testEditUserRolesPassesNullFirmTypeWhenUserHasNoFirm() {
-            String appId = UUID.randomUUID().toString();
-            MockHttpSession testSession = new MockHttpSession();
-            testSession.setAttribute("selectedApps", List.of(appId));
-            AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-            AppRoleDto unrestrictedRole = new AppRoleDto();
-            unrestrictedRole.setId(UUID.randomUUID().toString());
-            unrestrictedRole.setName("Unrestricted Role");
-            unrestrictedRole.setApp(appDto);
-
-            AppRoleDto unrestrictedRole2 = new AppRoleDto();
-            unrestrictedRole2.setId(UUID.randomUUID().toString());
-            unrestrictedRole2.setName("Unrestricted Role2");
-            unrestrictedRole2.setApp(appDto);
-
             UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            testSession.setAttribute("selectedApps", List.of("app-id-1"));
+
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
                     .firm(null)
                     .build();
+
+            AppRoleDto unrestrictedRole = new AppRoleDto();
+            unrestrictedRole.setId(UUID.randomUUID().toString());
+            unrestrictedRole.setName("Unrestricted Role");
+
+            AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
+
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null))
+            when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null))
                     .thenReturn(List.of(unrestrictedRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(unrestrictedRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(
-                    unrestrictedRole,
-                    unrestrictedRole));
+            when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
             String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
 
             assertThat(view).isEqualTo("edit-user-roles");
-            verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null);
+            verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null);
         }
 
         @Test
         public void testGrantAccessEditUserRolesPassesCorrectFirmTypeForLegalServicesProviderUser() {
-            String appId = UUID.randomUUID().toString();
-            MockHttpSession testSession = new MockHttpSession();
-            testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
-
-            AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-            AppRoleDto lspRole = new AppRoleDto();
-            lspRole.setId(UUID.randomUUID().toString());
-            lspRole.setName("LSP Role");
-            lspRole.setApp(appDto);
-
-            AppRoleDto lspRole2 = new AppRoleDto();
-            lspRole2.setId(UUID.randomUUID().toString());
-            lspRole2.setName("LSP Role2");
-            lspRole2.setApp(appDto);
-
-            Model model = new ExtendedModelMap();
             UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            testSession.setAttribute("grantAccessSelectedApps", List.of("app-id-1"));
+
             FirmDto lspFirm = FirmDto.builder().id(UUID.randomUUID()).name("LSP Firm").type(FirmType.LEGAL_SERVICES_PROVIDER).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
                     .firm(lspFirm)
                     .build();
+
+            AppRoleDto lspRole = new AppRoleDto();
+            lspRole.setId(UUID.randomUUID().toString());
+            lspRole.setName("LSP Role");
+
+            AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
+
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
+            when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
                     .thenReturn(List.of(lspRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole, lspRole2), List.of(lspRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(lspRole, lspRole2));
+            when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
             String view = userController.grantAccessEditUserRoles(userId.toString(), 0, new RolesForm(), authentication, model, testSession, redirectAttributes);
 
             assertThat(view).isEqualTo("grant-access-user-roles");
-            verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
+            verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
         }
 
         @Test
         public void testGrantAccessEditUserRolesPassesCorrectFirmTypeForInternalUser() {
-            String appId = UUID.randomUUID().toString();
-            MockHttpSession testSession = new MockHttpSession();
-            testSession.setAttribute("grantAccessSelectedApps", List.of(appId));
-
-            AppDto appDto = AppDto.builder().id(appId).name("Test App").build();
-
-            AppRoleDto internalRole = new AppRoleDto();
-            internalRole.setId(UUID.randomUUID().toString());
-            internalRole.setName("Internal Role");
-            internalRole.setApp(appDto);
-            AppRoleDto internalRole2 = new AppRoleDto();
-            internalRole2.setId(UUID.randomUUID().toString());
-            internalRole2.setName("Internal Role2");
-            internalRole2.setApp(appDto);
-
-            Model model = new ExtendedModelMap();
             UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            testSession.setAttribute("grantAccessSelectedApps", List.of("app-id-1"));
+
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.INTERNAL)
                     .firm(null)
                     .build();
+
+            AppRoleDto internalRole = new AppRoleDto();
+            internalRole.setId(UUID.randomUUID().toString());
+            internalRole.setName("Internal Role");
+
+            AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
+
+            Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(appId, UserType.INTERNAL, null))
+            when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null))
                     .thenReturn(List.of(internalRole));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole, internalRole2), List.of(internalRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
-            when(userService.getAppRolesByAppsId(anyList(), any())).thenReturn(List.of(internalRole, internalRole2));
+            when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
             String view = userController.grantAccessEditUserRoles(userId.toString(), 0, new RolesForm(), authentication, model, testSession, redirectAttributes);
 
             assertThat(view).isEqualTo("grant-access-user-roles");
-            verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.INTERNAL, null);
+            verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null);
         }
     }
 }
