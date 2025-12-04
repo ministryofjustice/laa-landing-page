@@ -1120,7 +1120,7 @@ public class UserService {
             }else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
-                diff = diffOffices(userProfile.getOffices(), offices, null);
+                diff = diffOffices(userProfile.getOffices(), offices, "");
                 // Update user profile offices
                 userProfile.setOffices(offices);
                 userProfile.setUnrestrictedOfficeAccess(false);
