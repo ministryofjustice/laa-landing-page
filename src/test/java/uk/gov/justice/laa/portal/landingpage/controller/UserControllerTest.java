@@ -1241,7 +1241,7 @@ class UserControllerTest {
     @Test
     public void testEditUserRoles_view_internal_user() {
         // Given
-        final String userId = "12345";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
         // Setup test user call
         UserProfileDto testUserProfile = new UserProfileDto();
         testUserProfile.setUserType(UserType.INTERNAL);
@@ -2450,6 +2450,9 @@ class UserControllerTest {
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
+        userProfileDto.setUserType(UserType.EXTERNAL);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
@@ -2471,6 +2474,9 @@ class UserControllerTest {
     void updateUserRoles_shouldCompleteEditingOnLastApp() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        List<AppRoleDto> roles = new ArrayList<>();
+        roles.addAll(createAppRole(2, true));
+        roles.addAll(createAppRole(1, true));
         RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role3"));
 
@@ -2482,6 +2488,9 @@ class UserControllerTest {
         existingRoles.put(0, List.of("role1", "role2"));
         existingRoles.put(1, null);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+        UserProfileDto userProfileDto = new UserProfileDto(); // populate as needed
+        userProfileDto.setUserType(UserType.EXTERNAL);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         // When - updating roles for last app (index 1)

@@ -1031,7 +1031,7 @@ public class UserController {
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
         }
 
-        if (!isMultipleRoles(allRoles) || (currentSelectedAppIndex >= selectedApps.size() - 1) ) {
+        if (!isMultipleRoles(allRoles) || (currentSelectedAppIndex >= selectedApps.size())) {
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         }
@@ -1204,7 +1204,7 @@ public class UserController {
 
         // Ensure passed in ID is a valid UUID to avoid open redirects.
         UUID uuid = UUID.fromString(id);
-        if (selectedAppIndex >= selectedApps.size() - 1) {
+        if (selectedAppIndex >= selectedApps.size()) {
             return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer";
         } else {
             List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, user.getUserType().name());
@@ -1866,7 +1866,7 @@ public class UserController {
             session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
         }
 
-        if (!isMultipleRoles(allRoles)) {
+        if (!isMultipleRoles(allRoles) || currentSelectedAppIndex >= selectedApps.size()) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             saveRolesInTheSession(id, session, allSelectedRolesByPage, currentUserProfile);
             UUID uuid = UUID.fromString(id);
