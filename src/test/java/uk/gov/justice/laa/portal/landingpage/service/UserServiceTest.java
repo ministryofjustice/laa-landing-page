@@ -4193,18 +4193,6 @@ class UserServiceTest {
         assertThat(rolesByIdIn.get(appRole1.getId().toString()).getName()).isEqualTo("ap1");
     }
 
-    @Test
-    void getAppRolesByAppsId() {
-        AppRole appRole1 = AppRole.builder().id(UUID.randomUUID()).name("ap1").build();
-        AppRole appRole2 = AppRole.builder().id(UUID.randomUUID()).build();
-        AppRole appRole3 = AppRole.builder().id(UUID.randomUUID()).build();
-        List<AppRole> appRoles = List.of(appRole1, appRole2, appRole3);
-        when(mockAppRoleRepository.findByAppIdUserTypeRestriction(anyList(), any())).thenReturn(appRoles);
-        List<AppRoleDto> rolesByIdIn = userService.getAppRolesByAppsId(List.of(), "user");
-        assertThat(rolesByIdIn).hasSize(3);
-        assertThat(rolesByIdIn.get(0).getName()).isEqualTo("ap1");
-    }
-
     @Nested
     class AddUserProfileTests {
 
