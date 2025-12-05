@@ -1222,52 +1222,6 @@ public class UserController {
         return "edit-user-roles-check-answer";
     }
 
-
-    /**
-     * Builds a list of UserRole objects based on selected roles and app-role mappings.
-     *
-     * @param id               The user ID for whom roles are being built.
-     * @param selectedRoles    List of selected role IDs.
-     * @param roles            Map of role IDs to their corresponding AppRoleDto objects.
-     * @param userType         The type of the user (used to fetch app roles).
-     * @param url              The base URL for navigation (may be updated if app has only one role).
-     * @param selectedAppRole  The list where constructed UserRole objects will be added.
-     */
-    private void buildAppRoleObject(String id,
-                                    List<String> selectedRoles,
-                                    Map<String, AppRoleDto> roles,
-                                    UserType userType,
-                                    String url,
-                                    List<UserRole> selectedAppRole,
-                                    FirmType userFirmType) {
-
-        // Iterate through each selected role ID
-        for (String selectedRole : selectedRoles) {
-            // Get the application ID associated with the selected role
-            String appId = roles.get(selectedRole).getApp().getId();
-            // Fetch all roles for this app and user type
-            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType, userFirmType);
-
-            // If the app has only one role, update the URL to point to the apps page
-            if (appRoleDtos.size() == 1) {
-                url = "/admin/users/edit/" + id + "/apps";
-            }
-
-            // Retrieve the AppRoleDto for the selected role
-            AppRoleDto role = roles.get(selectedRole);
-
-            // Create a new UserRole object and populate its fields
-            UserRole userRole = new UserRole();
-            userRole.setRoleName(role.getName());       // Set role name
-            userRole.setAppName(role.getApp().getName()); // Set application name
-            userRole.setUrl(url);                       // Set navigation URL
-
-            // Add the constructed UserRole to the list
-            selectedAppRole.add(userRole);
-        }
-    }
-
-
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
@@ -1336,29 +1290,8 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        //boolean hasAllOffices = userOffices.isEmpty();
         // Create form object or load from session if exist
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
-
-        /*if (officesForm == null) {
-            officesForm = new OfficesForm();
-            List<String> selectedOffices = new ArrayList<>();
-            if (hasAllOffices) {
-                selectedOffices.add("ALL");
-            } else {
-                selectedOffices.addAll(userOfficeIds);
-            }
-            officesForm.setOffices(selectedOffices);
-        } else {
-            if (officesForm.getOffices() != null) {
-                if (officesForm.getOffices().contains("ALL")) {
-                    hasAllOffices = true;
-                } else {
-                    hasAllOffices = false;
-                    userOfficeIds = new HashSet<String>(officesForm.getOffices());
-                }
-            }
-        }*/
         List<String> selectedOffices = new ArrayList<>();
         AllOfficesNoOffice result = verifyAllOffices(userOfficeIds.isEmpty()
                 ? Optional.empty()
