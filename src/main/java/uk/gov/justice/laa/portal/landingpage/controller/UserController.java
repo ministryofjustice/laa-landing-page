@@ -1222,52 +1222,6 @@ public class UserController {
         return "edit-user-roles-check-answer";
     }
 
-
-    /**
-     * Builds a list of UserRole objects based on selected roles and app-role mappings.
-     *
-     * @param id               The user ID for whom roles are being built.
-     * @param selectedRoles    List of selected role IDs.
-     * @param roles            Map of role IDs to their corresponding AppRoleDto objects.
-     * @param userType         The type of the user (used to fetch app roles).
-     * @param url              The base URL for navigation (may be updated if app has only one role).
-     * @param selectedAppRole  The list where constructed UserRole objects will be added.
-     */
-    private void buildAppRoleObject(String id,
-                                    List<String> selectedRoles,
-                                    Map<String, AppRoleDto> roles,
-                                    UserType userType,
-                                    String url,
-                                    List<UserRole> selectedAppRole,
-                                    FirmType userFirmType) {
-
-        // Iterate through each selected role ID
-        for (String selectedRole : selectedRoles) {
-            // Get the application ID associated with the selected role
-            String appId = roles.get(selectedRole).getApp().getId();
-            // Fetch all roles for this app and user type
-            List<AppRoleDto> appRoleDtos = userService.getAppRolesByAppIdAndUserType(appId, userType, userFirmType);
-
-            // If the app has only one role, update the URL to point to the apps page
-            if (appRoleDtos.size() == 1) {
-                url = "/admin/users/edit/" + id + "/apps";
-            }
-
-            // Retrieve the AppRoleDto for the selected role
-            AppRoleDto role = roles.get(selectedRole);
-
-            // Create a new UserRole object and populate its fields
-            UserRole userRole = new UserRole();
-            userRole.setRoleName(role.getName());       // Set role name
-            userRole.setAppName(role.getApp().getName()); // Set application name
-            userRole.setUrl(url);                       // Set navigation URL
-
-            // Add the constructed UserRole to the list
-            selectedAppRole.add(userRole);
-        }
-    }
-
-
     @PostMapping("/users/edit/{id}/roles-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
@@ -1321,7 +1275,7 @@ public class UserController {
      */
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
-    public String editUserOffices(@PathVariable String id, Model model, HttpSession session) {
+    public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         session.removeAttribute("editUserOfficesModel");
         // Get user's current offices
@@ -1336,28 +1290,23 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.isEmpty();
-
         // Create form object or load from session if exist
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
+        List<String> selectedOffices = new ArrayList<>();
+        AllOfficesNoOffice result = verifyAllOffices(userOfficeIds.isEmpty()
+                ? Optional.empty()
+                : Optional.of(userOfficeIds.stream().toList()), user, userOffices);
+        if (result.hasAllOffices()) {
+            selectedOffices.add("ALL");
+        } else if (result.hasNoOffices()) {
+            selectedOffices.add("NO_OFFICES");
+        } else {
+            selectedOffices.addAll(userOfficeIds);
+        }
+
         if (officesForm == null) {
             officesForm = new OfficesForm();
-            List<String> selectedOffices = new ArrayList<>();
-            if (hasAllOffices) {
-                selectedOffices.add("ALL");
-            } else {
-                selectedOffices.addAll(userOfficeIds);
-            }
             officesForm.setOffices(selectedOffices);
-        } else {
-            if (officesForm.getOffices() != null) {
-                if (officesForm.getOffices().contains("ALL")) {
-                    hasAllOffices = true;
-                } else {
-                    hasAllOffices = false;
-                    userOfficeIds = new HashSet<String>(officesForm.getOffices());
-                }
-            }
         }
         Set<String> finalUserOfficeIds = userOfficeIds;
         final List<OfficeModel> officeData = allOffices.stream()
@@ -1370,12 +1319,15 @@ public class UserController {
                         office.getId().toString(),
                         finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
-
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
-        model.addAttribute("hasAllOffices", hasAllOffices);
-
+        model.addAttribute("hasAllOffices", result.hasAllOffices());
+        model.addAttribute("hasNoOffices", result.hasNoOffices());
+        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
@@ -1422,6 +1374,8 @@ public class UserController {
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            model.addAttribute("shouldShowNoOffice", modelFromSession.getAttribute("shouldShowNoOffice"));
+
             return "edit-user-offices";
         }
         session.setAttribute("officesForm", officesForm);
@@ -1439,7 +1393,7 @@ public class UserController {
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
-        if (!selectedOffices.contains("ALL")) {
+        if (!(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1458,6 +1412,8 @@ public class UserController {
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
         model.addAttribute("userOffices", selectOfficesDisplay);
         model.addAttribute("user", modelFromSession.getAttribute("user"));
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
         return "edit-user-offices-check-answer";
     }
 
@@ -1891,7 +1847,7 @@ public class UserController {
      */
     @GetMapping("/users/grant-access/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
-    public String grantAccessEditUserOffices(@PathVariable String id, Model model, HttpSession session) {
+    public String grantAccessEditUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
         List<OfficeDto> userOffices = List.of();
 
@@ -1899,13 +1855,12 @@ public class UserController {
             userOffices = userService.getUserOfficesByUserId(id);
         } else {
             List<String> selectedOffices = selectedOfficesOptional.get();
-            if (!selectedOffices.isEmpty() && !selectedOffices.contains("ALL")) {
+            if (!selectedOffices.isEmpty()
+                    && !(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
                 userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
             }
         }
-
         // Get user's current offices
-
         Set<String> userOfficeIds = userOffices.stream()
                 .map(office -> office.getId().toString())
                 .collect(Collectors.toSet());
@@ -1916,7 +1871,7 @@ public class UserController {
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
         // Check if user has access to all offices
-        boolean hasAllOffices = userOffices.isEmpty();
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
@@ -1934,24 +1889,45 @@ public class UserController {
         OfficesForm officesForm = new OfficesForm();
         List<String> selectedOffices = new ArrayList<>();
 
-        if (hasAllOffices) {
+        AllOfficesNoOffice result = verifyAllOffices(selectedOfficesOptional, user, userOffices);
+        if (result.hasAllOffices()) {
             selectedOffices.add("ALL");
+        } else if (result.hasNoOffices()) {
+            selectedOffices.add("NO_OFFICES");
         } else {
             selectedOffices.addAll(userOfficeIds);
         }
 
         officesForm.setOffices(selectedOffices);
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
-        model.addAttribute("hasAllOffices", hasAllOffices);
-
+        model.addAttribute("hasAllOffices", result.hasAllOffices());
+        model.addAttribute("hasNoOffices", result.hasNoOffices());
+        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
+    }
+
+    private static AllOfficesNoOffice verifyAllOffices(Optional<List<String>> selectedOfficesOptional, UserProfileDto user, List<OfficeDto> userOffices) {
+        boolean hasNoOffices;
+        boolean hasAllOffices;
+        if (selectedOfficesOptional.isEmpty()) {
+            hasAllOffices = user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+            hasNoOffices = !user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
+        } else {
+            hasAllOffices = selectedOfficesOptional.get().contains("ALL");
+            hasNoOffices = selectedOfficesOptional.get().contains("NO_OFFICES");
+        }
+        return new AllOfficesNoOffice(hasAllOffices, hasNoOffices);
+    }
+
+    private record AllOfficesNoOffice(boolean hasAllOffices, boolean hasNoOffices) {
     }
 
     /**
@@ -1987,6 +1963,8 @@ public class UserController {
 
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("officeData", modelFromSession.getAttribute("officeData"));
+            model.addAttribute("shouldShowNoOffice", modelFromSession.getAttribute("shouldShowNoOffice"));
+
             return "grant-access-user-offices";
         }
 
@@ -2035,7 +2013,8 @@ public class UserController {
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
-        if (!selectedOffices.getFirst().equals("ALL")) {
+        if (!(selectedOffices.getFirst().equals("ALL")
+                || selectedOffices.getFirst().equals("NO_OFFICES"))) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
@@ -2052,6 +2031,9 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
+
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
         return "grant-access-check-answers";

@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -2009,7 +2010,40 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isNull();
-            assertThat(diff).isEqualTo("Removed : All, Added : All");
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isTrue();
+            assertThat(diff).isEqualTo("Removed : Unrestricted access true, Added : Unrestricted access true");
+            verify(mockUserProfileRepository).saveAndFlush(userProfile);
+        }
+
+        @Test
+        void updateUserOffices_saveOrRemoveOffices_whenUserAndProfileExistAndNoOfficesChosen() throws IOException {
+            // Arrange
+            UUID entraUserId = UUID.randomUUID();
+            UUID userProfileId = UUID.randomUUID();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(entraUser);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockUserProfileRepository.saveAndFlush(any())).thenReturn(userProfile);
+
+            List<String> selectedOffices = List.of("NO_OFFICES");
+
+            // Act
+            String diff = userService.updateUserOffices(userProfileId.toString(), selectedOffices);
+
+            // Assert
+            assertThat(userProfile.getOffices()).isNull();
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
+            assertThat(diff).isEqualTo("Removed : Unrestricted access false, Added : Unrestricted access false");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2052,7 +2086,8 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
-            assertThat(diff).contains("Removed : All, Added : ");
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
+            assertThat(diff).contains("Removed : Unrestricted access , Added : ");
             assertThat(diff).contains("of1");
             assertThat(diff).contains("of2");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
@@ -2108,7 +2143,7 @@ class UserServiceTest {
             assertThat(changedOffices[0]).contains("Removed : ");
             assertThat(changedOffices[0]).contains("of1");
             assertThat(changedOffices[0]).contains("of2");
-            assertThat(changedOffices[1]).contains("All");
+            assertThat(changedOffices[1]).contains("Unrestricted access");
             verify(mockUserProfileRepository).saveAndFlush(userProfileOld);
         }
 
@@ -2151,7 +2186,8 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
-            assertThat(diff).isEqualTo("Removed : All, Added : of1");
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
+            assertThat(diff).isEqualTo("Removed : Unrestricted access , Added : of1");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2210,7 +2246,8 @@ class UserServiceTest {
 
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
-            assertThat(diff).isEqualTo("Removed : All, Added : All");
+            assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
+            assertThat(diff).isEqualTo("Removed : Unrestricted access , Added : Unrestricted access ");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2228,13 +2265,67 @@ class UserServiceTest {
             Office n2 = Office.builder().id(new2).code("new2").build();
             Set<Office> oldOffices = Set.of(o1, o2, k1);
             Set<Office> newOffices = Set.of(k1, n1, n2);
-            String changed = userService.diffOffices(oldOffices, newOffices);
+            String changed = userService.diffOffices(oldOffices, newOffices, "");
             assertThat(changed).doesNotContain("kep1");
             String[] changedOffices = changed.split(", Added");
             assertThat(changedOffices[0]).contains("old1");
             assertThat(changedOffices[0]).contains("old2");
             assertThat(changedOffices[1]).contains("new1");
             assertThat(changedOffices[1]).contains("new2");
+        }
+
+        @Test
+        void diffOffices_diff_All_Offices() {
+            Office o1 = Office
+                    .builder()
+                    .id(UUID.fromString("5fcc67ed-ad22-4ce2-addc-74c974975958"))
+                    .code("old1")
+                    .build();
+            Office o2 = Office
+                    .builder()
+                    .id(UUID.fromString("b07911a3-964a-4281-8808-6f87f3f17bad"))
+                    .code("old2").build();
+            Office o3 = Office
+                    .builder()
+                    .id(UUID.fromString("14bf95e1-e315-4138-9aad-fca5faf41884"))
+                    .code("old3")
+                    .build();
+
+            Set<Office> oldOffices = Set.of(o1, o2, o3)
+                    .stream()
+                    .sorted(Comparator.comparing(Office::getCode))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            Set<Office> newOffices = Set.of();
+            String changed = userService.diffOffices(oldOffices, newOffices, "true");
+            assertThat(changed).isEqualTo("Removed : old1, old2, old3, Added : Unrestricted access true");
+        }
+
+        @Test
+        void diffOffices_diff_No_Offices() {
+            Office o1 = Office
+                    .builder()
+                    .id(UUID.fromString("5fcc67ed-ad22-4ce2-addc-74c974975958"))
+                    .code("old1")
+                    .build();
+            Office o2 = Office
+                    .builder()
+                    .id(UUID.fromString("b07911a3-964a-4281-8808-6f87f3f17bad"))
+                    .code("old2").build();
+            Office o3 = Office
+                    .builder()
+                    .id(UUID.fromString("14bf95e1-e315-4138-9aad-fca5faf41884"))
+                    .code("old3")
+                    .build();
+
+            Set<Office> oldOffices = Set.of(o1, o2, o3)
+                    .stream()
+                    .sorted(Comparator.comparing(Office::getCode))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            Set<Office> newOffices = Set.of();
+            String changed = userService.diffOffices(oldOffices, newOffices, "false");
+            assertThat(changed).isEqualTo("Removed : old1, old2, old3, Added : Unrestricted access false");
         }
     }
 
