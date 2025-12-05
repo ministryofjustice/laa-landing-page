@@ -140,6 +140,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     @Query("""
             SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser eu
+                        JOIN FETCH ups.firm f
                         JOIN FETCH ups.appRoles ars
             WHERE ups.lastCcmsSyncSuccessful = false
                 AND ars.legacySync = true
