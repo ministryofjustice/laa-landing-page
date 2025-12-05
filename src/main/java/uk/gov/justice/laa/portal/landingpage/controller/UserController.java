@@ -1869,6 +1869,10 @@ public class UserController {
         if (!isMultipleRoles(allRoles) || currentSelectedAppIndex >= selectedApps.size()) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             saveRolesInTheSession(id, session, allSelectedRolesByPage, currentUserProfile);
+            // Clear the grantAccessUserRolesModel and page roles from session to avoid
+            // stale data
+            session.removeAttribute("grantAccessUserRolesModel");
+            session.removeAttribute("grantAccessAllSelectedRoles");
             UUID uuid = UUID.fromString(id);
             return "redirect:/admin/users/grant-access/" + uuid + "/offices";
         }
