@@ -144,7 +144,7 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
+    public Map<String, String> updateUserRoles(String userProfileId, Collection<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
         Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);

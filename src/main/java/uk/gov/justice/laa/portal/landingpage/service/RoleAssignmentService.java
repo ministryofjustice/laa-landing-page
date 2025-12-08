@@ -15,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class RoleAssignmentService {
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
 
-    public boolean canAssignRole(Set<AppRole> editorRoles, List<String> targetRoles) {
+    public boolean canAssignRole(Set<AppRole> editorRoles, Collection<String> targetRoles) {
         List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
         List<AppRoleDto> validRoles = filterRoles(editorRoles, targetRoleIds);
         if (validRoles.size() < targetRoles.size()) {
