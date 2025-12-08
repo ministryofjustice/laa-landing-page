@@ -7,6 +7,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +19,7 @@ public class AppRoleService {
 
     private final ModelMapper modelMapper;
 
-    public List<AppRoleDto> getByIds(List<String> ids) {
+    public List<AppRoleDto> getByIds(Collection<String> ids) {
 
         List<UUID> appRoleIds = ids.stream().map(UUID::fromString).toList();
 
