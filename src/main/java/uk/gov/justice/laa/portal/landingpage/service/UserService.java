@@ -144,7 +144,7 @@ public class UserService {
     }
 
     @Transactional
-    public Map<String, String> updateUserRoles(String userProfileId, List<String> selectedRoles,
+    public Map<String, String> updateUserRoles(String userProfileId, Collection<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
         Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
         allAssignableRoles.addAll(nonEditableRoles);
@@ -1336,16 +1336,6 @@ public class UserService {
         return appRoleRepository.findAllByIdIn(roleIds).stream()
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class))
                 .collect(Collectors.toMap(AppRoleDto::getId, Function.identity()));
-    }
-
-    public List<AppRoleDto> getAppRolesByAppsId(List<String> apps, String userType) {
-        List<UUID> appsId = apps
-                .stream()
-                .map(UUID::fromString)
-                .toList();
-        return appRoleRepository.findByAppIdUserTypeRestriction(appsId, userType).stream()
-                .map(appRole -> mapper.map(appRole, AppRoleDto.class))
-                .toList();
     }
 
     /**

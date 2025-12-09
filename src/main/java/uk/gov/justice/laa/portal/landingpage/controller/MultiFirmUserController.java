@@ -442,43 +442,30 @@ public class MultiFirmUserController {
         if (selectedAppIds.isEmpty()) {
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
         }
-        Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
-        Integer currentSelectedAppIndex;
 
-        if (modelFromSession != null && modelFromSession.getAttribute("addProfileSelectedAppIndex") != null) {
-            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("addProfileSelectedAppIndex");
-        } else {
-            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
-        }
+        Integer currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
 
         if (currentSelectedAppIndex >= selectedAppIds.size()) {
             currentSelectedAppIndex = 0;
         }
+
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+        Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
+        FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
+
+        List<AppRoleDto> availableRoles = userService
+                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL, targetFirmType);
+        List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
+                availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
+
+        final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
+
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("addUserProfileAllSelectedRoles");
         if (Objects.isNull(editUserAllSelectedRoles)) {
             editUserAllSelectedRoles = new HashMap<>();
-        }
-
-        List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedAppIds, UserType.EXTERNAL.name());
-        //add roles in session and increase selectedAppIndex
-        currentSelectedAppIndex = addRolesInSessionAndIncreaseIndex(
-                rolesForm,
-                currentSelectedAppIndex,
-                selectedAppIds,
-                editUserAllSelectedRoles,
-                allRoles,
-                false);
-
-        // save if allSelectedRolesByPage is not empty
-        if (!editUserAllSelectedRoles.isEmpty()) {
-            session.setAttribute("addUserProfileAllSelectedRoles", editUserAllSelectedRoles);
-        }
-
-        if (!isMultipleRoles(allRoles)) {
-            session.setAttribute("addUserProfileAllSelectedRoles", editUserAllSelectedRoles);
-            return "redirect:/admin/multi-firm/user/add/profile/select/offices";
         }
 
         List<String> selectedRoles;
@@ -487,18 +474,6 @@ public class MultiFirmUserController {
         } else {
             selectedRoles = new ArrayList<>();
         }
-
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-        Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
-        FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
-        
-        List<AppRoleDto> availableRoles = userService
-                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL, targetFirmType);
-        List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
-                availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
-
-        final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
 
         List<AppRoleViewModel> appRoleViewModels = assignableRoles.stream()
                 .map(appRoleDto -> {
@@ -604,20 +579,11 @@ public class MultiFirmUserController {
             session.removeAttribute("addProfileUserRolesModel");
             return "redirect:/admin/multi-firm/user/add/profile/select/offices";
         } else {
-            List<AppRoleDto> allRoles = userService.getAppRolesByAppsId(selectedApps, UserType.EXTERNAL.name());
-            //add roles in session and increase selectedAppIndex
-            selectedAppIndex = addRolesInSessionAndIncreaseIndex(
-                    rolesForm,
-                    selectedAppIndex,
-                    selectedApps,
-                    allSelectedRolesByPage,
-                    allRoles,
-                    true);
-            modelFromSession.addAttribute("addProfileSelectedAppIndex", selectedAppIndex);
+            modelFromSession.addAttribute("addProfileSelectedAppIndex", selectedAppIndex + 1);
             session.setAttribute("addUserProfileAllSelectedRoles", allSelectedRolesByPage);
             session.setAttribute("addProfileUserRolesModel", modelFromSession);
             return "redirect:/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex="
-                    + selectedAppIndex;
+                    + (selectedAppIndex + 1);
         }
     }
 
@@ -876,65 +842,6 @@ public class MultiFirmUserController {
             cursor = cursor.getParentFirm();
         }
         return false;
-    }
-
-    /**
-     * Adds roles for selected applications into the session and updates the index.
-     *
-     * @param rolesForm               Form containing selected roles.
-     * @param selectedAppIndex        Current index of the selected application.
-     * @param selectedApps            List of selected application IDs.
-     * @param allSelectedRolesByPage  Map storing selected roles for each page (indexed by app index).
-     * @param isPost                  Flag indicating if the request is a POST (form submission).
-     * @return                        Updated index after processing roles.
-     */
-    private int addRolesInSessionAndIncreaseIndex(RolesForm rolesForm,
-                                                  int selectedAppIndex,
-                                                  List<String> selectedApps,
-                                                  Map<Integer, List<String>> allSelectedRolesByPage,
-                                                  List<AppRoleDto> appRoles,
-                                                  Boolean isPost) {
-        // Loop through selected applications starting from the current index
-        while (selectedAppIndex < selectedApps.size()) {
-            int index = selectedAppIndex;
-
-            // Fetch roles for the current application based on user type
-            List<AppRoleDto> roles = getRolesByAppId(appRoles, selectedApps.get(index));
-
-            // Check whether the application has more than one role
-            if (roles.size() > 1) {
-                // If it's a POST request, store the roles selected in the form for this app
-                if (isPost) {
-                    allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
-                    selectedAppIndex++; // Move to the next application
-                }
-                break; // Stop processing further apps since multiple roles require user selection
-            }
-
-            // If the app has only one role, automatically select it and store in the map
-            allSelectedRolesByPage.put(index, List.of(roles.get(0).getId()));
-            selectedAppIndex++; // Move to the next application
-        }
-
-        // Return the updated index after processing
-        return selectedAppIndex;
-    }
-
-    private static List<AppRoleDto> getRolesByAppId(List<AppRoleDto> appRoleDtos, String appId) {
-        return appRoleDtos.stream()
-                .filter(appRoleDto -> appRoleDto.getApp().getId().equals(appId))
-                .collect(Collectors.toList());
-
-    }
-
-    private static boolean isMultipleRoles(List<AppRoleDto> appRoleDtos) {
-        return appRoleDtos.stream()
-                .collect(Collectors
-                        .groupingBy(dto -> dto.getApp().getId(),
-                                Collectors.counting()))
-                .values().stream()
-                .anyMatch(count -> count > 1);
-
     }
 
 }

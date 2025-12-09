@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -4189,18 +4188,6 @@ class UserServiceTest {
         assertThat(rolesByIdIn.get(appRole1.getId().toString()).getName()).isEqualTo("ap1");
     }
 
-    @Test
-    void getAppRolesByAppsId() {
-        AppRole appRole1 = AppRole.builder().id(UUID.randomUUID()).name("ap1").build();
-        AppRole appRole2 = AppRole.builder().id(UUID.randomUUID()).build();
-        AppRole appRole3 = AppRole.builder().id(UUID.randomUUID()).build();
-        List<AppRole> appRoles = List.of(appRole1, appRole2, appRole3);
-        when(mockAppRoleRepository.findByAppIdUserTypeRestriction(anyList(), any())).thenReturn(appRoles);
-        List<AppRoleDto> rolesByIdIn = userService.getAppRolesByAppsId(List.of(), "user");
-        assertThat(rolesByIdIn).hasSize(3);
-        assertThat(rolesByIdIn.get(0).getName()).isEqualTo("ap1");
-    }
-
     @Nested
     class AddUserProfileTests {
 
@@ -4382,26 +4369,26 @@ class UserServiceTest {
             UUID entraUserId = UUID.randomUUID();
             UUID firmId = UUID.randomUUID();
             UUID appRoleId = UUID.randomUUID();
-            
+
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
                     .multiFirmUser(true)
                     .build();
-                    
+
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
                     .build();
-                    
+
             AppRoleDto appRoleDto = AppRoleDto.builder()
                     .id(appRoleId.toString())
                     .name("Test PUI Role")
                     .build();
-                    
+
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
                     .multiFirmUser(true)
                     .build();
-                    
+
             AppRole puiRole = AppRole.builder()
                     .id(appRoleId)
                     .name("Test PUI Role")
@@ -4415,12 +4402,12 @@ class UserServiceTest {
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, 
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
                     .sendMessage(eq(result), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
-            
+
             assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
@@ -4431,26 +4418,26 @@ class UserServiceTest {
             UUID entraUserId = UUID.randomUUID();
             UUID firmId = UUID.randomUUID();
             UUID appRoleId = UUID.randomUUID();
-            
+
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
                     .multiFirmUser(true)
                     .build();
-                    
+
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
                     .build();
-                    
+
             AppRoleDto appRoleDto = AppRoleDto.builder()
                     .id(appRoleId.toString())
                     .name("Non-PUI Role")
                     .build();
-                    
+
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
                     .multiFirmUser(true)
                     .build();
-                    
+
             AppRole nonPuiRole = AppRole.builder()
                     .id(appRoleId)
                     .name("Non-PUI Role")
@@ -4461,12 +4448,12 @@ class UserServiceTest {
             when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(nonPuiRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, 
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
                     .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
-            
+
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
         }
@@ -4476,26 +4463,26 @@ class UserServiceTest {
             UUID entraUserId = UUID.randomUUID();
             UUID firmId = UUID.randomUUID();
             UUID appRoleId = UUID.randomUUID();
-            
+
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
                     .multiFirmUser(true)
                     .build();
-                    
+
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
                     .build();
-                    
+
             AppRoleDto appRoleDto = AppRoleDto.builder()
                     .id(appRoleId.toString())
                     .name("Test PUI Role")
                     .build();
-                    
+
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
                     .multiFirmUser(true)
                     .build();
-                    
+
             AppRole puiRole = AppRole.builder()
                     .id(appRoleId)
                     .name("Test PUI Role")
@@ -4508,12 +4495,12 @@ class UserServiceTest {
                     .thenReturn(false);
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, 
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
                     .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
-            
+
             assertThat(result.isLastCcmsSyncSuccessful()).isFalse();
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
@@ -4527,41 +4514,41 @@ class UserServiceTest {
             UUID puiRole1Id = UUID.randomUUID();
             UUID puiRole2Id = UUID.randomUUID();
             UUID nonPuiRoleId = UUID.randomUUID();
-            
+
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
                     .multiFirmUser(true)
                     .build();
-                    
+
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
                     .build();
-                    
+
             List<AppRoleDto> appRoleDtos = List.of(
                     AppRoleDto.builder().id(puiRole1Id.toString()).name("PUI Role 1").build(),
                     AppRoleDto.builder().id(puiRole2Id.toString()).name("PUI Role 2").build(),
                     AppRoleDto.builder().id(nonPuiRoleId.toString()).name("Non-PUI Role").build()
             );
-                    
+
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
                     .multiFirmUser(true)
                     .build();
-                    
+
             AppRole puiRole1 = AppRole.builder()
                     .id(puiRole1Id)
                     .name("PUI Role 1")
                     .ccmsCode("PUI_CODE_1")
                     .legacySync(true)
                     .build();
-                    
+
             AppRole puiRole2 = AppRole.builder()
                     .id(puiRole2Id)
                     .name("PUI Role 2")
                     .ccmsCode("PUI_CODE_2")
                     .legacySync(true)
                     .build();
-                    
+
             AppRole nonPuiRole = AppRole.builder()
                     .id(nonPuiRoleId)
                     .name("Non-PUI Role")
@@ -4576,17 +4563,17 @@ class UserServiceTest {
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, 
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     appRoleDtos, "admin");
 
             ArgumentCaptor<Set<String>> newRolesCaptor = ArgumentCaptor.forClass(Set.class);
             verify(mockRoleChangeNotificationService, times(1))
                     .sendMessage(eq(result), newRolesCaptor.capture(), eq(Collections.emptySet()));
-            
+
             Set<String> capturedNewRoles = newRolesCaptor.getValue();
             assertThat(capturedNewRoles).containsExactlyInAnyOrder("PUI_CODE_1", "PUI_CODE_2");
             assertThat(capturedNewRoles).doesNotContain("Non-PUI Role");
-            
+
             assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
         }
 
@@ -4594,16 +4581,16 @@ class UserServiceTest {
         void shouldNotSendCcmsNotificationWhenNoRolesAssigned() {
             UUID entraUserId = UUID.randomUUID();
             UUID firmId = UUID.randomUUID();
-            
+
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
                     .multiFirmUser(true)
                     .build();
-                    
+
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
                     .build();
-                    
+
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
                     .multiFirmUser(true)
@@ -4612,12 +4599,12 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
-            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, 
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     null, "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
                     .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
-            
+
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
         }
@@ -4650,7 +4637,7 @@ class UserServiceTest {
             userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
             ArgumentCaptor<UserProfile> notificationCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockRoleChangeNotificationService).sendMessage(notificationCaptor.capture(), anySet(), anySet());
-            
+
             UserProfile profileSentToNotification = notificationCaptor.getValue();
             assertThat(profileSentToNotification.getId()).isEqualTo(generatedProfileId);
         }

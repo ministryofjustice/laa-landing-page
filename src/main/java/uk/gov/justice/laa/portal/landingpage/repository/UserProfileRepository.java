@@ -73,7 +73,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT COUNT(ups) FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL 
+            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
                    OR (ups.firm.parentFirm IS NOT NULL AND ups.firm.parentFirm.id = :#{#criteria.firmSearch.selectedFirmId}))
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
@@ -86,7 +86,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                             AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
                         ))
                         AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
-                        """)
+            """)
     Page<UserSearchResultsDto> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 
     @Query("""
@@ -136,4 +136,14 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.entraUser.id = :entraUserId
             """)
     long countByEntraUserId(@Param("entraUserId") UUID entraUserId);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN FETCH ups.entraUser eu
+                        JOIN FETCH ups.firm f
+                        JOIN FETCH ups.appRoles ars
+            WHERE ups.lastCcmsSyncSuccessful = false
+                AND ars.legacySync = true
+            """)
+    List<UserProfile> findUserProfilesForCcmsSync();
 }

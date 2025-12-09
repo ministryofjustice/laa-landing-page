@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Utility class for making rest calls
@@ -64,6 +65,16 @@ public class RestUtils {
         Object object = session.getAttribute(key);
         if (object instanceof List<?> list && list.stream().allMatch(o -> o == null || listType.isInstance(o))) {
             return Optional.of((List<T>) list);
+        } else {
+            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
+            return Optional.empty();
+        }
+    }
+
+    public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> setType) {
+        Object object = session.getAttribute(key);
+        if (object instanceof Set<?> set && set.stream().allMatch(o -> o == null || setType.isInstance(o))) {
+            return Optional.of((Set<T>) set);
         } else {
             log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
             return Optional.empty();
