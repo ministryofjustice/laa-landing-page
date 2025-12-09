@@ -2087,7 +2087,7 @@ class UserServiceTest {
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1, office2);
             assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
-            assertThat(diff).contains("Removed : Unrestricted access , Added : ");
+            assertThat(diff).contains("Removed : Unrestricted access null, Added : ");
             assertThat(diff).contains("of1");
             assertThat(diff).contains("of2");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
@@ -2187,7 +2187,7 @@ class UserServiceTest {
             // Assert
             assertThat(userProfile.getOffices()).containsExactlyInAnyOrder(office1);
             assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
-            assertThat(diff).isEqualTo("Removed : Unrestricted access , Added : of1");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access null, Added : of1");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2247,7 +2247,7 @@ class UserServiceTest {
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
             assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
-            assertThat(diff).isEqualTo("Removed : Unrestricted access , Added : Unrestricted access ");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access null , Added : Unrestricted access ");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
@@ -2265,7 +2265,7 @@ class UserServiceTest {
             Office n2 = Office.builder().id(new2).code("new2").build();
             Set<Office> oldOffices = Set.of(o1, o2, k1);
             Set<Office> newOffices = Set.of(k1, n1, n2);
-            String changed = userService.diffOffices(oldOffices, newOffices, "");
+            String changed = userService.diffOffices(oldOffices, newOffices, null);
             assertThat(changed).doesNotContain("kep1");
             String[] changedOffices = changed.split(", Added");
             assertThat(changedOffices[0]).contains("old1");
@@ -2297,7 +2297,7 @@ class UserServiceTest {
                     .collect(Collectors.toCollection(LinkedHashSet::new));
 
             Set<Office> newOffices = Set.of();
-            String changed = userService.diffOffices(oldOffices, newOffices, "true");
+            String changed = userService.diffOffices(oldOffices, newOffices, true);
             assertThat(changed).isEqualTo("Removed : old1, old2, old3, Added : Unrestricted access true");
         }
 
@@ -2324,7 +2324,7 @@ class UserServiceTest {
                     .collect(Collectors.toCollection(LinkedHashSet::new));
 
             Set<Office> newOffices = Set.of();
-            String changed = userService.diffOffices(oldOffices, newOffices, "false");
+            String changed = userService.diffOffices(oldOffices, newOffices, false);
             assertThat(changed).isEqualTo("Removed : old1, old2, old3, Added : Unrestricted access false");
         }
     }
