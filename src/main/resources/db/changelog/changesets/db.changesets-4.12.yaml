@@ -1,0 +1,138 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1763544960001-1
+      author: sankavi.mohanraj
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            # Firm must have at least one office
+            sql: "CREATE OR REPLACE FUNCTION check_firms_have_office() 
+                RETURNS trigger LANGUAGE plpgsql AS $$ 
+                BEGIN 
+                  IF EXISTS ( 
+                    SELECT 1 
+                    FROM firm f 
+                    WHERE NOT EXISTS ( 
+                      SELECT 1 FROM office o 
+                      WHERE o.firm_id = f.id 
+                    ) 
+                  ) THEN 
+                    RAISE EXCEPTION 'Firm must have at least one office'; 
+                  END IF; 
+                  IF TG_OP = 'DELETE' THEN 
+                    RETURN OLD; 
+                  ELSE 
+                    RETURN NEW; 
+                  END IF; 
+                END; 
+                $$"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE CONSTRAINT TRIGGER trg_check_firm_offices_on_office 
+                AFTER INSERT OR UPDATE OR DELETE ON office 
+                DEFERRABLE INITIALLY DEFERRED 
+                FOR EACH ROW 
+                EXECUTE FUNCTION check_firms_have_office();"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE CONSTRAINT TRIGGER trg_check_firm_offices_on_firm 
+                AFTER INSERT OR UPDATE OR DELETE ON firm 
+                DEFERRABLE INITIALLY DEFERRED 
+                FOR EACH ROW 
+                EXECUTE FUNCTION check_firms_have_office();"
+        # Office must match the firm assigned to user profile
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: "CREATE OR REPLACE FUNCTION check_user_profile_office_matches_firm() 
+                RETURNS trigger LANGUAGE plpgsql AS $func$ 
+                DECLARE 
+                  up_firm UUID; 
+                  office_firm UUID; 
+                BEGIN 
+                  SELECT firm_id INTO up_firm 
+                  FROM user_profile 
+                  WHERE id = NEW.user_profile_id; 
+                  IF up_firm IS NULL THEN 
+                    RETURN NEW; 
+                  END IF; 
+                  SELECT firm_id INTO office_firm 
+                  FROM office 
+                  WHERE id = NEW.office_id; 
+                  IF office_firm IS NULL THEN 
+                    RAISE EXCEPTION 'Office % has no firm assigned', NEW.office_id; 
+                  END IF; 
+                  IF office_firm <> up_firm THEN 
+                    RAISE EXCEPTION 'Office % does not belong to the user_profile''s firm', NEW.office_id; 
+                  END IF; 
+                  RETURN NEW; 
+                END; 
+                $func$"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE TRIGGER trg_user_profile_office_matches_firm 
+                BEFORE INSERT OR UPDATE OF office_id, user_profile_id 
+                ON user_profile_office 
+                FOR EACH ROW 
+                EXECUTE FUNCTION check_user_profile_office_matches_firm();"
+        # Don't allow ADVOCATE type firms to be a parent firm
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: "CREATE OR REPLACE FUNCTION check_parent_not_advocate() 
+                RETURNS trigger LANGUAGE plpgsql AS $pf$ 
+                DECLARE 
+                  parent_type VARCHAR(255); 
+                BEGIN 
+                  IF NEW.parent_firm_id IS NULL THEN 
+                    RETURN NEW; 
+                  END IF; 
+                  SELECT type INTO parent_type FROM firm 
+                  WHERE id = NEW.parent_firm_id; 
+                  IF parent_type = 'ADVOCATE' THEN 
+                    RAISE EXCEPTION 'ADVOCATE firms cannot be parent firms (parent=%)', NEW.parent_firm_id; 
+                  END IF; 
+                  RETURN NEW; 
+                END; 
+                $pf$"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE TRIGGER trg_parent_not_advocate 
+                BEFORE INSERT OR UPDATE OF parent_firm_id 
+                ON firm 
+                FOR EACH ROW 
+                EXECUTE FUNCTION check_parent_not_advocate();"
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: "CREATE OR REPLACE FUNCTION prevent_advocate_with_children_on_type_change() 
+                RETURNS trigger LANGUAGE plpgsql AS $pt$ 
+                BEGIN 
+                  IF NEW.type = 'ADVOCATE' AND EXISTS ( 
+                    SELECT 1 FROM firm f 
+                    WHERE f.parent_firm_id = NEW.id 
+                  ) THEN 
+                    RAISE EXCEPTION 'Cannot set firm to ADVOCATE while it is a parent (id=%)', NEW.id; 
+                  END IF; 
+                  RETURN NEW; 
+                END; 
+                $pt$"
+        - sql:
+            dbms: postgresql
+            sql: "CREATE TRIGGER trg_advocate_type_change_for_parent 
+                BEFORE UPDATE OF type 
+                ON firm 
+                FOR EACH ROW 
+                EXECUTE FUNCTION prevent_advocate_with_children_on_type_change();"
+      rollback:
+        - sql:
+            sql: "DROP TRIGGER IF EXISTS trg_advocate_type_change_for_parent ON firm; 
+                  DROP FUNCTION IF EXISTS prevent_advocate_with_children_on_type_change(); 
+                  DROP TRIGGER IF EXISTS trg_parent_not_advocate ON firm; 
+                  DROP FUNCTION IF EXISTS check_parent_not_advocate(); 
+                  DROP TRIGGER IF EXISTS trg_user_profile_office_matches_firm ON user_profile_office; 
+                  DROP FUNCTION IF EXISTS check_user_profile_office_matches_firm(); 
+                  DROP TRIGGER IF EXISTS trg_check_firm_offices_on_office ON office; 
+                  DROP TRIGGER IF EXISTS trg_check_firm_offices_on_firm ON firm; 
+                  DROP FUNCTION IF EXISTS check_firms_have_office();"

@@ -1,11 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import org.assertj.core.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -13,28 +20,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 @ExtendWith(MockitoExtension.class)
@@ -214,7 +214,6 @@ public class AccessControlServiceTest {
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         UUID accessedUserId = UUID.randomUUID();
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto2));
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com")
                 .build();
@@ -245,7 +244,6 @@ public class AccessControlServiceTest {
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(Collections.emptyList());
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
         UUID accessedUserId = UUID.randomUUID();
@@ -356,6 +354,102 @@ public class AccessControlServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertEquals(1, infoLogs.size());
         assertTrue(infoLogs.getFirst().toString().contains("does not have permission to edit this userId"));
+    }
+
+    @Test
+    public void testExternalParentFirmUserCanAccessChildFirmUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID parentFirmId = UUID.randomUUID();
+        UUID childFirmId = UUID.randomUUID();
+
+        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("parent@firm.test")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        Firm parent = Firm.builder().id(parentFirmId).build();
+        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
+        parent.setChildFirms(Set.of(child));
+        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
+        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
+        UserProfile authProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authUser)
+                .userType(UserType.EXTERNAL)
+                .firm(parent)
+                .appRoles(Set.of(authz))
+                .build();
+        authUser.getUserProfiles().add(authProfile);
+
+        UUID accessedProfileId = UUID.randomUUID();
+        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
+                .entraUser(accessedEntra).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        Mockito.when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
+                FirmDto.builder().id(parentFirmId).build(),
+                FirmDto.builder().id(childFirmId).build()));
+        Mockito.when(userService.getUserProfileById(accessedProfileId.toString()))
+                .thenReturn(Optional.of(accessedProfile));
+        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+
+        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+                .thenReturn(List.of(FirmDto.builder().id(childFirmId).build()));
+
+        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
+        Assertions.assertThat(canAccess).isTrue();
+    }
+
+    @Test
+    public void testExternalChildFirmUserCannotAccessParentFirmUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID parentFirmId = UUID.randomUUID();
+        UUID childFirmId = UUID.randomUUID();
+
+        EntraUser authUser = EntraUser.builder().id(UUID.randomUUID()).email("child@firm.test")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        Firm parent = Firm.builder().id(parentFirmId).build();
+        Firm child = Firm.builder().id(childFirmId).parentFirm(parent).build();
+        Permission viewExt = Permission.VIEW_EXTERNAL_USER;
+        AppRole authz = AppRole.builder().authzRole(true).permissions(Set.of(viewExt)).build();
+        UserProfile authProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authUser)
+                .userType(UserType.EXTERNAL)
+                .firm(child)
+                .appRoles(Set.of(authz))
+                .build();
+        authUser.getUserProfiles().add(authProfile);
+
+        UUID accessedProfileId = UUID.randomUUID();
+        EntraUserDto accessedEntra = EntraUserDto.builder().id(UUID.randomUUID().toString()).build();
+        UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
+                .entraUser(accessedEntra).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        Mockito.when(userService.getUserProfileById(accessedProfileId.toString()))
+                .thenReturn(Optional.of(accessedProfile));
+        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+
+        // Ensure logging path has a non-null CurrentUserDto to prevent NPE when access
+        // is denied
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("test");
+        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+
+        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+                .thenReturn(List.of(FirmDto.builder().id(parentFirmId).build()));
+
+        boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
+        Assertions.assertThat(canAccess).isFalse();
     }
 
     @Test
@@ -573,7 +667,8 @@ public class AccessControlServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         // Internal user with DELETE_EXTERNAL_USER permission
-        // Internal users should NOT be able to delete firm profiles (only provider admins can)
+        // Internal users should NOT be able to delete firm profiles (only provider
+        // admins can)
         UUID userId = UUID.randomUUID();
         Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(deletePermission)).build();
@@ -849,6 +944,297 @@ public class AccessControlServiceTest {
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCanViewAllFirmsOfMultiFirmUser_WithPermission() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        Permission viewAllMultiFirmPermission = Permission.VIEW_ALL_USER_MULTI_FIRM_PROFILES;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(viewAllMultiFirmPermission))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("admin@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+
+        boolean result = accessControlService.canViewAllFirmsOfMultiFirmUser();
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testCanViewAllFirmsOfMultiFirmUser_WithoutPermission() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        // User without VIEW_ALL_USER_MULTI_FIRM_PROFILES permission
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(Permission.VIEW_EXTERNAL_USER))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+
+        boolean result = accessControlService.canViewAllFirmsOfMultiFirmUser();
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testUserHasAuthzRole_WithMatchingRole() {
+        UUID userId = UUID.randomUUID();
+        AppRole globalAdminRole = AppRole.builder()
+                .name("Global Admin")
+                .authzRole(true)
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("admin@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(globalAdminRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testUserHasAuthzRole_WithoutMatchingRole() {
+        UUID userId = UUID.randomUUID();
+        AppRole someRole = AppRole.builder()
+                .name("Some Other Role")
+                .authzRole(true)
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(someRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testUserHasAuthzRole_CaseInsensitive() {
+        UUID userId = UUID.randomUUID();
+        AppRole globalAdminRole = AppRole.builder()
+                .name("Global Admin")
+                .authzRole(true)
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("admin@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(globalAdminRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasAuthzRole(user, "global admin");
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testUserHasAuthzRole_InactiveProfile() {
+        UUID userId = UUID.randomUUID();
+        AppRole globalAdminRole = AppRole.builder()
+                .name("Global Admin")
+                .authzRole(true)
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("admin@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile inactiveProfile = UserProfile.builder()
+                .activeProfile(false) // Inactive profile
+                .entraUser(user)
+                .appRoles(Set.of(globalAdminRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(inactiveProfile);
+
+        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testUserHasAnyGivenPermissions_WithMultiplePermissions() {
+        UUID userId = UUID.randomUUID();
+        Permission perm1 = Permission.VIEW_EXTERNAL_USER;
+        Permission perm2 = Permission.EDIT_EXTERNAL_USER;
+        Permission perm3 = Permission.DELETE_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(perm1, perm2))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("admin@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasAnyGivenPermissions(user, perm1, perm3);
+        Assertions.assertThat(result).isTrue(); // Has perm1
+    }
+
+    @Test
+    public void testUserHasAnyGivenPermissions_WithNoMatchingPermissions() {
+        UUID userId = UUID.randomUUID();
+        Permission perm1 = Permission.VIEW_EXTERNAL_USER;
+        Permission perm2 = Permission.EDIT_EXTERNAL_USER;
+        Permission perm3 = Permission.DELETE_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(perm1))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasAnyGivenPermissions(user, perm2, perm3);
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testUserHasPermission_SinglePermission() {
+        UUID userId = UUID.randomUUID();
+        Permission permission = Permission.VIEW_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(permission))
+                .build();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        boolean result = AccessControlService.userHasPermission(user, permission);
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testAuthenticatedUserIsInternalReturnsTrueWhenUserIsInternal() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .userType(UserType.INTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        boolean internal = accessControlService.authenticatedUserIsInternal();
+        Assertions.assertThat(internal).isTrue();
+    }
+
+    @Test
+    public void testAuthenticatedUserIsExternalReturnsFalseWhenUserIsExternal() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .email("user@example.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(user)
+                .userType(UserType.EXTERNAL)
+                .build();
+        user.getUserProfiles().add(userProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+        boolean internal = accessControlService.authenticatedUserIsInternal();
+        Assertions.assertThat(internal).isFalse();
     }
 
 }

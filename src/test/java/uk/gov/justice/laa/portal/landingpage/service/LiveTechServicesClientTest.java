@@ -29,7 +29,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
@@ -525,6 +524,36 @@ public class LiveTechServicesClientTest {
 
         assertLogMessage(Level.INFO, "Sending Resend verification email request to tech services");
         assertLogMessage(Level.ERROR, "Failed to send verification email fo");
+
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testSendEmailVerificationReturns425() {
+        AccessToken token = new AccessToken("token", null);
+
+        String errorBody = """
+                {
+                    "success": false,
+                    "code": "RECENTLY_TRIGGERED",
+                    "message": "An activation code was recently sent. Please wait before requesting another."
+                }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.TOO_EARLY,
+                "Too early", null, errorBody.getBytes(), null);
+
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(restClient.post()).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        String userId = UUID.randomUUID().toString();
+        EntraUserDto user = EntraUserDto.builder().id(userId).email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName")
+                .userStatus(UserStatus.ACTIVE).build();
+
+        liveTechServicesClient.sendEmailVerification(user);
+
+        assertLogMessage(Level.INFO, "Sending Resend verification email request to tech services");
+        assertLogMessage(Level.INFO, "Failed to send verification email for firstName lastName");
 
         verify(restClient, times(1)).post();
     }

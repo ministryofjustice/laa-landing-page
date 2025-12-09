@@ -86,7 +86,7 @@
                                         <a class="govuk-link" href="/admin/user/create/details">Change</a>
                                     </dd>
                                 </div>
-                                <div class="govuk-summary-list__row" th:if="${enableMultiFirmUser}">
+                                <div class="govuk-summary-list__row">
                                     <dt class="govuk-summary-list__key">Multi-firm access</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
@@ -121,7 +121,7 @@
                     </p>
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button"
-                            onclick="this.disabled=true; this.form.submit();">Confirm</button>
+                            onclick="this.disabled=true; this.form.submit();">Create new user</button>
                         <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
                     </div>
 

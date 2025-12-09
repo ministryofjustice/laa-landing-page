@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,14 +16,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,6 +43,12 @@ class RestUtilTest {
     private RestTemplate mockRestTemplate;
     @Captor
     private ArgumentCaptor<HttpEntity<?>> httpEntityCaptor;
+    private MockHttpSession mockHttpSession;
+
+    @BeforeEach
+    void setUp() {
+        mockHttpSession = new MockHttpSession();
+    }
 
     @Test
     void getGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
@@ -201,6 +210,67 @@ class RestUtilTest {
         Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(null);
         Optional<List<String>> returnedInt = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedInt.isEmpty());
+    }
+
+    @Test
+    void testGettingObjectFromSessionHandlesEmpty() {
+        HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
+        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(new ArrayList<>());
+        Optional<List<String>> returnedList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
+        Assertions.assertTrue(returnedList.isPresent());
+        Assertions.assertTrue(returnedList.get().isEmpty());
+    }
+
+    @Test
+    void testGettingSetFromSessionReturnsPopulatedOptionalWhenTypeIsCorrect() {
+        Object o = Set.of("TestValue1", "TestValue2", "TestValue3");
+        mockHttpSession.setAttribute("test", o);
+        Optional<Set<String>> stringSet = RestUtils.getSetFromHttpSession(mockHttpSession, "test", String.class);
+        Assertions.assertTrue(stringSet.isPresent());
+        Assertions.assertEquals(3, stringSet.get().size());
+    }
+
+    @Test
+    void testGettingSettFromSessionReturnsPopulatedOptionalWhenTypeIsCorrectAndListContainsNulls() {
+        // Given
+
+        // Setup list with some null values
+        Set<String> set = new HashSet<>();
+        set.add("TestValue1");
+        set.add(null);
+        set.add("TestValue3");
+        Object o = set;
+        // Have httpSession return above list as object.
+        mockHttpSession.setAttribute("test", o);
+        // When
+        Optional<Set<String>> stringList = RestUtils.getSetFromHttpSession(mockHttpSession, "test", String.class);
+
+        // Then
+        Assertions.assertTrue(stringList.isPresent());
+        Assertions.assertEquals(3, stringList.get().size());
+    }
+
+    @Test
+    void testGettingSetFromSessionReturnsEmptyOptionalWhenTypeIsIncorrect() {
+        Object o = Set.of("TestValue1", "TestValue2", "TestValue3");
+        mockHttpSession.setAttribute("test", o);
+        Optional<Set<Integer>> integerSet = RestUtils.getSetFromHttpSession(mockHttpSession, "test", Integer.class);
+        Assertions.assertTrue(integerSet.isEmpty());
+    }
+
+    @Test
+    void testGettingSetFromSessionHandlesNulls() {
+        mockHttpSession.removeAttribute("test");
+        Optional<Set<String>> returnedInt = RestUtils.getSetFromHttpSession(mockHttpSession, "test", String.class);
+        Assertions.assertTrue(returnedInt.isEmpty());
+    }
+
+    @Test
+    void testGettingSetObjectFromSessionHandlesEmpty() {
+        mockHttpSession.setAttribute("test", new HashSet<>());
+        Optional<Set<String>> returnedSet = RestUtils.getSetFromHttpSession(mockHttpSession, "test", String.class);
+        Assertions.assertTrue(returnedSet.isPresent());
+        Assertions.assertTrue(returnedSet.get().isEmpty());
     }
 
 }

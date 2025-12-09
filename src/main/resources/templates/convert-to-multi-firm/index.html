@@ -11,13 +11,13 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{'/admin/users/manage/' + ${user.id}}">
-            Back</a>
+        <a class="govuk-back-link" th:href="@{/admin/users/manage/{id}(id=${user.id})}">
+            Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-two-thirds">
-                <form th:action="@{'/admin/users/edit/' + ${user.id} + '/convert-to-multi-firm'}" th:method="post" th:object="${convertToMultiFirmForm}">
+                <form th:action="@{/admin/users/edit/{id}/convert-to-multi-firm(id=${user.id})}" th:method="post" th:object="${convertToMultiFirmForm}">
                     <div th:if="${#fields.hasErrors()}">
                         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                             aria-describedby="error-summary-description" data-module="govuk-error-summary">

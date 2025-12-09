@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,8 +64,9 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
                 .findFirst()
                 .orElseThrow();
 
-        Office newOffice = differentFirm.getOffices()
-                .stream()
+        List<Office> offices = officeRepository.findOfficeByFirm_IdIn(List.of(differentFirm.getId()));
+        
+        Office newOffice = offices.stream()
                 .findFirst()
                 .orElseThrow();
 
@@ -119,8 +121,9 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
                 .findFirst()
                 .orElseThrow();
 
-        Office newOffice = differentFirm.getOffices()
-                .stream()
+        List<Office> offices = officeRepository.findOfficeByFirm_IdIn(List.of(differentFirm.getId()));
+        
+        Office newOffice = offices.stream()
                 .findFirst()
                 .orElseThrow();
 

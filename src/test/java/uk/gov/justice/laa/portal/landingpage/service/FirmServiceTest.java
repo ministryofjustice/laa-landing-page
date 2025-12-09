@@ -242,9 +242,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", false, false),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", false, false),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", false, false)
+                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false),
+                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false),
+                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false)
             );
 
             // Setup cache mock
@@ -748,6 +748,75 @@ class FirmServiceTest {
                     .containsExactly("Alpha");
         }
 
+    }
+
+    @Nested
+    class FirmHierarchyHelperTests {
+        @Test
+        void firmMatchesQuery_shouldMatchOnName_caseInsensitive() {
+            Firm firm = Firm.builder().name("Alpha Legal").code("ALP01").build();
+            assertThat(firmService.firmMatchesQuery(firm, "alpha")).isTrue();
+            assertThat(firmService.firmMatchesQuery(firm, "LEGAL")).isTrue();
+        }
+
+        @Test
+        void firmMatchesQuery_shouldMatchOnCode_caseInsensitive() {
+            Firm firm = Firm.builder().name("Beta Legal").code("BETA99").build();
+            assertThat(firmService.firmMatchesQuery(firm, "beta99")).isTrue();
+            assertThat(firmService.firmMatchesQuery(firm, "BETA")).isTrue();
+        }
+
+        @Test
+        void firmMatchesQuery_shouldHandleNulls() {
+            Firm firmWithNulls = Firm.builder().name(null).code(null).build();
+            assertThat(firmService.firmMatchesQuery(firmWithNulls, "x")).isFalse();
+            assertThat(firmService.firmMatchesQuery(null, "x")).isFalse();
+        }
+
+        @Test
+        void getFilteredChildFirms_noQuery_returnsAllChildren() {
+            Firm child1 = Firm.builder().name("Child A").code("CA").build();
+            Firm child2 = Firm.builder().name("Child B").code("CB").build();
+            Firm parent = Firm.builder().name("Parent").childFirms(Set.of(child1, child2)).build();
+
+            List<Firm> result = firmService.getFilteredChildFirms(parent, null);
+            assertThat(result).containsExactlyInAnyOrder(child1, child2);
+        }
+
+        @Test
+        void getFilteredChildFirms_withQuery_filtersChildren() {
+            Firm child1 = Firm.builder().name("Alpha LLP").code("A1").build();
+            Firm child2 = Firm.builder().name("Beta Law").code("B2").build();
+            Firm parent = Firm.builder().name("Parent").childFirms(Set.of(child1, child2)).build();
+
+            List<Firm> resultByName = firmService.getFilteredChildFirms(parent, "alpha");
+            assertThat(resultByName).containsExactly(child1);
+
+            List<Firm> resultByCode = firmService.getFilteredChildFirms(parent, "b2");
+            assertThat(resultByCode).containsExactly(child2);
+        }
+
+        @Test
+        void getFilteredChildFirms_nullChildren_returnsEmptyList() {
+            Firm parent = Firm.builder().name("Parent").build();
+            List<Firm> result = firmService.getFilteredChildFirms(parent, "any");
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void includeParentFirm_noQuery_returnsTrue() {
+            Firm parent = Firm.builder().name("Parent").code("P1").build();
+            assertThat(firmService.includeParentFirm(parent, null)).isTrue();
+            assertThat(firmService.includeParentFirm(parent, "   ")).isTrue();
+        }
+
+        @Test
+        void includeParentFirm_withQuery_matchesOnNameOrCode() {
+            Firm parent = Firm.builder().name("Gamma Law").code("GL123").build();
+            assertThat(firmService.includeParentFirm(parent, "gamma")).isTrue();
+            assertThat(firmService.includeParentFirm(parent, "gl123")).isTrue();
+            assertThat(firmService.includeParentFirm(parent, "zzz")).isFalse();
+        }
     }
 
 }

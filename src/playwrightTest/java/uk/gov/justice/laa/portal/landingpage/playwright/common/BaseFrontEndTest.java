@@ -5,15 +5,26 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.extension.TestWatcher;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@Testcontainers
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class BaseFrontEndTest {
     private static final Logger LOGGER = Logger.getLogger(BaseFrontEndTest.class.getName());
     private static final String CONFIG_FILE = "src/playwrightTest/resources/playwright.properties";
@@ -23,56 +34,81 @@ public abstract class BaseFrontEndTest {
     protected static Page page;
     protected static Properties config;
 
+    @LocalServerPort
+    protected int port;
+
+    @Container
+    @ServiceConnection
+    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
+            .withDatabaseName("test_db")
+            .withUsername("postgres")
+            .withPassword("password");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgresContainer::getUsername);
+        registry.add("spring.datasource.password", postgresContainer::getPassword);
+    }
+
     @RegisterExtension
     TestWatcher screenshotOnFailure = new ScreenshotWatcher();
 
-    @BeforeAll
-    static void setup() throws IOException {
+    @BeforeEach
+    void setup() throws IOException {
         loadConfig();
         initializeBrowser();
-        performLogin();
+        // Removed performLogin() to let each test decide which user to log in as
     }
 
     @AfterAll
     static void tearDown() {
-        ResourceCloser.closeAll(page, browser, playwright);
+        if (page != null) {
+            page.close();
+        }
+        if (browser != null) {
+            browser.close();
+        }
+        if (playwright != null) {
+            playwright.close();
+        }
     }
 
     private static void loadConfig() throws IOException {
-        config = new Properties();
-        try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
-            config.load(input);
+        if (config == null) {
+            config = new Properties();
+            try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
+                config.load(input);
+            }
         }
     }
 
     private static void initializeBrowser() {
-        LOGGER.info("Initializing browser...");
-        playwright = Playwright.create();
+        if (playwright == null) {
+            playwright = Playwright.create();
+        }
         boolean headless = Boolean.parseBoolean(config.getProperty("app.playwright.headless", "false"));
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
-        page = browser.newPage();
+        if (browser == null) {
+            browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
+        }
+        if (page == null) {
+            page = browser.newPage();
+        }
     }
 
-    private static void performLogin() {
-        LOGGER.info("Performing login...");
+    /**
+     * Navigate to the login page as the specified test user.
+     *
+     * @param userEmail the email of the test user
+     */
+    protected void loginAs(String userEmail) {
+        LOGGER.info("Logging in as " + userEmail);
         try {
-            // Use properties for URL, username, and password
-            String url = config.getProperty("laa.landing.page.url");
-            final String username = config.getProperty("laa.landing.page.user");
-            final String password = config.getProperty("laa.landing.page.password");
-
+            String url = String.format("http://localhost:%d/playwright/login?email=%s", port, userEmail);
             page.navigate(url);
-            page.locator("[id='i0116']").fill(username);
-            page.getByText("Next").click();
-            page.locator("[id='i0118']").fill(password);
-            page.waitForTimeout(1000);
-            page.locator("input[type='submit'][value='Sign in']").click();
-
-            // page.getByText("Yes").click();
-
-            LOGGER.info("Login successful");
+            LOGGER.info("Login complete for " + userEmail);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Login failed", e);
+            LOGGER.log(Level.SEVERE, "Login failed for " + userEmail, e);
             throw e;
         }
     }
