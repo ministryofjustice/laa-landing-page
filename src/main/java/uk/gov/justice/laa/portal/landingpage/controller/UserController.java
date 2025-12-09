@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1724,8 +1725,8 @@ public class UserController {
 
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
-        List<String> selectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
-                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList()));
+        Set<String> selectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
+                .orElseGet(() -> userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toSet()));
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -1821,9 +1822,9 @@ public class UserController {
             session.removeAttribute("grantAccessUserRolesModel");
             session.removeAttribute("grantAccessAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
-            List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
+            Set<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
-                    .toList();
+                    .collect(Collectors.toSet());
             List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
                     .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
@@ -1992,7 +1993,7 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         // Get user's current app roles from session
-        List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+        Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
                 .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
@@ -2082,7 +2083,7 @@ public class UserController {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
 
-            List<String> allSelectedRoles = getListFromHttpSession(session, "allSelectedRoles", String.class)
+            Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
                     .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);

@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -4918,9 +4918,9 @@ class UserControllerTest {
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
 
-        List<String> selectedRoles = userAppRoles.stream()
+        Set<String> selectedRoles = userAppRoles.stream()
                 .map(AppRoleDto::getId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
         List<String> selectedOffices = userOffices.stream()
                 .map(map -> map.getId().toString())
                 .collect(Collectors.toList());
@@ -4975,9 +4975,9 @@ class UserControllerTest {
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
 
-        List<String> selectedRoles = userAppRoles.stream()
+        Set<String> selectedRoles = userAppRoles.stream()
                 .map(AppRoleDto::getId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
         List<String> selectedOffices = userOffices.stream()
                 .map(map -> map.getId().toString())
                 .collect(Collectors.toList());
@@ -5044,7 +5044,7 @@ class UserControllerTest {
         OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code(office.getCode()).build();
         List<OfficeDto> userOffices = List.of(officeDto);
 
-        List<String> selectedRoles = List.of("ALL");
+        Set<String> selectedRoles = Set.of("ALL");
         List<String> selectedOffices = userOffices.stream()
                 .map(map -> map.getId().toString())
                 .collect(Collectors.toList());
@@ -5100,7 +5100,7 @@ class UserControllerTest {
 
         MockHttpSession testSession = new MockHttpSession();
 
-        List<String> selectedRoles = List.of("Role 1");
+        Set<String> selectedRoles = Set.of("Role 1");
         List<String> selectedOffices = List.of("Office 1");
 
         testSession.setAttribute("allSelectedRoles", selectedRoles);
@@ -5108,7 +5108,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
-        when(roleAssignmentService.canAssignRole(any(), anyList())).thenReturn(true);
+        when(roleAssignmentService.canAssignRole(any(), anyCollection())).thenReturn(true);
 
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
@@ -5123,7 +5123,7 @@ class UserControllerTest {
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
 
-        verify(userService, times(1)).updateUserRoles(any(), anyList(), anyList(), any());
+        verify(userService, times(1)).updateUserRoles(any(), anyCollection(), anyList(), any());
         verify(eventService, times(3)).logEvent(any());
         verify(userService, times(1)).grantAccess(userId, currentUserDto.getName());
 
@@ -5179,7 +5179,7 @@ class UserControllerTest {
         currentUserDto.setName("admin user");
 
         MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("allSelectedRoles", List.of("Role 1"));
+        testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
