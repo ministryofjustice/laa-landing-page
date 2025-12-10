@@ -2040,8 +2040,8 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
-        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals(ALL));
-        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals(NO_OFFICES));
+        model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
+        model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
