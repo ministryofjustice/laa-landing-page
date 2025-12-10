@@ -6,6 +6,7 @@ public enum Permission {
     ACCESS_LAA_APPS, // Not used.
     VIEW_INTERNAL_USER,
     VIEW_EXTERNAL_USER,
+    VIEW_ALL_USER_MULTI_FIRM_PROFILES,
     CREATE_INTERNAL_USER,
     CREATE_EXTERNAL_USER,
     EDIT_INTERNAL_USER,
@@ -15,7 +16,10 @@ public enum Permission {
     VIEW_USER_OFFICE,
     EDIT_USER_DETAILS,
     DELEGATE_EXTERNAL_USER_ACCESS,
-    DELETE_EXTERNAL_USER;
+    DELETE_EXTERNAL_USER,
+    DELETE_AUDIT_USER,
+    VIEW_AUDIT_TABLE,
+    TRIGGER_CCMS_ROLE_SYNC;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),
@@ -28,6 +32,9 @@ public enum Permission {
             EDIT_USER_OFFICE.name(),
             VIEW_USER_OFFICE.name(),
             EDIT_USER_DETAILS.name(),
-            DELETE_EXTERNAL_USER.name()
+            DELETE_EXTERNAL_USER.name(),
+            DELETE_AUDIT_USER.name(),
+            VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(),
+            VIEW_AUDIT_TABLE.name()
     };
 }

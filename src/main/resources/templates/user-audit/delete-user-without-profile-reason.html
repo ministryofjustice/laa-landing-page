@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'delete-user-reason'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${'Remove access - ' + user.fullName}">Remove access</title>
+</head>
+<body>
+<main class="govuk-main-wrapper" id="main-content">
+    <div th:if="${globalErrorMessage}">
+        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+             aria-describedby="error-summary-description" data-module="govuk-error-summary">
+            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                There is a problem
+            </h2>
+            <div class="govuk-error-summary__body" id="error-summary-description">
+                <ul class="govuk-list govuk-error-summary__list">
+                    <li th:text="${globalErrorMessage}"></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <a class="govuk-back-link" th:href="@{'/admin/users/audit/' + ${user.userId} + '?isEntraId=true'}">Back</a>
+
+    <h1 class="govuk-heading-l">
+        Are you sure you want to remove access for <span th:text="${user.fullName}"></span>?
+    </h1>
+
+    <p class="govuk-body">This user has no firm profile or service assignments. This will remove the user's account from SiLAS right away and notify Microsoft Entra to remove their access. Their account may still be active for a short time until Microsoft fully processes the deletion.</p>
+
+    <form th:action="@{'/admin/users/audit/entra/' + ${user.userId} + '/delete'}" method="post" novalidate>
+        <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
+            <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">Please enter a reason (minimum 10 characters).</label>
+            <span class="govuk-error-message" th:if="${fieldErrorMessage}">
+                <span class="govuk-visually-hidden">Error:</span>
+                <span th:text="${fieldErrorMessage}"></span>
+            </span>
+            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:classappend="${fieldErrorMessage} ? 'govuk-textarea--error' : ''" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
+        </div>
+
+        <div class="moj-button-group">
+            <button type="submit" class="govuk-button govuk-button--warning" data-module="govuk-button">
+                Confirm and delete user
+            </button>
+            <a class="govuk-link" th:href="@{'/admin/users/audit/' + ${user.userId} + '?isEntraId=true'}">Cancel</a>
+        </div>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    </form>
+</main>
+</body>
+</html>

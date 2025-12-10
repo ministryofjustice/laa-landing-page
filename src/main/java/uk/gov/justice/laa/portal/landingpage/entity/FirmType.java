@@ -5,22 +5,15 @@ import lombok.Getter;
 @Getter
 public enum FirmType {
 
-    ADVOCATE("Advocate"),
-    CHAMBERS("Chambers"),
-    INDIVIDUAL("Individual"),
-    LEGAL_SERVICES_PROVIDER("Legal Services Provider"),
-    QM_PROVIDER("QM Provider"),
-    PARTNERSHIP("Partnership"),
-    LIMITED_COMPANY("Limited Company"),
-    LLP("LLP"),
-    SOLE_PRACTITIONER("Sole Practitioner"),
-    CHARITY("Charity"),
-    GOVERNMENT_FUNDED_ORGANISATION("Government Funded Organisation"),
-    NA("N/A");
+    LEGAL_SERVICES_PROVIDER(1, "Provider"),
+    CHAMBERS(2, "Chambers"),
+    ADVOCATE(3, "Advocate");
 
+    private final int ordinal;
     private final String value;
 
-    FirmType(String value) {
+    FirmType(int ordinal, String value) {
+        this.ordinal = ordinal;
         this.value = value;
     }
 

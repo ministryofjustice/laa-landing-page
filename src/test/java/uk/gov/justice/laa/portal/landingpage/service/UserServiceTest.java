@@ -1,72 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.core.requests.BatchRequestBuilder;
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
-import com.microsoft.graph.models.DirectoryRole;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.models.UserCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.users.UsersRequestBuilder;
-import com.microsoft.graph.users.item.UserItemRequestBuilder;
-import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
-import com.microsoft.kiota.RequestAdapter;
-import com.microsoft.kiota.RequestInformation;
-import okhttp3.Request;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
-import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
-import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -85,17 +18,92 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
+import com.microsoft.graph.core.content.BatchRequestContent;
+import com.microsoft.graph.core.content.BatchResponseContent;
+import com.microsoft.graph.core.requests.BatchRequestBuilder;
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.DirectoryRole;
+import com.microsoft.graph.models.User;
+import com.microsoft.graph.models.UserCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.users.UsersRequestBuilder;
+import com.microsoft.graph.users.item.UserItemRequestBuilder;
+import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
+import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.RequestInformation;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import okhttp3.Request;
+import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
+import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -713,7 +721,8 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).entraUser(entraUser)
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true)
+                .entraUser(entraUser)
                 .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
@@ -755,7 +764,8 @@ class UserServiceTest {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString())
+                .userProfiles(HashSet.newHashSet(1)).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).entraUser(entraUser).build();
         entraUser.getUserProfiles().add(userProfile);
 
@@ -774,7 +784,8 @@ class UserServiceTest {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString())
+                .userProfiles(HashSet.newHashSet(1)).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(false).entraUser(entraUser).build();
         entraUser.getUserProfiles().add(userProfile);
 
@@ -833,8 +844,7 @@ class UserServiceTest {
         List<LaaApplication> applications = Arrays.asList(
                 LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
                 LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
-                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build()
-        );
+                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build());
         when(laaApplicationsList.getApplications()).thenReturn(applications);
         // When
         Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -853,7 +863,8 @@ class UserServiceTest {
     public void getActiveProfileByUserId() {
         // Given
         UUID userId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString())
+                .userProfiles(HashSet.newHashSet(1)).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).entraUser(entraUser).build();
         entraUser.getUserProfiles().add(userProfile);
 
@@ -887,7 +898,8 @@ class UserServiceTest {
         // Given
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
         UUID userId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString()).userProfiles(HashSet.newHashSet(1)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).entraOid(userId.toString())
+                .userProfiles(HashSet.newHashSet(1)).build();
 
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
 
@@ -978,7 +990,8 @@ class UserServiceTest {
     @Test
     public void testFindEntraUserByEmail() {
         // Given
-        when(mockEntraUserRepository.findByEmailIgnoreCase(any())).thenReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+        when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                .thenReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
         // When
         Optional<EntraUser> optionalReturnedUser = userService.findEntraUserByEmail("test@test.com");
         // Then
@@ -1143,9 +1156,12 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL}).build();
-        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
-        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        AppRole appRole = AppRole.builder().id(roleId)
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL }).build();
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+                .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
+                .build();
         userProfile.setEntraUser(user);
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
@@ -1153,10 +1169,12 @@ class UserServiceTest {
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build())).build();
+                        .userType(UserType.EXTERNAL).build()))
+                .build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
+        userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(),
+                modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1170,8 +1188,10 @@ class UserServiceTest {
         UUID userProfileId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
-        UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true)
+                .userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1180,10 +1200,12 @@ class UserServiceTest {
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build())).build();
+                        .userType(UserType.EXTERNAL).build()))
+                .build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
+        userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(),
+                modifierId);
 
         // Assert
         assertThat(userProfile.getAppRoles()).containsExactly(appRole);
@@ -1195,15 +1217,18 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
-        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.INTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.INTERNAL })
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.INTERNAL)
+                .build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build())).build();
+                        .userType(UserType.EXTERNAL).build()))
+                .build();
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
@@ -1222,25 +1247,31 @@ class UserServiceTest {
         UUID roleId = UUID.randomUUID();
         UUID roleId2 = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).ordinal(1).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
-        AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2).userTypeRestriction(new UserType[] {UserType.EXTERNAL}).build();
-        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
+        AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
+                .build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build())).build();
+                        .userType(UserType.EXTERNAL).build()))
+                .build();
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         // Act
-        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()), modifierId);
+        userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()),
+                modifierId);
 
         // Assert
-        List<AppRole> results = userProfile.getAppRoles().stream().sorted(Comparator.comparingInt(AppRole::getOrdinal)).toList();
+        List<AppRole> results = userProfile.getAppRoles().stream().sorted(Comparator.comparingInt(AppRole::getOrdinal))
+                .toList();
         assertThat(results).containsExactly(appRole, appRole2);
     }
 
@@ -1250,14 +1281,17 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         UUID roleId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
-        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
-        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL).build();
+        AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.INTERNAL })
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
+                .build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build())).build();
+                        .userType(UserType.EXTERNAL).build()))
+                .build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
@@ -1369,19 +1403,19 @@ class UserServiceTest {
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
                 .ordinal(2)
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .app(testApp)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
                 .ordinal(3)
-                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                 .app(testApp)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
                 .ordinal(1)
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL })
                 .app(testApp)
                 .build();
 
@@ -1389,11 +1423,12 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.INTERNAL);
+                UserType.INTERNAL, null);
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
-                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction())).anyMatch(userType -> userType == UserType.INTERNAL));
+                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
+                        .anyMatch(userType -> userType == UserType.INTERNAL));
         Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
         Assertions.assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
     }
@@ -1405,19 +1440,19 @@ class UserServiceTest {
                 .build();
         AppRole internalRole = AppRole.builder()
                 .name("Test Internal Role")
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .app(testApp)
                 .ordinal(2)
                 .build();
         AppRole externalRole = AppRole.builder()
                 .name("Test External Role")
-                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                 .app(testApp)
                 .ordinal(3)
                 .build();
         AppRole internalAndExternalRole = AppRole.builder()
                 .name("Test Internal And External Role")
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL })
                 .ordinal(1)
                 .app(testApp)
                 .build();
@@ -1426,11 +1461,12 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL);
+                UserType.EXTERNAL, null);
         Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
-                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction())).anyMatch(userType -> userType == UserType.EXTERNAL));
+                .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
+                        .anyMatch(userType -> userType == UserType.EXTERNAL));
         Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
         Assertions.assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
     }
@@ -1439,8 +1475,226 @@ class UserServiceTest {
     public void testGetAppRolesByAppIdAndUserTypeReturnsEmptyListWhenAppIdIsNotFound() {
         when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
-                UserType.EXTERNAL);
+                UserType.EXTERNAL, null);
         Assertions.assertEquals(0, returnedAppRoles.size());
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersByFirmTypeWhenRestrictionExists() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
+
+        Assertions.assertEquals(2, chambersRoles.size());
+        Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions
+                .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersByFirmTypeForAdvocateFirm() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
+
+        Assertions.assertEquals(2, advocateRoles.size());
+        Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        Assertions
+                .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeIncludesOnlyUnrestrictedRolesWhenNoFirmTypeProvided() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, null);
+
+        Assertions.assertEquals(1, unrestrictedRoles.size());
+        Assertions.assertTrue(
+                unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions
+                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeFiltersOnlyRolesWithNoFirmRestrictionWhenFirmTypeDoesNotMatch() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole chambersOnlyRole = AppRole.builder()
+                .name("Chambers Only Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole advocateOnlyRole = AppRole.builder()
+                .name("Advocate Only Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        AppRole noFirmRestrictionRole = AppRole.builder()
+                .name("No Firm Restriction Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(null)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(chambersOnlyRole, advocateOnlyRole, noFirmRestrictionRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
+
+        Assertions.assertEquals(1, lspRoles.size());
+        Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
+        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+    }
+
+    @Test
+    public void testGetAppRolesByAppIdAndUserTypeCombinesUserTypeAndFirmTypeFiltering() {
+        App testApp = App.builder()
+                .name("Test App")
+                .build();
+
+        AppRole internalChambersRole = AppRole.builder()
+                .name("Internal Chambers Role")
+                .ordinal(1)
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole externalChambersRole = AppRole.builder()
+                .name("External Chambers Role")
+                .ordinal(2)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.CHAMBERS)
+                .app(testApp)
+                .build();
+
+        AppRole externalAdvocateRole = AppRole.builder()
+                .name("External Advocate Role")
+                .ordinal(3)
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .firmTypeRestriction(FirmType.ADVOCATE)
+                .app(testApp)
+                .build();
+
+        testApp.setAppRoles(Set.of(internalChambersRole, externalChambersRole, externalAdvocateRole));
+        when(mockAppRepository.findById(any())).thenReturn(Optional.of(testApp));
+
+        List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
+                UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
+
+        Assertions.assertEquals(1, externalChambersRoles.size());
+        Assertions.assertTrue(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
+        Assertions.assertFalse(
+                externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
     }
 
     @Test
@@ -1537,7 +1791,8 @@ class UserServiceTest {
         UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_INTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
-        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).appRoles(Set.of(appRole)).build());
+        Set<UserProfile> userProfiles = Set.of(UserProfile.builder().activeProfile(true).userType(UserType.INTERNAL)
+                .userProfileStatus(UserProfileStatus.COMPLETE).appRoles(Set.of(appRole)).build());
         EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
         assertThat(userService.isInternal(entraUser.getId())).isTrue();
@@ -1641,7 +1896,8 @@ class UserServiceTest {
             UUID officeId1 = UUID.randomUUID();
             UUID officeId2 = UUID.randomUUID();
 
-            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city")
+                    .postcode("pst_code").build();
             Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
             Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
 
@@ -1678,7 +1934,8 @@ class UserServiceTest {
         void getUserOfficesByUserId_returnsEmptyList_whenUserHasNoOffices() {
             // Arrange
             UUID userProfileId = UUID.randomUUID();
-            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true).offices(new HashSet<>()).userProfileStatus(UserProfileStatus.COMPLETE).build();
+            UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true)
+                    .offices(new HashSet<>()).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
@@ -1697,7 +1954,8 @@ class UserServiceTest {
             UUID officeId2 = UUID.randomUUID();
             UUID officeId3 = UUID.randomUUID();
 
-            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city")
+                    .postcode("pst_code").build();
             Office office1 = Office.builder().id(officeId1).code("Office 1").address(address).build();
             Office office2 = Office.builder().id(officeId2).code("Office 2").address(address).build();
             Office office3 = Office.builder().id(officeId3).code("Office 3").address(address).build();
@@ -1715,7 +1973,8 @@ class UserServiceTest {
 
             // Assert
             assertThat(result).hasSize(3);
-            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2", "Office 3");
+            assertThat(result).extracting(OfficeDto::getCode).containsExactlyInAnyOrder("Office 1", "Office 2",
+                    "Office 3");
         }
     }
 
@@ -1764,7 +2023,8 @@ class UserServiceTest {
 
             Firm userFirm = Firm.builder().id(firmId).build();
 
-            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city")
+                    .postcode("pst_code").build();
             Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
             Office office2 = Office.builder().id(officeId2).code("of2").address(address).firm(userFirm).build();
 
@@ -1808,7 +2068,8 @@ class UserServiceTest {
 
             Firm userFirm = Firm.builder().id(firmId).build();
 
-            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city")
+                    .postcode("pst_code").build();
             Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
             Office office2 = Office.builder().id(officeId2).code("of2").address(address).firm(userFirm).build();
 
@@ -1861,7 +2122,8 @@ class UserServiceTest {
 
             Firm userFirm = Firm.builder().id(firmId).build();
 
-            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city").postcode("pst_code").build();
+            Office.Address address = Office.Address.builder().addressLine1("addressLine1").city("city")
+                    .postcode("pst_code").build();
             Office office1 = Office.builder().id(officeId1).code("of1").address(address).firm(userFirm).build();
             Office office2 = Office.builder().id(officeId2).code("of2").address(address).build();
 
@@ -2220,8 +2482,7 @@ class UserServiceTest {
                     LaaApplication.builder().name("App A").ordinal(1).description("Default description for App A")
                             .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
                                     .appAssigned("App B")
-                                    .description("Alternative description for App A").build()
-                            )
+                                    .description("Alternative description for App A").build())
                             .build(),
                     LaaApplication.builder().name("App B").ordinal(2).build());
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
@@ -2269,8 +2530,7 @@ class UserServiceTest {
                     LaaApplication.builder().name("App A").ordinal(1)
                             .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
                                     .appAssigned("App B")
-                                    .description("Alternative description for App A").build()
-                            )
+                                    .description("Alternative description for App A").build())
                             .build(),
                     LaaApplication.builder().name("App B").ordinal(2).build());
             when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
@@ -2362,7 +2622,8 @@ class UserServiceTest {
             RuntimeException rtEx = assertThrows(RuntimeException.class,
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
-            assertThat(rtEx.getMessage()).isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
+            assertThat(rtEx.getMessage())
+                    .isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
@@ -2492,7 +2753,8 @@ class UserServiceTest {
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
-            // Act - Note: isUserManager flag is ignored for multi-firm users since no profile is created
+            // Act - Note: isUserManager flag is ignored for multi-firm users since no
+            // profile is created
             EntraUser result = userService.createUser(user, firmDto, true, "admin", true);
 
             // Assert
@@ -2656,8 +2918,10 @@ class UserServiceTest {
             UUID userId = UUID.randomUUID();
             UUID profileId = UUID.randomUUID();
             UUID entraOid = UUID.randomUUID();
-            UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userType(UserType.INTERNAL).build();
-            EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+            UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+                    .userType(UserType.INTERNAL).build();
+            EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
@@ -2665,10 +2929,12 @@ class UserServiceTest {
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                            .userType(UserType.EXTERNAL).build())).build();
+                            .userType(UserType.EXTERNAL).build()))
+                    .build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
-            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), Collections.emptyList(), modifierId);
+            userService.updateUserRoles(profileId.toString(), Collections.emptyList(), Collections.emptyList(),
+                    modifierId);
 
             // Assert
             assertThat(userProfile.getAppRoles()).isEmpty();
@@ -2686,7 +2952,8 @@ class UserServiceTest {
             UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
                     .userType(UserType.INTERNAL)
                     .appRoles(Set.of(appRole)).build();
-            EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+            EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
@@ -2698,7 +2965,8 @@ class UserServiceTest {
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                            .userType(UserType.EXTERNAL).build())).build();
+                            .userType(UserType.EXTERNAL).build()))
+                    .build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             // Act
             Map<String, String> result = userService.updateUserRoles(profileId.toString(), Collections.emptyList(),
@@ -2761,12 +3029,12 @@ class UserServiceTest {
             AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
 
             Set<UserProfile> userProfiles = Set.of(
-                    UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).userType(UserType.INTERNAL).build(),
+                    UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true).userType(UserType.INTERNAL)
+                            .build(),
                     UserProfile.builder().userType(UserType.EXTERNAL).build());
             UUID userId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).userProfiles(userProfiles).build();
             when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(entraUser));
-
 
             // Act
             boolean result = userService.isInternal(entraUser.getId());
@@ -2795,13 +3063,12 @@ class UserServiceTest {
     @Test
     void getGivenSort() {
         Map<String, String> fieldMappings = Map.of(
-            "firstName", "entraUser.firstName",
-            "lastName", "entraUser.lastName",
-            "email", "entraUser.email",
-            "eMAIl", "entraUser.email",
-            "lAstName", "entraUser.lastName",
-            "USERSTATUS", "userProfileStatus"
-        );
+                "firstName", "entraUser.firstName",
+                "lastName", "entraUser.lastName",
+                "email", "entraUser.email",
+                "eMAIl", "entraUser.email",
+                "lAstName", "entraUser.lastName",
+                "USERSTATUS", "userProfileStatus");
 
         String sort = "aSc";
         for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
@@ -2824,8 +3091,10 @@ class UserServiceTest {
     void setDefaultActiveProfile_switch_firm() throws IOException {
         UUID firm1Id = UUID.randomUUID();
         UUID firm2Id = UUID.randomUUID();
-        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
-        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build())
+                .build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build())
+                .build();
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
         ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
         userService.setDefaultActiveProfile(entraUser, firm2Id);
@@ -2846,8 +3115,10 @@ class UserServiceTest {
         UUID firm1Id = UUID.randomUUID();
         UUID firm2Id = UUID.randomUUID();
         UUID firm3Id = UUID.randomUUID();
-        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build()).build();
-        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build()).build();
+        UserProfile userProfile1 = UserProfile.builder().activeProfile(true).firm(Firm.builder().id(firm1Id).build())
+                .build();
+        UserProfile userProfile2 = UserProfile.builder().activeProfile(false).firm(Firm.builder().id(firm2Id).build())
+                .build();
         EntraUser entraUser = EntraUser.builder().userProfiles(Set.of(userProfile1, userProfile2)).build();
         assertThrows(IOException.class,
                 () -> userService.setDefaultActiveProfile(entraUser, firm3Id));
@@ -2954,13 +3225,13 @@ class UserServiceTest {
         // Given
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .ordinal(2)
                 .app(App.builder().id(UUID.randomUUID()).name("Internal App").build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL })
                 .ordinal(1)
                 .app(App.builder().id(UUID.randomUUID()).name("Common App").build())
                 .build();
@@ -2983,13 +3254,13 @@ class UserServiceTest {
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .ordinal(2)
-                .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                 .app(App.builder().id(UUID.randomUUID()).name("External App").ordinal(2).build())
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
                 .ordinal(1)
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL })
                 .app(App.builder().id(UUID.randomUUID()).name("Common App").ordinal(1).build())
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(UserType.EXTERNAL.name()))
@@ -3002,7 +3273,8 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(
                 IntStream.range(0, 2)
-                        .allMatch(i -> result.get(i).getName().equals(Arrays.asList("Common App", "External App").get(i))))
+                        .allMatch(i -> result.get(i).getName()
+                                .equals(Arrays.asList("Common App", "External App").get(i))))
                 .isTrue();
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.EXTERNAL.name());
     }
@@ -3013,12 +3285,12 @@ class UserServiceTest {
         App sharedApp = App.builder().id(UUID.randomUUID()).name("Shared App").build();
         AppRole appRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .app(sharedApp)
                 .build();
         AppRole appRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
-                .userTypeRestriction(new UserType[] {UserType.INTERNAL, UserType.EXTERNAL})
+                .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL })
                 .app(sharedApp)
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(UserType.INTERNAL.name()))
@@ -3275,28 +3547,20 @@ class UserServiceTest {
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                showMultiFirmUsers);
 
-        UserProfile userProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL)
-                .entraUser(EntraUser.builder()
-                        .firstName("Test")
-                        .lastName("User")
-                        .email("test@example.com")
-                        .build())
-                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
-                .build();
+        UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
-                List.of(userProfile),
+        Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
+                List.of(userSearchResultsDto),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
-                1
-        );
+                1);
 
         when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
-                .thenReturn(userProfilePage);
+                .thenReturn(userSearchResultsPage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersBySearch(criteria, page, pageSize, sort, direction);
@@ -3320,16 +3584,16 @@ class UserServiceTest {
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins, showMultiFirmUsers);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userTypes, showFirmAdmins,
+                showMultiFirmUsers);
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
+        Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
-                0
-        );
+                0);
 
         when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
-                .thenReturn(userProfilePage);
+                .thenReturn(userSearchResultsPage);
 
         // When
         PaginatedUsers result = userService.getPageOfUsersBySearch(
@@ -3387,25 +3651,17 @@ class UserServiceTest {
         String sort = "firstName";
         String direction = "ASC";
 
-        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+        UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                showMultiFirmUsers);
 
-        UserProfile userProfile = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .userType(UserType.EXTERNAL)
-                .entraUser(EntraUser.builder()
-                        .firstName("Test")
-                        .lastName("Name")
-                        .email("test.name@example.com")
-                        .build())
-                .firm(Firm.builder().id(firmSearch.getSelectedFirmId()).name("Test Firm").build())
-                .build();
+        UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm");
 
-        Page<UserProfile> userProfilePage = new PageImpl<>(
-                List.of(userProfile),
+        Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
+                List.of(userSearchResultsDto),
                 PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
-                1
-        );
+                1);
 
         when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
                 .thenReturn(userProfilePage);
@@ -3417,8 +3673,8 @@ class UserServiceTest {
         // Then
         assertThat(result.getUsers()).hasSize(1);
         assertThat(result.getTotalUsers()).isEqualTo(1);
-        assertThat(result.getUsers().getFirst().getEntraUser().getFirstName()).isEqualTo("Test");
-        assertThat(result.getUsers().getFirst().getEntraUser().getLastName()).isEqualTo("Name");
+        assertThat(result.getUsers().getFirst().firstName()).isEqualTo("Test");
+        assertThat(result.getUsers().getFirst().lastName()).isEqualTo("Name");
 
         // Verify the repository was called with the search criteria
         verify(mockUserProfileRepository).findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class));
@@ -3451,7 +3707,7 @@ class UserServiceTest {
                     .description("Old Role Description")
                     .ccmsCode("CCMS_OLD")
                     .legacySync(true)
-                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
                     .build();
 
@@ -3461,7 +3717,7 @@ class UserServiceTest {
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
-                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
                     .build();
 
@@ -3480,7 +3736,8 @@ class UserServiceTest {
                     .thenReturn(true);
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                            .userType(UserType.EXTERNAL).build())).build();
+                            .userType(UserType.EXTERNAL).build()))
+                    .build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
             Map<String, String> changed = userService.updateUserRoles(userProfileId, selectedRoles,
@@ -3490,9 +3747,8 @@ class UserServiceTest {
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
-                    eq(Set.of(newRole)),
-                    eq(Set.of(oldRole))
-            );
+                    eq(Set.of(newRole.getCcmsCode())),
+                    eq(Set.of(oldRole.getCcmsCode())));
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
@@ -3522,7 +3778,7 @@ class UserServiceTest {
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
                     .legacySync(true)
-                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
                     .build();
 
@@ -3541,7 +3797,8 @@ class UserServiceTest {
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                            .userType(UserType.EXTERNAL).build())).build();
+                            .userType(UserType.EXTERNAL).build()))
+                    .build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
             userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
@@ -3590,7 +3847,7 @@ class UserServiceTest {
                     .id(UUID.fromString(selectedRoles.get(0)))
                     .name("NON_PUI_ROLE")
                     .legacySync(false)
-                    .userTypeRestriction(new UserType[] {UserType.EXTERNAL})
+                    .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                     .authzRole(false)
                     .build();
 
@@ -3609,7 +3866,8 @@ class UserServiceTest {
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                            .userType(UserType.EXTERNAL).build())).build();
+                            .userType(UserType.EXTERNAL).build()))
+                    .build();
             when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
 
             userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
@@ -3619,8 +3877,7 @@ class UserServiceTest {
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
                     eq(Set.of()),
-                    eq(Set.of())
-            );
+                    eq(Set.of()));
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
@@ -3673,7 +3930,8 @@ class UserServiceTest {
 
         @Test
         void roleCoverage_grant_access() {
-            userService.roleCoverage(Set.of(), Set.of(AppRole.builder().build()), Firm.builder().build(), UUID.randomUUID().toString(), false, true);
+            userService.roleCoverage(Set.of(), Set.of(AppRole.builder().build()), Firm.builder().build(),
+                    UUID.randomUUID().toString(), false, true);
             verify(mockAppRoleRepository, never()).findByName(any());
             verify(mockUserProfileRepository, never()).findFirmUserByAuthzRoleAndFirm(any(), any(), any());
             verify(mockUserProfileRepository, never()).findInternalUserByAuthzRole(any(), any());
@@ -3682,20 +3940,24 @@ class UserServiceTest {
         @Test
         void roleCoverage_removeManager_not_last_not_self() {
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager")
+                    .build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
-            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
+            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin")
+                    .build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
-            //Set<AppRole> newRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
+            // Set<AppRole> newRoles = Set.of(externalUserManagerRole,
+            // externalUserAdminRole);
             UUID firmId = UUID.randomUUID();
             Firm firm = Firm.builder().id(firmId).build();
             Page<UserProfile> firmManagersPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 2
-            );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
+                    PageRequest.of(0, 2), 2);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any()))
+                    .thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager")))
+                    .thenReturn(Optional.of(externalUserManagerRole));
 
             userService.roleCoverage(oldRoles, Set.of(), firm, userId, false, false);
             verify(mockAppRoleRepository, times(1)).findByName(eq("Firm User Manager"));
@@ -3707,20 +3969,23 @@ class UserServiceTest {
         void roleCoverage_removeManager_not_last_is_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager")
+                    .build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
-            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
+            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin")
+                    .build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
             Set<AppRole> newRoles = Set.of(externalUserAdminRole);
             UUID firmId = UUID.randomUUID();
             Firm firm = Firm.builder().id(firmId).build();
             Page<UserProfile> firmManagersPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 2
-            );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
+                    PageRequest.of(0, 2), 2);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any()))
+                    .thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager")))
+                    .thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, true, false);
             assertThat(result).contains("You cannot remove your own User Manager role");
@@ -3734,23 +3999,27 @@ class UserServiceTest {
         void roleCoverage_removeManager_is_last_not_self() {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("Firm User Manager")
+                    .build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
-            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
+            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin")
+                    .build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
             Set<AppRole> newRoles = Set.of(externalUserAdminRole);
             UUID firmId = UUID.randomUUID();
             Firm firm = Firm.builder().id(firmId).name("MyFirm").build();
             Page<UserProfile> firmManagersPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 1
-            );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any())).thenReturn(firmManagersPage);
+                    PageRequest.of(0, 2), 1);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("Firm User Manager"), any()))
+                    .thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("Firm User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("Firm User Manager")))
+                    .thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, false, false);
-            assertThat(result).contains("User Manager role could not be removed, this is the last User Manager of MyFirm");
+            assertThat(result)
+                    .contains("User Manager role could not be removed, this is the last User Manager of MyFirm");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
@@ -3760,20 +4029,23 @@ class UserServiceTest {
         @Test
         void roleCoverage_removeManager_is_last_not_self_is_internal() {
             UUID externalUserManagerRoleId = UUID.randomUUID();
-            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId).name("External User Manager").build();
+            AppRole externalUserManagerRole = AppRole.builder().id(externalUserManagerRoleId)
+                    .name("External User Manager").build();
             UUID externalUserAdminRoleId = UUID.randomUUID();
-            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin").build();
+            AppRole externalUserAdminRole = AppRole.builder().id(externalUserAdminRoleId).name("External User Admin")
+                    .build();
             Set<AppRole> oldRoles = Set.of(externalUserManagerRole, externalUserAdminRole);
             Set<AppRole> newRoles = Set.of(externalUserAdminRole);
             UUID firmId = UUID.randomUUID();
             Firm firm = Firm.builder().id(firmId).name("MyFirm").build();
             Page<UserProfile> firmManagersPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 1
-            );
-            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"), any())).thenReturn(firmManagersPage);
+                    PageRequest.of(0, 2), 1);
+            when(mockUserProfileRepository.findFirmUserByAuthzRoleAndFirm(eq(firmId), eq("External User Manager"),
+                    any())).thenReturn(firmManagersPage);
             String userId = UUID.randomUUID().toString();
-            when(mockAppRoleRepository.findByName(eq("External User Manager"))).thenReturn(Optional.of(externalUserManagerRole));
+            when(mockAppRoleRepository.findByName(eq("External User Manager")))
+                    .thenReturn(Optional.of(externalUserManagerRole));
 
             String result = userService.roleCoverage(oldRoles, newRoles, firm, userId, false, true);
             assertThat(result).isEmpty();
@@ -3784,14 +4056,15 @@ class UserServiceTest {
             UUID globalAdminRoleId = UUID.randomUUID();
             AppRole globalAdminRole = AppRole.builder().id(globalAdminRoleId).name("Global Admin").build();
             UUID internalUserManagerRoleId = UUID.randomUUID();
-            AppRole internalUserManagerRole = AppRole.builder().id(internalUserManagerRoleId).name("Internal User Admin").build();
+            AppRole internalUserManagerRole = AppRole.builder().id(internalUserManagerRoleId)
+                    .name("Internal User Admin").build();
             Set<AppRole> oldRoles = Set.of(internalUserManagerRole, globalAdminRole);
             Set<AppRole> newRoles = Set.of(internalUserManagerRole);
             Page<UserProfile> globalAdminsPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS), mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 2
-            );
-            when(mockUserProfileRepository.findInternalUserByAuthzRole(eq("Global Admin"), any())).thenReturn(globalAdminsPage);
+                    PageRequest.of(0, 2), 2);
+            when(mockUserProfileRepository.findInternalUserByAuthzRole(eq("Global Admin"), any()))
+                    .thenReturn(globalAdminsPage);
             when(mockAppRoleRepository.findByName(eq("Global Admin"))).thenReturn(Optional.of(globalAdminRole));
             String userId = UUID.randomUUID().toString();
 
@@ -3808,18 +4081,19 @@ class UserServiceTest {
             UUID globalAdminRoleId = UUID.randomUUID();
             AppRole globalAdminRole = AppRole.builder().id(globalAdminRoleId).name("Global Admin").build();
             UUID internalUserManagerRoleId = UUID.randomUUID();
-            AppRole internalUserManagerRole = AppRole.builder().id(internalUserManagerRoleId).name("Internal User Admin").build();
+            AppRole internalUserManagerRole = AppRole.builder().id(internalUserManagerRoleId)
+                    .name("Internal User Admin").build();
             Set<AppRole> oldRoles = Set.of(internalUserManagerRole, globalAdminRole);
             Set<AppRole> newRoles = Set.of(internalUserManagerRole);
             Page<UserProfile> globalAdminsPage = new PageImpl<>(
                     List.of(mock(UserProfile.class, RETURNS_DEEP_STUBS)),
-                    PageRequest.of(0, 2), 1
-            );
-            when(mockUserProfileRepository.findInternalUserByAuthzRole(eq("Global Admin"), any())).thenReturn(globalAdminsPage);
+                    PageRequest.of(0, 2), 1);
+            when(mockUserProfileRepository.findInternalUserByAuthzRole(eq("Global Admin"), any()))
+                    .thenReturn(globalAdminsPage);
             when(mockAppRoleRepository.findByName(eq("Global Admin"))).thenReturn(Optional.of(globalAdminRole));
             String userId = UUID.randomUUID().toString();
 
-            String result =  userService.roleCoverage(oldRoles, newRoles, null, userId, false, false);
+            String result = userService.roleCoverage(oldRoles, newRoles, null, userId, false, false);
             assertThat(result).contains("Global Admin role could not be removed, this is the last Global Admin");
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
             assertThat(warningLogs).isNotEmpty();
@@ -3835,8 +4109,10 @@ class UserServiceTest {
         UUID profileId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
 
-        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
-        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+                .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
+                .build();
         userProfile.setEntraUser(user);
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
@@ -3845,7 +4121,8 @@ class UserServiceTest {
                         .build()));
 
         // Act
-        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                .sendVerificationEmail(profileId.toString());
 
         // Assert
         assertThat(response).isNotNull();
@@ -3861,8 +4138,10 @@ class UserServiceTest {
         UUID profileId = UUID.randomUUID();
         UUID entraOid = UUID.randomUUID();
 
-        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
-        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+                .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
+        EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
+                .build();
         userProfile.setEntraUser(user);
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
@@ -3871,7 +4150,8 @@ class UserServiceTest {
                         .build()));
 
         // Act
-        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService.sendVerificationEmail(profileId.toString());
+        TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                .sendVerificationEmail(profileId.toString());
 
         // Assert
         assertThat(response).isNotNull();
@@ -3888,7 +4168,8 @@ class UserServiceTest {
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.empty());
 
         // Act
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> userService.sendVerificationEmail(profileId.toString()));
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> userService.sendVerificationEmail(profileId.toString()));
 
         // Assert
         assertThat(ex.getMessage()).isEqualTo("Failed to send verification email!");
@@ -3931,6 +4212,9 @@ class UserServiceTest {
         @Mock
         private ModelMapper mapper;
 
+        @Mock
+        private RoleChangeNotificationService mockRoleChangeNotificationService;
+
         @InjectMocks
         private UserService userService;
 
@@ -3938,8 +4222,8 @@ class UserServiceTest {
         void shouldThrowExceptionIfNotMultiFirmUser() {
             EntraUserDto user = EntraUserDto.builder().build();
 
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, new FirmDto(), null, null, "admin"));
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> userService.addMultiFirmUserProfile(user, new FirmDto(), null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("is not a multi-firm user");
             verify(userProfileRepository, never()).save(any());
@@ -3954,8 +4238,8 @@ class UserServiceTest {
             FirmDto firmDto = new FirmDto();
             firmDto.setSkipFirmSelection(false); // invalid
 
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
             verify(userProfileRepository, never()).save(any());
@@ -3967,8 +4251,8 @@ class UserServiceTest {
         void shouldThrowExceptionIfFirmDetailsNotProvided() {
             EntraUserDto user = EntraUserDto.builder().multiFirmUser(true).build();
 
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, null, null, null, "admin"));
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> userService.addMultiFirmUserProfile(user, null, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("Invalid firm details");
             verify(userProfileRepository, never()).save(any());
@@ -3995,8 +4279,8 @@ class UserServiceTest {
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
 
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
 
             assertThat(ex.getMessage()).contains("User profile already exists");
             verify(userProfileRepository, never()).save(any());
@@ -4015,8 +4299,8 @@ class UserServiceTest {
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.empty());
 
-            RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                    userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
             assertThat(ex.getMessage()).contains("User not found for the given user user id");
             verify(userProfileRepository, never()).save(any());
@@ -4038,11 +4322,12 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
             assertThat(result.isActiveProfile()).isTrue();
-            verify(userProfileRepository).save(result);
+            verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
@@ -4066,6 +4351,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
             when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
 
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
 
@@ -4073,11 +4359,288 @@ class UserServiceTest {
                     List.of(appRoleDto), "admin");
 
             assertThat(result.isActiveProfile()).isFalse();
-            verify(userProfileRepository).save(result);
+            verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
         }
 
+        @Test
+        void shouldSendCcmsNotificationWhenPuiRolesAreAssigned() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Test PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Test PUI Role")
+                    .legacySync(true)
+                    .ccmsCode("PUI_CODE")
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldNotSendCcmsNotificationWhenNoPuiRoles() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Non-PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Non-PUI Role")
+                    .ccmsCode(null) // No CCMS code = not a PUI role
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(nonPuiRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
+
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldHandleCcmsNotificationFailure() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            AppRoleDto appRoleDto = AppRoleDto.builder()
+                    .id(appRoleId.toString())
+                    .name("Test PUI Role")
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("Test PUI Role")
+                    .ccmsCode("PUI_CODE")
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(false);
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    List.of(appRoleDto), "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isFalse();
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+            verify(techServicesClient, times(1)).updateRoleAssignment(entraUserId);
+        }
+
+        @Test
+        void shouldSendCcmsNotificationWithMultiplePuiRoles() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID puiRole1Id = UUID.randomUUID();
+            UUID puiRole2Id = UUID.randomUUID();
+            UUID nonPuiRoleId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            List<AppRoleDto> appRoleDtos = List.of(
+                    AppRoleDto.builder().id(puiRole1Id.toString()).name("PUI Role 1").build(),
+                    AppRoleDto.builder().id(puiRole2Id.toString()).name("PUI Role 2").build(),
+                    AppRoleDto.builder().id(nonPuiRoleId.toString()).name("Non-PUI Role").build()
+            );
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            AppRole puiRole1 = AppRole.builder()
+                    .id(puiRole1Id)
+                    .name("PUI Role 1")
+                    .ccmsCode("PUI_CODE_1")
+                    .legacySync(true)
+                    .build();
+
+            AppRole puiRole2 = AppRole.builder()
+                    .id(puiRole2Id)
+                    .name("PUI Role 2")
+                    .ccmsCode("PUI_CODE_2")
+                    .legacySync(true)
+                    .build();
+
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(nonPuiRoleId)
+                    .name("Non-PUI Role")
+                    .ccmsCode(null)
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(appRoleRepository.findById(puiRole1Id)).thenReturn(Optional.of(puiRole1));
+            when(appRoleRepository.findById(puiRole2Id)).thenReturn(Optional.of(puiRole2));
+            when(appRoleRepository.findById(nonPuiRoleId)).thenReturn(Optional.of(nonPuiRole));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+                    .thenReturn(true);
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    appRoleDtos, "admin");
+
+            ArgumentCaptor<Set<String>> newRolesCaptor = ArgumentCaptor.forClass(Set.class);
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), newRolesCaptor.capture(), eq(Collections.emptySet()));
+
+            Set<String> capturedNewRoles = newRolesCaptor.getValue();
+            assertThat(capturedNewRoles).containsExactlyInAnyOrder("PUI_CODE_1", "PUI_CODE_2");
+            assertThat(capturedNewRoles).doesNotContain("Non-PUI Role");
+
+            assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
+        }
+
+        @Test
+        void shouldNotSendCcmsNotificationWhenNoRolesAssigned() {
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            EntraUserDto userDto = EntraUserDto.builder()
+                    .id(entraUserId.toString())
+                    .multiFirmUser(true)
+                    .build();
+
+            FirmDto firmDto = FirmDto.builder()
+                    .id(firmId)
+                    .build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .multiFirmUser(true)
+                    .build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
+                    null, "admin");
+
+            verify(mockRoleChangeNotificationService, times(1))
+                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
+
+            verify(userProfileRepository, times(2)).save(result);
+            verify(entraUserRepository, times(1)).save(entraUser);
+        }
+
+        @Test
+        void shouldEnsureProfileHasLegacyUserIdBeforeCcmsNotification() {
+            UUID firmId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID generatedProfileId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+
+            when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
+            when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> {
+                UserProfile profile = invocation.getArgument(0);
+                if (profile.getId() == null) {
+                    return UserProfile.builder()
+                            .id(generatedProfileId)
+                            .entraUser(profile.getEntraUser())
+                            .userType(profile.getUserType())
+                            .activeProfile(profile.isActiveProfile())
+                            .userProfileStatus(profile.getUserProfileStatus())
+                            .build();
+                }
+                return profile;
+            });
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anySet(), anySet()))
+                    .thenReturn(true);
+            FirmDto firmDto = FirmDto.builder().id(firmId).build();
+            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+            userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
+            ArgumentCaptor<UserProfile> notificationCaptor = ArgumentCaptor.forClass(UserProfile.class);
+            verify(mockRoleChangeNotificationService).sendMessage(notificationCaptor.capture(), anySet(), anySet());
+
+            UserProfile profileSentToNotification = notificationCaptor.getValue();
+            assertThat(profileSentToNotification.getId()).isEqualTo(generatedProfileId);
+        }
     }
 
     @Nested
@@ -4096,11 +4659,12 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     116 // Total elements
@@ -4132,11 +4696,12 @@ class UserServiceTest {
             String sort = "firmName";
             String direction = "DESC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "firm.name")),
                     50 // Total elements
@@ -4168,11 +4733,12 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(6); // Only 6 users on last page
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(6); // Only 6 users on last page
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(11, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     116 // Total elements
@@ -4208,11 +4774,12 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     25 // Total elements after firm filter
@@ -4244,11 +4811,12 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(5); // Search returns 5 results
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(5); // Search returns 5 results
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     5 // Total elements matching search
@@ -4280,11 +4848,12 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(8); // 8 firm admins
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(8); // 8 firm admins
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
                     18 // Total firm admins
@@ -4314,31 +4883,32 @@ class UserServiceTest {
             int pageSize = 10;
             int totalElements = 50;
 
-            List<UserProfile> users = createUserProfiles(10);
-            
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
+
             // Test sorting by different fields
             String[][] sortConfigs = {
-                {"firstName", "ASC"},
-                {"lastName", "DESC"},
-                {"email", "ASC"},
-                {"firmName", "DESC"},
-                {"userType", "ASC"},
-                {"userStatus", "DESC"}
+                    { "firstName", "ASC" },
+                    { "lastName", "DESC" },
+                    { "email", "ASC" },
+                    { "firmName", "DESC" },
+                    { "userType", "ASC" },
+                    { "userStatus", "DESC" }
             };
 
             for (String[] config : sortConfigs) {
                 String sort = config[0];
                 String direction = config[1];
-                
-                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
 
-                Page<UserProfile> userProfilePage = new PageImpl<>(
+                UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                        showMultiFirmUsers);
+
+                Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                         users,
                         PageRequest.of(0, pageSize, Sort.by(Sort.Direction.valueOf(direction), "entraUser.firstName")),
-                        totalElements
-                );
+                        totalElements);
 
-                when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
+                when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class),
+                        any(PageRequest.class)))
                         .thenReturn(userProfilePage);
 
                 // When
@@ -4363,15 +4933,15 @@ class UserServiceTest {
             String sort = "firstName";
             String direction = "ASC";
 
-            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins, showMultiFirmUsers);
+            UserSearchCriteria criteria = new UserSearchCriteria(searchTerm, firmSearch, userType, showFirmAdmins,
+                    showMultiFirmUsers);
 
-            List<UserProfile> users = createUserProfiles(10);
-            
-            Page<UserProfile> userProfilePage = new PageImpl<>(
+            List<UserSearchResultsDto> users = createUserSearchResults(10);
+
+            Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                     users,
                     PageRequest.of(0, pageSize, Sort.by(Sort.Direction.ASC, "entraUser.firstName")),
-                    30
-            );
+                    30);
 
             when(mockUserProfileRepository.findBySearchParams(any(UserSearchCriteria.class), any(PageRequest.class)))
                     .thenReturn(userProfilePage);
@@ -4385,26 +4955,2335 @@ class UserServiceTest {
             assertThat(result.getTotalPages()).isEqualTo(3);
         }
 
-        private List<UserProfile> createUserProfiles(int count) {
-            List<UserProfile> profiles = new ArrayList<>();
+        private List<UserSearchResultsDto> createUserSearchResults(int count) {
+            List<UserSearchResultsDto> searchResults = new ArrayList<>();
             for (int i = 0; i < count; i++) {
+                UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
+                        UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i);
+
+                searchResults.add(result);
+            }
+            return searchResults;
+        }
+    }
+
+    @Nested
+    class DeleteFirmProfileTests {
+
+        @Test
+        void deleteFirmProfile_Success_ReturnsAuditEvent() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            // Create EntraUser with multi-firm flag
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            // Create firm
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Law Firm")
+                    .code("12345")
+                    .build();
+
+            // Create offices
+            Office office1 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+            Office office2 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+
+            // Create app roles with CCMS codes for PUI roles
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI")
+                    .build();
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("SOME_OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            // Create user profile to delete (active profile)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>(Arrays.asList(office1, office2)))
+                    .build();
+
+            // Create another profile for the same user (will become active)
+            UUID otherFirmId = UUID.randomUUID();
+            Firm otherFirm = Firm.builder()
+                    .id(otherFirmId)
+                    .name("Other Law Firm")
+                    .code("67890")
+                    .build();
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(otherFirm)
+                    .activeProfile(false)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            boolean result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isTrue();
+
+            // Verify profile was cleared of roles and offices
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify save was called at least once (for clearing entra user ref before
+            // deletion,
+            // and potentially setting new active profile after deletion)
+            verify(mockUserProfileRepository, atLeast(1)).save(any(UserProfile.class));
+
+            // Verify PUI notifications were sent (once with empty new roles and PUI old
+            // roles)
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), any(), any());
+        }
+
+        @Test
+        void deleteFirmProfile_NotMultiFirmUser_ThrowsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .multiFirmUser(false) // Not a multi-firm user
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Test Firm").build())
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
+
+            assertThat(exception.getMessage())
+                    .contains("User is not a multi-firm user");
+
+            // Verify no deletion occurred
+            verify(mockUserProfileRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteFirmProfile_ProfileNotFound_ThrowsException() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.empty());
+
+            // When & Then
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> userService.deleteFirmProfile(userProfileId.toString(), actorId));
+
+            assertThat(exception.getMessage())
+                    .contains("User profile not found");
+
+            // Verify no deletion occurred
+            verify(mockUserProfileRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteFirmProfile_NonActiveProfile_DoesNotReassignActive() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Alice")
+                    .lastName("Williams")
+                    .email("alice.williams@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            // Profile to delete (NOT active)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm A").code("AAA").build())
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>())
+                    .offices(new HashSet<>())
+                    .build();
+
+            // Another profile (already active)
+            UserProfile activeProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm B").build())
+                    .activeProfile(true)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(activeProfile);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            var result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isNotNull();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify active profile was NOT modified since deletion of non-active profile
+            // The service still saves after clearing entra user ref, but shouldn't reassign
+            // active
+            assertThat(activeProfile.isActiveProfile()).isTrue();
+        }
+
+        @Test
+        void deleteFirmProfile_ClearsRolesAndOffices() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("Charlie")
+                    .lastName("Brown")
+                    .email("charlie.brown@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .build();
+
+            // Create multiple roles and offices
+            Set<AppRole> roles = IntStream.range(0, 5)
+                    .mapToObj(i -> AppRole.builder()
+                            .id(UUID.randomUUID())
+                            .name("ROLE_" + i)
+                            .app(App.builder().id(UUID.randomUUID()).name("App").build())
+                            .build())
+                    .collect(Collectors.toSet());
+
+            Set<Office> offices = IntStream.range(0, 3)
+                    .mapToObj(i -> Office.builder()
+                            .id(UUID.randomUUID())
+                            .firm(firm)
+                            .build())
+                    .collect(Collectors.toSet());
+
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Firm").code("123").build())
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>(roles))
+                    .offices(new HashSet<>(offices))
+                    .build();
+
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Other Firm").build())
+                    .activeProfile(true)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            boolean result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isTrue();
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+        }
+
+        @Test
+        void deleteFirmProfile_SendsPuiNotifications() {
+            // Given
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            final UUID actorId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("David")
+                    .lastName("Miller")
+                    .email("david.miller@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI")
+                    .build();
+
+            // Mix of PUI roles (with CCMS code and legacySync) and non-PUI roles
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("999")
+                    .build();
+
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>())
+                    .build();
+
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(Firm.builder().id(UUID.randomUUID()).name("Other Firm").build())
+                    .activeProfile(true)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            // Don't need findAllByEntraUser stub - profiles read from
+            // entraUser.getUserProfiles()
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+
+            // When
+            userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then - verify notification service was called with PUI roles
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete),
+                    eq(Collections.emptySet()), any());
+        }
+    }
+
+    @Nested
+    class GetProfileCountByEntraUserIdTests {
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasMultipleProfiles_returnsCorrectCount() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 3L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasSingleProfile_returnsOne() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 1L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserHasNoProfiles_returnsZero() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            long expectedCount = 0L;
+            when(mockUserProfileRepository.countByEntraUserId(entraUserId)).thenReturn(expectedCount);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(expectedCount);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(entraUserId);
+        }
+
+        @Test
+        void getProfileCountByEntraUserId_whenUserDoesNotExist_returnsZero() {
+            // Given
+            UUID nonExistentUserId = UUID.randomUUID();
+            when(mockUserProfileRepository.countByEntraUserId(nonExistentUserId)).thenReturn(0L);
+
+            // When
+            long actualCount = userService.getProfileCountByEntraUserId(nonExistentUserId);
+
+            // Then
+            assertThat(actualCount).isEqualTo(0L);
+            verify(mockUserProfileRepository, times(1)).countByEntraUserId(nonExistentUserId);
+        }
+    }
+
+    @Nested
+    class GetAuditUsersTests {
+
+        @Test
+        void getAuditUsers_whenNoFilters_returnsAllUsers() {
+            // Given
+            UUID user1Id = UUID.randomUUID();
+            UUID user2Id = UUID.randomUUID();
+
+            EntraUser user1 = EntraUser.builder()
+                    .id(user1Id)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            EntraUser user2 = EntraUser.builder()
+                    .id(user2Id)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user1)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user2)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user1.setUserProfiles(Set.of(profile1));
+            user2.setUserProfiles(Set.of(profile2));
+
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2),
+                    PageRequest.of(0, 10), 2);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(Arrays.asList(user1, user2));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(2);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            assertThat(result.getCurrentPage()).isEqualTo(1);
+            assertThat(result.getPageSize()).isEqualTo(10);
+            assertThat(result.getUsers()).hasSize(2);
+
+            assertThat(result.getUsers().get(0).getName()).isEqualTo("John Doe");
+            assertThat(result.getUsers().get(0).getEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Test Firm");
+            assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
+            assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
+
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+            verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(any(Set.class));
+        }
+
+        @Test
+        void getAuditUsers_whenSearchTermProvided_filtersResults() {
+            // Given
+            String searchTerm = "john";
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(searchTerm), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(searchTerm,
+                    null, null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getName()).contains("John");
+
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(searchTerm), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_whenFirmIdProvided_filtersResults() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            UUID userId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Specific Firm")
+                    .code("SF001")
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(firmId), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null,
+                    firmId, null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Specific Firm");
+
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(firmId), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_whenSilasRoleProvided_filtersResults() {
+            // Given
+            String silasRole = "Global Admin";
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Admin")
+                    .lastName("User")
+                    .email("admin@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            AppRole adminRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("Global Admin")
+                    .authzRole(true)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(Set.of(adminRole))
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(silasRole), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    silasRole, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            assertThat(result.getUsers()).hasSize(1);
+
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(silasRole), eq(null), eq(null), eq(null), any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_whenMultiFirmUser_displaysCorrectly() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            Firm firm1 = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Firm One")
+                    .code("F1")
+                    .build();
+
+            Firm firm2 = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Firm Two")
+                    .code("F2")
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Multi")
+                    .lastName("Firm")
+                    .email("multi@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(true)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile1, profile2));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(2);
+            assertThat(result.getUsers().get(0).getFirmAssociation()).contains("Firm One", "Firm Two");
+        }
+
+        @Test
+        void getAuditUsers_whenNoResults_returnsEmptyList() {
+            // Given
+            Page<EntraUser> emptyPage = new PageImpl<>(Collections.emptyList(),
+                    PageRequest.of(0, 10), 0);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(emptyPage);
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+            assertThat(result.getTotalPages()).isEqualTo(0);
+            assertThat(result.getUsers()).isEmpty();
+
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
+            verify(mockEntraUserRepository, never()).findUsersWithProfilesAndRoles(any(Set.class));
+        }
+
+        @Test
+        void getAuditUsers_whenInternalUser_displaysCorrectType() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Internal")
+                    .lastName("Staff")
+                    .email("internal@justice.gov.uk")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(null) // Internal users have no firm
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Internal");
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
+        }
+
+        @Test
+        void getAuditUsers_withPagination_returnsCorrectPage() {
+            // Given
+            List<EntraUser> allUsers = new ArrayList<>();
+            for (int i = 1; i <= 25; i++) {
+                UUID userId = UUID.randomUUID();
+                EntraUser user = EntraUser.builder()
+                        .id(userId)
+                        .firstName("User" + i)
+                        .lastName("Test")
+                        .email("user" + i + "@example.com")
+                        .userStatus(UserStatus.ACTIVE)
+                        .multiFirmUser(false)
+                        .build();
+
                 UserProfile profile = UserProfile.builder()
                         .id(UUID.randomUUID())
-                        .userProfileStatus(UserProfileStatus.COMPLETE)
+                        .entraUser(user)
                         .userType(UserType.EXTERNAL)
-                        .entraUser(EntraUser.builder()
-                                .firstName("User" + i)
-                                .lastName("Test" + i)
-                                .email("user" + i + "@example.com")
-                                .build())
-                        .firm(Firm.builder()
-                                .id(UUID.randomUUID())
-                                .name("Firm " + i)
-                                .build())
+                        .activeProfile(true)
+                        .appRoles(new HashSet<>())
+                        .userProfileStatus(UserProfileStatus.COMPLETE)
                         .build();
-                profiles.add(profile);
+
+                user.setUserProfiles(Set.of(profile));
+                allUsers.add(user);
             }
-            return profiles;
+
+            // Page 2 with 10 items per page
+            List<EntraUser> page2Users = allUsers.subList(10, 20);
+            Page<EntraUser> userPage = new PageImpl<>(page2Users,
+                    PageRequest.of(1, 10), 25);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(page2Users);
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 2, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(25);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getCurrentPage()).isEqualTo(2);
+            assertThat(result.getPageSize()).isEqualTo(10);
+            assertThat(result.getUsers()).hasSize(10);
+        }
+
+        @Test
+        void getAuditUsers_whenUserHasNoProfiles_displaysUnknownType() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("NoProfile")
+                    .lastName("User")
+                    .email("noprofile@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Active");
+        }
+
+        @Test
+        void getAuditUsers_whenUserStatusDeactive_displaysDisabled() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Disabled")
+                    .lastName("User")
+                    .email("disabled@example.com")
+                    .userStatus(UserStatus.DEACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Disabled");
+        }
+
+        @Test
+        void getAuditUsers_whenUserHasPendingProfile_displaysPending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Pending")
+                    .lastName("User")
+                    .email("pending@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Pending");
+        }
+
+        @Test
+        void getAllSilasRoles_returnsAuthzRoles() {
+            // Given
+            AppRole role1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("Global Admin")
+                    .authzRole(true)
+                    .build();
+
+            AppRole role2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("Firm Admin")
+                    .authzRole(true)
+                    .build();
+
+            when(mockAppRoleRepository.findAllAuthzRoles())
+                    .thenReturn(List.of(role1, role2));
+
+            // When
+            List<AppRoleDto> result = userService.getAllSilasRoles();
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(2);
+            verify(mockAppRoleRepository).findAllAuthzRoles();
+        }
+
+        @Test
+        void getAuditUsers_withDescendingSort_sortsCorrectly() {
+            // Given
+            UUID user1Id = UUID.randomUUID();
+            UUID user2Id = UUID.randomUUID();
+
+            EntraUser user1 = EntraUser.builder()
+                    .id(user1Id)
+                    .firstName("Alice")
+                    .lastName("Aardvark")
+                    .email("alice@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            EntraUser user2 = EntraUser.builder()
+                    .id(user2Id)
+                    .firstName("Zack")
+                    .lastName("Zebra")
+                    .email("zack@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user1.setUserProfiles(Set.of(profile1));
+            user2.setUserProfiles(Set.of(profile2));
+
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user2, user1),
+                    PageRequest.of(0, 10), 2);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(Arrays.asList(user2, user1));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(2);
+            // Users returned in order from repository
+            assertThat(result.getUsers().get(0).getName()).contains("Zack");
+            assertThat(result.getUsers().get(1).getName()).contains("Alice");
+        }
+
+        @Test
+        void getAuditUsers_withNullUserProfiles_handlesGracefully() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("NullProfiles")
+                    .lastName("User")
+                    .email("nullprofiles@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(null) // Explicitly null
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(0);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByEmailDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "email", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByStatusAscending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UserAuditAccountStatusProjection projection = new UserAuditAccountStatusProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
+
+                @Override
+                public String getAccountStatus() {
+                    return "Active";
+                }
+            };
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(projection),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    1);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(new ArrayList<>(List.of(user)));
+
+            // When - using "accountstatus" as the sort field
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "accountstatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByUserTypeDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Smith")
+                    .email("john.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "usertype" as sort field which maps to "multiFirmUser"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "usertype", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortDirectionIsNull_defaultsToAscending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "name", null);
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("firstName")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("firstName").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortDirectionIsEmpty_defaultsToAscending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "email", "");
+
+            // Then
+            assertThat(result).isNotNull();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("email").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+    }
+
+    @Nested
+    class GetAuditUserDetailTests {
+
+        @Test
+        void getAuditUserDetail_withValidUserId_returnsDetailDto() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID officeId = UUID.randomUUID();
+            UUID appRoleId = UUID.randomUUID();
+            UUID appId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            Office.Address address = Office.Address.builder()
+                    .addressLine1("123 Test Street")
+                    .city("Test City")
+                    .postcode("TE1 1ST")
+                    .build();
+
+            Office office = Office.builder()
+                    .id(officeId)
+                    .code("TEST-OFFICE-01")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            App app = App.builder()
+                    .id(appId)
+                    .name("Test App")
+                    .build();
+
+            AppRole appRole = AppRole.builder()
+                    .id(appRoleId)
+                    .name("TEST_ROLE")
+                    .description("Test Role")
+                    .app(app)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(Set.of(office))
+                    .appRoles(Set.of(appRole))
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .email("john.doe@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .createdBy("admin@example.com")
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUserId()).isEqualTo(userId.toString());
+            assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getFirstName()).isEqualTo("John");
+            assertThat(result.getLastName()).isEqualTo("Doe");
+            assertThat(result.getFullName()).isEqualTo("John Doe");
+            assertThat(result.isMultiFirmUser()).isFalse();
+            assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
+            assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getProfileId()).isEqualTo(profileId.toString());
+            assertThat(profileDto.getFirmName()).isEqualTo("Test Firm");
+            assertThat(profileDto.getFirmCode()).isEqualTo("TF001");
+            assertThat(profileDto.getUserType()).isEqualTo("EXTERNAL");
+            assertThat(profileDto.isActiveProfile()).isTrue();
+            assertThat(profileDto.getOffices()).hasSize(1);
+            assertThat(profileDto.getRoles()).hasSize(1);
+
+            verify(mockUserProfileRepository).findById(profileId);
+        }
+
+        @Test
+        void getAuditUserDetail_withMultipleFirms_returnsAllProfiles() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profile1Id = UUID.randomUUID();
+            UUID profile2Id = UUID.randomUUID();
+            UUID firm1Id = UUID.randomUUID();
+            UUID firm2Id = UUID.randomUUID();
+
+            Firm firm1 = Firm.builder()
+                    .id(firm1Id)
+                    .name("Firm One")
+                    .code("F001")
+                    .build();
+
+            Firm firm2 = Firm.builder()
+                    .id(firm2Id)
+                    .name("Firm Two")
+                    .code("F002")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>())
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(profile2Id)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>())
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(true)
+                    .userProfiles(Set.of(profile1, profile2))
+                    .build();
+
+            profile1.setEntraUser(user);
+            profile2.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.isMultiFirmUser()).isTrue();
+            assertThat(result.getProfiles()).hasSize(2);
+
+            List<String> firmNames = result.getProfiles().stream()
+                    .map(uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto::getFirmName)
+                    .collect(Collectors.toList());
+            assertThat(firmNames).containsExactlyInAnyOrder("Firm One", "Firm Two");
+        }
+
+        @Test
+        void getAuditUserDetail_withNoOffices_showsAccessToAllOffices() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>()) // No offices
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("Access to All Offices");
+        }
+
+        @Test
+        void getAuditUserDetail_withMultipleOffices_listsOfficeCount() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID office1Id = UUID.randomUUID();
+            UUID office2Id = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            Office.Address address = Office.Address.builder()
+                    .addressLine1("Main Street")
+                    .city("London")
+                    .postcode("SW1A 1AA")
+                    .build();
+
+            Office office1 = Office.builder()
+                    .id(office1Id)
+                    .code("OFFICE-A")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            Office office2 = Office.builder()
+                    .id(office2Id)
+                    .code("OFFICE-B")
+                    .address(address)
+                    .firm(firm)
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(Set.of(office1, office2))
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("2 office(s) selected");
+            assertThat(profileDto.getOffices()).hasSize(2);
+        }
+
+        @Test
+        void getAuditUserDetail_withUserNotFound_throwsException() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            when(mockUserProfileRepository.findById(userId))
+                    .thenReturn(Optional.empty());
+
+            // When/Then
+            assertThrows(IllegalArgumentException.class, () -> {
+                userService.getAuditUserDetail(userId);
+            });
+        }
+
+        @Test
+        void getAuditUserDetail_withPagination_returnsCorrectPage() {
+            // Given
+            UUID profile1Id = UUID.randomUUID();
+            Firm firm1 = Firm.builder().name("Firm 1").code("F001").build();
+            Firm firm2 = Firm.builder().name("Firm 2").code("F002").build();
+            Firm firm3 = Firm.builder().name("Firm 3").code("F003").build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("user@example.com")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .multiFirmUser(true)
+                    .userStatus(UserStatus.ACTIVE)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .entraUser(entraUser)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            UserProfile profile3 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm3)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            entraUser.setUserProfiles(Set.of(profile1, profile2, profile3));
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When - Get page 1 with size 2
+            AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id, 1, 2);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(2);
+            assertThat(result.getTotalProfiles()).isEqualTo(3);
+            assertThat(result.getTotalProfilePages()).isEqualTo(2);
+            assertThat(result.getCurrentProfilePage()).isEqualTo(1);
+            assertThat(result.getProfiles().get(0).isActiveProfile()).isTrue();
+        }
+
+        @Test
+        void getAuditUserDetail_withPaginationLastPage_returnsRemainingProfiles() {
+            // Given
+            UUID profile1Id = UUID.randomUUID();
+            Firm firm1 = Firm.builder().name("Firm 1").code("F001").build();
+            Firm firm2 = Firm.builder().name("Firm 2").code("F002").build();
+            Firm firm3 = Firm.builder().name("Firm 3").code("F003").build();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email("user@example.com")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .multiFirmUser(true)
+                    .userStatus(UserStatus.ACTIVE)
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(profile1Id)
+                    .entraUser(entraUser)
+                    .firm(firm1)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm2)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            UserProfile profile3 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(firm3)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(false)
+                    .build();
+
+            entraUser.setUserProfiles(Set.of(profile1, profile2, profile3));
+
+            when(mockUserProfileRepository.findById(profile1Id))
+                    .thenReturn(Optional.of(profile1));
+
+            // When - Get page 2 with size 2 (should return 1 remaining profile)
+            AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profile1Id, 2, 2);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+            assertThat(result.getTotalProfiles()).isEqualTo(3);
+            assertThat(result.getTotalProfilePages()).isEqualTo(2);
+            assertThat(result.getCurrentProfilePage()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    class GetAuditUsersWithAccountStatusSorting {
+
+        @Test
+        void shouldSortByAccountStatusAscending() {
+            // Given
+            UUID userId1 = UUID.randomUUID();
+            UUID userId2 = UUID.randomUUID();
+            UUID userId3 = UUID.randomUUID();
+
+            // Mock projection results (ordered by account status: Active, Disabled,
+            // Pending)
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            // Mock full user fetching
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1, user2, user3));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(3);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+
+            // Verify repository was called with correct parameters
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedRequest = pageRequestCaptor.getValue();
+            assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
+            assertThat(capturedRequest.getPageSize()).isEqualTo(10);
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus")).isNotNull();
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @Test
+        void shouldSortByAccountStatusDescending() {
+            // Given
+            UUID userId1 = UUID.randomUUID();
+            UUID userId2 = UUID.randomUUID();
+            UUID userId3 = UUID.randomUUID();
+
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").descending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1, user2, user3));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "accountStatus", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(3);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedRequest = pageRequestCaptor.getValue();
+            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void shouldHandleEmptyResultsWithAccountStatusSort() {
+            // Given
+            Page<UserAuditAccountStatusProjection> emptyPage = new PageImpl<>(
+                    Collections.emptyList(),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    0);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(emptyPage);
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).isEmpty();
+            assertThat(result.getTotalUsers()).isEqualTo(0);
+        }
+
+        @Test
+        void shouldPreserveOrderFromRepository() {
+            // Given
+            UUID id1 = UUID.randomUUID();
+            UUID id2 = UUID.randomUUID();
+            UUID id3 = UUID.randomUUID();
+
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
+            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
+            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1, proj2, proj3),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    3);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            // Return users in different order to test sorting preservation
+            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE);
+            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user3, user1, user2)); // Different order
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result.getUsers()).hasSize(3);
+            // Order should match projection page order (checking entraUserId since users
+            // have no profiles)
+            assertThat(result.getUsers().get(0).getEntraUserId()).isEqualTo(id1.toString());
+            assertThat(result.getUsers().get(1).getEntraUserId()).isEqualTo(id2.toString());
+            assertThat(result.getUsers().get(2).getEntraUserId()).isEqualTo(id3.toString());
+        }
+
+        @Test
+        void shouldHandleFiltersWithAccountStatusSort() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            UUID appId = UUID.randomUUID();
+
+            UUID userId1 = UUID.randomUUID();
+            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+
+            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+                    List.of(proj1),
+                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    1);
+
+            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+                    eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
+                    eq(appId), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(projectionPage);
+
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user1));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
+                    firmId, "PUI_CASE_WORKER", appId, null, null, 1, 10, "accountStatus", "asc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalUsers()).isEqualTo(1);
+            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+                    eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
+                    eq(appId), eq(null), eq(null), any(PageRequest.class));
+        }
+
+        // Helper methods
+        private UserAuditAccountStatusProjection createAccountStatusProjection(UUID userId, String accountStatus) {
+            return new UserAuditAccountStatusProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
+
+                @Override
+                public String getAccountStatus() {
+                    return accountStatus;
+                }
+            };
+        }
+
+        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status) {
+            return EntraUser.builder()
+                    .id(id)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@example.com")
+                    .userStatus(status)
+                    .userProfiles(new HashSet<>())
+                    .build();
+        }
+    }
+
+    @Nested
+    class ConvertToMultiFirmUserTests {
+        @Test
+        void convertToMultiFirmUser_success() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+            user.getUserProfiles().add(profile);
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(user);
+
+            // When
+            userService.convertToMultiFirmUser(userId.toString());
+
+            // Then
+            ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+            verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+            assertThat(captor.getValue().isMultiFirmUser()).isTrue();
+        }
+
+        @Test
+        void convertToMultiFirmUser_userNotFound() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("User not found");
+        }
+
+        @Test
+        void convertToMultiFirmUser_alreadyMultiFirm() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .multiFirmUser(true)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("already a multi-firm user");
+        }
+    }
+
+    @Nested
+    class IsMultiFirmUserByEmailTests {
+        @Test
+        void isMultiFirmUserByEmail_returnsTrue() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .email(email)
+                    .multiFirmUser(true)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void isMultiFirmUserByEmail_returnsFalse_whenNotMultiFirm() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .email(email)
+                    .multiFirmUser(false)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void isMultiFirmUserByEmail_returnsFalse_whenUserNotFound() {
+            // Given
+            String email = "nonexistent@example.com";
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.empty());
+
+            // When
+            boolean result = userService.isMultiFirmUserByEmail(email);
+
+            // Then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    class GetUserProfilesByEntraUserIdTests {
+        @Test
+        void getUserProfilesByEntraUserIdAndSearch_withSearch() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            String search = "Law Firm";
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .email("user@example.com")
+                    .build();
+
+            Firm firm1 = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Law Firm One")
+                    .code("LF001")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm1)
+                    .activeProfile(true)
+                    .build();
+
+            List<UserProfile> profiles = List.of(profile1);
+            when(mockUserProfileRepository.findByEntraUserIdAndFirmSearch(entraUserId, search))
+                    .thenReturn(profiles);
+
+            // When
+            List<UserProfile> result = userService.getUserProfilesByEntraUserIdAndSearch(entraUserId, search);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result).contains(profile1);
+            verify(mockUserProfileRepository).findByEntraUserIdAndFirmSearch(entraUserId, search);
+        }
+    }
+
+    @Nested
+    class GetEntraUserByIdAndEmailTests {
+        @Test
+        void getEntraUserById_returnsUser() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            String email = "user@example.com";
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email(email)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserById(userId.toString());
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getId()).isEqualTo(userId.toString());
+        }
+
+        @Test
+        void getEntraUserById_returnsEmpty_whenNotFound() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserById(userId.toString());
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void getEntraUserByEmail_returnsUser() {
+            // Given
+            String email = "user@example.com";
+            EntraUser user = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .email(email)
+                    .build();
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserByEmail(email);
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getEmail()).isEqualToIgnoringCase(email);
+        }
+
+        @Test
+        void getEntraUserByEmail_returnsEmpty_whenNotFound() {
+            // Given
+            String email = "nonexistent@example.com";
+            when(mockEntraUserRepository.findByEmailIgnoreCase(email))
+                    .thenReturn(Optional.empty());
+
+            // When
+            Optional<EntraUserDto> result = userService.getEntraUserByEmail(email);
+
+            // Then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    class GetUserProfileByIdTests {
+        @Test
+        void getUserProfileById_returnsProfile() {
+            // Given
+            UUID profileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .email("user@example.com")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .entraUser(entraUser)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .build();
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            Optional<UserProfileDto> result = userService.getUserProfileById(profileId.toString());
+
+            // Then
+            assertThat(result).isPresent();
+            assertThat(result.get().getId()).isEqualTo(profileId);
+            assertThat(result.get().getUserType()).isEqualTo(UserType.EXTERNAL);
+        }
+
+        @Test
+        void getUserProfileById_returnsEmpty_whenNotFound() {
+            // Given
+            UUID profileId = UUID.randomUUID();
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.empty());
+
+            // When
+            Optional<UserProfileDto> result = userService.getUserProfileById(profileId.toString());
+
+            // Then
+            assertThat(result).isEmpty();
         }
     }
 }

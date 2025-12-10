@@ -128,6 +128,12 @@ spec:
               value: "${APP_CIVIL_DECIDE_DETAILS}"
             - name: APP_CIVIL_DECIDE_URL
               value: "${APP_CIVIL_DECIDE_URL}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_NAME
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_NAME}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS}"
+            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_URL
+              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE
@@ -222,9 +228,7 @@ spec:
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
-            - name: FEATURE_FLAG_ENABLE_RESEND_VER_CODE
-              value: "${FEATURE_FLAG_ENABLE_RESEND_VER_CODE}"
-            - name: FEATURE_FLAG_ENABLE_MULTI_FIRM_USER
-              value: "${FEATURE_FLAG_ENABLE_MULTI_FIRM_USER}"
+            - name: FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE
+              value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"

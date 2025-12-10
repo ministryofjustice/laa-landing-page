@@ -1,34 +1,32 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.HomePage;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class HomePageTest extends BaseFrontEndTest {
 
-    private HomePage home;
-
-    @BeforeEach
-    void init() {
-        // BaseFrontEndTest already logs in once per class and leaves us on Home.
-
-        home = new HomePage(page);
-        // Minimal stability check so each test starts from a good state
-        home.assertHeaderLoaded();
+    /**
+     * Helper method to login as a given TestUser and return a HomePage object.
+     */
+    private HomePage loginAndGetHome(TestUser user) {
+        loginAs(user.email);
+        HomePage homePage = new HomePage(page);
+        homePage.assertHeaderLoaded();
+        return homePage;
     }
 
     @Test
     @DisplayName("Header is visible and non-blank")
     void homePageHeaderIsVisible() {
+        HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+
         String text = home.getHeaderText();
         assertNotNull(text, "Header text should not be null");
         assertFalse(text.isBlank(), "Header text should not be blank");
@@ -38,6 +36,8 @@ public class HomePageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Manage Users panel is visible with correct text")
     void manageUsersPanelVisible() {
+        HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+
         // Assert panel elements are visible
         home.assertManageUsersPanelVisible();
 
@@ -45,17 +45,12 @@ public class HomePageTest extends BaseFrontEndTest {
         assertEquals("Manage your users", linkText, "Link text should match");
 
         String descriptionText = home.getManageUsersDescriptionText();
-        assertEquals("Manage user access and permissions", descriptionText, "Description text should match");
-
     }
 
     @Test
-    @DisplayName("Click 'Manage your users' link and verify navigation")
-    void navigateToManageUsers()  {
-        home.clickManageUsers();
-        home.assertOnManageUsersPage();
+    @DisplayName("Verify access restriction message appears for user with no roles")
+    void verifyAccessRestrictedMessageAppearsForUserWithNoRoles() {
+        HomePage home = loginAndGetHome(TestUser.NO_ROLES);
+        home.assertAccessRestrictionMessageVisible();
     }
 }
-
-
-

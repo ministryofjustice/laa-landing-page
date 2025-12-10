@@ -14,11 +14,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -53,12 +55,17 @@ public class BaseRepositoryTest {
 
     protected Firm buildFirm(String name, String firmCode) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .code(firmCode).type(FirmType.INDIVIDUAL).build();
+                .code(firmCode).type(FirmType.ADVOCATE).build();
+    }
+
+    protected Firm buildParentFirm(String name, String firmCode) {
+        return Firm.builder().name(name).offices(HashSet.newHashSet(11))
+                .code(firmCode).type(FirmType.LEGAL_SERVICES_PROVIDER).build();
     }
 
     protected Firm buildChildFirm(String name, String firmCode, Firm parentFirm) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .code(firmCode).type(FirmType.INDIVIDUAL).parentFirm(parentFirm).build();
+                .code(firmCode).type(FirmType.ADVOCATE).parentFirm(parentFirm).build();
     }
 
     protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
@@ -67,13 +74,27 @@ public class BaseRepositoryTest {
     }
 
     protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {
-        return App.builder().name(name).appRoles(HashSet.newHashSet(1))
+        return buildLaaApp(name, entraAppId, securityGroupOid, securityGroupName, "Test App Title", "Test App Description",
+                "http://localhost:8080/", "OID Group");
+    }
+
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName,
+                              String title, String description, String url, String oidGroupName) {
+        return App.builder().name(name).appRoles(HashSet.newHashSet(1)).url(url)
+                .title(title).description(description).appType(AppType.LAA).oidGroupName(oidGroupName)
                 .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {
         return AppRole.builder().name(name).description(name)
                 .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
+    }
+
+    protected AppRole buildLaaAppRoleWithUserTypes(App app, String name, UserType[] userTypes, Set<Permission> permissions) {
+        return AppRole.builder().name(name).description(name)
+                .userTypeRestriction(userTypes)
+                .permissions(permissions)
+                .app(app).build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {

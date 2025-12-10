@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -177,7 +178,7 @@ public class DemoDataPopulator {
 
     protected Firm buildFirm(String name) {
         return Firm.builder().name(name).offices(HashSet.newHashSet(11))
-                .type(FirmType.INDIVIDUAL).build();
+                .type(FirmType.ADVOCATE).build();
     }
 
     protected Office buildOffice(Firm firm, String code, String addrLine1, String city, String postCode) {
@@ -279,6 +280,11 @@ public class DemoDataPopulator {
                 app.setEntraAppId(oid);
                 app.setSecurityGroupName(securityGroupName);
                 app.setSecurityGroupOid(securityGroupOid);
+                app.setUrl("https://localhost");
+                app.setOidGroupName(app.getName() + " OID Group");
+                app.setAppType(AppType.LAA);
+                app.setDescription(app.getName() + " description");
+                app.setTitle(app.getName() + " Title");
                 String currentAppName = app.getName();
                 app.setName(appDetailPair.getRight());
                 laaAppRepository.save(app);

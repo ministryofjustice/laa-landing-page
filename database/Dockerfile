@@ -1,5 +1,10 @@
 FROM postgres:14.3-alpine
 
+# CVE-2024-58251
+RUN apk update && \
+    apk add --no-cache --upgrade busybox && \
+    rm -rf /var/cache/apk/*
+
 COPY init-db.sh /docker-entrypoint-initdb.d
 
 USER postgres

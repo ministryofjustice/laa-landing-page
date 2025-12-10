@@ -63,7 +63,7 @@ jobs:
 
           #  Tag the image per env (links with lifecycle policy of image)
           docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$ENV_NAME
-          
+
           # Push the image to the ECR repository
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$REPOSITORY:$ENV_NAME
@@ -120,6 +120,9 @@ jobs:
           APP_CIVIL_DECIDE_NAME: ${{ vars.APP_CIVIL_DECIDE_NAME || 'Civil Decide' }}
           APP_CIVIL_DECIDE_DETAILS: ${{ vars.APP_CIVIL_DECIDE_DETAILS || 'cd//cd//cd' }}
           APP_CIVIL_DECIDE_URL: ${{ secrets.APP_CIVIL_DECIDE_URL || '#' }}
+          APP_CIVIL_CLAIM_FOR_PAYMENT_NAME: ${{ vars.APP_CIVIL_CLAIM_FOR_PAYMENT_NAME || 'Civil Claim for Payment' }}
+          APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS: ${{ vars.APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS || 'ccfp//ccfp//ccfp' }}
+          APP_CIVIL_CLAIM_FOR_PAYMENT_URL: ${{ secrets.APP_CIVIL_CLAIM_FOR_PAYMENT_URL || '#' }}
           TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
           TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
           TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}
@@ -142,8 +145,7 @@ jobs:
           CCMS_USER_API_SQS_ARN: ${{ secrets.CCMS_USER_API_SQS_ARN }}
           ENABLE_DISTRIBUTED_DB_LOCKING: ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
           DISTRIBUTED_DB_LOCKING_PERIOD: ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
-          FEATURE_FLAG_ENABLE_RESEND_VER_CODE : ${{ vars.FEATURE_FLAG_ENABLE_RESEND_VER_CODE }}
-          FEATURE_FLAG_ENABLE_MULTI_FIRM_USER : ${{ vars.FEATURE_FLAG_ENABLE_MULTI_FIRM_USER }}
+          FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE : ${{ vars.FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE || 'true' }}
           SPRING_SESSION_JDBC_ENABLED : ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
 
       - name: Deploy to Cloud Platform
@@ -154,7 +156,7 @@ jobs:
 
       - name: Wait for new deployment to finish
         run: |
-          kubectl -n ${KUBE_NAMESPACE} rollout status deployment --timeout=6m
+          kubectl -n ${KUBE_NAMESPACE} rollout status deployment laa-landing-page --timeout=7m
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
@@ -164,7 +166,7 @@ jobs:
           #!/bin/bash
           RDS_DB_IDENTIFIER=$(kubectl get secret rds-postgresql-instance-output -o jsonpath='{.data.rds_instance_endpoint}' | base64 -d | cut -d. -f1 | xargs printf "%s")
           echo "RDS_DB_IDENTIFIER=${RDS_DB_IDENTIFIER}" >> "$GITHUB_ENV"
-          
+
       # Prometheus alerts & Grafana config generation - after application deployment to avoid chicken/egg scenarios
       # Note: first rm command removes the previously generated files and doesn't remove the templates/ directory
       - name: Generate Monitoring Deployment Files
@@ -178,9 +180,9 @@ jobs:
           ENV_NAME: ${{ vars.ENV_NAME }}
           # Alert trigger for remaining freeable memory on RDS instance, currently set in MB, below value is 85% of total memory
           RDS_LOW_FREEABLE_MEMORY_TRIGGER: "150"
-          # Should be 'prd' only if the environment is prd, otherwise set it to an random string. 
+          # Should be 'prd' only if the environment is prd, otherwise set it to an random string.
           ALERT_ALWAYS_ON_ENV: 'null'
-      
+
       # Prometheus alerts & Grafana deployment
       - name: Deploy Monitoring to Cloud Platform
         run: |

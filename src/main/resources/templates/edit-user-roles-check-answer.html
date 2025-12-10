@@ -56,7 +56,7 @@
                             <span>No role assigned</span>
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a th:href="@{'/admin/users/edit/' + ${user.id} + '/apps'}" class="govuk-link">Change</a>
+                            <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">Change</a>
                         </dd>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
         </p>
         <div class="govuk-button-group">
             <button type="submit" class="govuk-button">Confirm</button>
-            <a th:href="@{'/admin/users/edit/' + ${user.id} + '/cancel'}" class="govuk-link">Cancel</a>
+            <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
         </div>
     </form>
 </main>

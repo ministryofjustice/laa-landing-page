@@ -12,14 +12,20 @@ jobs:
     steps:
       - name: Run ZAP Daily Baseline Scan
         id: baseline_run
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
+<<<<<<< HEAD
           issue_title: ZAP Scan Baseline Report - dev
       - id: extract-summary
         uses: sean0x42/markdown-extract@v2.1.0
+=======
+
+      - name: Upload ZAP Daily Baseline Run Report
+        uses: actions/upload-artifact@v5
+>>>>>>> main
         with:
           file: report_md.md
           pattern: 'Summary of Alerts'
