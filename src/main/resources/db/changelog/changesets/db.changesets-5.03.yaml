@@ -24,4 +24,5 @@ databaseChangeLog:
                   SELECT 1 FROM user_profile_office uo WHERE uo.user_profile_id = up.id
                 ) THEN TRUE
                 ELSE FALSE
-              END;
+              END
+              WHERE status = 'COMPLETE';
