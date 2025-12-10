@@ -1294,9 +1294,9 @@ public class UserController {
         // Create form object or load from session if exist
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         List<String> selectedOffices = new ArrayList<>();
-        AllOfficesNoOffice result = verifyAllOffices(userOfficeIds.isEmpty()
+        AllOfficesNoOffice result = verifyAllOffices(officesForm == null
                 ? Optional.empty()
-                : Optional.of(userOfficeIds.stream().toList()), user, userOffices);
+                : Optional.of(officesForm.getOffices()), user, userOffices);
         if (result.hasAllOffices()) {
             selectedOffices.add("ALL");
         } else if (result.hasNoOffices()) {
