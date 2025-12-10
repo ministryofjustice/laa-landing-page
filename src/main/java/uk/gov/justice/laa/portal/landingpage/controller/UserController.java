@@ -1290,25 +1290,37 @@ public class UserController {
         List<UUID> firmIds = userFirms.stream().map(FirmDto::getId).collect(Collectors.toList());
         List<Office> allOffices = officeService.getOfficesByFirms(firmIds);
 
-        // Check if user has access to all offices
+        // Check if user has access to all offices or no office
         // Create form object or load from session if exist
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         List<String> selectedOffices = new ArrayList<>();
-        AllOfficesNoOffice result = verifyAllOffices(officesForm == null
-                ? Optional.empty()
-                : Optional.of(officesForm.getOffices()), user, userOffices);
-        if (result.hasAllOffices()) {
-            selectedOffices.add("ALL");
-        } else if (result.hasNoOffices()) {
-            selectedOffices.add("NO_OFFICES");
-        } else {
-            selectedOffices.addAll(userOfficeIds);
-        }
-
+        AllOfficesNoOffice result = new AllOfficesNoOffice(false, false);
         if (officesForm == null) {
             officesForm = new OfficesForm();
+            if (userOfficeIds.isEmpty()) {
+                if(user.isUnrestrictedOfficeAccess()) {
+                    result = new AllOfficesNoOffice(true, false);
+                    selectedOffices.add("ALL");
+                } else {
+                    result = new AllOfficesNoOffice(false, true);
+                    selectedOffices.add("NO_OFFICES");
+                }
+            } else {
+                selectedOffices.addAll(userOfficeIds);
+            }
             officesForm.setOffices(selectedOffices);
+        } else {
+            result = verifyAllOffices(Optional.of(officesForm.getOffices()), user, userOffices);
+            if (result.hasAllOffices()) {
+                selectedOffices.add("ALL");
+            } else if (result.hasNoOffices()) {
+                selectedOffices.add("NO_OFFICES");
+            } else {
+                selectedOffices.addAll(officesForm.getOffices());
+                userOfficeIds = new HashSet<>(officesForm.getOffices());
+            }
         }
+
         Set<String> finalUserOfficeIds = userOfficeIds;
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(

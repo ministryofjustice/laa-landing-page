@@ -2246,7 +2246,7 @@ class UserServiceTest {
             // Assert
             assertThat(userProfile.getOffices()).isEmpty();
             assertThat(userProfile.isUnrestrictedOfficeAccess()).isFalse();
-            assertThat(diff).isEqualTo("Removed : Unrestricted access null , Added : Unrestricted access ");
+            assertThat(diff).isEqualTo("Removed : Unrestricted access null, Added : Unrestricted access null");
             verify(mockUserProfileRepository).saveAndFlush(userProfile);
         }
 
