@@ -101,6 +101,8 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @RequestMapping("/admin")
 public class UserController {
 
+    public static final String NO_OFFICES = "NO_OFFICES";
+    public static final String ALL = "ALL";
     private final LoginService loginService;
     private final UserService userService;
     private final OfficeService officeService;
@@ -1300,10 +1302,10 @@ public class UserController {
             if (userOfficeIds.isEmpty()) {
                 if (user.isUnrestrictedOfficeAccess()) {
                     result = new AllOfficesNoOffice(true, false);
-                    selectedOffices.add("ALL");
+                    selectedOffices.add(ALL);
                 } else {
                     result = new AllOfficesNoOffice(false, true);
-                    selectedOffices.add("NO_OFFICES");
+                    selectedOffices.add(NO_OFFICES);
                 }
             } else {
                 selectedOffices.addAll(userOfficeIds);
@@ -1312,9 +1314,9 @@ public class UserController {
         } else {
             result = verifyAllOffices(Optional.of(officesForm.getOffices()), user, userOffices);
             if (result.hasAllOffices()) {
-                selectedOffices.add("ALL");
+                selectedOffices.add(ALL);
             } else if (result.hasNoOffices()) {
-                selectedOffices.add("NO_OFFICES");
+                selectedOffices.add(NO_OFFICES);
             } else {
                 selectedOffices.addAll(officesForm.getOffices());
                 userOfficeIds = new HashSet<>(officesForm.getOffices());
@@ -1406,7 +1408,7 @@ public class UserController {
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
         List<OfficeModel> selectOfficesDisplay = new ArrayList<>();
-        if (!(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
+        if (!(selectedOffices.contains(ALL) || selectedOffices.contains(NO_OFFICES))) {
             Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
             if (modelFromSession != null) {
                 @SuppressWarnings("unchecked")
@@ -1425,8 +1427,8 @@ public class UserController {
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
         model.addAttribute("userOffices", selectOfficesDisplay);
         model.addAttribute("user", modelFromSession.getAttribute("user"));
-        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
-        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals(ALL));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals(NO_OFFICES));
         return "edit-user-offices-check-answer";
     }
 
@@ -1863,7 +1865,7 @@ public class UserController {
         } else {
             List<String> selectedOffices = selectedOfficesOptional.get();
             if (!selectedOffices.isEmpty()
-                    && !(selectedOffices.contains("ALL") || selectedOffices.contains("NO_OFFICES"))) {
+                    && !(selectedOffices.contains(ALL) || selectedOffices.contains(NO_OFFICES))) {
                 userOffices = officeService.getOfficesByIds(selectedOfficesOptional.get());
             }
         }
@@ -1898,9 +1900,9 @@ public class UserController {
 
         AllOfficesNoOffice result = verifyAllOffices(selectedOfficesOptional, user, userOffices);
         if (result.hasAllOffices()) {
-            selectedOffices.add("ALL");
+            selectedOffices.add(ALL);
         } else if (result.hasNoOffices()) {
-            selectedOffices.add("NO_OFFICES");
+            selectedOffices.add(NO_OFFICES);
         } else {
             selectedOffices.addAll(userOfficeIds);
         }
@@ -1928,8 +1930,8 @@ public class UserController {
             hasAllOffices = user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
             hasNoOffices = !user.isUnrestrictedOfficeAccess() && userOffices.isEmpty();
         } else {
-            hasAllOffices = selectedOfficesOptional.get().contains("ALL");
-            hasNoOffices = selectedOfficesOptional.get().contains("NO_OFFICES");
+            hasAllOffices = selectedOfficesOptional.get().contains(ALL);
+            hasNoOffices = selectedOfficesOptional.get().contains(NO_OFFICES);
         }
         return new AllOfficesNoOffice(hasAllOffices, hasNoOffices);
     }
@@ -2020,8 +2022,8 @@ public class UserController {
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
-        if (!(selectedOffices.getFirst().equals("ALL")
-                || selectedOffices.getFirst().equals("NO_OFFICES"))) {
+        if (!selectedOffices.isEmpty() && !(selectedOffices.getFirst().equals(ALL)
+                || selectedOffices.getFirst().equals(NO_OFFICES))) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
@@ -2038,8 +2040,8 @@ public class UserController {
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
-        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals("ALL"));
-        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals("NO_OFFICES"));
+        model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals(ALL));
+        model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals(NO_OFFICES));
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
