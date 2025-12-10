@@ -1298,7 +1298,7 @@ public class UserController {
         if (officesForm == null) {
             officesForm = new OfficesForm();
             if (userOfficeIds.isEmpty()) {
-                if(user.isUnrestrictedOfficeAccess()) {
+                if (user.isUnrestrictedOfficeAccess()) {
                     result = new AllOfficesNoOffice(true, false);
                     selectedOffices.add("ALL");
                 } else {
