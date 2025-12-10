@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-information-assurance-role-assignments
+      author: paul.snowdon
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              -- Allow Global Admin to assign Information & Assurance role
+              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
+              VALUES (
+                (SELECT id FROM app_role WHERE name = 'Information & Assurance' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users')),
+                (SELECT id FROM app_role WHERE name = 'Global Admin' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users'))
+              )
+              ON CONFLICT DO NOTHING;
+
+              -- Allow Internal User Manager to assign Information & Assurance role
+              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
+              VALUES (
+                (SELECT id FROM app_role WHERE name = 'Information & Assurance' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users')),
+                (SELECT id FROM app_role WHERE name = 'Internal User Manager' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users'))
+              )
+              ON CONFLICT DO NOTHING;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'Information & Assurance' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users'))
+              AND assigning_role_id IN (
+                (SELECT id FROM app_role WHERE name = 'Global Admin' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users')),
+                (SELECT id FROM app_role WHERE name = 'Internal User Manager' AND app_id = (SELECT id FROM app WHERE name = 'Manage Your Users'))
+              );
