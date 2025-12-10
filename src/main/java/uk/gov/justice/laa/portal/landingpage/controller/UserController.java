@@ -2022,8 +2022,8 @@ public class UserController {
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
-        if (!selectedOffices.isEmpty() && !(selectedOffices.getFirst().equals(ALL)
-                || selectedOffices.getFirst().equals(NO_OFFICES))) {
+        if (!selectedOffices.isEmpty() && !(selectedOffices.contains(ALL)
+                || selectedOffices.contains(NO_OFFICES))) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
