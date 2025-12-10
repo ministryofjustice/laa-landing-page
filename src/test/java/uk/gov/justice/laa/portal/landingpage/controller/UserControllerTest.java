@@ -4879,7 +4879,7 @@ class UserControllerTest {
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
-        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+        String view = userController.grantAccessEditUserRoles(userId, 1, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
 
         // Then

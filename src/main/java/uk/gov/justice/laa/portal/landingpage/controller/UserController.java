@@ -1702,13 +1702,7 @@ public class UserController {
 
         List<String> selectedApps = selectedAppsOptional.get();
 
-        Model modelFromSession = (Model) session.getAttribute("grantAccessUserRolesModel");
-        Integer currentSelectedAppIndex;
-        if (modelFromSession != null && modelFromSession.getAttribute("grantAccessSelectedAppIndex") != null) {
-            currentSelectedAppIndex = (Integer) modelFromSession.getAttribute("grantAccessSelectedAppIndex");
-        } else {
-            currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
-        }
+        int currentSelectedAppIndex = selectedAppIndex != null ? selectedAppIndex : 0;
 
         // Ensure the index is within bounds
         if (currentSelectedAppIndex >= selectedApps.size()) {
