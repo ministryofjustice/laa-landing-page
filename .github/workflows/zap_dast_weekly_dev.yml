@@ -16,11 +16,89 @@ jobs:
           target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j -m 120'
           fail_action: false
-
-      - name: Upload Weekly Scan ZAP Report
-        uses: actions/upload-artifact@v4
+          issue_title: ZAP Full Scan Report - dev
+      - id: extract-summary
+        uses: sean0x42/markdown-extract@v2.1.0
         with:
-          name: weekly-zap-report
-          path: |
-            report_html.html
-            report_json.json
+          file: report_md.md
+          pattern: 'Summary of Alerts'
+          case-sensitive: 'true'
+      - name: Parse summary
+        run: |
+          #!/bin/bash -xe
+          high_value=$(echo "$ZAP_SUMMARY" | grep "| High |" | awk -F'|' '{print $3}' | xargs)
+          medium_value=$(echo "$ZAP_SUMMARY" | grep "| Medium |" | awk -F'|' '{print $3}' | xargs)
+          low_value=$(echo "$ZAP_SUMMARY" | grep "| Low |" | awk -F'|' '{print $3}' | xargs)
+          info_value=$(echo "$ZAP_SUMMARY" | grep "| Informational |" | awk -F'|' '{print $3}' | xargs)
+          echo "ZAP_HIGH=${high_value}" >> "$GITHUB_ENV"
+          echo "ZAP_MEDIUM=${medium_value}" >> "$GITHUB_ENV"
+          echo "ZAP_LOW=${low_value}" >> "$GITHUB_ENV"
+          echo "ZAP_INFO=${info_value}" >> "$GITHUB_ENV"
+        env:
+          ZAP_SUMMARY: ${{ steps.extract-summary.outputs.markdown }}
+      - name: Post to Slack
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}  # TODO - set up webhook, add env var
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "ZAP Weekly Scan Report: DEV Environment"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Scan Summary:*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rotating_light: *HIGH:* ${{ env.ZAP_HIGH }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":sign-warning: *MEDIUM:* ${{ env.ZAP_MEDIUM }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":orange_heart: *LOW:* ${{ env.ZAP_LOW }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":yellow_heart: *INFORMATIONAL:* ${{ env.ZAP_INFO }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+      # - name: Upload Weekly Scan ZAP Report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: weekly-zap-report
+      #     path: |
+      #       report_html.html
+      #       report_json.json

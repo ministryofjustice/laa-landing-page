@@ -17,6 +17,7 @@ jobs:
           target: 'https://test.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
+          issue_title: ZAP Scan Baseline Report - test
 
       - name: Upload ZAP Daily Homepage Baseline Run Report
         uses: actions/upload-artifact@v4

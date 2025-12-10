@@ -1,18 +1,18 @@
 repos:
   # Updates to latest versions instead of going by rev tags for all pre-commit hooks
 -   repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
-    rev: v0.8.0
+    rev: v0.9.0
     hooks:
     -   id: pre-commit-update
         args: ["--verbose"]
   # GitLeaks secret scanner
 -   repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.0
+    rev: v8.30.0
     hooks:
     -   id: gitleaks
   # GitGuardian Shield secret scanner
 -   repo: https://github.com/gitguardian/ggshield
-    rev: v1.44.0
+    rev: v1.45.0
     hooks:
     -   id: ggshield
         language_version: python3
