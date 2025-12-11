@@ -418,6 +418,47 @@ class AuditControllerTest {
     }
 
     @Test
+    void displayAuditTable_withMultiFirmIsNull_filtersResults() {
+        // Given
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), eq(null), anyInt(), anyInt(),
+                anyString(), anyString())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSelectedUserType(null);
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        assertThat(model.getAttribute("multiFirm")).isEqualTo("");
+        assertThat(model.getAttribute("selectedUserType")).isEqualTo("");
+
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+    }
+
+    @Test
+    void displayAuditTable_withMultiFirmWhenMultiFirmIsFalse_filtersResults() {
+        // Given
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), eq(false), anyInt(), anyInt(),
+                anyString(), anyString())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSelectedUserType(null);
+        criteria.setMultiFirm(false);
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        assertThat(model.getAttribute("multiFirm")).isEqualTo("false");
+        assertThat(model.getAttribute("selectedUserType")).isEqualTo("");
+
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
+    }
+
+    @Test
     void displayAuditTable_withMultiFirm_filtersResults() {
         // Given
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), eq(true), anyInt(), anyInt(),
