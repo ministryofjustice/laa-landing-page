@@ -45,6 +45,18 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     @Autowired
     protected UserService userService;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository officeRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected jakarta.persistence.EntityManager entityManager;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     private EntraUser externalUser;
     private UserProfile externalUserProfile;
     private Firm firm1;
@@ -54,48 +66,89 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     @BeforeAll
     @Override
     public void beforeAll() {
-        // Clean up
-        userProfileRepository.deleteAll();
-        entraUserRepository.deleteAll();
-        firmRepository.deleteAll();
+        setupFirmsAndUsers();
+    }
 
-        // Create firms
-        firm1 = buildFirm("ABC Law Firm", "ABC001");
-        firm1 = firmRepository.saveAndFlush(firm1);
+    private void setupFirmsAndUsers() {
+        org.springframework.transaction.TransactionStatus txStatus = 
+            transactionManager.getTransaction(new org.springframework.transaction.support.DefaultTransactionDefinition());
+        try {
+            // Clean up
+            userProfileRepository.deleteAll();
+            entraUserRepository.deleteAll();
+            officeRepository.deleteAll();
+            firmRepository.deleteAll();
 
-        firm2 = buildFirm("XYZ Legal Services", "XYZ001");
-        firm2 = firmRepository.saveAndFlush(firm2);
+            // Create firms with offices (firms must have at least one office)
+            // Disable triggers temporarily to avoid constraint issues during setup
+            entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
+            
+            firm1 = firmRepository.save(buildFirm("ABC Law Firm", "ABC001"));
+            var office1 = officeRepository.save(buildOffice(firm1, "Main Office", "123 Main St", "555-0001", "ABC-MAIN"));
+            firm1.getOffices().add(office1);
 
-        // Create external user
-        externalUser = buildEntraUser(generateEntraId(), "external.user@test.com", "External", "User");
-        UserProfile profile = buildLaaUserProfile(externalUser, UserType.EXTERNAL, true);
-        profile.setFirm(firm1);
-        profile.setAppRoles(new HashSet<>());
-        externalUser.setUserProfiles(Set.of(profile));
-        profile.setEntraUser(externalUser);
-        externalUser = entraUserRepository.saveAndFlush(externalUser);
-        externalUserProfile = profile;
+            firm2 = firmRepository.save(buildFirm("XYZ Legal Services", "XYZ001"));
+            var office2 = officeRepository.save(buildOffice(firm2, "Main Office", "456 Legal Ave", "555-0002", "XYZ-MAIN"));
+            firm2.getOffices().add(office2);
+            
+            firmRepository.flush();
+            officeRepository.flush();
+            
+            // Re-enable triggers
+            entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
 
-        // Create admin user with EDIT_USER_FIRM permission (External User Admin role has this permission)
-        adminUser = buildEntraUser(generateEntraId(), "admin@test.com", "Admin", "User");
-        UserProfile adminProfile = buildLaaUserProfile(adminUser, UserType.INTERNAL, true);
-        AppRole externalUserAdminRole = appRoleRepository.findAllWithPermissions().stream()
-                .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals("External User Admin"))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Could not find External User Admin role"));
-        adminProfile.setAppRoles(Set.of(externalUserAdminRole));
-        adminUser.setUserProfiles(Set.of(adminProfile));
-        adminProfile.setEntraUser(adminUser);
-        adminUser = entraUserRepository.saveAndFlush(adminUser);
+            // Create external user
+            externalUser = buildEntraUser(generateEntraId(), "external.user@test.com", "External", "User");
+            UserProfile profile = buildLaaUserProfile(externalUser, UserType.EXTERNAL, true);
+            profile.setFirm(firm1);
+            profile.setAppRoles(new HashSet<>());
+            externalUser.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(externalUser);
+            externalUser = entraUserRepository.saveAndFlush(externalUser);
+            externalUserProfile = profile;
+
+            // Create admin user with EDIT_USER_FIRM permission (External User Admin role has this permission)
+            adminUser = buildEntraUser(generateEntraId(), "admin@test.com", "Admin", "User");
+            UserProfile adminProfile = buildLaaUserProfile(adminUser, UserType.INTERNAL, true);
+            AppRole externalUserAdminRole = appRoleRepository.findAllWithPermissions().stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Admin"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find External User Admin role"));
+            adminProfile.setAppRoles(Set.of(externalUserAdminRole));
+            adminUser.setUserProfiles(Set.of(adminProfile));
+            adminProfile.setEntraUser(adminUser);
+            adminUser = entraUserRepository.saveAndFlush(adminUser);
+            
+            transactionManager.commit(txStatus);
+        } catch (Exception e) {
+            transactionManager.rollback(txStatus);
+            throw new RuntimeException("Failed to setup test data", e);
+        }
     }
 
     @AfterAll
     @Override
     protected void baseAfterAll() {
-        userProfileRepository.deleteAll();
-        entraUserRepository.deleteAll();
-        firmRepository.deleteAll();
+        org.springframework.transaction.TransactionStatus txStatus = 
+            transactionManager.getTransaction(new org.springframework.transaction.support.DefaultTransactionDefinition());
+        try {
+            // Disable triggers temporarily during cleanup
+            entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
+            
+            userProfileRepository.deleteAll();
+            entraUserRepository.deleteAll();
+            officeRepository.deleteAll();  // Delete offices before firms due to foreign key constraint
+            firmRepository.deleteAll();
+            
+            // Re-enable triggers
+            entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
+            
+            transactionManager.commit(txStatus);
+        } catch (Exception e) {
+            transactionManager.rollback(txStatus);
+            throw new RuntimeException("Failed to cleanup test data", e);
+        }
     }
 
     @Nested
