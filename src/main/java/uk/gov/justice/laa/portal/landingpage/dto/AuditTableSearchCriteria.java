@@ -24,7 +24,7 @@ public class AuditTableSearchCriteria {
     private String silasRole;
     private UUID selectedAppId;
     private UserType selectedUserType;
-    private Boolean multiFirm;
+    private boolean multiFirm;
     // Defaulted
     private String search = "";
     private int size = 10;

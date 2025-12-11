@@ -111,7 +111,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("direction")).isEqualTo("asc");
         assertThat(model.getAttribute("silasRoles")).isEqualTo(mockSilasRoles);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
         verify(userService, times(1)).getAllSilasRoles();
     }
 
@@ -131,7 +131,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("search")).isEqualTo("john");
 
-        verify(userService, times(1)).getAuditUsers("john", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("john", null, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -150,7 +150,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -168,7 +168,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -187,7 +187,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("selectedSilasRole")).isEqualTo("Global Admin");
 
-        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -206,7 +206,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(25);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 25, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 25, "name", "asc");
     }
 
     @Test
@@ -225,7 +225,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("page")).isEqualTo(2);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 2, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 2, 10, "name", "asc");
     }
 
     @Test
@@ -247,7 +247,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("sort")).isEqualTo("email");
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
-        verify(userService, times(1)).getAuditUsers("", null, "", null, null, null, 1, 10, "email", "desc");
+        verify(userService, times(1)).getAuditUsers("", null, "", null, null, false, 1, 10, "email", "desc");
     }
 
     @Test
@@ -279,7 +279,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("sort")).isEqualTo("email");
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
-        verify(userService, times(1)).getAuditUsers("test", firmId, "Global Admin", null, null, null, 2, 25, "email",
+        verify(userService, times(1)).getAuditUsers("test", firmId, "Global Admin", null, null, false, 2, 25, "email",
                 "desc");
     }
 
@@ -343,7 +343,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -368,7 +368,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid app ID format: " + selectedAppId);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -393,7 +393,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid user type provided: " + userType);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
@@ -413,28 +413,8 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("INTERNAL");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, UserType.INTERNAL, null, 1, 10, "name",
+        verify(userService, times(1)).getAuditUsers("", null, null, null, UserType.INTERNAL, false, 1, 10, "name",
                 "asc");
-    }
-
-    @Test
-    void displayAuditTable_withMultiFirmIsNull_filtersResults() {
-        // Given
-        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), eq(null), anyInt(), anyInt(),
-                anyString(), anyString())).thenReturn(mockPaginatedUsers);
-        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
-        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
-        criteria.setSelectedUserType(null);
-
-        // When
-        String viewName = auditController.displayAuditTable(criteria, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/users");
-        assertThat(model.getAttribute("multiFirm")).isEqualTo("");
-        assertThat(model.getAttribute("selectedUserType")).isEqualTo("");
-
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
     }
 
     @Test
@@ -452,7 +432,7 @@ class AuditControllerTest {
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
-        assertThat(model.getAttribute("multiFirm")).isEqualTo("false");
+        assertThat(model.getAttribute("multiFirm")).isEqualTo("");
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
@@ -472,7 +452,7 @@ class AuditControllerTest {
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
-        assertThat(model.getAttribute("multiFirm")).isEqualTo("true");
+        assertThat(model.getAttribute("multiFirm")).isEqualTo(true);
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("MULTI_FIRM");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, null, true, 1, 10, "name", "asc");
@@ -494,7 +474,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, null, 1, 10, "name", "asc");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, false, 1, 10, "name", "asc");
     }
 
     @Test
