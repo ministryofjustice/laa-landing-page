@@ -11,6 +11,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Deprecated
 public class EntraClaimDto implements Serializable {
     private String type;
     private String value;

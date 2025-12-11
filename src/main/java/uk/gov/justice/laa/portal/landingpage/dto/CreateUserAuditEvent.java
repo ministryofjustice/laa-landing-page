@@ -2,12 +2,13 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 public class CreateUserAuditEvent extends AuditEvent implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final EntraUser user;
     private final String selectedFirm;
     private final boolean isUserManager;
@@ -32,7 +33,6 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
 
     @Override
     public String getDescription() {
-        String userName = user.getFirstName() + " " + user.getLastName();
         return String.format(CREATE_USER_TEMPLATE, user.getId(), selectedFirm, isUserManager ? "External User Manager" : "Provider User");
     }
 }

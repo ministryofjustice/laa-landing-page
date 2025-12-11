@@ -5,6 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
+@Deprecated
 public class AppViewModel implements Serializable {
     private String id;
     private String name;

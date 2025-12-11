@@ -2,10 +2,13 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
 public class DeleteUserAttemptAuditEvent extends AuditEvent implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final String deletedUserId;
     private final String reason;
     private final String error;

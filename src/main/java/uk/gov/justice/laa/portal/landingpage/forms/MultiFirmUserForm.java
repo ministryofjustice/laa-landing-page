@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalPattern;
 import uk.gov.justice.laa.portal.landingpage.validation.ConditionalSize;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Data
@@ -15,6 +16,9 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MultiFirmUserForm implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @NotEmpty(message = "Multi firm user email must be provided")
     @ConditionalSize(max = 254, message = "Email must not be longer than 254 characters")

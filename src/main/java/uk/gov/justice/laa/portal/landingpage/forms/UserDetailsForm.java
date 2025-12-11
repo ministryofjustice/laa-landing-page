@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,9 @@ import uk.gov.justice.laa.portal.landingpage.validation.ConditionalSize;
 
 @Data
 public class UserDetailsForm implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     //Az letters include diacritics
     private static final String allowedChars = "A-Za-zÀ-ÖØ-öø-įĴ-őŔ-žǍ-ǰǴ-ǵǸ-țȞ-ȟȤ-ȳɃɆ-ɏḀ-ẞƀ-ƓƗ-ƚƝ-ơƤ-ƥƫ-ưƲ-ƶẠ-ỿ";

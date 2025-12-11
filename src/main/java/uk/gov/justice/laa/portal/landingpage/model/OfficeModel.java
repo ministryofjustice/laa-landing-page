@@ -6,12 +6,15 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import uk.gov.justice.laa.portal.landingpage.utils.AddressFormatter;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class OfficeModel implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String code;
     private Address address;
     private String id;
@@ -22,6 +25,8 @@ public class OfficeModel implements Serializable {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Address implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private String addressLine1;
         private String addressLine2;
         private String addressLine3;

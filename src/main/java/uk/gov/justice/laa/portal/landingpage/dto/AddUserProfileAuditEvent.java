@@ -3,12 +3,15 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
 @Getter
 public class AddUserProfileAuditEvent extends AuditEvent implements Serializable {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
     private static final String UPDATE_USER_ROLE_TEMPLATE
             = "New user profile with id %s added to user id %s, for the firm %s, added by %s and added %s (%s)";
     private final EntraUserDto user;

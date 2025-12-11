@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -17,6 +18,8 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LaaApplication implements Comparable<LaaApplication>, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String name;
     private String oidGroupName;
     private String title;
@@ -49,6 +52,8 @@ public class LaaApplication implements Comparable<LaaApplication>, Serializable 
     @AllArgsConstructor
     @Data
     public static class LaaApplicationDetails implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private String oid;
         private String securityGroupName;
         private String securityGroupOid;
