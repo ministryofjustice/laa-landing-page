@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -1390,9 +1392,16 @@ public class UserService {
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserType userType, Boolean multiFirm,
+            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
             int page, int pageSize, String sort, String direction) {
 
+        Boolean multiFirm = null;
+        UserType userType = null;
+        if (UserTypeForm.MULTI_FIRM.equals(userTypeForm)) {
+            multiFirm = true;
+        } else if (userTypeForm != null) {
+            userType = UserType.valueOf(userTypeForm.name());
+        }
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
         boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
@@ -1438,7 +1447,7 @@ public class UserService {
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
+                        .findUsersWithProfilesAndRoles(new LinkedHashSet<>(userIds));
 
                 // Sort users to match the order from the query result
                 Map<UUID, Integer> orderMap = new HashMap<>();
