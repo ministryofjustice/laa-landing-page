@@ -87,12 +87,6 @@ public class AuditController {
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
         model.addAttribute("selectedUserType",
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
-   /*     //fix STB-3320
-        if (criteria.isMultiFirm()) {
-            model.addAttribute("selectedUserType", "MULTI_FIRM");
-        }*/
-
-        //model.addAttribute("multiFirm", criteria.isMultiFirm());
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
     }
