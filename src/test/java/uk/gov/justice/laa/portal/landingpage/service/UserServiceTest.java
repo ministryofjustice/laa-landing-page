@@ -90,6 +90,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
@@ -5483,7 +5484,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5543,7 +5544,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(searchTerm,
-                    null, null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5600,7 +5601,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null,
-                    firmId, null, null, null, null, 1, 10, "name", "asc");
+                    firmId, null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5656,7 +5657,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    silasRole, null, null, null, 1, 10, "name", "asc");
+                    silasRole, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5727,7 +5728,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null, 1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5750,7 +5751,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5801,7 +5802,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5852,7 +5853,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 2, 10, "name", "asc");
+                    null, null, null,  2, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5890,7 +5891,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5944,7 +5945,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -5996,7 +5997,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6088,7 +6089,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "desc");
+                    null, null, null,  1, 10, "name", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6125,7 +6126,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6160,7 +6161,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "email", "desc");
+                    null, null, null,  1, 10, "email", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6216,7 +6217,7 @@ class UserServiceTest {
 
             // When - using "accountstatus" as the sort field
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "accountstatus", "asc");
+                    null, null, null,  1, 10, "accountstatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6258,7 +6259,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "usertype", "desc");
+                    null, null, null,  1, 10, "usertype", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6271,6 +6272,149 @@ class UserServiceTest {
             assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
             assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByUserTypeMultiFirmDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Smith")
+                    .email("john.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "usertype" as sort field which maps to "multiFirmUser"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, UserTypeForm.MULTI_FIRM,  1, 10, "usertype", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External - 3rd Party");
+            assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByUserTypeExternalDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Smith")
+                    .email("john.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "usertype" as sort field which maps to "multiFirmUser"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+
+        }
+
+        @Test
+        void getAuditUsers_whenSortingByUserTypeInternalDescending_appliesCorrectSort() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("John")
+                    .lastName("Smith")
+                    .email("john.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When - using "usertype" as sort field which maps to "multiFirmUser"
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, UserTypeForm.INTERNAL,  1, 10, "usertype", "desc");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Internal");
+            assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
+
+            ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(null), pageRequestCaptor.capture());
+
+            PageRequest capturedPageRequest = pageRequestCaptor.getValue();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+                    .isEqualTo(Sort.Direction.DESC);
+
         }
 
         @Test
@@ -6299,7 +6443,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "name", null);
+                    null, null, null,  1, 10, "name", null);
 
             // Then
             assertThat(result).isNotNull();
@@ -6340,7 +6484,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "email", "");
+                    null, null, null,  1, 10, "email", "");
 
             // Then
             assertThat(result).isNotNull();
@@ -6819,7 +6963,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "accountStatus", "asc");
+                    null, null, null, 1, 10, "accountStatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6869,7 +7013,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "accountStatus", "desc");
+                    null, null, null,  1, 10, "accountStatus", "desc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6899,7 +7043,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "accountStatus", "asc");
+                    null, null, null,  1, 10, "accountStatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
@@ -6937,7 +7081,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, null, 1, 10, "accountStatus", "asc");
+                    null, null, null,  1, 10, "accountStatus", "asc");
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
@@ -6973,7 +7117,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
-                    firmId, "PUI_CASE_WORKER", appId, null, null, 1, 10, "accountStatus", "asc");
+                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "accountStatus", "asc");
 
             // Then
             assertThat(result).isNotNull();
