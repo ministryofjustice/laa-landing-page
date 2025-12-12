@@ -397,6 +397,25 @@ class AuditControllerTest {
     }
 
     @Test
+    void displayAuditTable_withUserTypeNull_logsError() {
+        // Given
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(null), anyInt(), anyInt(),
+                anyString(), anyString())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSelectedUserType(null);
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc");
+    }
+
+    @Test
     void displayAuditTable_withUserType_filtersResults() {
         // Given
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(UserTypeForm.INTERNAL), anyInt(),
