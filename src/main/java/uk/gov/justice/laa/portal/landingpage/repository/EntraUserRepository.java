@@ -143,7 +143,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
-            @Param("userType") String userType,
+            @Param("userType") UserType userType,
             @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
@@ -185,7 +185,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
-            @Param("userType") String userType,
+            @Param("userType") UserType userType,
             @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 
@@ -262,7 +262,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
             @Param("appId") UUID appId,
-            @Param("userType") String userType,
+            @Param("userType") UserType userType,
             @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
 }
