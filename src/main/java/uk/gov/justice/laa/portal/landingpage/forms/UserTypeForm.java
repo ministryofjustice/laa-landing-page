@@ -8,7 +8,7 @@ public enum UserTypeForm {
     ALL(null, null),
     INTERNAL(false, UserType.INTERNAL),
     EXTERNAL(false, UserType.EXTERNAL),
-    MULTI_FIRM(true, UserType.EXTERNAL);
+    MULTI_FIRM(true, null);
 
     private final Boolean multiFirm;
     private final UserType userType;
