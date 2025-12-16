@@ -6336,7 +6336,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6353,7 +6353,7 @@ class UserServiceTest {
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
@@ -6391,7 +6391,7 @@ class UserServiceTest {
                     PageRequest.of(0, 10), 1);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(null), any(PageRequest.class)))
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), any(PageRequest.class)))
                     .thenReturn(userPage);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
@@ -6408,7 +6408,7 @@ class UserServiceTest {
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
             verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(null), pageRequestCaptor.capture());
+                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
             assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
