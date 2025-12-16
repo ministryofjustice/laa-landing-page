@@ -1,7 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -109,7 +113,6 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
-
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
@@ -118,6 +121,7 @@ public class AuditController {
             // Try to load by UserProfile ID first (existing behavior)
             try {
                 userDetail = userService.getAuditUserDetail(userId, profilePage, profileSize);
+
             } catch (IllegalArgumentException e) {
                 // If profile not found, try as EntraUser ID
                 log.debug("Profile not found with ID {}, attempting to load as EntraUser ID",
@@ -126,7 +130,23 @@ public class AuditController {
             }
         }
 
-        // Add attributes to model
+        //map to roles
+        List<AppRoleDto> roles = userDetail.getProfiles()
+                        .stream()
+                        .flatMap(profile -> profile.getRoles().stream())
+                        .toList();
+
+
+
+        Map<String, List<String>> appAssignments = roles.stream()
+                .filter(Objects::nonNull)
+                .filter(r -> r.getApp() != null && r.getApp().getName() != null && r.getName() != null)
+                .collect(Collectors.groupingBy(
+                        r -> r.getApp().getName(),
+                        Collectors.mapping(AppRoleDto::getName, Collectors.toList())));
+
+
+                        // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);

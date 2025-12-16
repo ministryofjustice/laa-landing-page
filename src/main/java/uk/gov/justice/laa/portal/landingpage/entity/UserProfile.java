@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.persistence.OrderBy;
 import org.hibernate.annotations.Check;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -83,6 +84,7 @@ public class UserProfile extends AuditableEntity {
         foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"),
         inverseJoinColumns = @JoinColumn(name = "app_role_id"),
         inverseForeignKey = @ForeignKey(name = "FK_user_profile_app_role_app_role_id"))
+    @OrderBy("name ASC")
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;
