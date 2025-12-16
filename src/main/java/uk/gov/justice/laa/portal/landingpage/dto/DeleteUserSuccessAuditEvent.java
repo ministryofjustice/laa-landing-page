@@ -3,10 +3,13 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
 public class DeleteUserSuccessAuditEvent extends AuditEvent implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final DeletedUser deletedUser;
     private final String reason;
 
