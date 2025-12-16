@@ -1,0 +1,131 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2025-12-15-step-01-drop-trigger-and-constraint
+      author: suresh.kavali
+      dbms: postgresql
+      runInTransaction: true
+      changes:
+        - sql:
+            sql: |
+              DROP TRIGGER IF EXISTS trg_advocate_type_change_for_parent ON firm;
+        - sql:
+            sql: |
+              ALTER TABLE firm DROP CONSTRAINT IF EXISTS firm_type_check;
+
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE firm
+              ADD CONSTRAINT firm_type_check
+              CHECK (type IN ('LEGAL_SERVICES_PROVIDER','CHAMBERS','ADVOCATE'));
+
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              CREATE TRIGGER trg_advocate_type_change_for_parent
+              BEFORE UPDATE OF type ON firm
+              FOR EACH ROW
+              EXECUTE FUNCTION prevent_advocate_with_children_on_type_change();
+
+  - changeSet:
+      id: 2025-12-15-step-02-create-enum
+      author: suresh.kavali
+      dbms: postgresql
+      runInTransaction: true
+      changes:
+        - sql:
+            sql: |
+              CREATE TYPE firm_type_enum AS ENUM ('LEGAL_SERVICES_PROVIDER', 'CHAMBERS', 'ADVOCATE');
+
+      rollback:
+        - sql:
+            sql: |
+              DROP TYPE IF EXISTS firm_type_enum;
+
+  - changeSet:
+      id: 2025-12-15-step-03-convert-column-types
+      author: suresh.kavali
+      dbms: postgresql
+      runInTransaction: true
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE firm
+              ALTER COLUMN type
+              TYPE firm_type_enum
+              USING (type::firm_type_enum);
+
+        - sql:
+            sql: |
+              ALTER TABLE app_role
+              ALTER COLUMN firm_type_restriction
+              TYPE firm_type_enum[]
+              USING (
+                CASE
+                  WHEN firm_type_restriction IS NULL THEN NULL
+                  ELSE ARRAY[firm_type_restriction::firm_type_enum]
+                END
+              );
+
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE app_role
+              ALTER COLUMN firm_type_restriction
+              TYPE varchar(255)
+              USING (
+                CASE
+                  WHEN firm_type_restriction IS NULL THEN NULL
+                  ELSE (
+                    SELECT e::varchar(255)
+                    FROM unnest(firm_type_restriction) AS t(e)
+                    LIMIT 1
+                  )
+                END
+              );
+
+        - sql:
+            sql: |
+              ALTER TABLE firm
+              ALTER COLUMN type
+              TYPE varchar(255)
+              USING (type::text);
+
+  - changeSet:
+      id: 2025-12-15-step-04-recreate-trigger
+      author: suresh.kavali
+      dbms: postgresql
+      runInTransaction: true
+      changes:
+        - sql:
+            sql: |
+              CREATE TRIGGER trg_advocate_type_change_for_parent
+              BEFORE UPDATE OF type ON firm
+              FOR EACH ROW
+              EXECUTE FUNCTION prevent_advocate_with_children_on_type_change();
+
+      rollback:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              DROP TRIGGER IF EXISTS trg_advocate_type_change_for_parent ON firm;
+
+  - changeSet:
+      id: 2025-12-15-step-05-optional-rollback-array-constraint
+      author: suresh.kavali
+      dbms: postgresql
+      runInTransaction: true
+      changes: [ ]
+      rollback:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+              ADD CONSTRAINT app_role_firm_type_check
+              CHECK (
+                firm_type_restriction IS NULL
+                OR firm_type_restriction IN ('LEGAL_SERVICES_PROVIDER','CHAMBERS','ADVOCATE')
+              );
