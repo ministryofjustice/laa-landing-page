@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 class ScreenshotWatcher implements TestWatcher {
     private static final Logger LOGGER = Logger.getLogger(ScreenshotWatcher.class.getName());
 
-    @Override
+    /*@Override
     public void testFailed(ExtensionContext context, Throwable cause) {
         if (BaseFrontEndTest.page == null) {
             return;
@@ -24,5 +24,5 @@ class ScreenshotWatcher implements TestWatcher {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to capture screenshot", e);
         }
-    }
+    }*/
 }
