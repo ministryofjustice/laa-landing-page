@@ -1396,6 +1396,7 @@ public class UserService {
             int page, int pageSize, String sort, String direction) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
+        String userTypeStr = userType == null ? null : userType.name();
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1426,13 +1427,13 @@ public class UserService {
             Page<? extends UserAuditProjection> resultPage;
             if (sortByProfileCount) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userType, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else if (sortByFirm) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userType, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else {
                 resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
-                        searchTerm, firmId, silasRole, appId, userType, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             }
 
             // Extract user IDs in order
