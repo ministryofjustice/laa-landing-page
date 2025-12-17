@@ -1,9 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -151,15 +150,10 @@ public class AuditController {
         return roles.stream()
                 .collect(Collectors.groupingBy(
                         role -> role.getApp().getName(),
-                        // Use TreeMap to keep keys ordered.
-                        () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER),
-                        // Map role -> role name, and sort the list values
+                        // Map role -> role name
                         Collectors.collectingAndThen(
                                 Collectors.mapping(AppRoleDto::getName, Collectors.toList()),
-                                list -> list.stream()
-                                        .filter(Objects::nonNull)
-                                        .sorted(String.CASE_INSENSITIVE_ORDER)
-                                        .collect(Collectors.toList())
+                                ArrayList::new
                         )
                 ));
     }
