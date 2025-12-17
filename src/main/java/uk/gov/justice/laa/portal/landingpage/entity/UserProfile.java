@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import java.util.Set;
 import java.util.UUID;
 
-import jakarta.persistence.OrderBy;
 import org.hibernate.annotations.Check;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
