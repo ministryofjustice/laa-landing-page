@@ -125,6 +125,7 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
+
         // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
