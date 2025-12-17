@@ -1,9 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -130,29 +130,41 @@ public class AuditController {
             }
         }
 
-        //map to roles
-        List<AppRoleDto> roles = userDetail.getProfiles()
-                        .stream()
-                        .flatMap(profile -> profile.getRoles().stream())
-                        .toList();
+        Map<String, List<String>> appAssignments = getAppsSortedAlphabetically(userDetail.getProfiles());
 
-
-
-        Map<String, List<String>> appAssignments = roles.stream()
-                .filter(Objects::nonNull)
-                .filter(r -> r.getApp() != null && r.getApp().getName() != null && r.getName() != null)
-                .collect(Collectors.groupingBy(
-                        r -> r.getApp().getName(),
-                        Collectors.mapping(AppRoleDto::getName, Collectors.toList())));
-
-
-                        // Add attributes to model
+        // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
+        model.addAttribute("appAssignments", appAssignments);
 
         return "user-audit/details";
+    }
+
+    /**
+     * Create a map containing all Apps by their role, and sort alphabetically.
+     */
+    private static Map<String, List<String>> getAppsSortedAlphabetically(List<AuditUserDetailDto.AuditProfileDto> profiles) {
+        //map to roles
+        List<AppRoleDto> roles = profiles
+                .stream()
+                .flatMap(profile -> profile.getRoles().stream())
+                .toList();
+        return roles.stream()
+                .collect(Collectors.groupingBy(
+                        role -> role.getApp().getName(),
+                        // Use TreeMap to keep keys ordered.
+                        () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER),
+                        // Map role -> role name, and sort the list values
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(AppRoleDto::getName, Collectors.toList()),
+                                list -> list.stream()
+                                        .filter(Objects::nonNull)
+                                        .sorted(String.CASE_INSENSITIVE_ORDER)
+                                        .collect(Collectors.toList())
+                        )
+                ));
     }
 
     /**

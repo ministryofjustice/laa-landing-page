@@ -187,12 +187,18 @@
                                 <td class="govuk-table__cell" th:text="${profile.firmCode}"></td>
                                 <td class="govuk-table__cell" th:text="${profile.officeRestrictions}"></td>
                                 <td class="govuk-table__cell">
-                                    <ul class="govuk-list" th:if="${profile.roles != null && !profile.roles.isEmpty()}">
-                                        <li th:each="role : ${profile.roles}">
-                                            <strong th:text="${role.app.name}"></strong>:
-                                            <span th:text="${role.description != null ? role.description : role.name}"></span>
-                                        </li>
-                                    </ul>
+
+                                    <div class="govuk-list" th:if="${appAssignments != null && !appAssignments.isEmpty()}">
+                                        <!-- Display roles -->
+                                        <div th:each="appAssignment : ${appAssignments}">
+                                            <strong th:text="${appAssignment.key}"/>:
+                                            <ul class="govuk-list govuk-list--bullet">
+                                                <li th:each="appRole : ${appAssignment.value}">
+                                                    <span th:text="${appRole}"/>
+                                                 </li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                     <span th:if="${profile.roles == null || profile.roles.isEmpty()}">No services assigned</span>
                                 </td>
                                 <td class="govuk-table__cell">
@@ -318,11 +324,15 @@
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
-                                    <!-- Display roles grouped by app -->
-                                    <div class="govuk-summary-list__row" th:each="role : ${profile.roles}">
-                                        <dt class="govuk-summary-list__key" th:text="${role.app.name}"></dt>
-                                        <dd class="govuk-summary-list__value"
-                                            th:text="${role.description != null ? role.description : role.name}"></dd>
+                                    <!-- Display roles -->
+                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${appAssignments}">
+                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
+
+                                        <dd class="govuk-summary-list__value">
+                                            <div th:each="appRole : ${appAssignment.value}">
+                                                <span th:text="${appRole}"></span>
+                                            </div>
+                                        </dd>
                                     </div>
                                     <div class="govuk-summary-list__row"
                                         th:if="${profile.roles == null || profile.roles.isEmpty()}">
