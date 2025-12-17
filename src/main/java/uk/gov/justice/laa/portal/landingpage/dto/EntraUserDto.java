@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import lombok.AllArgsConstructor;
@@ -13,7 +14,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EntraUserDto implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String id;
     private String email;
     private String fullName;
