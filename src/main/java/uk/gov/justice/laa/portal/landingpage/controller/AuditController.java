@@ -1,10 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -128,34 +125,13 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
-
-        Map<String, List<String>> appAssignments = getAppsGroupByAppName(userDetail);
-
         // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
-        model.addAttribute("appAssignments", appAssignments);
 
         return "user-audit/details";
-    }
-
-    private static Map<String, List<String>> getAppsGroupByAppName(AuditUserDetailDto userDetail) {
-        //map to roles
-        List<AppRoleDto> roles = userDetail.getProfiles()
-                .stream()
-                .flatMap(profile -> profile.getRoles().stream())
-                .toList();
-        return roles.stream()
-                .collect(Collectors.groupingBy(
-                        role -> role.getApp().getName(),
-                        // Map role -> role name
-                        Collectors.collectingAndThen(
-                                Collectors.mapping(AppRoleDto::getName, Collectors.toList()),
-                                ArrayList::new
-                        )
-                ));
     }
 
     /**

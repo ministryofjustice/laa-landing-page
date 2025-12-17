@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +27,7 @@ import org.springframework.ui.Model;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -485,6 +488,14 @@ class AuditControllerTest {
     void displayUserAuditDetail_withMultiFirmUser_returnsDetailViewWithAllProfiles() {
         // Given
         UUID userId = UUID.randomUUID();
+        AppRoleDto appRoleDto = AppRoleDto.builder()
+                .id(UUID.randomUUID().toString())
+                .name("Role 1")
+                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
+                .app(AppDto.builder()
+                        .name("App 1")
+                        .build())
+                .build();
 
         // Create multiple profiles for multi-firm user
         AuditUserDetailDto.AuditProfileDto profile1 = AuditUserDetailDto.AuditProfileDto
@@ -494,7 +505,7 @@ class AuditControllerTest {
                 .firmCode("SA123")
                 .officeRestrictions("Access to All Offices")
                 .activeProfile(true)
-                .roles(Collections.emptyList())
+                .roles(List.of(appRoleDto))
                 .build();
 
         AuditUserDetailDto.AuditProfileDto profile2 = AuditUserDetailDto.AuditProfileDto
@@ -504,7 +515,7 @@ class AuditControllerTest {
                 .firmCode("JL456")
                 .officeRestrictions("2 office(s) selected")
                 .activeProfile(false)
-                .roles(Collections.emptyList())
+                .roles(List.of(appRoleDto))
                 .build();
 
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
@@ -517,15 +528,19 @@ class AuditControllerTest {
                 .isMultiFirmUser(true)
                 .profiles(List.of(profile1, profile2))
                 .build();
-
+        Map<String, List<String>> expectedList = new HashMap<>();
+        expectedList.put("App 1", List.of("Role 1"));
         when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
 
         // Then
+        AuditUserDetailDto resultUserDetails = (AuditUserDetailDto) model.getAttribute("user");
         assertThat(viewName).isEqualTo("user-audit/details");
-        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+        assertThat(resultUserDetails).isEqualTo(mockUserDetail);
+        assertThat(resultUserDetails.getProfiles().get(0).getGroupByAppNameList()).isEqualTo(expectedList);
+        assertThat(resultUserDetails.getProfiles().get(1).getGroupByAppNameList()).isEqualTo(expectedList);
 
         // Verify user has multiple profiles
         AuditUserDetailDto result = (AuditUserDetailDto) model
