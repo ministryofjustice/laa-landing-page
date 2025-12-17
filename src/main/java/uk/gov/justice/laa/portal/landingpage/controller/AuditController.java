@@ -129,7 +129,7 @@ public class AuditController {
             }
         }
 
-        Map<String, List<String>> appAssignments = getAppsSortedAlphabetically(userDetail);
+        Map<String, List<String>> appAssignments = getAppsGroupByAppName(userDetail);
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -141,7 +141,7 @@ public class AuditController {
         return "user-audit/details";
     }
 
-    private static Map<String, List<String>> getAppsSortedAlphabetically(AuditUserDetailDto userDetail) {
+    private static Map<String, List<String>> getAppsGroupByAppName(AuditUserDetailDto userDetail) {
         //map to roles
         List<AppRoleDto> roles = userDetail.getProfiles()
                 .stream()
