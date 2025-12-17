@@ -84,7 +84,6 @@ public class UserProfile extends AuditableEntity {
         foreignKey = @ForeignKey(name = "FK_user_profile_app_role_user_profile_id"),
         inverseJoinColumns = @JoinColumn(name = "app_role_id"),
         inverseForeignKey = @ForeignKey(name = "FK_user_profile_app_role_app_role_id"))
-    @OrderBy("name ASC")
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;

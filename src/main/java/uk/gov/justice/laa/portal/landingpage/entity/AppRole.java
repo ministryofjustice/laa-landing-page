@@ -69,7 +69,6 @@ public class AppRole extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
-    @OrderBy("name ASC")
     @ToString.Exclude
     @JsonIgnore
     private App app;
