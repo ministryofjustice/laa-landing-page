@@ -49,8 +49,9 @@ sourceSets {
 }
 
 configurations {
-    playwrightImplementation.extendsFrom testImplementation
-    playwrightRuntimeOnly.extendsFrom testRuntimeOnly
+    playwrightTestImplementation.extendsFrom testImplementation
+    playwrightTestRuntimeOnly.extendsFrom testRuntimeOnly
+
     configureEach {
         exclude group: 'commons-logging', module: 'commons-logging'
     }
@@ -134,8 +135,7 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-testcontainers')
     testImplementation "org.testcontainers:testcontainers:2.0.2"
     testImplementation('com.microsoft.playwright:playwright:1.52.0')
-    playwrightImplementation "org.apiguardian:apiguardian-api:1.1.2"
-
+    playwrightTestImplementation "org.apiguardian:apiguardian-api:1.1.2"
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
 
