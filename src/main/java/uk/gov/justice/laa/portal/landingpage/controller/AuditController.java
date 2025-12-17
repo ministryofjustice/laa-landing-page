@@ -109,6 +109,7 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
+
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
@@ -117,7 +118,6 @@ public class AuditController {
             // Try to load by UserProfile ID first (existing behavior)
             try {
                 userDetail = userService.getAuditUserDetail(userId, profilePage, profileSize);
-
             } catch (IllegalArgumentException e) {
                 // If profile not found, try as EntraUser ID
                 log.debug("Profile not found with ID {}, attempting to load as EntraUser ID",
