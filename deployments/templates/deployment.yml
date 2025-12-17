@@ -232,3 +232,5 @@ spec:
               value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
+            - name: NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID
+              value: "${NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID}"
