@@ -539,8 +539,8 @@ class AuditControllerTest {
         AuditUserDetailDto resultUserDetails = (AuditUserDetailDto) model.getAttribute("user");
         assertThat(viewName).isEqualTo("user-audit/details");
         assertThat(resultUserDetails).isEqualTo(mockUserDetail);
-        assertThat(resultUserDetails.getProfiles().get(0).getGroupByAppNameList()).isEqualTo(expectedList);
-        assertThat(resultUserDetails.getProfiles().get(1).getGroupByAppNameList()).isEqualTo(expectedList);
+        assertThat(resultUserDetails.getProfiles().get(0).getRolesGroupByAppName()).isEqualTo(expectedList);
+        assertThat(resultUserDetails.getProfiles().get(1).getRolesGroupByAppName()).isEqualTo(expectedList);
 
         // Verify user has multiple profiles
         AuditUserDetailDto result = (AuditUserDetailDto) model

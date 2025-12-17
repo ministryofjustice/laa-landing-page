@@ -163,7 +163,7 @@ public class AuditUserDetailDto implements Serializable {
          */
         private boolean activeProfile;
 
-        public Map<String, List<String>> getGroupByAppNameList() {
+        public Map<String, List<String>> getRolesGroupByAppName() {
             return roles.stream()
                     .collect(Collectors.groupingBy(
                                     role -> role.getApp().getName(),
