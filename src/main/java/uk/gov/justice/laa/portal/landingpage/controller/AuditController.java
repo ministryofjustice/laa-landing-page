@@ -130,7 +130,7 @@ public class AuditController {
             }
         }
 
-        Map<String, List<String>> appAssignments = getAppsSortedAlphabetically(userDetail.getProfiles());
+        Map<String, List<String>> appAssignments = getAppsSortedAlphabetically(userDetail);
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -142,12 +142,9 @@ public class AuditController {
         return "user-audit/details";
     }
 
-    /**
-     * Create a map containing all Apps by their role, and sort alphabetically.
-     */
-    private static Map<String, List<String>> getAppsSortedAlphabetically(List<AuditUserDetailDto.AuditProfileDto> profiles) {
+    private static Map<String, List<String>> getAppsSortedAlphabetically(AuditUserDetailDto userDetail) {
         //map to roles
-        List<AppRoleDto> roles = profiles
+        List<AppRoleDto> roles = userDetail.getProfiles()
                 .stream()
                 .flatMap(profile -> profile.getRoles().stream())
                 .toList();

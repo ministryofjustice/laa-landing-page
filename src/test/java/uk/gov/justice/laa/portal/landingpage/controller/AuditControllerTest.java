@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.jayway.jsonpath.Criteria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +25,6 @@ import org.springframework.ui.Model;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -496,6 +494,7 @@ class AuditControllerTest {
                 .firmCode("SA123")
                 .officeRestrictions("Access to All Offices")
                 .activeProfile(true)
+                .roles(Collections.emptyList())
                 .build();
 
         AuditUserDetailDto.AuditProfileDto profile2 = AuditUserDetailDto.AuditProfileDto
@@ -505,6 +504,7 @@ class AuditControllerTest {
                 .firmCode("JL456")
                 .officeRestrictions("2 office(s) selected")
                 .activeProfile(false)
+                .roles(Collections.emptyList())
                 .build();
 
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
