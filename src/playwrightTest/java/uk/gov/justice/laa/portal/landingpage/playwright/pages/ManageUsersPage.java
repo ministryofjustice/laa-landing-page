@@ -146,11 +146,6 @@ public class ManageUsersPage {
         page.locator("#services a.govuk-link:has-text(\"Change\")").click();
     }
 
-    public void checkAppRadioOptions(List<String> app) {
-        Locator allCheckboxes = page.locator("input[type='checkbox']");
-
-    }
-
     public void verifySelectedUserServices(List<String> roles) {
         for (String role : roles) {
             Locator row = page.locator("dd:has-text('" + role + "')");
@@ -176,21 +171,6 @@ public class ManageUsersPage {
                 checkbox.check();
             }
         }
-    }
-
-    public void editUserRoles() {
-        // Click the "Change" link scoped inside the services panel
-
-        // Click continue
-        page.locator("button").filter(new Locator.FilterOptions().setHasText("Continue")).first().click();
-        // TODO: Check boxes in the app manages your users.
-
-        // Click continue
-        page.locator("button").filter(new Locator.FilterOptions().setHasText("Continue")).first().click();
-        //TODO: Confirm the changes
-        page.locator("button").filter(new Locator.FilterOptions().setHasText("Confirm")).first().click();
-        //TODO: Check the changes have been made
-
     }
 
     // Unauthorised
