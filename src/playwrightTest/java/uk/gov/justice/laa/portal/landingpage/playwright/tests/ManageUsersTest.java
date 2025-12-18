@@ -3,9 +3,14 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.TestRole;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ManageUsersTest extends BaseFrontEndTest {
 
@@ -32,7 +37,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
-        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUser(email);
     }
@@ -45,7 +50,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickCreateUser();
         final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(true);
-        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
         AuditPage auditPage = manageUsersPage.goToAuditPage();
         auditPage.assertUserIsPresent(email);
@@ -61,9 +66,49 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
-        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUser(email);
+    }
+
+    @Test
+    @DisplayName("Navigate from users list into manage-user page")
+    void verifyNavigateToUserDetailsPage() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.verifyIsUserDetailsPage();
+    }
+
+    @Test
+    @DisplayName("Navigate to user details and check if it is populated")
+    void verifyUserDetailsIsPopulated() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.verifyUserDetailsPopulated();
+    }
+
+    @Test
+    @DisplayName("Navigate from users list into manage-user page")
+    void editUserAndVerify() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        // Click the first user link in the list and assert we navigated to the manage-user page
+        manageUsersPage.clickFirstUserLink();
+        assertTrue(page.url().contains("/admin/users/manage/"));
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+        manageUsersPage.clickContinueFirmSelectPage();
+        List<String> roles = List.of(
+                TestRole.INTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_VIEWER.roleName
+        );
+        manageUsersPage.checkSelectedRoles(roles);
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.verifySelectedUserServices(roles);
     }
 
     @Test
