@@ -232,3 +232,15 @@ spec:
               value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
+            - name: APP_MEANS_AND_MATCH_UI1_NAME
+              value: "${APP_MEANS_AND_MATCH_UI1_NAME}"
+            - name: APP_MEANS_AND_MATCH_UI1_URL
+              value: "${APP_MEANS_AND_MATCH_UI1_URL}"
+            - name: APP_MEANS_AND_MATCH_UI1_DETAILS
+              value: "${APP_MEANS_AND_MATCH_UI1_DETAILS}"
+            - name: APP_MEANS_AND_MATCH_UI2_NAME
+              value: "${APP_MEANS_AND_MATCH_UI2_NAME}"
+            - name: APP_MEANS_AND_MATCH_UI2_URL
+              value: "${APP_MEANS_AND_MATCH_UI2_URL}"
+            - name: APP_MEANS_AND_MATCH_UI2_DETAILS
+              value: "${APP_MEANS_AND_MATCH_UI2_DETAILS}"
