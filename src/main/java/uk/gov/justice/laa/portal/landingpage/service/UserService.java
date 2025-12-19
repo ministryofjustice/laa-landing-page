@@ -100,15 +100,17 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     private final FirmService firmService;
+    private final NotificationService notificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository, AppRepository appRepository,
-            AppRoleRepository appRoleRepository, ModelMapper mapper,
-            OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
+                       EntraUserRepository entraUserRepository, AppRepository appRepository,
+                       AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+                       NotificationService notificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -120,6 +122,7 @@ public class UserService {
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
         this.firmService = firmService;
+        this.notificationService = notificationService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -817,6 +820,9 @@ public class UserService {
         entraUserRepository.save(entraUser);
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
+
+        notificationService.notifyDeleteFirmAccess(userProfile.getId(), entraUserDto.getFirstName(),
+                entraUserDto.getEmail(), firmDto.getName());
 
         logger.info("User profile added successfully for user: {} ({})", entraUserDto.getFullName(),
                 entraUserDto.getId());
